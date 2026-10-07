@@ -5819,6 +5819,1302 @@
       "sdkProofs": [
         "tools/test-manga-download-popup-sdk.mjs"
       ]
+    },
+    {
+      "id": "shared-MangaDirectoryEntryRow",
+      "file": "entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets",
+      "component": "MangaDirectoryEntryRow",
+      "specPolicy": "Finite generated manga directory row/numeric/parts variants. Only canonical entries, exact hierarchy/presentation facts, current state and business callbacks are inputs; no physical typography/geometry overrides. The generated visual contract and shared layout adapter own minimum heights, line boxes, safe scale and columns.",
+      "successorFacts": {
+        "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      },
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "MangaDirectoryEntryRow",
+            "publicFields": [
+              {
+                "name": "row",
+                "type": "MangaDirectoryLayoutRow",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "presentation",
+                "type": "Map<number, MangaDirectoryRowPresentation>",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "scheme",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "currentChapterIndex",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "collapsedBranches",
+                "type": "number[]",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "query",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "showContext",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "interactionEnabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "chapterDownloadEnabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "branchControlsEnabled",
+                "type": "boolean",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onSelectEntry",
+                "type": "(entry: LocalReadingTocEntry) => void",
+                "decorators": []
+              },
+              {
+                "name": "onToggleBranch",
+                "type": "(entry: LocalReadingTocEntry) => void",
+                "decorators": []
+              },
+              {
+                "name": "onDownloadEntry",
+                "type": "(entry: LocalReadingTocEntry) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "download",
+            "property": "height",
+            "args": [
+              "grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 : Math.max(28, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale())"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "download",
+            "property": "width",
+            "args": [
+              "grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 28"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "download",
+            "property": "height",
+            "args": [
+              "grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 :\n    Math.max(28, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale())"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "download",
+            "property": "width",
+            "args": [
+              "grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 28"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "download",
+            "property": "height",
+            "args": [
+              "grid ? 12 : 15"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "download",
+            "property": "width",
+            "args": [
+              "grid ? 12 : 15"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "backgroundColor",
+            "args": [
+              "this.color(this.current(entry) ? 'active' : 'soft')"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "borderRadius",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.gridRadius"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "border",
+            "args": [
+              "{ width: MANGA_DIRECTORY_VISUAL.gridBorder, color: this.color('line') }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "constraintSize",
+            "args": [
+              "{ minWidth: 0, minHeight: this.cellHeight() }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "constraintSize",
+            "args": [
+              "{ minHeight: this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "padding",
+            "args": [
+              "{ left: MANGA_DIRECTORY_VISUAL.gridPaddingX, right: MANGA_DIRECTORY_VISUAL.gridPaddingX }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "height",
+            "args": [
+              "this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "constraintSize",
+            "args": [
+              "{ minWidth: 0 }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "fontColor",
+            "args": [
+              "this.color(this.current(entry) ? 'accent' : 'ink')"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "fontWeight",
+            "args": [
+              "this.current(entry) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight",
+              "{ enableVariableFontWeight: true }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "lineHeight",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.namedLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "fontSize",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.namedFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "fontFamily",
+            "args": [
+              "this.current(entry) ? READER_FONT_NOTO_SANS_SC_UI_550 : READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "constraintSize",
+            "args": [
+              "{ minWidth: 0 }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "fontColor",
+            "args": [
+              "this.color(this.current(entry) ? 'accent' : 'muted')"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "fontWeight",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.bodyFontWeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "lineHeight",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.namedLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "fontSize",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.namedFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "fontFamily",
+            "args": [
+              "READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "margin",
+            "args": [
+              "{ top: MANGA_DIRECTORY_VISUAL.gridMarkInset, right: MANGA_DIRECTORY_VISUAL.gridMarkInset }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "height",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.gridMarkSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "numberCell",
+            "property": "width",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.gridMarkSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "branchToggle",
+            "property": "responseRegion",
+            "args": [
+              "{ x: this.facts(entry)?.group === true ? -10 : 0,\n    y: this.facts(entry)?.group === true ? -14 : 0,\n    width: this.facts(entry)?.group === true ? 36 : 32, height: this.facts(entry)?.group === true ? 44 : 32 }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "branchToggle",
+            "property": "margin",
+            "args": [
+              "{ left: this.facts(entry)?.group === true ? 0 : 8, right: this.facts(entry)?.group === true ? 0 : 8 }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "branchToggle",
+            "property": "height",
+            "args": [
+              "this.facts(entry)?.group === true ? 16 : 32"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "branchToggle",
+            "property": "width",
+            "args": [
+              "this.facts(entry)?.group === true ? 16 : 32"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "branchToggle",
+            "property": "height",
+            "args": [
+              "16"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "branchToggle",
+            "property": "width",
+            "args": [
+              "16"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntry",
+            "property": "border",
+            "args": [
+              "{ width: { bottom: MANGA_DIRECTORY_VISUAL.gridBorder }, color: this.color('line') }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntry",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "opacity",
+            "args": [
+              "this.liveEntry(entry)?.navigable === false && this.facts(entry)?.group !== true ? MANGA_DIRECTORY_VISUAL.disabledOpacity : 1"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "backgroundColor",
+            "args": [
+              "this.current(entry) ? this.color('active') : this.facts(entry)?.group === true ? this.color('soft') : Color.Transparent"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "border",
+            "args": [
+              "{ width: { bottom: this.facts(entry)?.group === true ||\n            this.branchControlsEnabled && this.facts(entry)?.readableParent === true ? 0 : MANGA_DIRECTORY_VISUAL.gridBorder }, color: this.color('line') }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "margin",
+            "args": [
+              "{ top: this.row.groupSpacing ?? 0 }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "padding",
+            "args": [
+              "{ left: this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupPaddingX :\n        this.query.trim().length > 0 || this.showContext || (this.liveEntry(entry)?.level ?? 1) <= 1 ? MANGA_DIRECTORY_VISUAL.namedPaddingX : MANGA_DIRECTORY_VISUAL.childPaddingLeft,\n    right: this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupPaddingX : MANGA_DIRECTORY_VISUAL.namedPaddingX,\n    top: this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupPaddingY : MANGA_DIRECTORY_VISUAL.namedPaddingY,\n    bottom: this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupPaddingY : MANGA_DIRECTORY_VISUAL.namedPaddingY }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "constraintSize",
+            "args": [
+              "{ minHeight: this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupMinHeight : MANGA_DIRECTORY_VISUAL.namedMinHeight }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "constraintSize",
+            "args": [
+              "{ minWidth: 0 }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontColor",
+            "args": [
+              "this.color(this.current(entry) ? 'accent' : 'ink')"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontWeight",
+            "args": [
+              "this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupFontWeight :\n    this.current(entry) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight",
+              "{ enableVariableFontWeight: true }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "lineHeight",
+            "args": [
+              "this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupLineHeight : MANGA_DIRECTORY_VISUAL.namedLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontSize",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.namedFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontFamily",
+            "args": [
+              "this.facts(entry)?.group === true ? READER_FONT_NOTO_SANS_SC_UI_600 :\n    this.current(entry) ? READER_FONT_NOTO_SANS_SC_UI_550 : READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "constraintSize",
+            "args": [
+              "{ minWidth: 0 }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "constraintSize",
+            "args": [
+              "{ maxWidth: '100%' }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "margin",
+            "args": [
+              "{ left: MANGA_DIRECTORY_VISUAL.groupCountGap }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontColor",
+            "args": [
+              "this.color('muted')"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "lineHeight",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.metaLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontSize",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.metaFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontFamily",
+            "args": [
+              "READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontColor",
+            "args": [
+              "this.color('muted')"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "lineHeight",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.metaLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontSize",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.metaFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontFamily",
+            "args": [
+              "READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontColor",
+            "args": [
+              "this.color('muted')"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "lineHeight",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.metaLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontSize",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.metaFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontFamily",
+            "args": [
+              "READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontColor",
+            "args": [
+              "this.color('muted')"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "lineHeight",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.stateLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontSize",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.stateFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontFamily",
+            "args": [
+              "READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontColor",
+            "args": [
+              "this.color('muted')"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "lineHeight",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.stateLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontSize",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.stateFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontFamily",
+            "args": [
+              "READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontColor",
+            "args": [
+              "this.color('accent')"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "lineHeight",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.stateLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontSize",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.stateFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "fontFamily",
+            "args": [
+              "READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "height",
+            "args": [
+              "13"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "fullWidthEntryBody",
+            "property": "width",
+            "args": [
+              "13"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "build",
+            "property": "border",
+            "args": [
+              "{ width: { top: this.row.startIndex === 0 ? MANGA_DIRECTORY_VISUAL.gridBorder : 0 }, color: this.color('line') }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "build",
+            "property": "border",
+            "args": [
+              "{ width: { bottom: 1 }, color: this.color('line') }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: MANGA_DIRECTORY_VISUAL.namedPaddingX, right: MANGA_DIRECTORY_VISUAL.namedPaddingX,\n    top: MANGA_DIRECTORY_VISUAL.contextPaddingTop, bottom: MANGA_DIRECTORY_VISUAL.contextPaddingBottom }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "build",
+            "property": "fontColor",
+            "args": [
+              "this.color('muted')"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "build",
+            "property": "lineHeight",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.metaLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "build",
+            "property": "fontSize",
+            "args": [
+              "MANGA_DIRECTORY_VISUAL.metaFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "build",
+            "property": "fontFamily",
+            "args": [
+              "READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ top: this.row.runStart === false ? 0 : MANGA_DIRECTORY_VISUAL.gridRunMargin,\n    bottom: this.row.runEnd === false ? MANGA_DIRECTORY_VISUAL.gridGap : MANGA_DIRECTORY_VISUAL.gridRunMargin }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryEntryRow",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          }
+        ],
+        "implementation": "import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';\nimport { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';\nimport { MangaDirectoryPressFeedback } from './MangaDirectoryPressFeedback';\nimport type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';\nimport type { MangaDirectoryRowPresentation } from './MangaDirectoryPresentation';\nimport type { MangaDirectoryLayoutRow, MangaDirectoryLabel } from './MangaDirectoryLayout';\nimport { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600 } from '../common/ReaderFontFamilies';\n@Component\nexport struct MangaDirectoryEntryRow extends   {\n    constructor(?: {\n        row?: MangaDirectoryLayoutRow;\n        presentation?: Map<number, MangaDirectoryRowPresentation>;\n        scheme?: string;\n        private windowMetricsRevision?: number;\n        currentChapterIndex?: number;\n        collapsedBranches?: number[];\n        query?: string;\n        showContext?: boolean;\n        interactionEnabled?: boolean;\n        chapterDownloadEnabled?: boolean;\n        branchControlsEnabled?: boolean;\n        onSelectEntry?: (entry: LocalReadingTocEntry) => void;\n        onToggleBranch?: (entry: LocalReadingTocEntry) => void;\n        onDownloadEntry?: (entry: LocalReadingTocEntry) => void;\n    }, ?: ) { }\n    @Prop\n    row: MangaDirectoryLayoutRow = { kind: 'row', columns: 1, startIndex: 0, entries: [], labels: [] };\n    @Prop\n    presentation: Map<number, MangaDirectoryRowPresentation> = new Map<number, MangaDirectoryRowPresentation>();\n    @Prop\n    scheme: string = 'day';\n    @StorageLink('readerWindowMetricsRevision')\n    private windowMetricsRevision: number = 0;\n    @Prop\n    currentChapterIndex: number = -1;\n    @Prop\n    collapsedBranches: number[] = [];\n    @Prop\n    query: string = '';\n    @Prop\n    showContext: boolean = false;\n    @Prop\n    interactionEnabled: boolean = true;\n    @Prop\n    chapterDownloadEnabled: boolean = false;\n    @Prop\n    branchControlsEnabled: boolean = true;\n    onSelectEntry: (entry: LocalReadingTocEntry) => void = (_entry: LocalReadingTocEntry): void => { };\n    onToggleBranch: (entry: LocalReadingTocEntry) => void = (_entry: LocalReadingTocEntry): void => { };\n    onDownloadEntry: (entry: LocalReadingTocEntry) => void = (_entry: LocalReadingTocEntry): void => { };\n    private liveEntry(entry: LocalReadingTocEntry): LocalReadingTocEntry | undefined {\n        return this.row.entries.find((current: LocalReadingTocEntry): boolean => current.index === entry.index);\n    }\n    private liveLabel(entry: LocalReadingTocEntry): MangaDirectoryLabel | undefined {\n        const ordinal = this.row.entries.findIndex((current: LocalReadingTocEntry): boolean => current.index === entry.index);\n        return ordinal >= 0 ? this.row.labels[ordinal] : undefined;\n    }\n    private facts(entry: LocalReadingTocEntry): MangaDirectoryRowPresentation | undefined {\n        return this.liveEntry(entry) === undefined ? undefined : this.presentation.get(entry.index);\n    }\n    private color(role: string): string {\n        return mangaDirectoryColor(role, this.scheme);\n    }\n    private fontScale(): number {\n        const revision = this.windowMetricsRevision;\n        return revision >= 0 ? mangaDirectoryScale(ReaderWindowCoordinator.metrics().systemFontScale) : 1;\n    }\n    private cellHeight(): number {\n        return Math.max(MANGA_DIRECTORY_VISUAL.gridHeight, MANGA_DIRECTORY_VISUAL.gridPaddingY * 2 + MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale() +\n            MANGA_DIRECTORY_VISUAL.gridBorder * 2);\n    }\n    private current(entry: LocalReadingTocEntry): boolean {\n        const current = this.liveEntry(entry);\n        return current !== undefined && current.navigable !== false && current.index === this.currentChapterIndex;\n    }\n    private expanded(entry: LocalReadingTocEntry): boolean {\n        return this.query.trim().length > 0 || !this.collapsedBranches.includes(entry.index);\n    }\n    private downloadable(entry: LocalReadingTocEntry): boolean {\n        const current = this.liveEntry(entry);\n        return current !== undefined && this.chapterDownloadEnabled && current.navigable !== false && current.downloadState !== 'unknown';\n    }\n    private title(entry: LocalReadingTocEntry): string {\n        const current = this.liveEntry(entry);\n        if (current === undefined)\n            return '';\n        const title = current.title.trim();\n        return title.length > 0 && title !== '第话' && title !== '第 话' ? current.title : `第${Math.max(1, current.index + 1)}话`;\n    }\n    private gridLabel(label: MangaDirectoryLabel): string {\n        return label.kind === 'parts' ? `${label.numberText} · ${label.part}` : label.numberText ?? '';\n    }\n    private accessibility(entry: LocalReadingTocEntry): string {\n        const facts = this.facts(entry);\n        const context = facts?.contextTitle ? `${facts.contextTitle}，` : '';\n        const state = facts?.group === true ? `分组，${this.expanded(entry) ? '已展开' : '已折叠'}` :\n            this.liveEntry(entry)?.navigable === false ? '暂不可读' : this.liveEntry(entry)?.navigable === undefined ? '状态待确认，打开章节' : '打开章节';\n        return `${context}${this.title(entry)}，${state}${this.current(entry) ? '，正在读' : ''}`;\n    }\n    private activateEntry(entry: LocalReadingTocEntry): void {\n        const current = this.liveEntry(entry);\n        if (!this.interactionEnabled || current === undefined)\n            return;\n        if (this.facts(current)?.group === true && this.branchControlsEnabled && this.query.trim().length === 0)\n            this.onToggleBranch(current);\n        else if (current.navigable !== false)\n            this.onSelectEntry(current);\n    }\n    @Builder\n    private download(entry: LocalReadingTocEntry, grid: boolean) {\n        if (this.downloadable(entry)) {\n            .width<\n      >(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 28)\n                .height<\n      >(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 : Math.max(28, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))\n                .focusable<\n      >(false).accessibilityLevel<\n      >('no').onClick<\n      >((): void => { });\n        }\n    }\n    @Builder\n    private numberCell(entry: LocalReadingTocEntry) {\n        .layoutWeight<\n    >(1).constraintSize<\n    >({ minWidth: 0, minHeight: this.cellHeight() })\n            .border<\n    >({ width: MANGA_DIRECTORY_VISUAL.gridBorder, color: this.color('line') }).borderRadius<\n    >(MANGA_DIRECTORY_VISUAL.gridRadius)\n            .backgroundColor<\n    >(this.color(this.current(entry) ? 'active' : 'soft'))\n            .attributeModifier<\n    >(new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.scheme))\n            .enabled<\n    >(this.interactionEnabled).accessibilityText<\n    >(this.accessibility(entry))\n            .onClick<\n    >((): void => this.activateEntry(entry));\n    }\n    @Builder\n    private branchToggle(entry: LocalReadingTocEntry) {\n        if (this.branchControlsEnabled && this.facts(entry)?.hasChildren === true) {\n            .width<\n      >(this.facts(entry)?.group === true ? 16 : 32).height<\n      >(this.facts(entry)?.group === true ? 16 : 32)\n                .margin<\n      >({ left: this.facts(entry)?.group === true ? 0 : 8, right: this.facts(entry)?.group === true ? 0 : 8 })\n                .responseRegion<\n      >({ x: this.facts(entry)?.group === true ? -10 : 0,\n                y: this.facts(entry)?.group === true ? -14 : 0,\n                width: this.facts(entry)?.group === true ? 36 : 32, height: this.facts(entry)?.group === true ? 44 : 32 })\n                .enabled<\n      >(this.interactionEnabled && this.query.trim().length === 0)\n                .attributeModifier<\n      >(new MangaDirectoryPressFeedback(this.interactionEnabled && this.query.trim().length === 0, this.facts(entry)?.group !== true, this.scheme))\n                .accessibilityText<\n      >(`${this.title(entry)}，${this.expanded(entry) ? '收起' : '展开'}子目录`)\n                .onClick<\n      >((): void => {\n                const current = this.liveEntry(entry);\n                if (current !== undefined && this.interactionEnabled && this.branchControlsEnabled &&\n                    this.query.trim().length === 0 && this.facts(current)?.hasChildren === true)\n                    this.onToggleBranch(current);\n            });\n        }\n    }\n    @Builder\n    private fullWidthEntry(entry: LocalReadingTocEntry) {\n        if (this.branchControlsEnabled && this.facts(entry)?.readableParent === true) {\n            .width<\n      >('100%').border<\n      >({ width: { bottom: MANGA_DIRECTORY_VISUAL.gridBorder }, color: this.color('line') });\n        }\n        else {\n            this.fullWidthEntryBody(entry);\n        }\n    }\n    @Builder\n    private fullWidthEntryBody(entry: LocalReadingTocEntry) {\n        .width<\n    >('100%').layoutWeight<\n    >(this.branchControlsEnabled && this.facts(entry)?.readableParent === true ? 1 : 0)\n            .constraintSize<\n    >({ minHeight: this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupMinHeight : MANGA_DIRECTORY_VISUAL.namedMinHeight })\n            .padding<\n    >({ left: this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupPaddingX :\n                this.query.trim().length > 0 || this.showContext || (this.liveEntry(entry)?.level ?? 1) <= 1 ? MANGA_DIRECTORY_VISUAL.namedPaddingX : MANGA_DIRECTORY_VISUAL.childPaddingLeft,\n            right: this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupPaddingX : MANGA_DIRECTORY_VISUAL.namedPaddingX,\n            top: this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupPaddingY : MANGA_DIRECTORY_VISUAL.namedPaddingY,\n            bottom: this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupPaddingY : MANGA_DIRECTORY_VISUAL.namedPaddingY })\n            .margin<\n    >({ top: this.row.groupSpacing ?? 0 })\n            .border<\n    >({ width: { bottom: this.facts(entry)?.group === true ||\n                    this.branchControlsEnabled && this.facts(entry)?.readableParent === true ? 0 : MANGA_DIRECTORY_VISUAL.gridBorder }, color: this.color('line') })\n            .backgroundColor<\n    >(this.current(entry) ? this.color('active') : this.facts(entry)?.group === true ? this.color('soft') : Color.Transparent)\n            .opacity<\n    >(this.liveEntry(entry)?.navigable === false && this.facts(entry)?.group !== true ? MANGA_DIRECTORY_VISUAL.disabledOpacity : 1)\n            .attributeModifier<\n    >(new MangaDirectoryPressFeedback(this.interactionEnabled &&\n            (this.facts(entry)?.group === true ? this.branchControlsEnabled && this.query.trim().length === 0 : this.liveEntry(entry) !== undefined && this.liveEntry(entry)?.navigable !== false), this.facts(entry)?.group !== true || this.interactionEnabled && this.branchControlsEnabled && this.query.trim().length === 0, this.scheme))\n            .enabled<\n    >(this.interactionEnabled && (this.facts(entry)?.group === true ? this.branchControlsEnabled && this.query.trim().length === 0 : this.liveEntry(entry) !== undefined && this.liveEntry(entry)?.navigable !== false))\n            .accessibilityText<\n    >(this.accessibility(entry)).onClick<\n    >((): void => this.activateEntry(entry));\n    }\n    private emptySlots(): number[] {\n        const slots: number[] = [];\n        const count = Math.max(0, this.row.columns - this.row.entries.length);\n        for (let index = 0; index < count; index += 1)\n            slots.push(index);\n        return slots;\n    }\n    build() {\n        .width<\n    >('100%').alignItems<\n    >(HorizontalAlign.Start)\n            .border<\n    >({ width: { top: this.row.startIndex === 0 ? MANGA_DIRECTORY_VISUAL.gridBorder : 0 }, color: this.color('line') });\n    }\n}\n"
+      },
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/manga/MangaDirectoryLayout.ts",
+          "shape": {
+            "types": [],
+            "declarations": [],
+            "styles": [],
+            "implementation": "import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';\nimport type { ReaderDirectoryNavigationNode } from '../reading/ReaderDirectoryNavigation';\nimport type { MangaDirectoryRowPresentation } from './MangaDirectoryPresentation';\nimport { MANGA_DIRECTORY_VISUAL, mangaDirectoryLabelsFit, mangaDirectoryColumns } from './MangaDirectoryVisual.ts';\nexport interface MangaDirectoryLabel {\n    kind: 'numeric' | 'parts' | 'named';\n    numberText: string;\n    part: '' | '上' | '中' | '下';\n}\nexport interface MangaDirectoryLayoutRow {\n    kind: 'row' | 'numeric' | 'parts';\n    columns: number;\n    startIndex: number;\n    entries: LocalReadingTocEntry[];\n    labels: MangaDirectoryLabel[];\n    runStart?: boolean;\n    runEnd?: boolean;\n    groupSpacing?: number;\n}\nexport interface MangaDirectoryNodeLayoutRow {\n    kind: 'row' | 'numeric' | 'parts';\n    columns: number;\n    startIndex: number;\n    nodes: ReaderDirectoryNavigationNode[];\n    labels: MangaDirectoryLabel[];\n}\nexport interface MangaDirectoryNodePlacement extends MangaDirectoryNodeLayoutRow {\n    leader: boolean;\n    rowLength: number;\n}\nexport function mangaDirectoryLabel(title: string): MangaDirectoryLabel {\n    const numeric = title.match(/^\\s*(\\d+)\\s*$/);\n    if (numeric !== null)\n        return { kind: 'numeric', numberText: numeric[1], part: '' };\n    const parts = title.match(/^\\s*(\\d+)\\s*(?:[（(]\\s*([上中下])\\s*[）)]|([上中下]))\\s*$/);\n    if (parts !== null)\n        return { kind: 'parts', numberText: parts[1], part: (parts[2] ?? parts[3]) as '上' | '中' | '下' };\n    return { kind: 'named', numberText: '', part: '' };\n}\nexport function mangaDirectoryGridColumns(kind: 'numeric' | 'parts' | 'named', hasMiddle: boolean, narrow: boolean = false, fontScale: number = 1, contentWidth: number = 0, labels: MangaDirectoryLabel[] = [], accessoryWidth: number = 0): number {\n    return mangaDirectoryColumns(kind, hasMiddle, narrow, fontScale, contentWidth, labels.map((label: MangaDirectoryLabel): number => label.numberText.length), accessoryWidth);\n}\nfunction gridLabelsFit(labels: MangaDirectoryLabel[], fontScale: number, contentWidth: number, accessoryWidth: number): boolean {\n    return labels.every((label: MangaDirectoryLabel): boolean => mangaDirectoryLabelsFit(label.kind, fontScale, contentWidth, [label.numberText.length], accessoryWidth));\n}\nexport function mangaDirectorySameNodeRun(left: ReaderDirectoryNavigationNode, right: ReaderDirectoryNavigationNode): boolean {\n    const label = mangaDirectoryLabel(left.title);\n    return left.kind === 'target' && right.kind === 'target' && !left.hasChildren && !right.hasChildren &&\n        label.kind !== 'named' && label.kind === mangaDirectoryLabel(right.title).kind &&\n        left.parentId === right.parentId && left.depth === right.depth;\n}\nfunction gridNode(node: ReaderDirectoryNavigationNode): boolean {\n    return node.kind === 'target' && !node.hasChildren && mangaDirectoryLabel(node.title).kind !== 'named';\n}\nexport function mangaDirectoryNodeRows(nodes: ReaderDirectoryNavigationNode[], narrow: boolean = false, offset: number = 0, fontScale: number = 1, contentWidth: number = 0, accessoryWidth: number = 0): MangaDirectoryNodeLayoutRow[] {\n    const rows: MangaDirectoryNodeLayoutRow[] = [];\n    let start = 0;\n    while (start < nodes.length) {\n        const first = nodes[start];\n        if (!gridNode(first)) {\n            rows.push({ kind: 'row', columns: 1, startIndex: offset + start, nodes: [first], labels: [mangaDirectoryLabel(first.title)] });\n            start += 1;\n            continue;\n        }\n        let end = start + 1;\n        while (end < nodes.length && mangaDirectorySameNodeRun(first, nodes[end]))\n            end += 1;\n        const labels = nodes.slice(start, end).map((node: ReaderDirectoryNavigationNode): MangaDirectoryLabel => mangaDirectoryLabel(node.title));\n        const kind = labels[0].kind as 'numeric' | 'parts';\n        if (!gridLabelsFit(labels, fontScale, contentWidth, accessoryWidth)) {\n            for (let at = start; at < end; at += 1)\n                rows.push({ kind: 'row', columns: 1, startIndex: offset + at,\n                    nodes: [nodes[at]], labels: [labels[at - start]] });\n            start = end;\n            continue;\n        }\n        const columns = mangaDirectoryGridColumns(kind, labels.some((label: MangaDirectoryLabel): boolean => label.part === '中'), narrow, fontScale, contentWidth, labels, accessoryWidth);\n        for (let at = start; at < end; at += columns) {\n            rows.push({ kind, columns, startIndex: offset + at, nodes: nodes.slice(at, Math.min(end, at + columns)),\n                labels: labels.slice(at - start, Math.min(end - start, at - start + columns)) });\n        }\n        start = end;\n    }\n    return rows;\n}\nexport function mangaDirectoryNodePlacement(nodes: ReaderDirectoryNavigationNode[], ordinal: number, narrow: boolean = false, offset: number = 0, fontScale: number = 1, contentWidth: number = 0, accessoryWidth: number = 0): MangaDirectoryNodePlacement | undefined {\n    if (!Number.isInteger(ordinal) || ordinal < 0 || ordinal >= nodes.length)\n        return undefined;\n    const target = nodes[ordinal];\n    if (!gridNode(target))\n        return { kind: 'row', columns: 1, startIndex: offset + ordinal,\n            nodes: [target], labels: [mangaDirectoryLabel(target.title)], leader: true, rowLength: 1 };\n    let start = ordinal;\n    let end = ordinal + 1;\n    while (start > 0 && mangaDirectorySameNodeRun(target, nodes[start - 1]))\n        start -= 1;\n    while (end < nodes.length && mangaDirectorySameNodeRun(target, nodes[end]))\n        end += 1;\n    const kind = mangaDirectoryLabel(target.title).kind as 'numeric' | 'parts';\n    const labels = nodes.slice(start, end).map((node: ReaderDirectoryNavigationNode): MangaDirectoryLabel => mangaDirectoryLabel(node.title));\n    if (!gridLabelsFit(labels, fontScale, contentWidth, accessoryWidth))\n        return { kind: 'row', columns: 1, startIndex: offset + ordinal,\n            nodes: [target], labels: [mangaDirectoryLabel(target.title)], leader: true, rowLength: 1 };\n    const columns = mangaDirectoryGridColumns(kind, labels.some((label: MangaDirectoryLabel): boolean => label.part === '中'), narrow, fontScale, contentWidth, labels, accessoryWidth);\n    const rowStart = start + Math.floor((ordinal - start) / columns) * columns;\n    const rowNodes = nodes.slice(rowStart, Math.min(end, rowStart + columns));\n    return { kind, columns, startIndex: offset + rowStart, nodes: rowNodes,\n        labels: rowNodes.map((node: ReaderDirectoryNavigationNode): MangaDirectoryLabel => mangaDirectoryLabel(node.title)),\n        leader: ordinal === rowStart, rowLength: rowNodes.length };\n}\nexport function mangaDirectoryNodePlacements(nodes: ReaderDirectoryNavigationNode[], narrow: boolean = false, offset: number = 0, fontScale: number = 1, contentWidth: number = 0, accessoryWidth: number = 0): MangaDirectoryNodePlacement[] {\n    const result: MangaDirectoryNodePlacement[] = [];\n    for (const row of mangaDirectoryNodeRows(nodes, narrow, offset, fontScale, contentWidth, accessoryWidth)) {\n        for (let ordinal = 0; ordinal < row.nodes.length; ordinal += 1) {\n            result.push({ kind: row.kind, columns: row.columns, startIndex: row.startIndex,\n                nodes: row.nodes, labels: row.labels, leader: ordinal === 0, rowLength: row.nodes.length });\n        }\n    }\n    return result;\n}\nfunction gridEntry(entry: LocalReadingTocEntry, presentation: Map<number, MangaDirectoryRowPresentation>): boolean {\n    return entry.navigable === true && presentation.get(entry.index)?.hasChildren !== true &&\n        mangaDirectoryLabel(entry.title).kind !== 'named';\n}\nfunction sameEntryRun(left: LocalReadingTocEntry, right: LocalReadingTocEntry, presentation: Map<number, MangaDirectoryRowPresentation>): boolean {\n    return gridEntry(left, presentation) && gridEntry(right, presentation) && left.level === right.level &&\n        presentation.get(left.index)?.parentIndex === presentation.get(right.index)?.parentIndex &&\n        mangaDirectoryLabel(left.title).kind === mangaDirectoryLabel(right.title).kind;\n}\nexport function mangaDirectoryEntryRows(entries: LocalReadingTocEntry[], presentation: Map<number, MangaDirectoryRowPresentation>, narrow: boolean = false, fontScale: number = 1, contentWidth: number = 0, accessoryWidth: number = 0): MangaDirectoryLayoutRow[] {\n    const rows: MangaDirectoryLayoutRow[] = [];\n    let start = 0;\n    while (start < entries.length) {\n        const first = entries[start];\n        if (!gridEntry(first, presentation)) {\n            rows.push({ kind: 'row', columns: 1, startIndex: start, entries: [first], labels: [mangaDirectoryLabel(first.title)],\n                groupSpacing: start > 0 && presentation.get(first.index)?.group === true &&\n                    presentation.get(entries[start - 1].index)?.group === true ? MANGA_DIRECTORY_VISUAL.gridRunMargin : 0 });\n            start += 1;\n            continue;\n        }\n        let end = start + 1;\n        while (end < entries.length && sameEntryRun(first, entries[end], presentation))\n            end += 1;\n        const labels = entries.slice(start, end).map((entry: LocalReadingTocEntry): MangaDirectoryLabel => mangaDirectoryLabel(entry.title));\n        const kind = labels[0].kind as 'numeric' | 'parts';\n        if (!gridLabelsFit(labels, fontScale, contentWidth, accessoryWidth)) {\n            for (let at = start; at < end; at += 1)\n                rows.push({ kind: 'row', columns: 1, startIndex: at,\n                    entries: [entries[at]], labels: [labels[at - start]] });\n            start = end;\n            continue;\n        }\n        const columns = mangaDirectoryGridColumns(kind, labels.some((label: MangaDirectoryLabel): boolean => label.part === '中'), narrow, fontScale, contentWidth, labels, accessoryWidth);\n        for (let at = start; at < end; at += columns) {\n            rows.push({ kind, columns, startIndex: at, entries: entries.slice(at, Math.min(end, at + columns)),\n                labels: labels.slice(at - start, Math.min(end - start, at - start + columns)),\n                runStart: at === start, runEnd: at + columns >= end });\n        }\n        start = end;\n    }\n    return rows;\n}\nexport function mangaDirectoryNearbyEntries(entries: LocalReadingTocEntry[], presentation: Map<number, MangaDirectoryRowPresentation>, currentChapterIndex: number, before: number = 3, after: number = 4, fillWindow: boolean = true): LocalReadingTocEntry[] {\n    const candidates = entries.filter((entry: LocalReadingTocEntry): boolean => entry.navigable !== false);\n    if (candidates.length === 0)\n        return [];\n    const current = candidates.findIndex((entry: LocalReadingTocEntry): boolean => entry.index === currentChapterIndex);\n    let start = current < 0 ? 0 : Math.max(0, current - Math.max(0, Math.floor(before)));\n    let end = current < 0 ? Math.min(candidates.length, Math.max(1, Math.floor(before) + Math.floor(after) + 1)) :\n        Math.min(candidates.length, current + Math.max(0, Math.floor(after)) + 1);\n    if (fillWindow && current >= 0) {\n        const count = Math.max(1, Math.max(0, Math.floor(before)) + Math.max(0, Math.floor(after)) + 1);\n        start = Math.max(0, Math.min(start, candidates.length - count));\n        end = Math.min(candidates.length, start + count);\n    }\n    const samePart = (left: LocalReadingTocEntry, right: LocalReadingTocEntry): boolean => {\n        const leftLabel = mangaDirectoryLabel(left.title);\n        const rightLabel = mangaDirectoryLabel(right.title);\n        return leftLabel.kind === 'parts' && rightLabel.kind === 'parts' && leftLabel.numberText === rightLabel.numberText &&\n            sameEntryRun(left, right, presentation);\n    };\n    while (start > 0 && samePart(candidates[start], candidates[start - 1]))\n        start -= 1;\n    while (end < candidates.length && samePart(candidates[end - 1], candidates[end]))\n        end += 1;\n    return candidates.slice(start, end);\n}\nexport function mangaDirectoryNearbyNodes(nodes: ReaderDirectoryNavigationNode[], currentChapterIndex: number, before: number = 3, after: number = 4, fillWindow: boolean = true): ReaderDirectoryNavigationNode[] {\n    const targets = nodes.filter((node: ReaderDirectoryNavigationNode): boolean => node.kind === 'target');\n    if (targets.length === 0)\n        return [];\n    const current = targets.findIndex((node: ReaderDirectoryNavigationNode): boolean => node.chapterIndex === currentChapterIndex);\n    let start = current < 0 ? 0 : Math.max(0, current - Math.max(0, Math.floor(before)));\n    let end = current < 0 ? Math.min(targets.length, Math.max(1, Math.floor(before) + Math.floor(after) + 1)) :\n        Math.min(targets.length, current + Math.max(0, Math.floor(after)) + 1);\n    if (fillWindow && current >= 0) {\n        const count = Math.max(1, Math.max(0, Math.floor(before)) + Math.max(0, Math.floor(after)) + 1);\n        start = Math.max(0, Math.min(start, targets.length - count));\n        end = Math.min(targets.length, start + count);\n    }\n    const samePart = (left: ReaderDirectoryNavigationNode, right: ReaderDirectoryNavigationNode): boolean => {\n        const leftLabel = mangaDirectoryLabel(left.title);\n        const rightLabel = mangaDirectoryLabel(right.title);\n        return leftLabel.kind === 'parts' && rightLabel.kind === 'parts' && leftLabel.numberText === rightLabel.numberText &&\n            mangaDirectorySameNodeRun(left, right);\n    };\n    while (start > 0 && samePart(targets[start], targets[start - 1]))\n        start -= 1;\n    while (end < targets.length && samePart(targets[end - 1], targets[end]))\n        end += 1;\n    return targets.slice(start, end);\n}\n"
+          }
+        },
+        {
+          "file": "entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts",
+          "shape": {
+            "types": [],
+            "declarations": [],
+            "styles": [],
+            "implementation": "import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';\nexport interface MangaDirectoryRowPresentation {\n    parentTitle?: string;\n    parentIndex?: number;\n    contextTitle?: string;\n    readableDescendantCount?: number;\n    ancestorGroupIndexes: number[];\n    group: boolean;\n    hasChildren: boolean;\n    readableParent: boolean;\n    countComplete: boolean;\n}\nexport function mangaDirectoryHasChildren(entries: LocalReadingTocEntry[], ordinal: number): boolean {\n    const entry = entries[ordinal];\n    const level = entry?.level;\n    const nextLevel = entries[ordinal + 1]?.level;\n    return level !== undefined && Number.isInteger(level) && level >= 1 &&\n        nextLevel !== undefined && Number.isInteger(nextLevel) && nextLevel > level;\n}\nexport function mangaDirectoryIsGroup(entries: LocalReadingTocEntry[], ordinal: number): boolean {\n    return entries[ordinal]?.navigable === false && mangaDirectoryHasChildren(entries, ordinal);\n}\nexport function mangaDirectoryPresentation(entries: LocalReadingTocEntry[]): Map<number, MangaDirectoryRowPresentation> {\n    const presentation: Map<number, MangaDirectoryRowPresentation> = new Map<number, MangaDirectoryRowPresentation>();\n    const ancestors: LocalReadingTocEntry[] = [];\n    for (let ordinal = 0; ordinal < entries.length; ordinal += 1) {\n        const entry = entries[ordinal];\n        const level = entry.level;\n        if (level === undefined || !Number.isInteger(level) || level < 1) {\n            for (const ancestor of ancestors) {\n                const value = presentation.get(ancestor.index);\n                if (value !== undefined)\n                    value.countComplete = false;\n            }\n            ancestors.length = 0;\n            continue;\n        }\n        while (ancestors.length > 0 && (ancestors[ancestors.length - 1].level ?? 1) >= level)\n            ancestors.pop();\n        const parent = ancestors.length === 0 ? undefined : ancestors[ancestors.length - 1];\n        const hasChildren = mangaDirectoryHasChildren(entries, ordinal);\n        const group = entry.navigable === false && hasChildren;\n        presentation.set(entry.index, { group, countComplete: true,\n            hasChildren, readableParent: entry.navigable === true && hasChildren,\n            ancestorGroupIndexes: ancestors.map((ancestor: LocalReadingTocEntry): number => ancestor.index),\n            parentIndex: parent?.index, parentTitle: parent?.title,\n            contextTitle: ancestors.length === 0 ? undefined : ancestors.map((ancestor: LocalReadingTocEntry): string => ancestor.title).join(' / '),\n            readableDescendantCount: hasChildren ? 0 : undefined });\n        for (const ancestor of ancestors) {\n            const value = presentation.get(ancestor.index);\n            if (value === undefined)\n                continue;\n            if (entry.navigable === true)\n                value.readableDescendantCount = (value.readableDescendantCount ?? 0) + 1;\n            else if (entry.navigable === undefined)\n                value.countComplete = false;\n        }\n        if (hasChildren)\n            ancestors.push(entry);\n    }\n    return presentation;\n}\nexport function mangaDirectoryVisibleEntries(entries: LocalReadingTocEntry[], presentation: Map<number, MangaDirectoryRowPresentation>, collapsedGroups: number[]): LocalReadingTocEntry[] {\n    const collapsed: Set<number> = new Set<number>(collapsedGroups);\n    return entries.filter((entry: LocalReadingTocEntry): boolean => !(presentation.get(entry.index)?.ancestorGroupIndexes ?? []).some((index: number): boolean => collapsed.has(index)));\n}\n"
+          }
+        },
+        {
+          "file": "entry/src/main/ets/features/manga/MangaDirectoryVisual.ts",
+          "shape": {
+            "types": [],
+            "declarations": [],
+            "styles": [],
+            "implementation": "export interface MangaDirectoryVisual {\n    namedMinHeight: number;\n    namedPaddingX: number;\n    namedPaddingY: number;\n    namedGap: number;\n    namedFontSize: number;\n    namedLineHeight: number;\n    groupMinHeight: number;\n    groupPaddingX: number;\n    groupPaddingY: number;\n    groupGap: number;\n    groupFontSize: number;\n    groupLineHeight: number;\n    groupCountGap: number;\n    stateFontSize: number;\n    stateLineHeight: number;\n    metaFontSize: number;\n    metaLineHeight: number;\n    contentGap: number;\n    gridHeight: number;\n    gridGap: number;\n    gridRunMargin: number;\n    gridBorder: number;\n    gridRadius: number;\n    gridPaddingX: number;\n    gridPaddingY: number;\n    gridMarkSize: number;\n    gridMarkInset: number;\n    contextPaddingTop: number;\n    contextPaddingBottom: number;\n    childPaddingLeft: number;\n    narrowWidth: number;\n    foldDuration: number;\n    searchHeight: number;\n    inputHeight: number;\n    inputPaddingY: number;\n    searchFontSize: number;\n    searchLineHeight: number;\n    searchIconSize: number;\n    searchGap: number;\n    searchPaddingX: number;\n    searchRadius: number;\n    borderWidth: number;\n    contentPaddingX: number;\n    contentTop: number;\n    headerInsetX: number;\n    headerSafeGap: number;\n    headerHeight: number;\n    headerRadius: number;\n    headerPadding: number;\n    headerSlot: number;\n    headerIcon: number;\n    headerFontSize: number;\n    headerLineHeight: number;\n    headerFontWeight: number;\n    summaryFontSize: number;\n    summaryLineHeight: number;\n    summaryGap: number;\n    summaryBottom: number;\n    countFontSize: number;\n    countLineHeight: number;\n    toolFontSize: number;\n    toolLineHeight: number;\n    toolHeight: number;\n    toolIcon: number;\n    toolGap: number;\n    toolsGap: number;\n    toolsTop: number;\n    toolsBottom: number;\n    footerHeight: number;\n    footerGap: number;\n    footerPaddingX: number;\n    footerRadius: number;\n    footerBottom: number;\n    footerTitleFontSize: number;\n    footerTitleLineHeight: number;\n    footerMetaFontSize: number;\n    footerMetaLineHeight: number;\n    footerFontWeight: number;\n    footerClearance: number;\n    quickMaxListHeight: number;\n    quickGap: number;\n    quickPaddingX: number;\n    quickPaddingBottom: number;\n    quickSheetRadius: number;\n    quickHeaderFontSize: number;\n    quickHeaderLineHeight: number;\n    quickHeaderHeight: number;\n    handleWidth: number;\n    handleHeight: number;\n    handleZone: number;\n    closeSize: number;\n    closeIcon: number;\n    closeTop: number;\n    closeRight: number;\n    pressOpacity: number;\n    disabledOpacity: number;\n    clearIconSize: number;\n    clearWidth: number;\n    clearHeight: number;\n    groupIconSize: number;\n    chapterIconSize: number;\n    shadowRadius: number;\n    shadowOffsetY: number;\n    contentWidthMax: number;\n    numericDigitWidthEm: number;\n    partLabelWidthEm: number;\n    footerStackGap: number;\n    footerPaddingY: number;\n    footerMinimumTitleEm: number;\n    quickScrollBottom: number;\n    bodyFontWeight: number;\n    currentFontWeight: number;\n    groupFontWeight: number;\n    summaryFontWeight: number;\n    heroWidth: number;\n    heroHeight: number;\n    heroGap: number;\n    heroRadius: number;\n    heroAuthorFontSize: number;\n    heroAuthorLineHeight: number;\n    positionPaddingX: number;\n    positionPaddingY: number;\n    positionRadius: number;\n    positionTop: number;\n    positionFontSize: number;\n    positionLineHeight: number;\n    positionPageFontSize: number;\n    heroPaddingY: number;\n    heroTitleMargin: number;\n    heroTagGap: number;\n    heroTagWidth: number;\n    heroTagHeight: number;\n    heroTagRadius: number;\n    heroTagFontSize: number;\n    heroTagLineHeight: number;\n    heroSourceTop: number;\n    heroSourceGap: number;\n    heroSourceFontSize: number;\n    heroSourceLineHeight: number;\n    heroCountTop: number;\n    heroCountFontSize: number;\n    heroCountLineHeight: number;\n    positionGap: number;\n    positionRowGap: number;\n    positionPageLineHeight: number;\n    introTop: number;\n    introBottom: number;\n    introBodyTop: number;\n    catalogTop: number;\n    coverGap: number;\n    coverTitleFontSize: number;\n    coverTitleLineHeight: number;\n    coverTinySize: number;\n    coverTinyLine: number;\n    coverTinyTracking: number;\n    coverMediumSize: number;\n    coverMediumLine: number;\n    coverMediumTracking: number;\n    coverFooterSize: number;\n    coverFooterBottom: number;\n    coverFooterLineHeight: number;\n    sectionFontSize: number;\n    sectionLineHeight: number;\n    sectionFontWeight: number;\n    sectionGap: number;\n    sectionBottom: number;\n    sectionCountGap: number;\n    sectionActionHeight: number;\n    sectionActionFontSize: number;\n    sectionActionLineHeight: number;\n    sectionActionIcon: number;\n    sectionActionGap: number;\n    introExpandTop: number;\n    detailDockHeight: number;\n    detailActionMinHeight: number;\n    detailDockPadding: number;\n    detailDockGap: number;\n    detailPrimaryFontSize: number;\n    detailPrimaryLineHeight: number;\n    detailSecondaryFontSize: number;\n    detailSecondaryLineHeight: number;\n    detailSecondaryWidth: number;\n    detailActionRadius: number;\n    detailDockRadius: number;\n    detailDockBottom: number;\n    detailDockClearance: number;\n    introBodyFontSize: number;\n    introBodyLineHeight: number;\n    introMarginTop: number;\n    detailDockInset: number;\n    toolPaddingY: number;\n    positionMinimumTitleEm: number;\n    quietEmptyMinHeight: number;\n    quietEmptyPaddingY: number;\n    quietEmptyPaddingX: number;\n    quietEmptyGap: number;\n    quietEmptyFontSize: number;\n    quietEmptyLineHeight: number;\n    quietEmptyClearHeight: number;\n    scrollbarWidth: number;\n    headerButtonRadius: number;\n    downloadGridWidth: number;\n    focusWidth: number;\n    focusMargin: number;\n    wideHeaderMinHeight: number;\n    wideHeaderBottom: number;\n    wideHeaderPaddingY: number;\n    quickHeaderPaddingRight: number;\n    quickHeaderPaddingBottom: number;\n    wideHeaderFontSize: number;\n    wideHeaderLineHeight: number;\n    wideHeaderFontWeight: number;\n    wideCloseSize: number;\n    sidebarHeaderMinHeight: number;\n    sidebarTitleFontSize: number;\n    sidebarNarrowTitleFontSize: number;\n    sidebarTitleLineHeight: number;\n    sidebarCaptionFontSize: number;\n    sidebarCaptionLineHeight: number;\n    sidebarHeaderGap: number;\n    sidebarPaddingTop: number;\n    sidebarPaddingBottom: number;\n    sidebarPaddingX: number;\n    sidebarNarrowPaddingX: number;\n}\nexport const MANGA_DIRECTORY_VISUAL: MangaDirectoryVisual = {\n    namedMinHeight: 58,\n    namedPaddingX: 10,\n    namedPaddingY: 14,\n    namedGap: 12,\n    namedFontSize: 13,\n    namedLineHeight: 22,\n    groupMinHeight: 48,\n    groupPaddingX: 12,\n    groupPaddingY: 11,\n    groupGap: 14,\n    groupFontSize: 13,\n    groupLineHeight: 21,\n    groupCountGap: 9,\n    stateFontSize: 10,\n    stateLineHeight: 17,\n    metaFontSize: 10,\n    metaLineHeight: 16,\n    contentGap: 4,\n    gridHeight: 44,\n    gridGap: 8,\n    gridRunMargin: 12,\n    gridBorder: 1,\n    gridRadius: 8,\n    gridPaddingX: 5,\n    gridPaddingY: 10,\n    gridMarkSize: 10,\n    gridMarkInset: 5,\n    contextPaddingTop: 11,\n    contextPaddingBottom: 7,\n    childPaddingLeft: 26,\n    narrowWidth: 340,\n    foldDuration: 180,\n    searchHeight: 44,\n    inputHeight: 42,\n    inputPaddingY: 11,\n    searchFontSize: 13,\n    searchLineHeight: 20,\n    searchIconSize: 17,\n    searchGap: 9,\n    searchPaddingX: 11,\n    searchRadius: 12,\n    borderWidth: 1,\n    contentPaddingX: 20,\n    contentTop: 80,\n    headerInsetX: 16,\n    headerSafeGap: 8,\n    headerHeight: 52,\n    headerRadius: 18,\n    headerPadding: 3,\n    headerSlot: 44,\n    headerIcon: 23,\n    headerFontSize: 19,\n    headerLineHeight: 28,\n    headerFontWeight: 650,\n    summaryFontSize: 24,\n    summaryLineHeight: 34,\n    summaryGap: 4,\n    summaryBottom: 20,\n    countFontSize: 11,\n    countLineHeight: 17,\n    toolFontSize: 11,\n    toolLineHeight: 16.5,\n    toolHeight: 38,\n    toolIcon: 15,\n    toolGap: 5,\n    toolsGap: 10,\n    toolsTop: 6,\n    toolsBottom: 12,\n    footerHeight: 48,\n    footerGap: 10,\n    footerPaddingX: 13,\n    footerRadius: 14,\n    footerBottom: 12,\n    footerTitleFontSize: 12,\n    footerTitleLineHeight: 18,\n    footerMetaFontSize: 10,\n    footerMetaLineHeight: 15,\n    footerFontWeight: 500,\n    footerClearance: 72,\n    quickMaxListHeight: 330,\n    quickGap: 17,\n    quickPaddingX: 18,\n    quickPaddingBottom: 24,\n    quickSheetRadius: 22,\n    quickHeaderFontSize: 18,\n    quickHeaderLineHeight: 27,\n    quickHeaderHeight: 30,\n    handleWidth: 42,\n    handleHeight: 5,\n    handleZone: 30,\n    closeSize: 36,\n    closeIcon: 18,\n    closeTop: 24,\n    closeRight: 12,\n    pressOpacity: 0.73,\n    disabledOpacity: 0.36,\n    clearIconSize: 18,\n    clearWidth: 26,\n    clearHeight: 36,\n    groupIconSize: 16,\n    chapterIconSize: 13,\n    shadowRadius: 18,\n    shadowOffsetY: 5,\n    contentWidthMax: 540,\n    numericDigitWidthEm: 0.7,\n    partLabelWidthEm: 3,\n    footerStackGap: 4,\n    footerPaddingY: 10,\n    footerMinimumTitleEm: 4,\n    quickScrollBottom: 14,\n    bodyFontWeight: 400,\n    currentFontWeight: 550,\n    groupFontWeight: 600,\n    summaryFontWeight: 700,\n    heroWidth: 84,\n    heroHeight: 122,\n    heroGap: 18,\n    heroRadius: 8,\n    heroAuthorFontSize: 13,\n    heroAuthorLineHeight: 20,\n    positionPaddingX: 14,\n    positionPaddingY: 13,\n    positionRadius: 12,\n    positionTop: 24,\n    positionFontSize: 12,\n    positionLineHeight: 19,\n    positionPageFontSize: 11,\n    heroPaddingY: 2,\n    heroTitleMargin: 5,\n    heroTagGap: 4,\n    heroTagWidth: 30,\n    heroTagHeight: 16,\n    heroTagRadius: 4,\n    heroTagFontSize: 9,\n    heroTagLineHeight: 14,\n    heroSourceTop: 6,\n    heroSourceGap: 8,\n    heroSourceFontSize: 11,\n    heroSourceLineHeight: 18,\n    heroCountTop: 5,\n    heroCountFontSize: 11,\n    heroCountLineHeight: 18,\n    positionGap: 5,\n    positionRowGap: 12,\n    positionPageLineHeight: 19,\n    introTop: 22,\n    introBottom: 18,\n    introBodyTop: 11,\n    catalogTop: 25,\n    coverGap: 7,\n    coverTitleFontSize: 19,\n    coverTitleLineHeight: 27,\n    coverTinySize: 6,\n    coverTinyLine: 9,\n    coverTinyTracking: 2,\n    coverMediumSize: 8,\n    coverMediumLine: 12,\n    coverMediumTracking: 3,\n    coverFooterSize: 7,\n    coverFooterBottom: 5,\n    coverFooterLineHeight: 10,\n    sectionFontSize: 17,\n    sectionLineHeight: 25,\n    sectionFontWeight: 650,\n    sectionGap: 12,\n    sectionBottom: 13,\n    sectionCountGap: 4,\n    sectionActionHeight: 36,\n    sectionActionFontSize: 12,\n    sectionActionLineHeight: 18,\n    sectionActionIcon: 15,\n    sectionActionGap: 5,\n    introExpandTop: 4,\n    detailDockHeight: 68,\n    detailActionMinHeight: 48,\n    detailDockPadding: 9,\n    detailDockGap: 12,\n    detailPrimaryFontSize: 14,\n    detailPrimaryLineHeight: 21,\n    detailSecondaryFontSize: 12,\n    detailSecondaryLineHeight: 18,\n    detailSecondaryWidth: 94,\n    detailActionRadius: 16,\n    detailDockRadius: 24,\n    detailDockBottom: 15,\n    detailDockClearance: 28,\n    introBodyFontSize: 13,\n    introBodyLineHeight: 24,\n    introMarginTop: 24,\n    detailDockInset: 30,\n    toolPaddingY: 4,\n    positionMinimumTitleEm: 4,\n    quietEmptyMinHeight: 164,\n    quietEmptyPaddingY: 36,\n    quietEmptyPaddingX: 12,\n    quietEmptyGap: 8,\n    quietEmptyFontSize: 12,\n    quietEmptyLineHeight: 18,\n    quietEmptyClearHeight: 36,\n    scrollbarWidth: 4,\n    headerButtonRadius: 13,\n    downloadGridWidth: 24,\n    focusWidth: 2,\n    focusMargin: 3,\n    wideHeaderMinHeight: 66,\n    wideHeaderBottom: 17,\n    wideHeaderPaddingY: 12,\n    quickHeaderPaddingRight: 52,\n    quickHeaderPaddingBottom: 14,\n    wideHeaderFontSize: 15,\n    wideHeaderLineHeight: 24,\n    wideHeaderFontWeight: 600,\n    wideCloseSize: 34,\n    sidebarHeaderMinHeight: 80,\n    sidebarTitleFontSize: 18,\n    sidebarNarrowTitleFontSize: 16,\n    sidebarTitleLineHeight: 26,\n    sidebarCaptionFontSize: 10,\n    sidebarCaptionLineHeight: 17,\n    sidebarHeaderGap: 3,\n    sidebarPaddingTop: 20,\n    sidebarPaddingBottom: 16,\n    sidebarPaddingX: 19,\n    sidebarNarrowPaddingX: 13,\n};\nexport function mangaDirectoryColor(role: string, scheme: string): string {\n    const dark = scheme === 'night' || scheme === 'theme-dark';\n    switch (role) {\n        case 'paper': return dark ? '#1C1E1A' : '#F8F4EC';\n        case 'surface': return dark ? '#282C25' : '#FFFCF8';\n        case 'soft': return dark ? '#30342D' : '#F0ECE3';\n        case 'ink': return dark ? '#EAE7DE' : '#1F1B17';\n        case 'muted': return dark ? '#ABA99F' : '#756F69';\n        case 'faint': return dark ? '#767D71' : '#A39C90';\n        case 'green': return dark ? '#324C37' : '#1F3528';\n        case 'accent': return dark ? '#B9CEB1' : '#425D45';\n        case 'onGreen': return dark ? '#FFFAF4' : '#FFFAF4';\n        case 'active': return dark ? '#303C2D' : '#E8EDE2';\n        case 'line': return dark ? '#3B4036' : '#E7E0D5';\n        case 'frame': return dark ? '#4D5447' : '#D7D0C3';\n        case 'shadow': return dark ? '#29000000' : '#12372A18';\n        case 'handle': return dark ? '#565E50' : '#C9C9C4';\n        case 'scrim': return dark ? '#57000000' : '#57000000';\n        case 'scrollbar': return dark ? '#47000000' : '#47000000';\n        default: return dark ? '#EAE7DE' : '#1F1B17';\n    }\n}\nexport function mangaDirectoryScale(fontScale: number): number {\n    return Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;\n}\nexport function mangaDirectoryLineBox(minimum: number, line: number, verticalPadding: number, fontScale: number): number {\n    return Math.max(minimum, line * mangaDirectoryScale(fontScale) + verticalPadding);\n}\nexport function mangaDirectoryQuickMinimumListHeight(fontScale: number): number {\n    return Math.min(MANGA_DIRECTORY_VISUAL.quickMaxListHeight, Math.max(MANGA_DIRECTORY_VISUAL.gridHeight, MANGA_DIRECTORY_VISUAL.namedMinHeight) * mangaDirectoryScale(fontScale));\n}\nexport function mangaDirectoryFullFlowFooter(viewportHeight: number, fontScale: number, safeTop: number, safeBottom: number, footerHeight: number): boolean {\n    if (!Number.isFinite(viewportHeight) || viewportHeight <= 0)\n        return false;\n    const scale = mangaDirectoryScale(fontScale);\n    const headerBottom = Math.max(0, safeTop) + MANGA_DIRECTORY_VISUAL.headerSafeGap + mangaDirectoryHeaderHeight(scale);\n    const footerTop = viewportHeight - Math.max(0, safeBottom) - MANGA_DIRECTORY_VISUAL.footerBottom - Math.max(0, footerHeight);\n    const minimum = Math.max(MANGA_DIRECTORY_VISUAL.namedMinHeight, MANGA_DIRECTORY_VISUAL.namedLineHeight * scale + MANGA_DIRECTORY_VISUAL.namedPaddingY * 2 + MANGA_DIRECTORY_VISUAL.gridBorder);\n    return footerTop - headerBottom < minimum;\n}\nexport function mangaDirectoryQuickFlowGaps(): number {\n    return MANGA_DIRECTORY_VISUAL.quickGap * 2;\n}\nexport function mangaDirectoryPositionStacked(contentWidth: number, fontScale: number, position: string): boolean {\n    if (!Number.isFinite(contentWidth) || contentWidth <= 0)\n        return false;\n    const scale = mangaDirectoryScale(fontScale);\n    const pageEm = Array.from(position).reduce((sum: number, character: string): number => sum + (character.charCodeAt(0) < 128 ? MANGA_DIRECTORY_VISUAL.numericDigitWidthEm : 1), 0);\n    const reserved = (MANGA_DIRECTORY_VISUAL.positionMinimumTitleEm * MANGA_DIRECTORY_VISUAL.positionFontSize + pageEm * MANGA_DIRECTORY_VISUAL.positionPageFontSize) * scale + MANGA_DIRECTORY_VISUAL.positionRowGap + MANGA_DIRECTORY_VISUAL.positionPaddingX * 2;\n    return contentWidth < reserved;\n}\nexport function mangaDirectoryHeaderHeight(fontScale: number): number {\n    return Math.max(MANGA_DIRECTORY_VISUAL.headerHeight, MANGA_DIRECTORY_VISUAL.headerLineHeight * mangaDirectoryScale(fontScale) + MANGA_DIRECTORY_VISUAL.headerPadding * 2 + MANGA_DIRECTORY_VISUAL.borderWidth * 2);\n}\nexport function mangaDirectoryContentTop(fontScale: number): number {\n    return mangaDirectoryHeaderHeight(fontScale) + MANGA_DIRECTORY_VISUAL.contentTop - MANGA_DIRECTORY_VISUAL.headerHeight;\n}\nexport function mangaDirectoryFooterStacked(contentWidth: number, fontScale: number, position: string): boolean {\n    if (!Number.isFinite(contentWidth) || contentWidth <= 0)\n        return false;\n    const pageEm = Array.from(position).reduce((sum: number, character: string): number => sum + (character.charCodeAt(0) < 128 ? MANGA_DIRECTORY_VISUAL.numericDigitWidthEm : 1), 0);\n    const reserved = (4 + pageEm) * MANGA_DIRECTORY_VISUAL.footerMetaFontSize * mangaDirectoryScale(fontScale) + MANGA_DIRECTORY_VISUAL.footerMinimumTitleEm * MANGA_DIRECTORY_VISUAL.footerTitleFontSize * mangaDirectoryScale(fontScale) + MANGA_DIRECTORY_VISUAL.footerGap * 2 + (MANGA_DIRECTORY_VISUAL.footerPaddingX + MANGA_DIRECTORY_VISUAL.borderWidth) * 2;\n    return contentWidth < reserved;\n}\nexport function mangaDirectoryFooterHeight(fontScale: number, contentWidth: number = 0, position: string = ''): number {\n    const scale = mangaDirectoryScale(fontScale);\n    if (!mangaDirectoryFooterStacked(contentWidth, scale, position))\n        return mangaDirectoryLineBox(MANGA_DIRECTORY_VISUAL.footerHeight, MANGA_DIRECTORY_VISUAL.footerTitleLineHeight, (MANGA_DIRECTORY_VISUAL.footerPaddingY + MANGA_DIRECTORY_VISUAL.borderWidth) * 2, scale);\n    const inner = Math.max(1, contentWidth - (MANGA_DIRECTORY_VISUAL.footerPaddingX + MANGA_DIRECTORY_VISUAL.borderWidth) * 2);\n    const pageEm = Array.from(position).reduce((sum: number, character: string): number => sum + (character.charCodeAt(0) < 128 ? MANGA_DIRECTORY_VISUAL.numericDigitWidthEm : 1), 0);\n    const pageLines = position.length === 0 ? 0 : Math.max(1, Math.ceil(pageEm * MANGA_DIRECTORY_VISUAL.footerMetaFontSize * scale / inner));\n    return Math.max(MANGA_DIRECTORY_VISUAL.footerHeight, (MANGA_DIRECTORY_VISUAL.footerMetaLineHeight * (1 + pageLines) + MANGA_DIRECTORY_VISUAL.footerTitleLineHeight) * scale + MANGA_DIRECTORY_VISUAL.footerStackGap * (pageLines > 0 ? 2 : 1) + (MANGA_DIRECTORY_VISUAL.footerPaddingY + MANGA_DIRECTORY_VISUAL.borderWidth) * 2);\n}\nexport function mangaDirectoryLabelsFit(kind: string, fontScale: number, contentWidth: number, numberLengths: number[], accessoryWidth: number = 0): boolean {\n    if (!Number.isFinite(contentWidth) || contentWidth <= 0)\n        return true;\n    return numberLengths.every((length: number): boolean => (length * MANGA_DIRECTORY_VISUAL.namedFontSize * MANGA_DIRECTORY_VISUAL.numericDigitWidthEm + (kind === 'parts' ? MANGA_DIRECTORY_VISUAL.namedFontSize * MANGA_DIRECTORY_VISUAL.partLabelWidthEm : 0)) * mangaDirectoryScale(fontScale) + (MANGA_DIRECTORY_VISUAL.gridPaddingX + MANGA_DIRECTORY_VISUAL.gridBorder) * 2 + Math.max(0, accessoryWidth) <= contentWidth);\n}\nexport function mangaDirectoryColumns(kind: string, hasMiddle: boolean, narrow: boolean, fontScale: number, contentWidth: number, numberLengths: number[], accessoryWidth: number = 0): number {\n    if (kind === 'named')\n        return 1;\n    const preferred = kind === 'numeric' ? (narrow ? 3 : 4) : hasMiddle ? 3 : narrow ? 2 : 4;\n    if (!Number.isFinite(contentWidth) || contentWidth <= 0)\n        return preferred;\n    const longest = numberLengths.reduce((length: number, value: number): number => Math.max(length, value), 0);\n    const text = (longest * MANGA_DIRECTORY_VISUAL.namedFontSize * MANGA_DIRECTORY_VISUAL.numericDigitWidthEm + (kind === 'parts' ? MANGA_DIRECTORY_VISUAL.namedFontSize * MANGA_DIRECTORY_VISUAL.partLabelWidthEm : 0)) * mangaDirectoryScale(fontScale);\n    const minimum = Math.max(MANGA_DIRECTORY_VISUAL.gridHeight, text + MANGA_DIRECTORY_VISUAL.gridPaddingX * 2 + MANGA_DIRECTORY_VISUAL.gridBorder * 2 + Math.max(0, accessoryWidth));\n    return Math.max(1, Math.min(preferred, Math.floor((contentWidth + MANGA_DIRECTORY_VISUAL.gridGap) / (minimum + MANGA_DIRECTORY_VISUAL.gridGap))));\n}\n"
+          }
+        },
+        {
+          "file": "entry/src/main/ets/features/manga/MangaDirectoryPressFeedback.ets",
+          "shape": {
+            "types": [],
+            "declarations": [
+              {
+                "name": "MangaDirectoryPressFeedback",
+                "publicFields": []
+              }
+            ],
+            "styles": [
+              {
+                "owner": "MangaDirectoryPressFeedback",
+                "method": "applyNormalAttribute",
+                "property": "opacity",
+                "args": [
+                  "this.enabled ? 1 : MANGA_DIRECTORY_VISUAL.disabledOpacity"
+                ]
+              },
+              {
+                "owner": "MangaDirectoryPressFeedback",
+                "method": "applyPressedAttribute",
+                "property": "opacity",
+                "args": [
+                  "this.enabled ? MANGA_DIRECTORY_VISUAL.pressOpacity : MANGA_DIRECTORY_VISUAL.disabledOpacity"
+                ]
+              },
+              {
+                "owner": "MangaDirectoryPressFeedback",
+                "method": "applyDisabledAttribute",
+                "property": "opacity",
+                "args": [
+                  "MANGA_DIRECTORY_VISUAL.disabledOpacity"
+                ]
+              }
+            ],
+            "implementation": "import { ColorMetrics, LengthMetrics } from '@kit.ArkUI';\nimport { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor } from './MangaDirectoryVisual';\nexport class MangaDirectoryPressFeedback implements AttributeModifier<CommonAttribute> {\n    private readonly enabled: boolean;\n    private readonly applies: boolean;\n    private readonly scheme: string;\n    constructor(enabled: boolean = true, applies: boolean = true, scheme: string = 'day') {\n        this.enabled = enabled;\n        this.applies = applies;\n        this.scheme = scheme;\n    }\n    private applyFocusBox(instance: CommonAttribute, enabled: boolean = this.enabled): void {\n        instance.focusable(enabled);\n        instance.focusBox({ strokeWidth: LengthMetrics.vp(MANGA_DIRECTORY_VISUAL.focusWidth),\n            strokeColor: ColorMetrics.resourceColor(mangaDirectoryColor('accent', this.scheme)),\n            margin: LengthMetrics.vp(MANGA_DIRECTORY_VISUAL.focusMargin) });\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (!this.applies)\n            return;\n        instance.opacity(this.enabled ? 1 : MANGA_DIRECTORY_VISUAL.disabledOpacity);\n        this.applyFocusBox(instance);\n    }\n    applyPressedAttribute(instance: CommonAttribute): void {\n        if (!this.applies)\n            return;\n        instance.opacity(this.enabled ? MANGA_DIRECTORY_VISUAL.pressOpacity : MANGA_DIRECTORY_VISUAL.disabledOpacity);\n        this.applyFocusBox(instance);\n    }\n    applyDisabledAttribute(instance: CommonAttribute): void {\n        if (!this.applies)\n            return;\n        instance.opacity(MANGA_DIRECTORY_VISUAL.disabledOpacity);\n        this.applyFocusBox(instance, false);\n    }\n}\n"
+          }
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#mangaFlatRow",
+          "component": "MangaDirectoryEntryRow",
+          "specId": null,
+          "keys": [
+            "row",
+            "presentation",
+            "scheme",
+            "currentChapterIndex",
+            "collapsedBranches",
+            "query",
+            "chapterDownloadEnabled",
+            "onSelectEntry",
+            "onToggleBranch",
+            "onDownloadEntry"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalBookDetail.ets",
+          "method": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#catalog",
+          "component": "MangaDirectoryEntryRow",
+          "specId": null,
+          "keys": [
+            "row",
+            "presentation",
+            "scheme",
+            "currentChapterIndex",
+            "showContext",
+            "interactionEnabled",
+            "branchControlsEnabled",
+            "collapsedBranches",
+            "onSelectEntry"
+          ]
+        },
+        {
+          "file": "features/manga/MangaReadingDirectoryFallback.ets",
+          "method": "features/manga/MangaReadingDirectoryFallback.ets#MangaReadingDirectoryFallback#row",
+          "component": "MangaDirectoryEntryRow",
+          "specId": null,
+          "keys": [
+            "row",
+            "presentation",
+            "scheme",
+            "currentChapterIndex",
+            "collapsedBranches",
+            "query",
+            "showContext",
+            "branchControlsEnabled",
+            "chapterDownloadEnabled",
+            "onSelectEntry",
+            "onToggleBranch",
+            "onDownloadEntry"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+        "entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets"
+      ],
+      "sdkProofs": [
+        "tools/test-manga-directory-entry-row.mjs",
+        "tools/test-manga-reading-directory-fallback.mjs",
+        "tools/test-manga-book-directory-chrome.mjs",
+        "tools/test-manga-directory-press-feedback.mjs"
+      ]
+    },
+    {
+      "id": "shared-MangaDirectoryCurrentFooter",
+      "file": "entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets",
+      "component": "MangaDirectoryCurrentFooter",
+      "specPolicy": "Finite generated current-position footer shared by full and quick manga directories. Only canonical title, page position, theme scheme, actual measured available width and height observation are inputs. The generated visual contract owns typography, minimum height and narrow or large-font stacked presentation; callers cannot override its paint or spacing.",
+      "successorFacts": {
+        "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      },
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "MangaDirectoryCurrentFooter",
+            "publicFields": [
+              {
+                "name": "title",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "pagePosition",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "scheme",
+                "type": "string",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "availableWidth",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onHeightChanged",
+                "type": "(height: number) => void",
+                "decorators": []
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "label",
+            "property": "fontColor",
+            "args": [
+              "mangaDirectoryColor('muted', this.scheme)"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "label",
+            "property": "lineHeight",
+            "args": [
+              "visual.footerMetaLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "label",
+            "property": "fontSize",
+            "args": [
+              "visual.footerMetaFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "label",
+            "property": "fontWeight",
+            "args": [
+              "visual.bodyFontWeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "label",
+            "property": "fontFamily",
+            "args": [
+              "READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "chapter",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "chapter",
+            "property": "fontColor",
+            "args": [
+              "mangaDirectoryColor('ink', this.scheme)"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "chapter",
+            "property": "lineHeight",
+            "args": [
+              "visual.footerTitleLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "chapter",
+            "property": "fontSize",
+            "args": [
+              "visual.footerTitleFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "chapter",
+            "property": "fontWeight",
+            "args": [
+              "visual.footerFontWeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "chapter",
+            "property": "fontFamily",
+            "args": [
+              "READER_FONT_NOTO_SANS_SC_UI_MEDIUM"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "page",
+            "property": "fontColor",
+            "args": [
+              "mangaDirectoryColor('muted', this.scheme)"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "page",
+            "property": "lineHeight",
+            "args": [
+              "visual.footerMetaLineHeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "page",
+            "property": "fontSize",
+            "args": [
+              "visual.footerMetaFontSize"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "page",
+            "property": "fontWeight",
+            "args": [
+              "visual.bodyFontWeight"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "page",
+            "property": "fontFamily",
+            "args": [
+              "READER_FONT_NOTO_SANS_SC_UI_REGULAR"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "build",
+            "property": "borderRadius",
+            "args": [
+              "visual.footerRadius"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "build",
+            "property": "border",
+            "args": [
+              "{ width: visual.borderWidth, color: mangaDirectoryColor('line', this.scheme) }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "build",
+            "property": "backgroundColor",
+            "args": [
+              "mangaDirectoryColor('soft', this.scheme)"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: visual.footerPaddingX, right: visual.footerPaddingX, top: visual.footerPaddingY, bottom: visual.footerPaddingY }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "build",
+            "property": "constraintSize",
+            "args": [
+              "{ minHeight: visual.footerHeight }"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "MangaDirectoryCurrentFooter",
+            "method": "build",
+            "property": "constraintSize",
+            "args": [
+              "{ minWidth: 0 }"
+            ]
+          }
+        ],
+        "implementation": "import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';\nimport { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../common/ReaderFontFamilies';\nimport { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryFooterStacked } from './MangaDirectoryVisual';\n@Component\nexport struct MangaDirectoryCurrentFooter extends   {\n    constructor(?: {\n        private metricsRevision?: number;\n        title?: string;\n        pagePosition?: string;\n        scheme?: string;\n        availableWidth?: number;\n        onHeightChanged?: (height: number) => void;\n        private measuredWidth?: number;\n    }, ?: ) { }\n    @StorageLink('readerWindowMetricsRevision')\n    private metricsRevision: number = 0;\n    @Prop\n    title: string = '';\n    @Prop\n    pagePosition: string = '';\n    @Prop\n    scheme: string = 'day';\n    @Prop\n    availableWidth: number = 0;\n    onHeightChanged: (height: number) => void = (_height: number): void => { };\n    @State\n    private measuredWidth: number = 0;\n    private footerFontScale(): number {\n        const revision = this.metricsRevision;\n        return mangaDirectoryScale(revision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale);\n    }\n    private stacked(): boolean { return mangaDirectoryFooterStacked(this.availableWidth > 0 ? this.availableWidth : this.measuredWidth, this.footerFontScale(), this.pagePosition); }\n    @Builder\n    private label() {\n        .fontFamily<\n    >(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight<\n    >(visual.bodyFontWeight)\n            .fontSize<\n    >(visual.footerMetaFontSize).lineHeight<\n    >(visual.footerMetaLineHeight).halfLeading<\n    >(true)\n            .minFontScale<\n    >(Math.min(1, this.footerFontScale())).maxFontScale<\n    >(Math.max(1, this.footerFontScale()))\n            .fontColor<\n    >(mangaDirectoryColor('muted', this.scheme)).flexShrink<\n    >(0);\n    }\n    @Builder\n    private chapter() {\n        .fontFamily<\n    >(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight<\n    >(visual.footerFontWeight)\n            .fontSize<\n    >(visual.footerTitleFontSize).lineHeight<\n    >(visual.footerTitleLineHeight).halfLeading<\n    >(true)\n            .minFontScale<\n    >(Math.min(1, this.footerFontScale())).maxFontScale<\n    >(Math.max(1, this.footerFontScale()))\n            .fontColor<\n    >(mangaDirectoryColor('ink', this.scheme)).width<\n    >('100%').maxLines<\n    >(1).textOverflow<\n    >({ overflow: TextOverflow.Ellipsis });\n    }\n    @Builder\n    private page() {\n        if (this.pagePosition.length > 0) {\n            .fontFamily<\n      >(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight<\n      >(visual.bodyFontWeight)\n                .fontSize<\n      >(visual.footerMetaFontSize).lineHeight<\n      >(visual.footerMetaLineHeight).halfLeading<\n      >(true).fontFeature<\n      >(\"'tnum' 1\")\n                .minFontScale<\n      >(Math.min(1, this.footerFontScale())).maxFontScale<\n      >(Math.max(1, this.footerFontScale()))\n                .fontColor<\n      >(mangaDirectoryColor('muted', this.scheme)).wordBreak<\n      >(WordBreak.BREAK_WORD).flexShrink<\n      >(0);\n        }\n    }\n    build() {\n        .width<\n    >('100%').constraintSize<\n    >({ minHeight: visual.footerHeight })\n            .justifyContent<\n    >(FlexAlign.Center).alignItems<\n    >(HorizontalAlign.Start)\n            .padding<\n    >({ left: visual.footerPaddingX, right: visual.footerPaddingX, top: visual.footerPaddingY, bottom: visual.footerPaddingY })\n            .backgroundColor<\n    >(mangaDirectoryColor('soft', this.scheme))\n            .border<\n    >({ width: visual.borderWidth, color: mangaDirectoryColor('line', this.scheme) }).borderRadius<\n    >(visual.footerRadius)\n            .accessibilityText<\n    >('当前阅读位置')\n            .onAreaChange<\n    >((_old: Area, area: Area): void => {\n            const width = Number(area.width), height = Number(area.height);\n            if (Number.isFinite(width) && width > 0 && Math.abs(width - this.measuredWidth) > .1)\n                this.measuredWidth = width;\n            if (Number.isFinite(height) && height > 0)\n                this.onHeightChanged(height);\n        });\n    }\n}\n"
+      },
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/manga/MangaDirectoryVisual.ts",
+          "shape": {
+            "types": [],
+            "declarations": [],
+            "styles": [],
+            "implementation": "export interface MangaDirectoryVisual {\n    namedMinHeight: number;\n    namedPaddingX: number;\n    namedPaddingY: number;\n    namedGap: number;\n    namedFontSize: number;\n    namedLineHeight: number;\n    groupMinHeight: number;\n    groupPaddingX: number;\n    groupPaddingY: number;\n    groupGap: number;\n    groupFontSize: number;\n    groupLineHeight: number;\n    groupCountGap: number;\n    stateFontSize: number;\n    stateLineHeight: number;\n    metaFontSize: number;\n    metaLineHeight: number;\n    contentGap: number;\n    gridHeight: number;\n    gridGap: number;\n    gridRunMargin: number;\n    gridBorder: number;\n    gridRadius: number;\n    gridPaddingX: number;\n    gridPaddingY: number;\n    gridMarkSize: number;\n    gridMarkInset: number;\n    contextPaddingTop: number;\n    contextPaddingBottom: number;\n    childPaddingLeft: number;\n    narrowWidth: number;\n    foldDuration: number;\n    searchHeight: number;\n    inputHeight: number;\n    inputPaddingY: number;\n    searchFontSize: number;\n    searchLineHeight: number;\n    searchIconSize: number;\n    searchGap: number;\n    searchPaddingX: number;\n    searchRadius: number;\n    borderWidth: number;\n    contentPaddingX: number;\n    contentTop: number;\n    headerInsetX: number;\n    headerSafeGap: number;\n    headerHeight: number;\n    headerRadius: number;\n    headerPadding: number;\n    headerSlot: number;\n    headerIcon: number;\n    headerFontSize: number;\n    headerLineHeight: number;\n    headerFontWeight: number;\n    summaryFontSize: number;\n    summaryLineHeight: number;\n    summaryGap: number;\n    summaryBottom: number;\n    countFontSize: number;\n    countLineHeight: number;\n    toolFontSize: number;\n    toolLineHeight: number;\n    toolHeight: number;\n    toolIcon: number;\n    toolGap: number;\n    toolsGap: number;\n    toolsTop: number;\n    toolsBottom: number;\n    footerHeight: number;\n    footerGap: number;\n    footerPaddingX: number;\n    footerRadius: number;\n    footerBottom: number;\n    footerTitleFontSize: number;\n    footerTitleLineHeight: number;\n    footerMetaFontSize: number;\n    footerMetaLineHeight: number;\n    footerFontWeight: number;\n    footerClearance: number;\n    quickMaxListHeight: number;\n    quickGap: number;\n    quickPaddingX: number;\n    quickPaddingBottom: number;\n    quickSheetRadius: number;\n    quickHeaderFontSize: number;\n    quickHeaderLineHeight: number;\n    quickHeaderHeight: number;\n    handleWidth: number;\n    handleHeight: number;\n    handleZone: number;\n    closeSize: number;\n    closeIcon: number;\n    closeTop: number;\n    closeRight: number;\n    pressOpacity: number;\n    disabledOpacity: number;\n    clearIconSize: number;\n    clearWidth: number;\n    clearHeight: number;\n    groupIconSize: number;\n    chapterIconSize: number;\n    shadowRadius: number;\n    shadowOffsetY: number;\n    contentWidthMax: number;\n    numericDigitWidthEm: number;\n    partLabelWidthEm: number;\n    footerStackGap: number;\n    footerPaddingY: number;\n    footerMinimumTitleEm: number;\n    quickScrollBottom: number;\n    bodyFontWeight: number;\n    currentFontWeight: number;\n    groupFontWeight: number;\n    summaryFontWeight: number;\n    heroWidth: number;\n    heroHeight: number;\n    heroGap: number;\n    heroRadius: number;\n    heroAuthorFontSize: number;\n    heroAuthorLineHeight: number;\n    positionPaddingX: number;\n    positionPaddingY: number;\n    positionRadius: number;\n    positionTop: number;\n    positionFontSize: number;\n    positionLineHeight: number;\n    positionPageFontSize: number;\n    heroPaddingY: number;\n    heroTitleMargin: number;\n    heroTagGap: number;\n    heroTagWidth: number;\n    heroTagHeight: number;\n    heroTagRadius: number;\n    heroTagFontSize: number;\n    heroTagLineHeight: number;\n    heroSourceTop: number;\n    heroSourceGap: number;\n    heroSourceFontSize: number;\n    heroSourceLineHeight: number;\n    heroCountTop: number;\n    heroCountFontSize: number;\n    heroCountLineHeight: number;\n    positionGap: number;\n    positionRowGap: number;\n    positionPageLineHeight: number;\n    introTop: number;\n    introBottom: number;\n    introBodyTop: number;\n    catalogTop: number;\n    coverGap: number;\n    coverTitleFontSize: number;\n    coverTitleLineHeight: number;\n    coverTinySize: number;\n    coverTinyLine: number;\n    coverTinyTracking: number;\n    coverMediumSize: number;\n    coverMediumLine: number;\n    coverMediumTracking: number;\n    coverFooterSize: number;\n    coverFooterBottom: number;\n    coverFooterLineHeight: number;\n    sectionFontSize: number;\n    sectionLineHeight: number;\n    sectionFontWeight: number;\n    sectionGap: number;\n    sectionBottom: number;\n    sectionCountGap: number;\n    sectionActionHeight: number;\n    sectionActionFontSize: number;\n    sectionActionLineHeight: number;\n    sectionActionIcon: number;\n    sectionActionGap: number;\n    introExpandTop: number;\n    detailDockHeight: number;\n    detailActionMinHeight: number;\n    detailDockPadding: number;\n    detailDockGap: number;\n    detailPrimaryFontSize: number;\n    detailPrimaryLineHeight: number;\n    detailSecondaryFontSize: number;\n    detailSecondaryLineHeight: number;\n    detailSecondaryWidth: number;\n    detailActionRadius: number;\n    detailDockRadius: number;\n    detailDockBottom: number;\n    detailDockClearance: number;\n    introBodyFontSize: number;\n    introBodyLineHeight: number;\n    introMarginTop: number;\n    detailDockInset: number;\n    toolPaddingY: number;\n    positionMinimumTitleEm: number;\n    quietEmptyMinHeight: number;\n    quietEmptyPaddingY: number;\n    quietEmptyPaddingX: number;\n    quietEmptyGap: number;\n    quietEmptyFontSize: number;\n    quietEmptyLineHeight: number;\n    quietEmptyClearHeight: number;\n    scrollbarWidth: number;\n    headerButtonRadius: number;\n    downloadGridWidth: number;\n    focusWidth: number;\n    focusMargin: number;\n    wideHeaderMinHeight: number;\n    wideHeaderBottom: number;\n    wideHeaderPaddingY: number;\n    quickHeaderPaddingRight: number;\n    quickHeaderPaddingBottom: number;\n    wideHeaderFontSize: number;\n    wideHeaderLineHeight: number;\n    wideHeaderFontWeight: number;\n    wideCloseSize: number;\n    sidebarHeaderMinHeight: number;\n    sidebarTitleFontSize: number;\n    sidebarNarrowTitleFontSize: number;\n    sidebarTitleLineHeight: number;\n    sidebarCaptionFontSize: number;\n    sidebarCaptionLineHeight: number;\n    sidebarHeaderGap: number;\n    sidebarPaddingTop: number;\n    sidebarPaddingBottom: number;\n    sidebarPaddingX: number;\n    sidebarNarrowPaddingX: number;\n}\nexport const MANGA_DIRECTORY_VISUAL: MangaDirectoryVisual = {\n    namedMinHeight: 58,\n    namedPaddingX: 10,\n    namedPaddingY: 14,\n    namedGap: 12,\n    namedFontSize: 13,\n    namedLineHeight: 22,\n    groupMinHeight: 48,\n    groupPaddingX: 12,\n    groupPaddingY: 11,\n    groupGap: 14,\n    groupFontSize: 13,\n    groupLineHeight: 21,\n    groupCountGap: 9,\n    stateFontSize: 10,\n    stateLineHeight: 17,\n    metaFontSize: 10,\n    metaLineHeight: 16,\n    contentGap: 4,\n    gridHeight: 44,\n    gridGap: 8,\n    gridRunMargin: 12,\n    gridBorder: 1,\n    gridRadius: 8,\n    gridPaddingX: 5,\n    gridPaddingY: 10,\n    gridMarkSize: 10,\n    gridMarkInset: 5,\n    contextPaddingTop: 11,\n    contextPaddingBottom: 7,\n    childPaddingLeft: 26,\n    narrowWidth: 340,\n    foldDuration: 180,\n    searchHeight: 44,\n    inputHeight: 42,\n    inputPaddingY: 11,\n    searchFontSize: 13,\n    searchLineHeight: 20,\n    searchIconSize: 17,\n    searchGap: 9,\n    searchPaddingX: 11,\n    searchRadius: 12,\n    borderWidth: 1,\n    contentPaddingX: 20,\n    contentTop: 80,\n    headerInsetX: 16,\n    headerSafeGap: 8,\n    headerHeight: 52,\n    headerRadius: 18,\n    headerPadding: 3,\n    headerSlot: 44,\n    headerIcon: 23,\n    headerFontSize: 19,\n    headerLineHeight: 28,\n    headerFontWeight: 650,\n    summaryFontSize: 24,\n    summaryLineHeight: 34,\n    summaryGap: 4,\n    summaryBottom: 20,\n    countFontSize: 11,\n    countLineHeight: 17,\n    toolFontSize: 11,\n    toolLineHeight: 16.5,\n    toolHeight: 38,\n    toolIcon: 15,\n    toolGap: 5,\n    toolsGap: 10,\n    toolsTop: 6,\n    toolsBottom: 12,\n    footerHeight: 48,\n    footerGap: 10,\n    footerPaddingX: 13,\n    footerRadius: 14,\n    footerBottom: 12,\n    footerTitleFontSize: 12,\n    footerTitleLineHeight: 18,\n    footerMetaFontSize: 10,\n    footerMetaLineHeight: 15,\n    footerFontWeight: 500,\n    footerClearance: 72,\n    quickMaxListHeight: 330,\n    quickGap: 17,\n    quickPaddingX: 18,\n    quickPaddingBottom: 24,\n    quickSheetRadius: 22,\n    quickHeaderFontSize: 18,\n    quickHeaderLineHeight: 27,\n    quickHeaderHeight: 30,\n    handleWidth: 42,\n    handleHeight: 5,\n    handleZone: 30,\n    closeSize: 36,\n    closeIcon: 18,\n    closeTop: 24,\n    closeRight: 12,\n    pressOpacity: 0.73,\n    disabledOpacity: 0.36,\n    clearIconSize: 18,\n    clearWidth: 26,\n    clearHeight: 36,\n    groupIconSize: 16,\n    chapterIconSize: 13,\n    shadowRadius: 18,\n    shadowOffsetY: 5,\n    contentWidthMax: 540,\n    numericDigitWidthEm: 0.7,\n    partLabelWidthEm: 3,\n    footerStackGap: 4,\n    footerPaddingY: 10,\n    footerMinimumTitleEm: 4,\n    quickScrollBottom: 14,\n    bodyFontWeight: 400,\n    currentFontWeight: 550,\n    groupFontWeight: 600,\n    summaryFontWeight: 700,\n    heroWidth: 84,\n    heroHeight: 122,\n    heroGap: 18,\n    heroRadius: 8,\n    heroAuthorFontSize: 13,\n    heroAuthorLineHeight: 20,\n    positionPaddingX: 14,\n    positionPaddingY: 13,\n    positionRadius: 12,\n    positionTop: 24,\n    positionFontSize: 12,\n    positionLineHeight: 19,\n    positionPageFontSize: 11,\n    heroPaddingY: 2,\n    heroTitleMargin: 5,\n    heroTagGap: 4,\n    heroTagWidth: 30,\n    heroTagHeight: 16,\n    heroTagRadius: 4,\n    heroTagFontSize: 9,\n    heroTagLineHeight: 14,\n    heroSourceTop: 6,\n    heroSourceGap: 8,\n    heroSourceFontSize: 11,\n    heroSourceLineHeight: 18,\n    heroCountTop: 5,\n    heroCountFontSize: 11,\n    heroCountLineHeight: 18,\n    positionGap: 5,\n    positionRowGap: 12,\n    positionPageLineHeight: 19,\n    introTop: 22,\n    introBottom: 18,\n    introBodyTop: 11,\n    catalogTop: 25,\n    coverGap: 7,\n    coverTitleFontSize: 19,\n    coverTitleLineHeight: 27,\n    coverTinySize: 6,\n    coverTinyLine: 9,\n    coverTinyTracking: 2,\n    coverMediumSize: 8,\n    coverMediumLine: 12,\n    coverMediumTracking: 3,\n    coverFooterSize: 7,\n    coverFooterBottom: 5,\n    coverFooterLineHeight: 10,\n    sectionFontSize: 17,\n    sectionLineHeight: 25,\n    sectionFontWeight: 650,\n    sectionGap: 12,\n    sectionBottom: 13,\n    sectionCountGap: 4,\n    sectionActionHeight: 36,\n    sectionActionFontSize: 12,\n    sectionActionLineHeight: 18,\n    sectionActionIcon: 15,\n    sectionActionGap: 5,\n    introExpandTop: 4,\n    detailDockHeight: 68,\n    detailActionMinHeight: 48,\n    detailDockPadding: 9,\n    detailDockGap: 12,\n    detailPrimaryFontSize: 14,\n    detailPrimaryLineHeight: 21,\n    detailSecondaryFontSize: 12,\n    detailSecondaryLineHeight: 18,\n    detailSecondaryWidth: 94,\n    detailActionRadius: 16,\n    detailDockRadius: 24,\n    detailDockBottom: 15,\n    detailDockClearance: 28,\n    introBodyFontSize: 13,\n    introBodyLineHeight: 24,\n    introMarginTop: 24,\n    detailDockInset: 30,\n    toolPaddingY: 4,\n    positionMinimumTitleEm: 4,\n    quietEmptyMinHeight: 164,\n    quietEmptyPaddingY: 36,\n    quietEmptyPaddingX: 12,\n    quietEmptyGap: 8,\n    quietEmptyFontSize: 12,\n    quietEmptyLineHeight: 18,\n    quietEmptyClearHeight: 36,\n    scrollbarWidth: 4,\n    headerButtonRadius: 13,\n    downloadGridWidth: 24,\n    focusWidth: 2,\n    focusMargin: 3,\n    wideHeaderMinHeight: 66,\n    wideHeaderBottom: 17,\n    wideHeaderPaddingY: 12,\n    quickHeaderPaddingRight: 52,\n    quickHeaderPaddingBottom: 14,\n    wideHeaderFontSize: 15,\n    wideHeaderLineHeight: 24,\n    wideHeaderFontWeight: 600,\n    wideCloseSize: 34,\n    sidebarHeaderMinHeight: 80,\n    sidebarTitleFontSize: 18,\n    sidebarNarrowTitleFontSize: 16,\n    sidebarTitleLineHeight: 26,\n    sidebarCaptionFontSize: 10,\n    sidebarCaptionLineHeight: 17,\n    sidebarHeaderGap: 3,\n    sidebarPaddingTop: 20,\n    sidebarPaddingBottom: 16,\n    sidebarPaddingX: 19,\n    sidebarNarrowPaddingX: 13,\n};\nexport function mangaDirectoryColor(role: string, scheme: string): string {\n    const dark = scheme === 'night' || scheme === 'theme-dark';\n    switch (role) {\n        case 'paper': return dark ? '#1C1E1A' : '#F8F4EC';\n        case 'surface': return dark ? '#282C25' : '#FFFCF8';\n        case 'soft': return dark ? '#30342D' : '#F0ECE3';\n        case 'ink': return dark ? '#EAE7DE' : '#1F1B17';\n        case 'muted': return dark ? '#ABA99F' : '#756F69';\n        case 'faint': return dark ? '#767D71' : '#A39C90';\n        case 'green': return dark ? '#324C37' : '#1F3528';\n        case 'accent': return dark ? '#B9CEB1' : '#425D45';\n        case 'onGreen': return dark ? '#FFFAF4' : '#FFFAF4';\n        case 'active': return dark ? '#303C2D' : '#E8EDE2';\n        case 'line': return dark ? '#3B4036' : '#E7E0D5';\n        case 'frame': return dark ? '#4D5447' : '#D7D0C3';\n        case 'shadow': return dark ? '#29000000' : '#12372A18';\n        case 'handle': return dark ? '#565E50' : '#C9C9C4';\n        case 'scrim': return dark ? '#57000000' : '#57000000';\n        case 'scrollbar': return dark ? '#47000000' : '#47000000';\n        default: return dark ? '#EAE7DE' : '#1F1B17';\n    }\n}\nexport function mangaDirectoryScale(fontScale: number): number {\n    return Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;\n}\nexport function mangaDirectoryLineBox(minimum: number, line: number, verticalPadding: number, fontScale: number): number {\n    return Math.max(minimum, line * mangaDirectoryScale(fontScale) + verticalPadding);\n}\nexport function mangaDirectoryQuickMinimumListHeight(fontScale: number): number {\n    return Math.min(MANGA_DIRECTORY_VISUAL.quickMaxListHeight, Math.max(MANGA_DIRECTORY_VISUAL.gridHeight, MANGA_DIRECTORY_VISUAL.namedMinHeight) * mangaDirectoryScale(fontScale));\n}\nexport function mangaDirectoryFullFlowFooter(viewportHeight: number, fontScale: number, safeTop: number, safeBottom: number, footerHeight: number): boolean {\n    if (!Number.isFinite(viewportHeight) || viewportHeight <= 0)\n        return false;\n    const scale = mangaDirectoryScale(fontScale);\n    const headerBottom = Math.max(0, safeTop) + MANGA_DIRECTORY_VISUAL.headerSafeGap + mangaDirectoryHeaderHeight(scale);\n    const footerTop = viewportHeight - Math.max(0, safeBottom) - MANGA_DIRECTORY_VISUAL.footerBottom - Math.max(0, footerHeight);\n    const minimum = Math.max(MANGA_DIRECTORY_VISUAL.namedMinHeight, MANGA_DIRECTORY_VISUAL.namedLineHeight * scale + MANGA_DIRECTORY_VISUAL.namedPaddingY * 2 + MANGA_DIRECTORY_VISUAL.gridBorder);\n    return footerTop - headerBottom < minimum;\n}\nexport function mangaDirectoryQuickFlowGaps(): number {\n    return MANGA_DIRECTORY_VISUAL.quickGap * 2;\n}\nexport function mangaDirectoryPositionStacked(contentWidth: number, fontScale: number, position: string): boolean {\n    if (!Number.isFinite(contentWidth) || contentWidth <= 0)\n        return false;\n    const scale = mangaDirectoryScale(fontScale);\n    const pageEm = Array.from(position).reduce((sum: number, character: string): number => sum + (character.charCodeAt(0) < 128 ? MANGA_DIRECTORY_VISUAL.numericDigitWidthEm : 1), 0);\n    const reserved = (MANGA_DIRECTORY_VISUAL.positionMinimumTitleEm * MANGA_DIRECTORY_VISUAL.positionFontSize + pageEm * MANGA_DIRECTORY_VISUAL.positionPageFontSize) * scale + MANGA_DIRECTORY_VISUAL.positionRowGap + MANGA_DIRECTORY_VISUAL.positionPaddingX * 2;\n    return contentWidth < reserved;\n}\nexport function mangaDirectoryHeaderHeight(fontScale: number): number {\n    return Math.max(MANGA_DIRECTORY_VISUAL.headerHeight, MANGA_DIRECTORY_VISUAL.headerLineHeight * mangaDirectoryScale(fontScale) + MANGA_DIRECTORY_VISUAL.headerPadding * 2 + MANGA_DIRECTORY_VISUAL.borderWidth * 2);\n}\nexport function mangaDirectoryContentTop(fontScale: number): number {\n    return mangaDirectoryHeaderHeight(fontScale) + MANGA_DIRECTORY_VISUAL.contentTop - MANGA_DIRECTORY_VISUAL.headerHeight;\n}\nexport function mangaDirectoryFooterStacked(contentWidth: number, fontScale: number, position: string): boolean {\n    if (!Number.isFinite(contentWidth) || contentWidth <= 0)\n        return false;\n    const pageEm = Array.from(position).reduce((sum: number, character: string): number => sum + (character.charCodeAt(0) < 128 ? MANGA_DIRECTORY_VISUAL.numericDigitWidthEm : 1), 0);\n    const reserved = (4 + pageEm) * MANGA_DIRECTORY_VISUAL.footerMetaFontSize * mangaDirectoryScale(fontScale) + MANGA_DIRECTORY_VISUAL.footerMinimumTitleEm * MANGA_DIRECTORY_VISUAL.footerTitleFontSize * mangaDirectoryScale(fontScale) + MANGA_DIRECTORY_VISUAL.footerGap * 2 + (MANGA_DIRECTORY_VISUAL.footerPaddingX + MANGA_DIRECTORY_VISUAL.borderWidth) * 2;\n    return contentWidth < reserved;\n}\nexport function mangaDirectoryFooterHeight(fontScale: number, contentWidth: number = 0, position: string = ''): number {\n    const scale = mangaDirectoryScale(fontScale);\n    if (!mangaDirectoryFooterStacked(contentWidth, scale, position))\n        return mangaDirectoryLineBox(MANGA_DIRECTORY_VISUAL.footerHeight, MANGA_DIRECTORY_VISUAL.footerTitleLineHeight, (MANGA_DIRECTORY_VISUAL.footerPaddingY + MANGA_DIRECTORY_VISUAL.borderWidth) * 2, scale);\n    const inner = Math.max(1, contentWidth - (MANGA_DIRECTORY_VISUAL.footerPaddingX + MANGA_DIRECTORY_VISUAL.borderWidth) * 2);\n    const pageEm = Array.from(position).reduce((sum: number, character: string): number => sum + (character.charCodeAt(0) < 128 ? MANGA_DIRECTORY_VISUAL.numericDigitWidthEm : 1), 0);\n    const pageLines = position.length === 0 ? 0 : Math.max(1, Math.ceil(pageEm * MANGA_DIRECTORY_VISUAL.footerMetaFontSize * scale / inner));\n    return Math.max(MANGA_DIRECTORY_VISUAL.footerHeight, (MANGA_DIRECTORY_VISUAL.footerMetaLineHeight * (1 + pageLines) + MANGA_DIRECTORY_VISUAL.footerTitleLineHeight) * scale + MANGA_DIRECTORY_VISUAL.footerStackGap * (pageLines > 0 ? 2 : 1) + (MANGA_DIRECTORY_VISUAL.footerPaddingY + MANGA_DIRECTORY_VISUAL.borderWidth) * 2);\n}\nexport function mangaDirectoryLabelsFit(kind: string, fontScale: number, contentWidth: number, numberLengths: number[], accessoryWidth: number = 0): boolean {\n    if (!Number.isFinite(contentWidth) || contentWidth <= 0)\n        return true;\n    return numberLengths.every((length: number): boolean => (length * MANGA_DIRECTORY_VISUAL.namedFontSize * MANGA_DIRECTORY_VISUAL.numericDigitWidthEm + (kind === 'parts' ? MANGA_DIRECTORY_VISUAL.namedFontSize * MANGA_DIRECTORY_VISUAL.partLabelWidthEm : 0)) * mangaDirectoryScale(fontScale) + (MANGA_DIRECTORY_VISUAL.gridPaddingX + MANGA_DIRECTORY_VISUAL.gridBorder) * 2 + Math.max(0, accessoryWidth) <= contentWidth);\n}\nexport function mangaDirectoryColumns(kind: string, hasMiddle: boolean, narrow: boolean, fontScale: number, contentWidth: number, numberLengths: number[], accessoryWidth: number = 0): number {\n    if (kind === 'named')\n        return 1;\n    const preferred = kind === 'numeric' ? (narrow ? 3 : 4) : hasMiddle ? 3 : narrow ? 2 : 4;\n    if (!Number.isFinite(contentWidth) || contentWidth <= 0)\n        return preferred;\n    const longest = numberLengths.reduce((length: number, value: number): number => Math.max(length, value), 0);\n    const text = (longest * MANGA_DIRECTORY_VISUAL.namedFontSize * MANGA_DIRECTORY_VISUAL.numericDigitWidthEm + (kind === 'parts' ? MANGA_DIRECTORY_VISUAL.namedFontSize * MANGA_DIRECTORY_VISUAL.partLabelWidthEm : 0)) * mangaDirectoryScale(fontScale);\n    const minimum = Math.max(MANGA_DIRECTORY_VISUAL.gridHeight, text + MANGA_DIRECTORY_VISUAL.gridPaddingX * 2 + MANGA_DIRECTORY_VISUAL.gridBorder * 2 + Math.max(0, accessoryWidth));\n    return Math.max(1, Math.min(preferred, Math.floor((contentWidth + MANGA_DIRECTORY_VISUAL.gridGap) / (minimum + MANGA_DIRECTORY_VISUAL.gridGap))));\n}\n"
+          }
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#mangaCurrentFooter",
+          "component": "MangaDirectoryCurrentFooter",
+          "specId": null,
+          "keys": [
+            "title",
+            "pagePosition",
+            "scheme",
+            "availableWidth",
+            "onHeightChanged"
+          ]
+        },
+        {
+          "file": "features/manga/MangaReadingSurface.ets",
+          "method": "features/manga/MangaReadingSurface.ets#MangaReadingSurface#directoryCurrentFooter",
+          "component": "MangaDirectoryCurrentFooter",
+          "specId": null,
+          "keys": [
+            "title",
+            "pagePosition",
+            "scheme",
+            "availableWidth",
+            "onHeightChanged"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+        "entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets"
+      ],
+      "sdkProofs": [
+        "tools/test-manga-directory-quick-panel-sdk.mjs",
+        "tools/test-manga-book-directory-chrome.mjs"
+      ]
     }
   ],
   "legacyBusinessRowsSha256": "fe09e5d8e92fa0dcd2e7bc47571f500b3f47673331c303f7d48832c4db4e7f3c",

@@ -11,6 +11,8 @@ import { ReaderDirectoryNavigationGateway, decodeReaderDirectoryOpen, decodeRead
 import { readerDirectoryViewportAnchor } from '../entry/src/main/ets/features/reading/ReaderDirectoryViewport.ts';
 
 import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
+import { mangaGridBuilderMembers, mangaGridProbeDependencies, emptyMangaGridState } from './lib/manga-directory-grid-probe.mjs';
+import { mangaDirectoryEntryRowSdk } from './lib/manga-directory-entry-row-probe.mjs';
 
 const listPath = new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url);
 const listSource = readFileSync(listPath, 'utf8');
@@ -49,12 +51,13 @@ assert.throws(() => decodeReaderDirectoryOpen({ ...wire, nodes: [{ ...wireChild,
 assert.throws(() => decodeReaderDirectoryPage({ viewId: 'v1', visibleTotal: 319,
   nodes: [{ ...wireChild, parentTitle: ' ' }] }, 'v1', 256), /parent title/);
 
-const rowNames = ['mangaRow', 'selectMangaRow', 'mangaColor', 'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft', 'isCurrentMangaNode'];
+const rowNames = ['mangaPaintNode', 'mangaChapter', 'mangaRowAccessibility', 'mangaRowAdmitted', 'mangaFontScale', 'mangaFirstDisplayRow', 'mangaRowBody', 'mangaRow', 'selectMangaRow', 'toggleMangaRow', 'mangaColor', 'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft', 'isCurrentMangaNode'];
+const gridNames = [...new Set(['row', ...rowNames, ...mangaGridBuilderMembers])];
 function rowProbe(source, node, { scheme = 'day', current = false, search = false, index = 0, height = 58, catalog = false, narrow = false } = {}) {
-  const { owner } = createReaderBuilderProbe(source, rowNames, fontFamilies);
+  const { owner } = createReaderBuilderProbe(source, rowNames, { ...mangaGridProbeDependencies, ...fontFamilies });
   Object.assign(owner, { view, mangaScheme: scheme, appThemeScheme: 'day', mangaSearchActive: search,
     mangaRowMinHeight: height, mangaCatalogDisplay: catalog, mangaCatalogNarrow: narrow, currentChapterIndex: current ? node.chapterIndex : -1, interactionEnabled: true, mangaPresentationRevision: 0,
-    dataSource: { loadedItemById: () => ({ node, index }), currentView: () => view },
+    dataSource: { loadedItemById: () => ({ node, index }), currentView: () => view, loadedNode: () => undefined },
     onSelectTarget() {}, toggleNode() {}, selectTarget() {} });
   owner.mangaRow({ node, index, key: node.nodeId });
   const nodes = [...owner.nodes.values()];
@@ -68,7 +71,7 @@ function checkOrdinary(source) {
     assert.equal(rowProbe(source, view.nodes[1], { scheme }).row.padding.left, 26, 'one normalization gives the exact child inset outside search');
     assert.equal(row.create.space, 12);
     assert.equal(title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_REGULAR);
-    assert.equal(title.fontWeight, 400, 'static regular face uses normal native styling without a VF switch');
+    assert.deepEqual(title.fontWeight, [400, {enableVariableFontWeight: true}], 'native weight declares the generated body role');
     assert.equal(title.lineHeight, 22);
     const parent = nodes.find(item => item.type === 'Text' && item.create === '确定卷组');
     assert.equal(parent.fontSize, 10); assert.equal(parent.lineHeight, 16);
@@ -99,7 +102,7 @@ function checkGroupMotion(source) {
   assert.equal(globalThis.Context, previousContext, 'probe restores the caller Context after every observer');
 }
 checkGroupMotion(listSource);
-const instantGroup = listSource.replace(".animation({ duration: 180, curve: 'ease' })", '');
+const instantGroup = listSource.replaceAll(".animation({ duration: MANGA_DIRECTORY_VISUAL.foldDuration, curve: 'ease' })", '');
 assert.notEqual(instantGroup, listSource);
 assert.throws(() => checkGroupMotion(instantGroup), /demo group rotation/);
 async function checkRetainedGroup(source) {
@@ -114,16 +117,16 @@ async function checkRetainedGroup(source) {
     `${pageWindowCode}; return { ReaderDirectoryPageWindow, cacheReaderDirectoryNavigationPage };`)(
       { get: key => cache.get(key), put: (key, value) => cache.set(key, value), keys: () => [...cache.keys()] }, readerDirectoryScopeKey);
   const DataSource = productionMotionMethods(listPath,
-    ['loadedNode', 'loadedItemById', 'getData', 'totalCount', 'currentView', 'replace', 'admit'],
-    { DIRECTORY_PAGE_SIZE: 256, setTimeout: action => timers.push(action) });
+    ['loadedNode', 'loadedItemById', 'getData', 'totalCount', 'currentView', 'replace', 'admit', 'coreIndex', 'displayIndex', 'requestPage', 'notifyCoreChanged'],
+    { ...mangaGridProbeDependencies, DIRECTORY_PAGE_SIZE: 256, setTimeout: action => timers.push(action) });
   const data = Object.assign(new DataSource(), { view: undefined, pages: new ReaderDirectoryPageWindow(),
-    pending: new Set(), listeners: [], load() {} });
+    pending: new Set(), admittedPages: new Set(), listeners: [], load() {} });
   const initial = { ...view, viewId: 'retained-expanded', visibleTotal: 300, nodes: [],
     preparedPages: [{ offset: 256, page: { viewId: 'retained-expanded', visibleTotal: 300, nodes: [{ ...view.nodes[0] }] } }] };
   const hooks = { ...properties.hooks, initialParams: { view: initial } };
   const { owner } = createReaderBuilderProbe(source,
-    [...rowNames, 'rowKey', 'view', 'mangaPresentationRevision', 'onViewChanged', 'loadPage'],
-    { ...properties.sdk, ...fontFamilies, setTimeout: action => timers.push(action), cacheReaderDirectoryNavigationPage }, hooks);
+    [...rowNames, 'rowKey', 'view', 'mangaPresentationRevision', 'onViewChanged', 'loadPage', 'admitMangaPages'],
+    { ...mangaGridProbeDependencies, ...properties.sdk, ...fontFamilies, readerDirectoryViewportAnchor: () => undefined, readerDirectoryScopeKey, setTimeout: action => timers.push(action), cacheReaderDirectoryNavigationPage }, hooks);
   const clicks = [];
   Object.assign(owner, { mangaDisplay: true, mangaScheme: 'day', appThemeScheme: 'day', mangaSearchActive: false,
     currentChapterIndex: -1, interactionEnabled: true, mounted: true, generation: 0, selectionGeneration: 0,
@@ -161,7 +164,7 @@ async function checkRetainedGroup(source) {
     nodes: [{ ...view.nodes[1] }, { ...view.nodes[0], expanded: true, title: '再次展开后的组名', readableDescendantCount: 320 }] });
   assert.equal(arrow.rotate.angle, 0, 'retained SDK Image rotates -90 back to 0');
   assert.equal(title.create, '再次展开后的组名'); assert.equal(counter.create, '320 个可读条目');
-  assert.equal(row.margin.top, 12); assert.equal(row.border.width.top, 0, 'a retained group at rank one never leaves a fixed first-row line');
+  assert.equal(row.margin.top, 0); assert.equal(row.border.width.top, 0, 'a retained group at rank one never leaves a fixed first-row line');
   rowAction.onClick(); assert.equal(clicks.at(-1).expanded, true);
   const updated = { ...data.loadedItemById('g').node, title: '同视图分页新组名', readableDescendantCount: 321 };
   owner.gateway = { page: async () => ({ viewId: owner.view.viewId, visibleTotal: 2, nodes: [{ ...view.nodes[1] }, updated] }) };
@@ -193,16 +196,16 @@ assert.notEqual(capturedGroup, listSource);
 await assert.rejects(() => checkRetainedGroup(capturedGroup), /rotates 0 to -90/);
 function checkScrollableBoundary(source) {
   const lazy = new Proxy({}, { get: () => () => {} });
-  const { owner } = createReaderBuilderProbe(source, ['row', ...rowNames, 'build'], { ...fontFamilies, LazyForEach: lazy });
-  Object.assign(owner, { mangaDisplay: true, mangaScheme: 'day', dataSource: {}, listPaddingX: 0,
+  const { owner } = createReaderBuilderProbe(source, [...gridNames, 'build'], { ...fontFamilies, ...mangaGridProbeDependencies, LazyForEach: lazy });
+  Object.assign(owner, { mangaDisplay: true, ...emptyMangaGridState(), mangaScheme: 'day', listPaddingX: 0,
     listPaddingRight: -1, listPaddingTop: -1, listPaddingBottom: -1, listPaddingY: 0, interactionEnabled: true });
   owner.initialRender();
-  assert.equal([...owner.nodes.values()].find(node => node.type === 'List').border, undefined,
-    'directory boundary is not attached to the fixed native List viewport');
+  assert.equal([...owner.nodes.values()].find(node => node.type === 'Grid').border, undefined,
+    'directory boundary is not attached to the fixed native Grid viewport');
   for (const height of [58, 50]) {
     const first = rowProbe(source, view.nodes[1], { index: 0, height });
     const later = rowProbe(source, view.nodes[1], { index: 256, height });
-    assert.equal(first.row.constraintSize.minHeight, height, 'phone/wide manga row min-height follows its dedicated visual prop');
+    assert.equal(first.row.constraintSize.minHeight, 58, 'every entrance retains demo row anatomy; wide windows do not shrink typography');
     assert.equal(first.row.border.width.top, 1); assert.equal(later.row.border.width.top, 0,
       'a virtual page never gains a fake first-row boundary');
   }
@@ -211,63 +214,66 @@ checkScrollableBoundary(listSource);
 function checkCatalogVariants(source) {
   for (const narrow of [false, true]) {
     const current = rowProbe(source, view.nodes[1], { catalog: true, narrow, current: true });
-    assert.equal(current.row.constraintSize.minHeight, 48, 'persistent catalog uses its own compact row');
-    assert.deepEqual(current.row.padding, { left: narrow ? 20 : 28, right: narrow ? 10 : 15, top: 11, bottom: 11 });
-    assert.equal(current.row.border.width.top, 0, 'catalog header owns its divider; catalog tree has no extra top line');
-    assert.equal(current.title.fontSize, narrow ? 11 : 12); assert.equal(current.title.lineHeight, 20);
+    assert.equal(current.row.constraintSize.minHeight, 58, 'catalog uses the same demo row anatomy');
+    assert.deepEqual(current.row.padding, { left: 26, right: 10, top: 14, bottom: 14 });
+    assert.equal(current.row.border.width.top, 1, 'catalog tree keeps its own scrolling first boundary');
+    assert.equal(current.title.fontSize, 13); assert.equal(current.title.lineHeight, 22);
     assert.equal(current.title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_550);
-    assert.equal(current.row.create.space, narrow ? 5 : 12);
+    assert.equal(current.row.create.space, 12);
     const state = current.nodes.find(node => node.type === 'Text' && node.create === '正在读');
-    assert.equal(state.fontSize, narrow ? 8 : 9); assert.equal(state.lineHeight, 17);
+    assert.equal(state.fontSize, 10); assert.equal(state.lineHeight, 17);
     const root = rowProbe(source, { ...view.nodes[1], depth: 1 }, { catalog: true, narrow });
-    assert.equal(root.row.padding.left, narrow ? 12 : 15);
+    assert.equal(root.row.padding.left, 10);
     const group = rowProbe(source, view.nodes[0], { catalog: true, narrow });
-    assert.equal(group.row.constraintSize.minHeight, 44);
-    assert.deepEqual(group.row.padding, { left: 15, right: 15, top: 10, bottom: 10 });
-    assert.equal(group.row.border.width.top, 0); assert.equal(group.title.fontSize, 13); assert.equal(group.title.lineHeight, 21);
+    assert.equal(group.row.constraintSize.minHeight, 48);
+    assert.deepEqual(group.row.padding, { left: 12, right: 12, top: 11, bottom: 11 });
+    assert.equal(group.row.border.width.top, 1); assert.equal(group.title.fontSize, 13); assert.equal(group.title.lineHeight, 21);
     const span = group.nodes.find(node => node.type === 'Flex');
-    assert.equal(span.create.direction, narrow ? 'FlexDirection.Column' : 'FlexDirection.Row');
-    assert.equal(span.create.alignItems, narrow ? 'ItemAlign.Start' : 'ItemAlign.Baseline');
+    assert.equal(span.create.direction, 'FlexDirection.Row');
+    assert.equal(span.create.alignItems, 'ItemAlign.Baseline');
     const counter = group.nodes.find(node => node.type === 'Text' && node.create === '318 个可读条目');
-    assert.deepEqual(counter.margin, { left: narrow ? 0 : 9, top: narrow ? 1 : 0 });
+    assert.deepEqual(counter.margin, { left: 9 });
   }
   const lazy = new Proxy({}, { get: () => () => {} });
   const properties = createArkUIPropertyRuntimeProbe();
   const { owner } = createReaderBuilderProbe(source,
-    ['mangaCatalogDisplay', 'mangaCatalogNarrow', 'row', ...rowNames, 'build'],
-    { ...properties.sdk, ...fontFamilies, LazyForEach: lazy }, properties.hooks);
-  Object.assign(owner, { mangaDisplay: true, mangaCatalogDisplay: false, mangaCatalogNarrow: false,
-    mangaScheme: 'day', dataSource: {}, listPaddingX: 0, listPaddingRight: -1, listPaddingTop: -1,
+    ['mangaCatalogDisplay', 'mangaCatalogNarrow', ...gridNames, 'build'],
+    { ...properties.sdk, ...fontFamilies, ...mangaGridProbeDependencies, LazyForEach: lazy }, properties.hooks);
+  Object.assign(owner, { mangaDisplay: true, mangaCatalogDisplay: false, mangaCatalogNarrow: undefined,
+    ...emptyMangaGridState(), mangaScheme: 'day', listPaddingX: 0, listPaddingRight: -1, listPaddingTop: -1,
     listPaddingBottom: -1, listPaddingY: 0, interactionEnabled: true });
   owner.initialRender();
-  const list = [...owner.nodes.values()].find(node => node.type === 'List');
-  assert.equal(list.contentEndOffset, 14);
+  const list = [...owner.nodes.values()].find(node => node.type === 'Grid');
+  assert.equal(list.padding.bottom, 0);
   owner.updateStateVars({ mangaCatalogDisplay: true }); properties.flush();
-  assert.equal(list.contentEndOffset, 18, 'retained native List updates catalog bottom clearance without padding its viewport');
+  assert.equal(list.contentEndOffset, 18, 'retained native Grid updates catalog clearance through official scroll content API');
+  assert.equal(list.padding.bottom, 0, 'scroll clearance cannot shrink the viewport');
   owner.updateStateVars({ mangaCatalogDisplay: false }); properties.flush();
-  assert.equal(list.contentEndOffset, 14);
+  assert.equal(list.padding.bottom, 0);
 }
 checkCatalogVariants(listSource);
-const phoneCatalog = listSource.replace('this.mangaCatalogDisplay ? 48 : this.mangaRowMinHeight })', 'this.mangaRowMinHeight })');
+const phoneCatalog = listSource.replaceAll('MANGA_DIRECTORY_VISUAL.namedMinHeight', '48');
 assert.notEqual(phoneCatalog, listSource);
-assert.throws(() => checkCatalogVariants(phoneCatalog), /own compact row/);
-const noNarrowCatalog = listSource.replaceAll('this.mangaCatalogNarrow', 'false');
+assert.throws(() => checkCatalogVariants(phoneCatalog), /same demo row anatomy/);
+const noNarrowCatalog = listSource.replaceAll('MANGA_DIRECTORY_VISUAL.namedGap', '(this.mangaCatalogNarrow ? 5 : MANGA_DIRECTORY_VISUAL.namedGap)');
 assert.notEqual(noNarrowCatalog, listSource);
-assert.throws(() => checkCatalogVariants(noNarrowCatalog), /deep-equal/);
-const fixedTop = listSource.replace("    .width('100%').height('100%')\n    .padding", "    .width('100%').height('100%')\n    .border({ width: { top: 1 } })\n    .padding");
+assert.throws(() => checkCatalogVariants(noNarrowCatalog), /strictly equal/);
+const fixedTop = listSource.replace(".columnsGap(0).rowsGap(0).width('100%').height('100%')", ".columnsGap(0).rowsGap(0).width('100%').height('100%').border({ width: { top: 1 } })");
 assert.notEqual(fixedTop, listSource);
-assert.throws(() => checkScrollableBoundary(fixedTop), /fixed native List viewport/);
-const fixedPhoneHeight = listSource.replace("this.mangaCatalogDisplay ? 48 : this.mangaRowMinHeight })", "this.mangaCatalogDisplay ? 48 : 58 })");
+assert.throws(() => checkScrollableBoundary(fixedTop), /fixed native Grid viewport/);
+const fixedPhoneHeight = listSource.replaceAll('MANGA_DIRECTORY_VISUAL.namedMinHeight', '50');
 assert.notEqual(fixedPhoneHeight, listSource);
-assert.throws(() => checkScrollableBoundary(fixedPhoneHeight), /dedicated visual prop/);
+assert.throws(() => checkScrollableBoundary(fixedPhoneHeight), /every entrance/);
 for (const scheme of ['day', 'night']) {
   const { nodes, row, title } = rowProbe(listSource, view.nodes[0], { scheme, index: 40 });
   assert.equal(title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_600); assert.equal(title.fontWeight, 600);
   assert.equal(title.lineHeight, 21); assert.equal(row.create.space, 14);
-  assert.equal(row.constraintSize.minHeight, 48); assert.equal(row.margin.top, 12);
+  assert.equal(row.constraintSize.minHeight, 48); assert.equal(row.margin.top, 0);
   assert.equal(row.border.width.bottom, 0);
   const counter = nodes.find(item => item.type === 'Text' && item.create === '318 个可读条目');
   assert.equal(counter.fontSize, 10); assert.equal(counter.lineHeight, 16); assert.equal(counter.margin.left, 9);
+  assert.equal(counter.maxLines, undefined); assert.equal(counter.constraintSize.maxWidth, '100%');
+  assert.equal(counter.wordBreak, 'WordBreak.BREAK_WORD', 'large real counts can wrap inside the actual group lane');
   assert.equal(nodes.find(item => item.type === 'Flex').create.alignItems, 'ItemAlign.Baseline');
   const arrow = nodes.find(item => item.type === 'Image');
   assert.equal(arrow.create, `app.media.manga_sheet_chevron_down${scheme === 'night' ? '_theme_night' : ''}`);
@@ -279,7 +285,7 @@ for (const scheme of ['day', 'night']) {
   const ordinary = rowProbe(listSource, view.nodes[1], { scheme });
   assert.ok(!ordinary.nodes.some(item => item.type === 'Text' && item.create === '确定卷组'), 'normal rows do not add search-only context');
   const current = rowProbe(listSource, view.nodes[1], { scheme, current: true });
-  assert.equal(current.title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_550); assert.equal(current.title.fontWeight, 400);
+  assert.equal(current.title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_550); assert.deepEqual(current.title.fontWeight, [550, {enableVariableFontWeight: true}]);
   assert.ok(current.nodes.some(item => item.type === 'Text' && item.create === '正在读'));
   assert.ok(!current.nodes.some(item => item.type === 'Image'));
   ordinary.owner.currentChapterIndex = wireChild.chapterIndex;
@@ -293,22 +299,22 @@ for (const scheme of ['day', 'night']) {
 const variableFamily = listSource.replaceAll('READER_FONT_NOTO_SANS_SC_UI_REGULAR', 'READER_FONT_NOTO_SANS_SC');
 assert.notEqual(variableFamily, listSource);
 assert.throws(() => checkOrdinary(variableFamily), /ReaderNotoSansSC/);
-const indentedSearch = listSource.replace('if (this.mangaSearchActive) return 10;', '');
+const indentedSearch = listSource.replace('return this.mangaSearchActive ||', 'return false ||');
 assert.notEqual(indentedSearch, listSource);
 assert.throws(() => checkOrdinary(indentedSearch), /flat row/);
 const doubleDepth = listSource.replace('return Math.max(1, node.depth);',
   'return this.view.identity === undefined ? Math.max(1, node.depth) : node.depth + 1;');
 assert.notEqual(doubleDepth, listSource);
-assert.throws(() => checkOrdinary(doubleDepth), /exact child inset/);
+assert.throws(() => assert.equal(rowProbe(doubleDepth, view.nodes[1]).owner.displayLevel(view.nodes[1]), 2), /strictly equal/);
 const branch = listSource.indexOf("else if (item.node.kind === 'target')");
 const arrowStart = listSource.indexOf('Image(', branch);
-const arrowSuffix = '.width(13).height(13).onClick((): void => this.selectMangaRow(item));';
+const arrowSuffix = '.width(13).height(13);';
 const arrowEnd = listSource.indexOf(arrowSuffix, arrowStart) + arrowSuffix.length;
 assert.ok(branch > 0 && arrowStart > branch && arrowEnd > arrowStart);
 const tinyPath = `${listSource.slice(0, arrowStart)}Path().commands('M4 3 L8 6.5 L4 10').width(13).height(13);${listSource.slice(arrowEnd)}`;
 assert.throws(() => checkOrdinary(tinyPath), /actual SVG owns its viewBox/);
 
-const scrollNames = ['planPosition', 'positionInitialCurrent', 'positionRowHeight', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft'];
+const scrollNames = ['mangaContentStartOffset', 'planPosition', 'positionInitialCurrent', 'positionRowHeight', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft'];
 function scrollProbe(source, { manga = true, locate = false, anchor, measuredHeight = 83 } = {}) {
   const calls = [];
   const { owner } = createReaderBuilderProbe(source, scrollNames, { readerDirectoryScopeKey,
@@ -316,6 +322,7 @@ function scrollProbe(source, { manga = true, locate = false, anchor, measuredHei
   Object.assign(owner, { view: { ...view, currentDisplayInset: locate ? 12 : 50,
     currentDisplaySmooth: locate, locateCurrent: locate }, mangaDisplay: manga, mangaSearchActive: false,
     sourceId: 'manga', bookId: 'book', rowHeight: 40, initialPositionPending: true,
+    mangaVisibleTopInset: 0, contentStartInset: 0, listPaddingTop: 0, listPaddingY: 0,
     dataSource: { loadedNode: () => view.nodes[0] },
     scroller: { getItemRect: () => ({ height: measuredHeight }), scrollToIndex: (...args) => calls.push(args) } });
   owner.positionInitialCurrent();
@@ -334,13 +341,14 @@ const oldCenter = listSource.replaceAll('align: this.mangaDisplay ? ScrollAlign.
 assert.notEqual(oldCenter, listSource);
 assert.throws(() => checkOpening(oldCenter), /deep-equal/);
 
-const fallbackNames = ['preparePresentation', 'rowPresentation', 'groupSpacing', 'groupExpanded', 'rowFontFamily', 'row', 'mangaColor'];
+const fallbackNames = ['preparePresentation', 'prepareLayout', 'fontScale', 'layoutRow', 'showContext', 'rowPresentation', 'row', 'mangaColor'];
 function fallbackProbe(entries, entry, search = false) {
-  const { owner } = createReaderBuilderProbe(fallbackSource, fallbackNames, { ...fontFamilies, readerDirectoryAccessibilityText, mangaDirectoryPresentation });
-  Object.assign(owner, { admittedEntries: entries, projectedEntries: entries, presentation: new Map(), collapsedGroups: [], query: search ? '话' : '',
+  const rowSdk = mangaDirectoryEntryRowSdk({ dependencies: { readerDirectoryAccessibilityText, mangaDirectoryPresentation } });
+  const { owner } = createReaderBuilderProbe(fallbackSource, fallbackNames, rowSdk.deps, rowSdk.hooks);
+  Object.assign(owner, { layoutRows: [], admittedEntries: entries, projectedEntries: entries, presentation: new Map(), collapsedGroups: [], query: search ? '话' : '',
     currentChapterIndex: -1, mangaScheme: 'day', rowHeight: 58, selectEntry() {} });
-  owner.preparePresentation(); owner.row(entry, 'identity');
-  return { owner, nodes: [...owner.nodes.values()] };
+  owner.preparePresentation(); owner.prepareLayout(); owner.row(entry, 'identity');
+  return { owner, nodes: rowSdk.nodes(owner) };
 }
 const canonical = [
   { index: 7, title: '组甲', level: 1, navigable: false },
@@ -352,7 +360,8 @@ const canonical = [
 {
   const { nodes } = fallbackProbe(canonical, canonical[3]);
   const row = nodes.find(item => item.type === 'Row');
-  assert.equal(row.margin.top, 12); assert.equal(row.constraintSize.minHeight, 48); assert.equal(row.border.width.bottom, 0);
+  assert.equal(row.constraintSize.minHeight, 48); assert.equal(row.border.width.bottom, 0);
+  assert.equal(row.backgroundColor, '#F0ECE3', 'the actual shared group row keeps its distinct soft background');
   assert.ok(nodes.some(item => item.type === 'Text' && item.create === '1 个可读条目'));
   const { nodes: search } = fallbackProbe(canonical, canonical[1], true);
   assert.ok(search.some(item => item.type === 'Text' && item.create === '组甲'), 'flat query retains parent from complete canonical explicit depth');
@@ -367,17 +376,17 @@ const canonical = [
   assert.equal(rowDisabled.constraintSize.minHeight, 58); assert.equal(rowDisabled.border.width.bottom, 1);
   assert.equal(rowDisabled.backgroundColor, 'Color.Transparent');
   const title = ordinary.find(item => item.type === 'Text');
-  assert.equal(title.fontWeight, 400); assert.equal(title.fontColor, '#756F69');
+  assert.deepEqual(title.fontWeight, [400, {enableVariableFontWeight: true}]); assert.equal(title.fontColor, '#1F1B17'); assert.equal(rowDisabled.opacity, .36);
   assert.ok(!ordinary.some(item => item.create === '整卷可读'), 'a volume word does not create a semantic fact');
 }
 function checkFallbackCountRefresh(source) {
   const properties = createArkUIPropertyRuntimeProbe();
-  const { owner } = createReaderBuilderProbe(source, [...fallbackNames, 'presentation'],
-    { ...properties.sdk, ...fontFamilies, readerDirectoryAccessibilityText, mangaDirectoryPresentation }, properties.hooks);
-  Object.assign(owner, { admittedEntries: canonical, projectedEntries: [canonical[0]], collapsedGroups: [], query: '组甲',
+  const rowSdk = mangaDirectoryEntryRowSdk({ properties, dependencies: { readerDirectoryAccessibilityText, mangaDirectoryPresentation } });
+  const { owner } = createReaderBuilderProbe(source, [...fallbackNames, 'presentation'], rowSdk.deps, rowSdk.hooks);
+  Object.assign(owner, { layoutRows: [], admittedEntries: canonical, projectedEntries: [canonical[0]], collapsedGroups: [], query: '组甲',
     currentChapterIndex: -1, mangaScheme: 'day', rowHeight: 58, selectEntry() {} });
-  owner.preparePresentation(); owner.row(canonical[0], 'identity');
-  const count = [...owner.nodes.values()].find(item => item.type === 'Text' && item.create === '2 个可读条目');
+  owner.preparePresentation(); owner.prepareLayout(); owner.row(canonical[0], 'identity');
+  const count = rowSdk.nodes(owner).find(item => item.type === 'Text' && item.create === '2 个可读条目');
   assert.ok(count);
   const actorCount = owner.observers.length;
   owner.admittedEntries = [canonical[0], canonical[1], canonical[2],
@@ -436,4 +445,4 @@ const unfencedClose = listSource.replaceAll('this.selectionGeneration += 1;', ''
   .replaceAll('this.interactionEnabled !== false && ', '').replaceAll('this.interactionEnabled === false || ', '');
 assert.notEqual(unfencedClose, listSource);
 await assert.rejects(() => checkClosing(unfencedClose), /closing cancels/);
-console.log('PASS manga directory actual gateway -> SDK parity: fixed 400/550/600 families without VF dependence, Radix SVG, one depth normalization, full-tree metadata, group spacing, flat search, phone58/wide50/catalog48+narrow, content-owned first-rank boundary, 50/12 positioning and preserved native anchors; same native group Image receives 0/-90/0 with live title/count/second click and same-view page admission; fifteen old-implementation negative controls rejected. SDK animation requests verified, compositor frames require VM evidence');
+console.log('PASS manga directory actual gateway -> SDK parity: fixed 400/550/600 families without VF dependence, Radix SVG, one depth normalization, full-tree metadata, group spacing, flat search, all entrances58 with13/22 typography and adaptive columns, content-owned first-rank boundary, 50/12 positioning and preserved native anchors; same native group Image receives 0/-90/0 with live title/count/second click and same-view page admission; fifteen old-implementation negative controls rejected. SDK animation requests verified, compositor frames require VM evidence');

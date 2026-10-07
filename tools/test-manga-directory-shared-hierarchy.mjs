@@ -5,6 +5,14 @@ import { compileHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
 import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
 import { snapshotReaderDirectoryData, sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
+import { mangaDirectoryEntryRows, mangaDirectoryNearbyEntries } from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
+import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryHeaderHeight, mangaDirectoryContentTop } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import * as geometry from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
+import * as metrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+
+const windowPorts = { ...geometry, ...metrics, visual, mangaDirectoryScale, mangaDirectoryHeaderHeight, mangaDirectoryContentTop,
+  ReaderWindowCoordinator: { metrics: () => ({ ...metrics.createDefaultReaderWindowMetrics(),
+    windowRect: { x: 0, y: 0, width: 400, height: 852 }, systemFontScale: 1 }) } };
 
 const base = new URL('../entry/src/main/ets/', import.meta.url);
 const entries = [
@@ -23,14 +31,19 @@ assert.deepEqual(mangaDirectoryVisibleEntries(entries, model, [7]).map(row => ro
 assert.deepEqual(mangaDirectoryVisibleEntries(entries, model, [17]).map(row => row.index), [7, 17, 29, 41, 53]);
 
 const Detail = productionMotionMethods(new URL('features/bookshelf/LocalBookDetail.ets', base),
-  ['visibleToc', 'chapterIsGroup', 'chapterIndent', 'onBookChanged', 'onTocChanged'], {
-    mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup, CHAPTER_PREVIEW_LIMIT: 20,
+  ['visibleToc', 'chapterIsGroup', 'chapterIndent', 'onBookChanged', 'onTocChanged', 'prepareMangaPreview',
+    'contentFrame', 'safeLeft', 'safeRight'], {
+    ...windowPorts,
+    mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup, mangaDirectoryEntryRows,
+    mangaDirectoryNearbyEntries, CHAPTER_PREVIEW_LIMIT: 8, TEXT_CHAPTER_PREVIEW_LIMIT: 20,
   });
 const detail = Object.assign(new Detail(), { toc: entries, book: { sourceId: 's', bookId: 'b', contentKind: 'manga' },
-  collapsedGroups: [7, 17], collapseIdentity: 's\0b' });
-assert.deepEqual(detail.visibleToc().map(row => row.index), [7, 29, 41, 53]);
+  collapsedGroups: [7, 17], collapseIdentity: 's\0b', mangaPresentation: new Map(), mangaPreviewRows: [], liveWidth: () => 400 });
+detail.prepareMangaPreview();
+assert.deepEqual(detail.visibleToc().map(row => row.index), [23, 29, 53], 'detail preview contains actual nearby targets, with explicit context carried separately');
+assert.equal(detail.mangaPresentation.get(23).contextTitle, '外卷 / 内卷');
 detail.collapsedGroups = [17];
-assert.deepEqual(detail.visibleToc().map(row => row.index), [7, 17, 29, 41, 53]);
+assert.deepEqual(detail.visibleToc().map(row => row.index), [23, 29, 53], 'a full-directory folding preference cannot hide the detail preview target');
 assert.equal(detail.chapterIsGroup(entries[4]), false, 'disabled row does not fold later independent chapters');
 assert.equal(detail.chapterIndent(entries[3]), 10, 'a root target is not indented under a prior volume');
 detail.book = { ...detail.book, bookId: 'other' }; detail.onBookChanged();
@@ -40,27 +53,32 @@ detail.onTocChanged(); assert.deepEqual(detail.collapsedGroups, [], 'renamed/reu
 
 const timers = [], scrolls = [];
 const Page = productionMotionMethods(new URL('features/bookshelf/BookDirectoryPage.ets', base),
-  ['identity', 'admitEntries', 'mangaGroupFor', 'mangaIsGroup', 'mangaVisibleEntries', 'locateCurrent', 'selectMangaEntry', 'rowIsCurrent'], {
+  ['identity', 'admitEntries', 'mangaIsGroup', 'mangaVisibleEntries', 'locateCurrent', 'selectMangaEntry', 'rowIsCurrent',
+    'toggleMangaBranch', 'prepareMangaLayout', 'publishProjection', 'onListUserScroll', 'mangaEntryIsDisplayed',
+    'contentFrame', 'mangaNarrow', 'mangaFontScale', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaVisibleTopInset', 'topInset'], {
+    ...windowPorts,
     mangaDirectoryPresentation, mangaDirectoryVisibleEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
-    projectReaderDirectoryEntries, ScrollAlign: { CENTER: 'center' }, setTimeout: fn => timers.push(fn),
+    mangaDirectoryEntryRows, projectReaderDirectoryEntries, ScrollAlign: { START: 'start' }, LengthMetrics: { vp: value => ({ value }) }, setTimeout: fn => timers.push(fn),
   });
-const page = Object.assign(new Page(), { sourceId: 's', bookId: 'b', mounted: true, entries,
+const page = Object.assign(new Page(), { sourceId: 's', bookId: 'b', contentKind: 'manga', mounted: true, entries,
   admittedIdentity: '', admittedEntries: [], projectedEntries: [], mangaCollapsedGroups: [],
   searchQuery: '', searchDraft: '', ascending: true, currentChapterIndex: 23, listReady: true,
-  navigationActive: false, locateCurrentRevision: 0, scrollGeneration: 0,
+  navigationActive: false, locateCurrentRevision: 0, scrollGeneration: 0, viewportWidth: 400, mangaLayoutRows: [], mangaToolsHeight: 175,
   listScroller: { scrollToIndex: (...args) => scrolls.push(args) }, scheduleTopScroll() {},
-  publishProjection(rows) { this.projectedEntries = rows; }, selected: [], onSelectChapter(index) { this.selected.push(index); } });
+  selected: [], onSelectChapter(index) { this.selected.push(index); } });
 page.admitEntries(false);
-page.selectMangaEntry(entries[1], page.identity()); page.selectMangaEntry(entries[0], page.identity());
+assert.deepEqual(page.mangaLayoutRows.flatMap(row => row.entries.map(entry => entry.index)), entries.map(entry => entry.index),
+  'the explicitly admitted manga fixture initializes layout with every original canonical entry');
+page.toggleMangaBranch(entries[1], page.identity()); page.toggleMangaBranch(entries[0], page.identity());
 assert.deepEqual(page.mangaVisibleEntries().map(row => row.index), [7, 29, 41, 53]);
-assert.equal(page.mangaGroupFor(entries[3]), undefined);
+assert.equal(page.mangaPresentation.get(entries[3].index).parentTitle, undefined);
 page.selectMangaEntry(entries[4], page.identity());
 assert.deepEqual(page.mangaCollapsedGroups, [17, 7], 'a disabled root cannot manufacture a fold');
 page.locateCurrent(); timers.splice(0).forEach(fn => fn());
 assert.deepEqual(page.mangaCollapsedGroups, [], 'locate unfolds every exact ancestor');
-assert.deepEqual(scrolls.at(-1), [2, false, 'center']);
+assert.deepEqual(scrolls.at(-1), [2, false, 'start', { extraOffset: { value: 183 } }]);
 page.mangaCollapsedGroups = [7]; page.searchQuery = '内卷的话';
-page.projectedEntries = projectReaderDirectoryEntries(page.admittedEntries, page.searchQuery, false);
+page.publishProjection(projectReaderDirectoryEntries(page.admittedEntries, page.searchQuery, false));
 assert.deepEqual(page.mangaVisibleEntries().map(row => row.index), [23], 'search retains the hidden exact target');
 page.selectMangaEntry(page.projectedEntries[0], page.identity()); assert.deepEqual(page.selected, [23]);
 page.entries = entries.map(row => row.index === 7 ? { ...row, title: '另一卷' } : row); page.admitEntries(false);

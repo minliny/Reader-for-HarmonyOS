@@ -1,3 +1,4 @@
+import { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } from './lib/manga-directory-adaptive-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire, registerHooks} from 'node:module';
@@ -9,6 +10,7 @@ import {readerAppearanceThemeStyle, readerAppearanceChromeTone} from '../entry/s
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
+import {mangaSurfaceSdkDependencies} from './lib/manga-surface-sdk-probe.mjs';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
 const require=createRequire(import.meta.url);
@@ -83,9 +85,21 @@ const mangaChromeMembers=['windowChromeActive','windowChromeOverlayActive','isRe
  'mounted','runtime','settingsGateway','appThemeScheme','controlsVisible','error','openingRetry','recovering','chapterEnd','panel',
  'backgroundPreference','loginRequiredForControls','aboutToAppear','aboutToDisappear','toggleControls','controlsPresentedForWindow',
  'refreshLoginRequiredForControls','onWindowChromeChanged','applyWindowChrome','applyWindowPolicyForChromeOwner','restoreAppWindowChrome',
- 'paperColor','inkColor','loginRequired','imageError','notifyPublishedRows','requestedLast','measureVisibleWindow','onRowAppear'];
-function mangaSdkFixture(f,text=mangaSource,properties=createArkUIPropertyRuntimeProbe()){
+ 'paperColor','inkColor','loginRequired','imageError','notifyPublishedRows','requestedLast','measureVisibleWindow','onRowAppear',
+ 'viewportWidth','viewportHeight','stageWidth','stageHeight','widePanel','persistentDirectory','directoryColumnWidth'];
+const mangaMaskSceneMembers=[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,'build','panelOverlay','panelOffset','panelScrimOpacity','panelPhase','panelGeneration',
+ 'panelActionGeneration','panelCloseTask','panelCloseResolve','reduceMotion','windowMetricsRevision','onDirectoryMetricsChanged',
+ 'quickHeaderMeasured','quickToolsMeasured','quickFooterMeasured','openPanel','closePanel','invalidatePanelMotion','settlePanel',
+ 'beginPanelDrag','updatePanelDrag','finishPanelDrag','panelTravel','panelHeight','panelWidth','panelContentHeight',
+ 'windowInteractiveInsets','interactiveInsets','panelInsets','panelTitle','panelContentInset','surfaceColor','lineColor',
+ 'directoryFontScale','directoryHeaderChrome','resizeViewport'];
+function mangaSdkFixture(f,text=mangaSource,properties=createArkUIPropertyRuntimeProbe(),maskScene=false){
  let identity=true;
+ const frames=[],animations=[],restores=[];
+ let owner;
+ const uiContext={postFrameCallback:frame=>frames.push(frame),animateTo(params,apply){
+  apply();animations.push({params});
+ }};
  const prefs={mangaBackground:'paper',mangaDirection:'vertical',mangaFit:'source',mangaPageNumbers:true};
  class SessionPort{
   constructor(){this.tiles=new Map();this.pages=[];this.closeCount=0;}
@@ -94,16 +108,29 @@ function mangaSdkFixture(f,text=mangaSource,properties=createArkUIPropertyRuntim
   async close(){this.closeCount++;}
  }
  const available=componentMembers(text).names;
- const deps={...properties.sdk,ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,ReaderWindowPolicy:f.P,
+ if(maskScene){
+  // The full frontend registers all declared Builders before member lowering.
+  // Preserve that actual declaration metadata while chapter/list bodies remain
+  // separate IO/paint boundaries of this window-composition fixture.
+  const declaration=componentMembers(text),map=require(`${sdkRoot}/lib/component_map.js`);
+  for(const member of declaration.component.members)if(ts.getAllDecorators(member).some(d=>d.getText(declaration.file)==='@Builder'))
+   map.CUSTOM_BUILDER_METHOD.add(member.name.getText(declaration.file));
+ }
+ const deps={...mangaDirectoryAdaptiveDependencies,...mangaSurfaceSdkDependencies,...properties.sdk,ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,ReaderWindowPolicy:f.P,
   hilog:{warn(){}},AppStorage:globalThis.AppStorage,
+  uiContext,curves:{interpolatingSpring:(...args)=>({kind:'native-spring',args})},Curve:{EaseInOut:'easeInOut'},
   MangaBookPresentation:{revision:0,useOwner(){}},MangaSessionController:SessionPort};
- const {owner,Component,output}=createReaderBuilderProbe(text,mangaChromeMembers.filter(n=>available.has(n)),deps,
-  {...properties.hooks,initialParams:{windowChromeActive:true,windowChromeOverlayActive:false,isReaderIdentityCurrent:()=>identity}});
+ const built=createReaderBuilderProbe(text,[...mangaChromeMembers,...(maskScene?mangaMaskSceneMembers:[])].filter(n=>available.has(n)),deps,
+  {...properties.hooks,
+   initialParams:{windowChromeActive:true,windowChromeOverlayActive:false,isReaderIdentityCurrent:()=>identity}});
+ owner=built.owner;const {Component,output}=built;
+ if(text===mangaSource&&maskScene&&!sdkEvidence.mangaMaskEmittedSHA)sdkEvidence.mangaMaskEmittedSHA=sha256(output);
  if(text===mangaSource&&!sdkEvidence.mangaEmittedSHA){sdkEvidence.mangaEmittedSHA=sha256(output);sdkEvidence.propertyRuntime=properties.source;}
  function initialize(instance){
   const rows=[];
   Object.assign(instance,{runtime:{},sourceId:'real-source',bookId:'real-book',offline:false,first:0,last:0,
-   viewportHeight:844,publishedRowKeys:new Map(),layoutGeneration:0,viewportGeneration:0,loginGeneration:0,presentationGeneration:0,
+   viewportWidth:390,viewportHeight:844,stageWidth:390,stageHeight:844,
+   publishedRowKeys:new Map(),layoutGeneration:0,viewportGeneration:0,loginGeneration:0,presentationGeneration:0,
    brightnessOwner:0,brightnessGeneration:0,panelFontGeneration:0,horizontal:false,pendingTurnOrdinal:undefined,
    settingsGateway:{current:()=>prefs},onExitRequestHandler(){},
    retainPreparationOnDisappear:()=>false,
@@ -111,12 +138,21 @@ function mangaSdkFixture(f,text=mangaSource,properties=createArkUIPropertyRuntim
    scroller:{getItemIndex:()=>0},
    // Resource, native geometry and panel scheduling are independent boundaries;
    // all chrome/lifecycle/auth mapping and Coordinator methods remain production.
-   loadBrightness(){},open(){},invalidatePanelMotion(){},updateViewport:async()=>{},
+   loadBrightness(){},open(){},...(!maskScene?{invalidatePanelMotion(){}}:{}),updateViewport:async()=>{},
    rowRenderKey(row){return `${row.key}:${this.imageError(row)}`;},confirmMountedTurn(){}});
+  if(maskScene)Object.assign(instance,{
+   opened:false,showPageNumbers:false,quickHeaderMeasured:0,quickToolsMeasured:0,quickFooterMeasured:0,
+   imageViewport(){},tabletDirectory(){},topControls(){},bottomControls(){},chapterEndContent(){},
+   directoryPanel(){},modePanel(){},settingsPanel(){},morePanel(){},
+   // Chapter transport, static-font receipt and keyboard dismissal are IO
+   // boundaries. Actual panel lifecycle, paint, Area and chrome remain selected.
+   saveVisible:async()=>{},dismissPanelKeyboard:async()=>{},preparePanelFonts:async()=>true,
+   restore:(...args)=>restores.push(args),
+  });
   return rows;
  }
  const rows=initialize(owner);
- return{owner,Component,initialize,rows,properties,output,prefs,
+ return{owner,Component,initialize,rows,properties,output,prefs,frames,animations,restores,
   setIdentity(value){identity=value;},
   async mount(){owner.aboutToAppear();await settle();},
   async state(name,value){owner[name]=value;properties.flush();await settle();},
@@ -127,10 +163,10 @@ function assertBars(win,visible,message='all three native system bars match pres
  assert.deepEqual(win.barEnabled,{status:visible,navigation:visible,navigationIndicator:visible},message);
  for(const call of win.calls.filter(c=>c[0]==='visible'))assert.equal(call[3],false,'specific system bar changes explicitly disable platform visibility animation');
 }
-function assertMangaChrome(f,win,presented,paper='#F8F4EC',foreground='#1F1B17',tone='dark',owner='reader'){
- const background=presented?paper:'#00000000';
- assert.equal(win.properties.statusBarColor,background,'visible manga status bar must paint its own background');
- assert.equal(win.properties.navigationBarColor,background,'visible manga navigation bar must paint its own background');
+function assertMangaChrome(f,win,presented,paper='#F8F4EC',foreground='#1F1B17',tone='dark',owner='reader',authoredMask=false){
+ const background=presented&&!authoredMask?paper:'#00000000';
+ assert.equal(win.properties.statusBarColor,background,'native status paint must preserve the owning manga composition');
+ assert.equal(win.properties.navigationBarColor,background,'native navigation paint must preserve the owning manga composition');
  assert.equal(win.properties.statusBarContentColor,foreground);assert.equal(win.properties.navigationBarContentColor,foreground);
  assert.equal(f.app.get('readerWindowChromeThemeId'),'','solid manga underlay never borrows the novel transparent theme');
  assert.equal(f.app.get('readerWindowChromeUnderlayColor'),paper);assert.equal(f.app.get('readerWindowChromeTone'),tone);
@@ -180,13 +216,134 @@ await check('manga plain controller auth facts → production publication/viewpo
 });
 await check('manga internal panels and actual SDK outer-overlay Props show all bars; clearing returns immersive',async()=>{
  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();const m=mangaSdkFixture(f);await m.mount();
- for(const panel of ['directory','mode','settings','download']){
-  await m.state('panel',panel);assertBars(w,true,panel);assertMangaChrome(f,w,true);
+ for(const panel of ['directory','mode','settings','more','downloads']){
+  await m.state('panel',panel);assertBars(w,true,panel);assertMangaChrome(f,w,true,'#F8F4EC','#1F1B17','dark','reader',true);
   await m.state('panel','');assertBars(w,false);assertMangaChrome(f,w,false);
  }
  await m.props({windowChromeOverlayActive:true});assertBars(w,true);assertMangaChrome(f,w,true,'#F8F4EC','#1F1B17','dark','overlay');
  await m.props({windowChromeOverlayActive:false});assertBars(w,false);assertMangaChrome(f,w,false);
  m.owner.aboutToDisappear();await settle();f.C.detach();
+});
+async function mountedMaskScene(text=mangaSource,background='paper'){
+ const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const m=mangaSdkFixture(f,text,createArkUIPropertyRuntimeProbe(),true);m.prefs.mangaBackground=background;
+ await m.mount();await m.owner.openPanel('directory');m.owner.initialRender();
+ // The authored scrim is admitted once. Native branch removal/replacement is
+ // outside this helper; actual State Watch, retained paint attributes, Area
+ // callbacks and serialized Window writes continue through the real SDK.
+ const root=m.owner.nodes.get(0),stage=[...m.owner.nodes.values()].find(n=>n.type==='Row'&&n.onAreaChange);
+ assert.ok(root&&stage,'actual SDK build admits the same full-window stage Area callback');
+ return{f,w,m,root,stage};
+}
+async function verifyAuthoredMask(text=mangaSource){
+ for(const [background,paper,ink,tone]of [['paper','#F8F4EC','#1F1B17','dark'],
+  ['white','#FFFFFF','#1F1B17','dark'],['ink','#1C1E1A','#EAE7DE','light']]){
+  const {f,w,m,root}=await mountedMaskScene(text,background),rootID=root.id;
+  m.properties.flush();await settle();
+  const scrim=[...m.owner.nodes.values()].find(n=>n.type==='Column'&&n.backgroundColor==='#57000000'&&n.height==='100%');
+  assert.ok(scrim,'actual SDK phone panel owns a full-window authored scrim');
+  assert.equal(scrim.opacity,0);assert.equal(m.owner.panelPhase,'opening');assertBars(w,true);
+  assertMangaChrome(f,w,true,paper,ink,tone,'reader',true);
+  m.frames.shift().onFrame(0);assert.equal(m.animations.length,0);
+  m.frames.shift().onFrame(1);m.properties.flush();await settle();
+  assert.equal(m.animations[0].params.duration,160);assert.equal(scrim.opacity,1);
+  assertMangaChrome(f,w,true,paper,ink,tone,'reader',true);
+  m.animations[1].params.onFinish();m.properties.flush();assert.equal(m.owner.panelPhase,'open');
+  m.owner.beginPanelDrag();m.owner.updatePanelDrag(30);m.properties.flush();await settle();
+  assert.equal(m.owner.panelPhase,'dragging');assertMangaChrome(f,w,true,paper,ink,tone,'reader',true);
+  const closing=m.owner.closePanel();m.properties.flush();await settle();
+  assert.equal(m.owner.panelPhase,'closing');assert.equal(m.owner.panel,'directory');assert.equal(scrim.opacity,0);
+  assertMangaChrome(f,w,true,paper,ink,tone,'reader',true);
+  m.animations.at(-1).params.onFinish();await closing;m.properties.flush();await settle();
+  assert.equal(m.owner.panel,'');assert.equal(m.owner.controlsVisible,true);
+  assertMangaChrome(f,w,true,paper,ink,tone);assert.equal(root.id,rootID,'mask lifecycle retains the same SDK window root');
+  m.owner.reduceMotion=true;
+  for(const panel of ['mode','settings','more','downloads']){
+   await m.owner.openPanel(panel);m.properties.flush();await settle();assert.equal(m.owner.panelPhase,'open');
+   assertMangaChrome(f,w,true,paper,ink,tone,'reader',true);
+   await m.props({windowChromeOverlayActive:true});assertMangaChrome(f,w,true,paper,ink,tone,'overlay');
+   await m.props({windowChromeOverlayActive:false});assertMangaChrome(f,w,true,paper,ink,tone,'reader',true);
+   await m.owner.closePanel();m.properties.flush();await settle();assertMangaChrome(f,w,true,paper,ink,tone);
+  }
+  m.owner.aboutToDisappear();await settle();f.C.detach();
+ }
+}
+await check('actual SDK full-window phone scrim plus serialized Coordinator: opening/open/drag/closing/reduced and external overlay retain exact owner',()=>verifyAuthoredMask());
+async function verifyMaskResize(text=mangaSource,only='both'){
+ const {f,w,m,root,stage}=await mountedMaskScene(text);m.owner.reduceMotion=true;
+ await m.owner.openPanel('directory');m.properties.flush();await settle();
+ const rootID=root.id;
+ const transparent=()=>assertMangaChrome(f,w,true,'#F8F4EC','#1F1B17','dark','reader',true);
+ const opaque=()=>assertMangaChrome(f,w,true);
+ transparent();
+ if(only!=='stage'){
+  m.owner.resizeViewport(660,844);m.properties.flush();await settle();opaque();
+  m.owner.resizeViewport(390,844);m.properties.flush();await settle();transparent();
+ }
+ if(only!=='viewport'){
+  stage.onAreaChange({}, {width:660,height:844});m.properties.flush();await settle();opaque();
+  stage.onAreaChange({}, {width:390,height:844});m.properties.flush();await settle();transparent();
+ }
+ if(only==='both'){
+  for(const order of ['stage-first','viewport-first']){
+   const area=(width,height)=>stage.onAreaChange({}, {width,height});
+   const size=(width,height)=>m.owner.resizeViewport(width,height);
+   const first=order==='stage-first'?area:size,last=order==='stage-first'?size:area;
+   first(920,900);m.properties.flush();await settle();opaque();
+   last(662,900);m.properties.flush();await settle();opaque();
+   first(390,844);m.properties.flush();await settle();
+   last(390,844);m.properties.flush();await settle();transparent();
+  }
+  m.owner.quickHeaderMeasured=19;m.owner.quickToolsMeasured=20;m.owner.quickFooterMeasured=21;
+  m.owner.windowMetricsRevision+=1;m.properties.flush();await settle();
+  assert.deepEqual([m.owner.quickHeaderMeasured,m.owner.quickToolsMeasured,m.owner.quickFooterMeasured],[0,0,0]);transparent();
+  await m.props({windowChromeActive:false});assertBars(w,true);assertAppChrome(f,w);
+  stage.onAreaChange({}, {width:660,height:844});m.owner.resizeViewport(660,844);
+  m.owner.windowMetricsRevision+=1;m.properties.flush();await settle();assertAppChrome(f,w);
+  await m.props({windowChromeActive:true});opaque();
+  stage.onAreaChange({}, {width:390,height:844});m.owner.resizeViewport(390,844);
+  m.properties.flush();await settle();transparent();
+  m.setIdentity(false);const next=mangaSdkFixture(f);await next.mount();const colors=f.colors(w).length;
+  stage.onAreaChange({}, {width:660,height:844});m.owner.resizeViewport(660,844);
+  m.owner.windowMetricsRevision+=1;m.properties.flush();await settle();
+  assert.equal(f.colors(w).length,colors,'stale actual Area/metrics callbacks cannot reclaim newest window owner');
+  assertBars(w,false);assertMangaChrome(f,w,false);next.owner.aboutToDisappear();await settle();
+ }
+ assert.equal(root.id,rootID,'actual Area/chrome publication does not remount the SDK root');
+ m.owner.aboutToDisappear();await settle();f.C.detach();
+}
+await check('actual SDK viewport and stage Area after assignment plus metrics refresh: phone/wide both orders, inactive/stale identity',()=>verifyMaskResize());
+await check('negative: original opaque phone bars cannot pass authored mask composition',async()=>{
+ const opaque=mangaSource.replace("'', !presented || authoredPhoneMask)","'', !presented)");assert.notEqual(opaque,mangaSource);
+ await assert.rejects(verifyAuthoredMask(opaque),/native status paint must preserve/);
+});
+await check('negative: omitted viewport chrome refresh leaves the opened mask native style stale',async()=>{
+ const stale=mangaSource.replace('this.viewportWidth = width; this.viewportHeight = height;\n    this.onWindowChromeChanged();',
+  'this.viewportWidth = width; this.viewportHeight = height;');assert.notEqual(stale,mangaSource);
+ await assert.rejects(verifyMaskResize(stale,'viewport'),/native status paint must preserve/);
+});
+await check('negative: omitted actual stage Area chrome refresh leaves persistent/wide native style stale',async()=>{
+ const stale=mangaSource.replace('if (Number.isFinite(height) && height > 0) this.stageHeight = height;\n        this.onWindowChromeChanged();',
+  'if (Number.isFinite(height) && height > 0) this.stageHeight = height;');assert.notEqual(stale,mangaSource);
+ await assert.rejects(verifyMaskResize(stale,'stage'),/native status paint must preserve/);
+});
+async function verifyMaskMetricsRefresh(text=mangaSource){
+ const {f,w,m,stage}=await mountedMaskScene(text);m.properties.flush();await settle();
+ assertMangaChrome(f,w,true,'#F8F4EC','#1F1B17','dark','reader',true);
+ const gate=deferred();w.nextColor=gate;
+ stage.onAreaChange({}, {width:660,height:844});m.properties.flush();await settle();
+ gate.reject(new Error('controlled pending wide color failure'));await settle();
+ assertMangaChrome(f,w,true,'#F8F4EC','#1F1B17','dark','reader',true);
+ f.displayInfo.scaledDensity=2;w.events.get('windowRectChange')({});
+ assert.equal(f.C.metrics().systemFontScale,2,'the production Coordinator publishes the changed font-scale metric');
+ m.owner.windowMetricsRevision=f.app.get('readerWindowMetricsRevision');m.properties.flush();await settle();
+ assertMangaChrome(f,w,true); // The actual metrics Watch retries the pending style.
+ m.owner.aboutToDisappear();await settle();f.C.detach();
+}
+await check('production font-scale metric → actual SDK metrics Watch retries failed wide chrome without geometry remount',()=>verifyMaskMetricsRefresh());
+await check('negative: omitted metrics chrome refresh strands the failed native wide color',async()=>{
+ const stale=mangaSource.replace(/(private onDirectoryMetricsChanged\(\): void \{[\s\S]*?)    this\.onWindowChromeChanged\(\);/, '$1');assert.notEqual(stale,mangaSource);
+ await assert.rejects(verifyMaskMetricsRefresh(stale),/native status paint must preserve/);
 });
 await check('manga inactive Prop restores captured landscape/awake App owner; hidden state writes cannot reclaim it',async()=>{
  const f=fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
@@ -412,4 +569,4 @@ await check('show superseded by hide converges and same-size rotation does not r
 for(const result of cases)console.log(JSON.stringify(result));
 console.log(JSON.stringify({sdkEvidence,cases:cases.length}));
 assert.equal(cases.filter(x=>x.status==='FAIL').length,0,'production window chrome scenarios');
-console.log('PASS actual SDK Manga/Shell Props/State Watch → production intent → actual Coordinator, plus existing LRE palette/order cases and five production counterfactuals. Native subscriber delivery and Window promises are controlled; no device pixel, compositor, failure-frequency or native-bar acceptance claim.');
+console.log('PASS actual SDK Manga/Shell Props/State Watch → production intent → actual Coordinator, authored phone mask opening/drag/closing/restore, both Area orders and font-metric retry, plus existing LRE palette/order cases and nine production counterfactuals. Native branch removal, subscriber delivery and Window promises are controlled boundaries; no device pixel, compositor, failure-frequency or native-bar acceptance claim.');

@@ -2,18 +2,28 @@ import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
 
 export interface MangaDirectoryRowPresentation {
   parentTitle?: string;
+  parentIndex?: number;
+  /** Full explicit ancestor path, independent of filtering and folding. */
+  contextTitle?: string;
   readableDescendantCount?: number;
+  /** Compatibility name: includes every explicit branch, including readable parents. */
   ancestorGroupIndexes: number[];
   group: boolean;
+  hasChildren: boolean;
+  readableParent: boolean;
   countComplete: boolean;
 }
 
-export function mangaDirectoryIsGroup(entries: LocalReadingTocEntry[], ordinal: number): boolean {
+export function mangaDirectoryHasChildren(entries: LocalReadingTocEntry[], ordinal: number): boolean {
   const entry = entries[ordinal];
   const level = entry?.level;
   const nextLevel = entries[ordinal + 1]?.level;
-  return entry?.navigable === false && level !== undefined && Number.isInteger(level) && level >= 1 &&
+  return level !== undefined && Number.isInteger(level) && level >= 1 &&
     nextLevel !== undefined && Number.isInteger(nextLevel) && nextLevel > level;
+}
+
+export function mangaDirectoryIsGroup(entries: LocalReadingTocEntry[], ordinal: number): boolean {
+  return entries[ordinal]?.navigable === false && mangaDirectoryHasChildren(entries, ordinal);
 }
 
 /** One presentation of Core's explicit flat depth facts for all three manga
@@ -35,17 +45,21 @@ export function mangaDirectoryPresentation(entries: LocalReadingTocEntry[]): Map
     }
     while (ancestors.length > 0 && (ancestors[ancestors.length - 1].level ?? 1) >= level) ancestors.pop();
     const parent = ancestors.length === 0 ? undefined : ancestors[ancestors.length - 1];
-    const group = mangaDirectoryIsGroup(entries, ordinal);
+    const hasChildren = mangaDirectoryHasChildren(entries, ordinal);
+    const group = entry.navigable === false && hasChildren;
     presentation.set(entry.index, { group, countComplete: true,
+      hasChildren, readableParent: entry.navigable === true && hasChildren,
       ancestorGroupIndexes: ancestors.map((ancestor: LocalReadingTocEntry): number => ancestor.index),
-      parentTitle: parent?.title, readableDescendantCount: group ? 0 : undefined });
+      parentIndex: parent?.index, parentTitle: parent?.title,
+      contextTitle: ancestors.length === 0 ? undefined : ancestors.map((ancestor: LocalReadingTocEntry): string => ancestor.title).join(' / '),
+      readableDescendantCount: hasChildren ? 0 : undefined });
     for (const ancestor of ancestors) {
       const value = presentation.get(ancestor.index);
       if (value === undefined) continue;
       if (entry.navigable === true) value.readableDescendantCount = (value.readableDescendantCount ?? 0) + 1;
       else if (entry.navigable === undefined) value.countComplete = false;
     }
-    if (group) ancestors.push(entry);
+    if (hasChildren) ancestors.push(entry);
   }
   return presentation;
 }

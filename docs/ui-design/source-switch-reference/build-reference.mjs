@@ -9,9 +9,19 @@ import { calculateReferenceProfile } from './reference-profile.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const host = path.resolve(here, '../../..');
 const workspace = path.dirname(host);
-const isolated = path.dirname(workspace);
-const project = path.dirname(isolated);
-const original = path.join(isolated, 'source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline');
+const workspaceParent = path.dirname(workspace);
+const project = path.basename(workspaceParent) === '.reader-isolated' ? path.dirname(workspaceParent) : workspace;
+const original = path.join(here, 'approved-source');
+const archived = JSON.parse(await fs.readFile(path.join(original, 'archive-manifest.json'), 'utf8'));
+if (archived.schemaVersion !== 1 || archived.id !== 'novel-source-switch-approved-source-20261007') {
+  throw new Error('REFERENCE_ARCHIVE_UNSUPPORTED');
+}
+for (const [name, expected] of Object.entries(archived.files)) {
+  const bytes = await fs.readFile(path.join(original, name));
+  if (bytes.length !== expected.bytes || crypto.createHash('sha256').update(bytes).digest('hex') !== expected.sha256) {
+    throw new Error(`REFERENCE_ARCHIVED_INPUT_CHANGED ${name}`);
+  }
+}
 const specPath = path.join(workspace, 'Reader-UI/design/source-switch/source-switch.visual.json');
 const specRaw = await fs.readFile(specPath, 'utf8');
 const definition = JSON.parse(specRaw);
@@ -20,6 +30,25 @@ const visual = definition.numbers;
 const sha = value => crypto.createHash('sha256').update(value).digest('hex');
 const referencePath = pathname => path.relative(here, pathname).split(path.sep).join('/');
 const originalPath = name => referencePath(path.join(original, name));
+const rebasedDir = path.join(here, 'rebased');
+const stylesheetNames = ['tokens.css', 'app.css', 'library.css', 'reading.css', 'source-flow.css',
+  'settings.css', 'source-switch.css', 'delivery.css'];
+const sharedAsset = value => {
+  const prefix = '../../../entry/src/main/resources/';
+  if (!value.startsWith(prefix)) throw new Error(`REFERENCE_SHARED_ASSET_UNSUPPORTED ${value}`);
+  return path.join(host, 'entry/src/main/resources', value.slice(prefix.length));
+};
+const rebasedStyles = new Map();
+for (const name of stylesheetNames) {
+  const raw = await fs.readFile(path.join(original, name), 'utf8');
+  const css = raw.replace(/url\((['"]?)([^)'"\s]+)\1\)/g, (whole, quote, value) => {
+    if (value.startsWith('data:')) return whole;
+    const relative = path.relative(rebasedDir, sharedAsset(value)).split(path.sep).join('/');
+    return `url(${quote}${relative}${quote})`;
+  });
+  rebasedStyles.set(path.join(rebasedDir, name), css);
+}
+const stylesheetPath = name => referencePath(path.join(rebasedDir, name));
 const originalInputs = new Map();
 async function source(name) {
   const content = await fs.readFile(path.join(original, name), 'utf8');
@@ -88,12 +117,12 @@ const bundle = await esbuild.build({ stdin: { contents: flow, resolveDir: origin
 });
 let html = await source('index.html');
 for (const name of ['tokens.css', 'app.css', 'library.css', 'reading.css']) {
-  html = replaceExactly(html, `href="${name}"`, `href="${originalPath(name)}"`);
+  html = replaceExactly(html, `href="${name}"`, `href="${stylesheetPath(name)}"`);
 }
 html = replaceExactly(html, 'href="source-flow.css?v=light-discovery-toolbar-20261007"',
-  `href="${originalPath('source-flow.css')}"`);
+  `href="${stylesheetPath('source-flow.css')}"`);
 html = replaceExactly(html, '</head>', '  <link rel="stylesheet" href="source-switch-reference.css">\n  <link rel="stylesheet" href="reference-shell.css">\n</head>');
-html = replaceExactly(html, 'href="catalogue.html#reader-controls"', `href="${originalPath('catalogue.html')}#reader-controls"`);
+html = replaceExactly(html, 'href="catalogue.html#reader-controls"', 'href="catalogue.html#reader-controls"');
 html = replaceExactly(html, '<title>Reader · 小说换源完整流程</title>', '<title>Reader · 共同视觉规格换源参考</title>');
 html = replaceExactly(html, '<p class="source-flow-demo-eyebrow">Reader · 独立交互稿</p>', '<p class="source-flow-demo-eyebrow">Reader · 共同视觉规格参考</p>');
 html = replaceExactly(html, 'src="source-flow.bundle.js?v=light-discovery-toolbar-20261007"', 'src="source-switch-reference.bundle.js"');
@@ -108,6 +137,13 @@ html = replaceExactly(html, '<h2>完整演示</h2>', `<h2>完整演示</h2>
       </div>`);
 html = replaceExactly(html, '本稿使用定时模拟的书源响应与阅读内容，用于查看布局、动态刷新和换源动画。',
   '使用选定稿的模拟书源与阅读内容；布局、字体和动画来自共同规格。定位章节开头文案与当前业务一致。源码校验不代表浏览器或VM视觉验收。');
+let catalogue = await source('catalogue.html');
+for (const name of stylesheetNames.filter(name => name !== 'source-flow.css')) {
+  catalogue = replaceExactly(catalogue, `href="${name}${name === 'source-switch.css' ? '?v=concepts-20261006' : ''}"`, `href="${stylesheetPath(name)}"`);
+}
+catalogue = replaceExactly(catalogue, 'href="LOGIC.md"', `href="${originalPath('LOGIC.md')}"`);
+catalogue = replaceExactly(catalogue, 'src="app.bundle.js?v=concepts-20261006"', 'src="catalogue.bundle.js"');
+const catalogueBundle = await fs.readFile(path.join(original, 'app.bundle.js'), 'utf8');
 const shell = '.source-flow-viewport-holder{overflow:auto}.reference-profile-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;font-size:11px}.reference-profile-controls label{display:flex;flex-direction:column;gap:3px}.reference-profile-controls label:first-child,.reference-profile-controls details,.reference-profile-controls output{grid-column:1/-1}.reference-profile-controls input,.reference-profile-controls select{width:100%;min-width:0;padding:5px;border:1px solid #cdd7cf;border-radius:6px;background:white;font-size:11px}.reference-profile-controls output{color:#65716a;line-height:1.5}.reference-profile-controls details label{margin-top:6px}\n';
 
 // Execute the finite profile math without a browser. Expected base geometry is
@@ -146,10 +182,10 @@ const dependencyFiles = new Set([...Object.keys(bundle.metafile.inputs).filter(n
   path.join(here, 'reference-profile.mjs'), path.join(here, 'build-reference.mjs')]);
 // Resolve stylesheet font/image dependencies and actual reader/control/drawer
 // markup resources without starting a browser or pretending these are pixels.
-for (const name of ['tokens.css', 'app.css', 'library.css', 'reading.css', 'source-flow.css']) {
+for (const name of stylesheetNames) {
   const css = await fs.readFile(path.join(original, name), 'utf8');
   for (const match of css.matchAll(/url\(['"]?([^)'"\s]+)['"]?\)/g)) {
-    if (!match[1].startsWith('data:')) dependencyFiles.add(path.resolve(original, match[1]));
+    if (!match[1].startsWith('data:')) dependencyFiles.add(sharedAsset(match[1]));
   }
 }
 const { screens } = await import(pathToFileURL(path.join(original, 'ui-reading.mjs')).href);
@@ -168,7 +204,8 @@ for (const markup of staticMarkup) for (const match of markup.matchAll(/src="([^
   dependencyFiles.add(pathname); markupAssets.add(referencePath(pathname));
 }
 staticModel.destroy();
-dependencyFiles.add(path.join(original, 'catalogue.html'));
+for (const name of Object.keys(archived.files)) dependencyFiles.add(path.join(original, name));
+dependencyFiles.add(path.join(original, 'archive-manifest.json'));
 const dependencies = {};
 for (const filename of [...dependencyFiles].sort()) {
   const bytes = await fs.readFile(filename);
@@ -178,7 +215,7 @@ for (const filename of [...dependencyFiles].sort()) {
 for (const [name, digest] of originalInputs) {
   const filename = path.join(original, name);
   const bytes = await fs.readFile(filename);
-  dependencies[referencePath(filename)] = { sha256: digest, bytes: bytes.length, crossWorktree: true };
+  dependencies[referencePath(filename)] = { sha256: digest, bytes: bytes.length, crossWorktree: false };
 }
 const fontEvidencePath = path.join(here, 'font-provenance.json');
 let fontEvidence = null;
@@ -188,15 +225,15 @@ const manifest = {
   schemaVersion: 1, id: 'novel-source-switch-shared-reference-20261007',
   entry: 'index.html', sharedDefinition: referencePath(specPath), sharedDefinitionSha256: sha(specRaw),
   generatedCss: 'source-switch-reference.css', generatedNative: '../../../entry/src/main/ets/features/source/SourceSwitchVisual.ts',
-  sourceDemo: referencePath(original), sourceDemoModified: false,
+  sourceDemo: referencePath(original), sourceDemoModified: false, sourceArchive: originalPath('archive-manifest.json'), sourceArchiveOrigin: archived.origin,
   selectedRefinement: { path: originalPath(definition.provenance.referenceRefinement),
     sha256: definition.provenance.inputs[definition.provenance.referenceRefinement],
     acceptance: definition.provenance.referenceRefinementAcceptance,
     historicalImageScope: definition.provenance.referenceImageScope },
-  dependencyPolicy: 'Thin entry intentionally depends on retained adjacent DESIGN worktree; no font, SVG, cover or base CSS copies. It is not a standalone portable archive.',
+  dependencyPolicy: 'Portable inside a Reader workspace: exact local approved-source archive, generated URL-only stylesheet adapters, shared Host fonts/media and paired UI visual definition. No adjacent worktree required; historical catalogue and its direct local dependencies are included.',
   dependencies, derivedOriginalSourceSha256: Object.fromEntries([...originalInputs].sort(([a], [b]) => a.localeCompare(b))), fontEvidence,
-  bundler: { name: 'esbuild', version: esbuild.version, package: referencePath(esbuildModule) },
-  adapters: ['shared animation durations/easing/reader fade', 'width/height/font scale/safe-area profiles', 'short/large-font book scroll and extreme-window flow chrome', 'chapter-start caption and completion copy'],
+  bundler: { name: 'esbuild', version: esbuild.version, packageRoot: 'Reader project root', package: path.relative(project, esbuildModule).split(path.sep).join('/') },
+  adapters: ['shared animation durations/easing/reader fade', 'width/height/font scale/safe-area profiles', 'short/large-font book scroll and extreme-window flow chrome', 'chapter-start caption and completion copy', 'URL-only portable stylesheet and historical catalogue adapters'],
   originalModelPreserved: 'Fictional successful-source admission, stop/restart/late-response generation guards and 900/900/600ms transaction fixtures remain demo-only.',
   verification: { generatorCheckedSeparately: true, executedProfileChecks: 10, baseGeometryFromSelectedCss: true,
     fontScaleBelowOnePreserved: true, tinyWindowFlowChrome: true, sharedCssConsumedByHtml: true,
@@ -204,16 +241,18 @@ const manifest = {
     fontMetadataSameVersion: true, originalVariableToStaticOutlineEquivalence: false,
     fontBoundary: 'Full glyph-command comparison failed; same upstream Version2.004/coverage is established, exact VF-to-static outline equality is not. The new reference and native both use the same physical static face hashes.',
     browserRendered: false, browserPlayback: false, nativeRendered: false, visualAcceptance: 'OPEN' },
-  outputs: { 'index.html': sha(html), 'reference-shell.css': sha(shell), 'source-switch-reference.bundle.js': sha(script) },
+  outputs: { 'index.html': sha(html), 'reference-shell.css': sha(shell), 'source-switch-reference.bundle.js': sha(script),
+    'catalogue.html': sha(catalogue), 'catalogue.bundle.js': sha(catalogueBundle),
+    ...Object.fromEntries([...rebasedStyles].map(([filename, content]) => [referencePath(filename), sha(content)])) },
 };
-const outputs = [[path.join(here, 'index.html'), html], [path.join(here, 'reference-shell.css'), shell],
+const outputs = [...rebasedStyles, [path.join(here, 'catalogue.html'), catalogue], [path.join(here, 'catalogue.bundle.js'), catalogueBundle], [path.join(here, 'index.html'), html], [path.join(here, 'reference-shell.css'), shell],
   [path.join(here, 'source-switch-reference.bundle.js'), script], [path.join(here, 'reference-manifest.json'), JSON.stringify(manifest, null, 2) + '\n']];
 const check = process.argv.includes('--check');
 for (const [filename, content] of outputs) {
   if (check) {
     if (await fs.readFile(filename, 'utf8') !== content) throw new Error(`REFERENCE_OUTPUT_STALE ${path.basename(filename)}`);
   }
-  else await fs.writeFile(filename, content);
+  else { await fs.mkdir(path.dirname(filename), { recursive: true }); await fs.writeFile(filename, content); }
 }
 console.log(JSON.stringify({ status: 'PASS', mode: check ? 'check' : 'build', entry: path.relative(host, path.join(here, 'index.html')),
   sharedDefinitionSha256: sha(specRaw), bundleBytes: Buffer.byteLength(script), crossWorktreeDependencies: Object.values(dependencies).filter(item => item.crossWorktree).length,

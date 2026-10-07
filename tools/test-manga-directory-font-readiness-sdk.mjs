@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { mangaDirectoryEntryRowSdk } from './lib/manga-directory-entry-row-probe.mjs';
+import { mangaRowBuilderMembers, mangaGridProbeDependencies } from './lib/manga-directory-grid-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/ReaderDirectoryTrace.ts';
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
@@ -98,7 +100,7 @@ for (const watchBeforeReceipt of [false, true]) {
 async function nativeOpeningInset(text = source) {
   for (const inset of [50, 7]) for (const locate of [false, true]) for (const manga of [true, false]) {
     const properties = createArkUIPropertyRuntimeProbe(), requests = [], scrolls = [];
-    const { owner } = createReaderBuilderProbe(text, ['mangaCurrentOpenInset', 'mangaFontsReady',
+    const { owner } = createReaderBuilderProbe(text, ['mangaCurrentOpenInset', 'mangaQuickDisplay', 'mangaFontsReady',
       'mangaFontGeneration', 'mangaFontTask', 'openTree', 'prepareMangaFonts'], {
       ...properties.sdk, prepareMangaSheetFonts: async () => true,
       ReaderDirectoryTrace, readerDirectoryScopeKey: () => 'manga:book', readerDirectoryViewportAnchor: () => undefined,
@@ -117,19 +119,19 @@ async function nativeOpeningInset(text = source) {
     assert.equal(owner.view.currentDisplayInset, manga ? locate ? 12 : inset : undefined,
       'the SDK production opening publishes the variant inset, while explicit locate stays 12');
     const { owner: list } = createReaderBuilderProbe(listSource,
-      ['planPosition', 'positionInitialCurrent', 'positionRowHeight', 'mangaGroupSpacing', 'mangaRowIndex'], {
+      ['mangaContentStartOffset', 'planPosition', 'positionInitialCurrent', 'positionRowHeight', 'mangaGroupSpacing', 'mangaRowIndex'], {
         readerDirectoryScopeKey: () => 'manga:book', readerDirectoryViewportAnchor: () => undefined,
         ScrollAlign: { START: 'start', CENTER: 'center' }, LengthMetrics: { vp: value => ({ value }) },
       });
     Object.assign(list, { view: owner.view, mangaDisplay: manga, sourceId: 'manga', bookId: 'book',
-      initialPositionPending: true, scroller: { scrollToIndex: (...args) => scrolls.push(args) } });
+      initialPositionPending: true, mangaVisibleTopInset: 0, contentStartInset: 0, listPaddingTop: 0, listPaddingY: 0, scroller: { scrollToIndex: (...args) => scrolls.push(args) } });
     list.positionInitialCurrent();
     assert.deepEqual(scrolls, manga ? [[9, locate, 'start', { extraOffset: { value: -(locate ? 12 : inset) } }]] : [[9, false, 'center']],
       'the published opening reaches the unmodified SDK list scroll request');
   }
 }
 await nativeOpeningInset();
-const fixedPhoneOpen = source.replace('locateCurrent ? 12 : this.mangaCurrentOpenInset', 'locateCurrent ? 12 : 50');
+const fixedPhoneOpen = source.replace('explicitLocateCurrent ? 12 : this.mangaCurrentOpenInset', 'explicitLocateCurrent ? 12 : 50');
 assert.notEqual(fixedPhoneOpen, source);
 await assert.rejects(() => nativeOpeningInset(fixedPhoneOpen), /variant inset/);
 
@@ -200,24 +202,28 @@ function nativeLifecycleFixture(text = source, manga = true) {
   };
   const entry = { index: 79, title: '03', navigable: true };
   const { owner: mangaOwner } = createReaderBuilderProbe(mangaSurfaceSource,
-    ['panel', 'panelPhase', 'directoryFallback', 'widePanel', 'persistentDirectory', 'selectDirectoryTarget', 'onWindowChromeChanged'],
+    ['panel', 'panelPhase', 'directoryFallback', 'directoryOuterIdentity', 'directoryCurrentOpenInset', 'directoryQuickHeight', 'directoryQuickRemainingHeight', 'directoryQuickToolsHeight', 'directoryToolHeight', 'directoryFontScale', 'directoryHeaderChrome', 'panelContentHeight', 'panelHeight', 'panelInsets', 'interactiveInsets', 'windowInteractiveInsets', 'controlsPresentedForWindow', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'widePanel', 'persistentDirectory', 'selectDirectoryTarget', 'onWindowChromeChanged'],
     { ...properties.sdk, ...mangaSurfaceSdkDependencies }, properties.hooks);
   Object.assign(mangaOwner, { isReaderIdentityCurrent: () => false, mounted: true, panel: 'directory', panelPhase: 'opening',
     sourceId: 'manga', bookId: 'book', viewportWidth: 390, viewportHeight: 844, stageWidth: 390, stageHeight: 844,
+    error: '', controlsVisible: false, chapterEnd: false, directoryOpenRevision: '',
+    quickHeaderMeasured: 60, quickFooterMeasured: 48, quickToolsMeasured: 56, windowMetricsRevision: 0,
     backgroundPreference: 'paper', controller: { chapter: { chapterIndex: 79 } },
-    directoryEntries: () => [entry], performPanelAction: () => calls.push('target-action') });
+    directoryEntries: () => [entry], performPanelAction: action => { calls.push('target-action'); action(); },
+    onSelectDirectoryTarget: index => calls.push(['target-index', index]) });
   mangaOwner.directoryFallback(false);
   const child = [...mangaOwner.children.values()][0];
   assert.ok([...mangaOwner.nodes.values()].some(node => node.type === '__Common__' && node.enabled === false),
     'the real manga fallback wrapper remains disabled during entry');
+  const rowSdk = mangaDirectoryEntryRowSdk({ dependencies: { sameReaderDirectoryData, readerDirectoryAccessibilityText } });
   const { owner: fallback } = createReaderBuilderProbe(fallbackSource,
-    ['row', 'rowFontFamily', 'rowPresentation', 'groupSpacing', 'groupExpanded', 'mangaColor', 'identity', 'selectEntry'],
-    { ...fonts, sameReaderDirectoryData, readerDirectoryAccessibilityText });
+    ['row', 'prepareLayout', 'fontScale', 'layoutRow', 'showContext', 'rowPresentation', 'mangaColor', 'identity', 'selectEntry'], rowSdk.deps, rowSdk.hooks);
   Object.assign(fallback, { mounted: true, sourceId: 'manga', bookId: 'book',
     entries: [entry], admittedEntries: [entry], projectedEntries: [entry], admittedIdentity: 'manga\u0000book',
     currentChapterIndex: 79, query: '', mangaScheme: 'day', rowHeight: 58,
-    mangaCatalogDisplay: false, mangaCatalogNarrow: false, presentation: new Map(), collapsedGroups: [],
+    mangaCatalogDisplay: false, mangaCatalogNarrow: false, layoutRows: [], presentation: new Map(), collapsedGroups: [],
     onSelectChapter: child.params.onSelectChapter });
+  fallback.prepareLayout();
   let fallbackBuilds = 0;
   Object.assign(owner, { mangaDisplay: manga, interactionEnabled: false, bookId: 'book', sourceId: 'manga',
     query: '', ascending: true, currentChapterIndex: 79, openRevision: 'opening',
@@ -228,11 +234,11 @@ function nativeLifecycleFixture(text = source, manga = true) {
     query: owner.query, ascending: owner.ascending, currentChapterIndex: owner.currentChapterIndex,
     openRevision: owner.openRevision, ...changes });
   owner.aboutToAppear(); owner.initialRender();
-  return { owner, mangaOwner, fallback, properties, calls, receipts, query, update,
+  return { owner, mangaOwner, fallback, fallbackNodes: () => rowSdk.nodes(fallback), properties, calls, receipts, query, update,
     fallbackBuilds: () => fallbackBuilds, treeRequests: () => calls.filter(value => Array.isArray(value) && value[0] === 'tree'),
     blank: () => [...branches.values()].some(record => record.branch === 0),
     historicalBlank: () => [...owner.nodes.values()].some(node => node.type === 'Blank'),
-    text: () => [...fallback.nodes.values()].find(node => node.type === 'Text' && node.create === '03') };
+    text: () => rowSdk.nodes(fallback).find(node => node.type === 'Text' && node.create === '03') };
 }
 async function sameMountDisabledAdmission(text = source) {
   const f = nativeLifecycleFixture(text);
@@ -243,20 +249,27 @@ async function sameMountDisabledAdmission(text = source) {
   assert.equal(f.fallbackBuilds(), 1); assert.equal(f.text().fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_550,
     'the real prepared fallback row Text is requested by its production Builder after checked receipt');
   assert.equal(f.treeRequests().length, 0, 'display admission cannot issue a blocked tree request');
-  const row = [...f.fallback.nodes.values()].find(node => node.type === 'Column' && node.layoutWeight === 1 && typeof node.onClick === 'function');
-  assert.ok(row, 'the prepared fallback keeps its real title selection callback');
-  assert.equal([...f.fallback.nodes.values()].find(node => node.type === 'Row').onClick, undefined,
-    'the flat row remains a layout ancestor rather than a second selection handler');
+  const row = f.fallbackNodes().find(node => node.type === 'Stack' && node.accessibilityText?.includes('03') && typeof node.onClick === 'function');
+  assert.ok(row, 'the prepared fallback keeps its real outer chapter selection callback');
+  assert.equal(row.constraintSize.minHeight, 44, 'the callback belongs to the entire painted cell');
+  assert.ok(!f.fallbackNodes().some(node => node.type === 'Text' && node.create === '03' && node.onClick),
+    'inner title does not install a duplicate gesture actor');
+  assert.equal(f.fallbackNodes().find(node => node.type === 'Row').onClick, undefined,
+    'the grid-run layout remains an ancestor rather than a second selection handler');
   row.onClick(); await tick(); assert.equal(f.calls.includes('target-action'), false,
     'a programmatic retained row callback still hits the real manga target opening fence');
   assert.equal(f.owner.interactionEnabled, false);
   f.update({ interactionEnabled: true }); f.mangaOwner.panelPhase = 'open'; await tick();
   assert.equal(f.treeRequests().length, 1, 'only the existing interaction Watch admits tree work');
+  row.onClick(); await tick();
+  assert.deepEqual(f.calls.filter(call => Array.isArray(call) && call[0] === 'target-index'), [['target-index', 79]],
+    'the same outer cell callback admits the exact chapter after the native business opening fence');
   f.update({ interactionEnabled: false }); f.mangaOwner.panelPhase = 'closing';
   f.query.resolve({ viewId: 'late-closed', visibleTotal: 1 }); await tick(); f.properties.flush();
   assert.equal(f.owner.view, undefined, 'late tree receipt cannot publish through the original closing fence');
   assert.equal(f.blank(), false, 'closing retains the independently admitted display');
-  row.onClick(); await tick(); assert.equal(f.calls.includes('target-action'), false);
+  row.onClick(); await tick(); assert.equal(f.calls.filter(call => call === 'target-action').length, 1,
+    'the retained outer actor cannot dispatch another chapter while closing');
 }
 await sameMountDisabledAdmission();
 const oldMountCoupling = source.replace('    if (this.mangaDisplay) {\n      void this.prepareMangaFonts();\n    }\n', '');
@@ -303,8 +316,8 @@ function liveCurrentFamily(text = listSource) {
   const properties = createArkUIPropertyRuntimeProbe();
   const { owner } = createReaderBuilderProbe(text,
     ['currentChapterIndex', 'mangaCatalogDisplay', 'mangaCatalogNarrow', 'mangaRowMinHeight',
-      'mangaRow', 'selectMangaRow', 'isCurrentMangaNode', 'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft', 'mangaColor'],
-    { ...properties.sdk, ...fonts }, properties.hooks);
+      ...mangaRowBuilderMembers],
+    { ...mangaGridProbeDependencies, ...properties.sdk, ...fonts }, properties.hooks);
   const entry = { nodeId: 'leaf', title: '03', depth: 2, kind: 'target', chapterIndex: 79 };
   Object.assign(owner, { mangaScheme: 'day', mangaSearchActive: false, currentChapterIndex: -1,
     interactionEnabled: true, view: { viewId: 'v' }, mangaRowMinHeight: 58,
@@ -324,24 +337,24 @@ function liveCurrentFamily(text = listSource) {
   assert.equal(title.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_REGULAR);
   update({ currentChapterIndex: 79 });
   assert.equal(title.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_550, 'native Prop update switches the retained title to physical fixed 550');
-  assert.equal(title.fontWeight, 400, 'the fixed face has no non-hundred native/VF request');
+  assert.deepEqual(title.fontWeight, [550, {enableVariableFontWeight: true}], 'fixed outlines and explicit current weight use the shared 550 role');
   update({ currentChapterIndex: -1 });
   assert.equal(title.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_REGULAR);
   const row = [...owner.nodes.values()].find(node => node.type === 'Row');
   update({ mangaRowMinHeight: 50 });
-  assert.equal(row.constraintSize.minHeight, 50);
+  assert.equal(row.constraintSize.minHeight, 58, 'responsive entrance props retain the exact demo row anatomy');
   update({ mangaCatalogDisplay: true });
-  assert.equal(title.fontSize, 12); assert.equal(title.lineHeight, 20);
-  assert.equal(row.constraintSize.minHeight, 48); assert.equal(row.padding.left, 28); assert.equal(row.border.width.top, 0);
+  assert.equal(title.fontSize, 13); assert.equal(title.lineHeight, 22);
+  assert.equal(row.constraintSize.minHeight, 58); assert.equal(row.padding.left, 26); assert.equal(row.border.width.top, 1);
   update({ mangaCatalogNarrow: true });
-  assert.equal(title.fontSize, 11); assert.equal(row.padding.left, 20); assert.equal(row.padding.right, 10); assert.equal(row.create.space, 5);
+  assert.equal(title.fontSize, 13); assert.equal(row.padding.left, 26); assert.equal(row.padding.right, 10); assert.equal(row.create.space, 12);
   update({ mangaCatalogDisplay: false, mangaRowMinHeight: 58 });
   assert.equal(title.fontSize, 13); assert.equal(title.lineHeight, 22);
   assert.equal(row.constraintSize.minHeight, 58); assert.equal(row.padding.left, 26); assert.equal(row.border.width.top, 1);
   assert.equal(owner.observers.length, actors, 'same native title actor switches family in both directions');
 }
 liveCurrentFamily();
-const stuckRegular = listSource.replace('this.isCurrentMangaNode(item) ? READER_FONT_NOTO_SANS_SC_UI_550 : READER_FONT_NOTO_SANS_SC_UI_REGULAR', 'READER_FONT_NOTO_SANS_SC_UI_REGULAR');
+const stuckRegular = listSource.replaceAll('this.isCurrentMangaNode(item) ? READER_FONT_NOTO_SANS_SC_UI_550 : READER_FONT_NOTO_SANS_SC_UI_REGULAR', 'READER_FONT_NOTO_SANS_SC_UI_REGULAR');
 assert.notEqual(stuckRegular, listSource);
 assert.throws(() => liveCurrentFamily(stuckRegular), /physical fixed 550/);
 console.log('PASS manga directory fixed-font SDK binding, deferred checked receipt, fallback/tree admission, stale/closing fences, same actor responsive styles, phone/catalog open50 and side-panel open7 through SDK scroll requests, explicit locate12, novel direct/center path; 5 old-implementation negative controls, same mounted SDK Blank-to-prepared-fallback branch request while interaction disabled, retained closing display, dispose/remount receipt fences and unchanged tree/target admission. Native branch removal, glyph pixels and motion frames remain target acceptance.');

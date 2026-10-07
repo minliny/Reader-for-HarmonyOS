@@ -11,6 +11,7 @@ import { readerSourceCategoryLabel } from '../entry/src/main/ets/features/source
 import {sourceSharedActionFixture} from './lib/source-shared-action-probe.mjs';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
+import { localBookDetailSdk } from './lib/local-book-detail-sdk-probe.mjs';
 
 const baseline = process.argv.includes('--baseline');
 const read = name => readFileSync(new URL(baseline
@@ -196,10 +197,24 @@ check('compact shelf keeps two tags and live independent progress after row reus
 });
 
 const detailSource = read('bookshelf/LocalBookDetail.ets');
+// The current detail delegates its novel and manga branches to production
+// Builders. Mount the complete SDK-emitted component and shared children;
+// keep the archived pre-repair probe intact for its baseline comparison.
+const detailProbe = (names, dependencies = {}, hooks = {}) => {
+  if (baseline) {
+    const probe = createReaderBuilderProbe(detailSource, names, dependencies, hooks);
+    // The archived partial probe used this cover-fact seam. The current
+    // component executes its actual hasCover method against the supplied URL.
+    if (names.includes('hero')) probe.owner.hasCover = () => true;
+    return probe;
+  }
+  const { NoCoverCover: _legacyCoverStub, ...facts } = dependencies;
+  return localBookDetailSdk(facts, { ...hooks, source: hooks.source ?? detailSource });
+};
 check('detail preview retains at most 20 Core identities in the outer scroll and volume rows only fold', () => {
   for (const count of [0, 3, 20, 40]) {
-    const { owner } = createReaderBuilderProbe(detailSource,
-      ['catalog', 'chapterRow', 'visibleToc', 'chapterEmptyMessage', 'chapterIndent','isCurrentChapter'], { CHAPTER_PREVIEW_LIMIT:20 });
+    const { owner } = detailProbe(
+      ['catalog', 'chapterRow', 'visibleToc', 'chapterEmptyMessage', 'chapterIndent','isCurrentChapter'], { CHAPTER_PREVIEW_LIMIT:20, TEXT_CHAPTER_PREVIEW_LIMIT:20 });
     const toc = Array.from({ length: count }, (_, offset) => ({ index: 7 + offset * 3,
       title: `第${offset + 1}章`, navigable: offset !== 1 }));
     const selected = [];let directories = 0;
@@ -218,7 +233,10 @@ check('detail preview retains at most 20 Core identities in the outer scroll and
     assert.equal(rows.length,Math.min(count,20));
     if(rows.length) {
       rows.at(-1).onClick();assert.deepEqual(selected,[toc[Math.min(count,20)-1].index],'display retains sparse Core indices');
-      rows[1].onClick();assert.equal(selected.length,1,'volume row folds without navigating');assert.deepEqual(owner.collapsedGroups,[toc[1].index]);
+      rows[1].onClick();assert.equal(selected.length,1,'volume row folds without navigating');
+      // Actual SDK @State exposes a branded ObservedObject proxy. Compare
+      // the complete canonical values rather than its platform prototype.
+      assert.deepEqual(Array.from(owner.collapsedGroups),[toc[1].index]);
     }
     owner.removing=true;owner.replay();
     const disabledDirectory=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.width===94&&node.height===44);
@@ -228,8 +246,8 @@ check('detail preview retains at most 20 Core identities in the outer scroll and
 });
 for(const scheme of ['day','night']) {
   check(`${scheme}: current source and author facts remain exact while the source action follows permission`,()=>{
-    const {owner}=createReaderBuilderProbe(detailSource,['hero','metadataTag','readingFacts'],{bookAuthorLabel,NoCoverCover:Child,ImageFit:{Cover:'Cover'}});
-    Object.assign(owner,{appThemeScheme:scheme,book:{sourceId:'source',title:'书名',author:'作者名',sourceName:'短书源',lastChapter:'最新章节',coverUrl:'https://example.test/cover'},hasCover:()=>true,sourceSwitchEnabled:true});
+    const {owner}=detailProbe(['hero','metadataTag','readingFacts'],{bookAuthorLabel,NoCoverCover:Child,ImageFit:{Cover:'Cover'}});
+    Object.assign(owner,{appThemeScheme:scheme,book:{sourceId:'source',title:'书名',author:'作者名',sourceName:'短书源',lastChapter:'最新章节',coverUrl:'https://example.test/cover'},sourceSwitchEnabled:true});
     owner.hero();owner.readingFacts();
     assert.ok(texts(owner).some(n=>n.create==='作者名'));
     const source=texts(owner).find(n=>n.create==='当前来源：短书源');assert.equal(source.layoutWeight,1);assert.equal(source.constraintSize.minWidth,0);
@@ -245,17 +263,27 @@ for(const scheme of ['day','night']) {
     }
   });
 }
-check('detail cover and two-line title use the approved natural hero instead of a fixed five-line block',()=>{
-  const {owner}=createReaderBuilderProbe(detailSource,['hero','metadataTag'],{bookAuthorLabel,NoCoverCover:Child,ImageFit:{Cover:'Cover'}});
-  Object.assign(owner,{appThemeScheme:'day',book:{title:'Title',author:'Author',sourceName:'Source',lastChapter:'Chapter',coverUrl:'https://example.test/cover'},hasCover:()=>true});owner.hero();
+function checkNaturalHero(candidate = detailSource) {
+  const {owner}=detailProbe(['hero','metadataTag'],{bookAuthorLabel,NoCoverCover:Child,ImageFit:{Cover:'Cover'}},{source:candidate});
+  Object.assign(owner,{appThemeScheme:'day',book:{title:'Title',author:'Author',sourceName:'Source',lastChapter:'Chapter',coverUrl:'https://example.test/cover'}});owner.hero();
   const nodes=[...owner.nodes.values()],cover=nodes.find(n=>n.type==='Image'),title=texts(owner).find(n=>n.create==='Title'),author=texts(owner).find(n=>n.create==='Author');
   assert.equal(cover.width,84);assert.equal(cover.height,122);
   assert.deepEqual([title.fontSize,title.lineHeight,title.maxLines],[24,34,2]);
   assert.deepEqual([author.fontFamily,author.fontSize,author.lineHeight],['ReaderNotoSansSC',13,20]);assert.equal(author.fontColor,readerAppColor('TOK_MUTED','day'));
   const hero=nodes.find(n=>n.type==='Row'&&n.constraintSize?.minHeight===122);assert.ok(hero);assert.equal(hero.height,undefined,'long titles can grow the hero instead of clipping');
+}
+check('detail cover and two-line title use the approved natural hero instead of a fixed five-line block',()=>{
+  checkNaturalHero();
+  if (!baseline) {
+    const wrongCover = detailSource.replace('Image(this.book.coverUrl as string).width(84)',
+      'Image(this.book.coverUrl as string).width(104)');
+    assert.notEqual(wrongCover, detailSource, 'negative control changes the actual novel hero source');
+    assert.throws(() => checkNaturalHero(wrongCover), assert.AssertionError,
+      'a real SDK hero width regression cannot pass through the shared probe');
+  }
 });
 check('missing synopsis is explained without contaminating metadata and expansion preserves content',()=>{
-  const {owner}=createReaderBuilderProbe(detailSource,['summary','displayIntro'],{bookIntroText},{allowEmptyBranchAdmission:true});
+  const {owner}=detailProbe(['summary','displayIntro'],{bookIntroText},{allowEmptyBranchAdmission:true});
   Object.assign(owner,{appThemeScheme:'day',book:Object.freeze({intro:''}),introExpanded:false});owner.summary();
   assert.ok(texts(owner).some(n=>n.create==='暂无简介'));assert.equal(owner.displayIntro(),'');assert.equal(owner.book.intro,'');
   owner.book={intro:'真实简介'};owner.replay();const intro=texts(owner).find(n=>n.create==='真实简介');assert.equal(intro.maxLines,3);
@@ -263,8 +291,8 @@ check('missing synopsis is explained without contaminating metadata and expansio
 });
 for(const [message,reason,expected] of [['','','暂无章节信息'],['正在读取本地目录…','','正在读取本地目录…'],['','目录读取失败，请重试','目录读取失败，请重试']]) {
   check(`empty chapters expose status: ${expected}`,()=>{
-    const {owner}=createReaderBuilderProbe(detailSource,['catalog','chapterRow','chapterEmptyMessage'],{});
-    Object.assign(owner,{appThemeScheme:'day',toc:[],loadingMessage:message,readingEnabled:false,readingBlockedReason:reason,visibleToc:()=>[],removing:false});owner.catalog();
+    const {owner}=detailProbe(['catalog','chapterRow','chapterEmptyMessage'],{});
+    Object.assign(owner,{appThemeScheme:'day',book:{sourceId:'local',bookId:'empty',contentKind:'novel'},toc:[],loadingMessage:message,readingEnabled:false,readingBlockedReason:reason,removing:false});owner.catalog();
     assert.ok(texts(owner).some(n=>n.create===expected));
     assert.equal([...owner.nodes.values()].find(n=>n.type==='Stack'&&n.width===94&&n.height===44).enabled,true,'directory recovery remains reachable');
   });

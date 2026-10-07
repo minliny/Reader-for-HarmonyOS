@@ -15,7 +15,7 @@ function loadList(text = source) {
   assert.equal(text.split('\n  build() {').length, 2);
   const methods = `${text.split('\n  build() {')[0]}\n}`
     .replace(/^import[\s\S]*?;\s*/gm, '')
-    .replace(/@(?:Component|Prop|State|BuilderParam)\b\s*/g, '')
+    .replace(/@(?:Component|Prop|State|BuilderParam|Builder)\b\s*/g, '')
     .replace(/@Watch\('[^']+'\)\s*/g, '')
     .replace('export struct ReaderDirectoryList', 'class ReaderDirectoryList');
   class ChildrenMainSize {

@@ -768,6 +768,40 @@
       },
       "contractId": "shared-ReaderMangaDownloadPopup",
       "proof": "tools/test-manga-download-popup-sdk.mjs"
+    },
+    {
+      "file": "entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets",
+      "kind": "finite-spec-actual-shared-producer",
+      "owner": "MangaDirectoryEntryRow",
+      "reason": "One concrete manga directory content renderer replaces duplicated fallback/full/detail bodies, with finite generated demo variants and original owner admission/callbacks. Code and SDK facts are recorded; native layout and user acceptance remain open.",
+      "counts": {
+        "fontSize": 10,
+        "backgroundColor": 2
+      },
+      "contractId": "shared-MangaDirectoryEntryRow",
+      "proof": "tools/test-manga-directory-entry-row.mjs",
+      "successorFacts": {
+        "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets",
+      "kind": "finite-spec-actual-shared-producer",
+      "owner": "MangaDirectoryCurrentFooter",
+      "reason": "One concrete generated current-position footer replaces the duplicated full and quick bodies. Only measured space and canonical reading facts are supplied; native layout and user acceptance remain open.",
+      "counts": {
+        "fontSize": 3,
+        "backgroundColor": 1
+      },
+      "contractId": "shared-MangaDirectoryCurrentFooter",
+      "proof": "tools/test-manga-directory-quick-panel-sdk.mjs",
+      "successorFacts": {
+        "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
     }
   ],
   "uiPolicies": [
@@ -788,8 +822,8 @@
       "owner": "BookDirectoryPage / ReaderDirectoryHost and manga canonical hierarchy",
       "reason": "Approved manga detail-catalog variant preserves standard directory recovery and shared rule/navigation owners. Finite manga group, readable volume/chapter, current state and metadata rows retain the approved geometry without title/index inference.",
       "counts": {
-        "fontSize": 12,
-        "backgroundColor": 6
+        "fontSize": 6,
+        "backgroundColor": 4
       },
       "supersededLegacyCounts": {
         "fontSize": 1,
@@ -798,7 +832,12 @@
       "approvalEvidence": "evidence/2026-10-02-manga-ui-implementation/SCOPE.md",
       "designSource": "paired Reader-UI/design/manga-ui-20261002/; docs/MANGA_UI_DEMO_PARITY_AUDIT_20261003.md",
       "approvedSourceHead": "19be89908333ee8074d2624e9d7fb938e0b011d3",
-      "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE"
+      "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE",
+      "successorFacts": {
+        "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
     },
     {
       "file": "entry/src/main/ets/features/bookshelf/BookshelfShell.ets",
@@ -814,8 +853,8 @@
       "owner": "LocalBookDetail / readable admission and shelf mutation Owner",
       "reason": "Approved natural detail hero and manga current-position preview coexist with retained novel/local business variants. The existing 104×150 cover, floating centered header/dock and at-most-20 canonical chapter preview are finite approved styles, with admission identity fencing retained.",
       "counts": {
-        "fontSize": 25,
-        "backgroundColor": 10
+        "fontSize": 39,
+        "backgroundColor": 12
       },
       "supersededLegacyCounts": {
         "fontSize": 15,
@@ -824,7 +863,12 @@
       "approvalEvidence": "evidence/2026-10-02-manga-ui-implementation/SCOPE.md",
       "designSource": "paired Reader-UI/design/manga-ui-20261002/; docs/MANGA_UI_DEMO_PARITY_AUDIT_20261003.md",
       "approvedSourceHead": "19be89908333ee8074d2624e9d7fb938e0b011d3",
-      "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE"
+      "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE",
+      "successorFacts": {
+        "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
     },
     {
       "file": "entry/src/main/ets/features/common/PageBackBar.ets",
@@ -864,14 +908,18 @@
       "owner": "MangaDirectoryPresentation / canonical Core directory projection",
       "reason": "Approved manga catalog rows consume existing ReaderDirectoryList and preserve Core hierarchy/index/navigability. Finite 58vp rows, group/current/metadata faces and narrow variants are retained; no title-based hierarchy inference or extra UI route.",
       "counts": {
-        "fontSize": 6,
-        "backgroundColor": 1
+        "fontSize": 2
       },
       "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE",
       "approvalEvidence": "evidence/2026-10-02-manga-ui-implementation/SCOPE.md",
       "designSource": "paired Reader-UI/design/manga-ui-20261002/; docs/MANGA_UI_DEMO_PARITY_AUDIT_20261003.md",
       "approvedSourceHead": "19be89908333ee8074d2624e9d7fb938e0b011d3",
-      "proof": "docs/MANGA_UI_DEV_CLOSURE_20261004.md"
+      "proof": "docs/MANGA_UI_DEV_CLOSURE_20261004.md",
+      "successorFacts": {
+        "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
     },
     {
       "file": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
@@ -880,13 +928,18 @@
       "reason": "Approved immersive manga reading, stable image viewport and existing control/mode/settings/catalog/more/chapter-end sheets from r4. Physical reading background and measured viewport inputs are native render contracts; no novel typesetting or generic error duplication.",
       "counts": {
         "fontSize": 36,
-        "backgroundColor": 21
+        "backgroundColor": 19
       },
       "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE",
       "approvalEvidence": "evidence/2026-10-02-manga-ui-implementation/SCOPE.md",
       "designSource": "paired Reader-UI/design/manga-ui-20261002/; docs/MANGA_UI_DEMO_PARITY_AUDIT_20261003.md",
       "approvedSourceHead": "19be89908333ee8074d2624e9d7fb938e0b011d3",
-      "proof": "docs/MANGA_READER_SHEETS_PARITY_20261003.md"
+      "proof": "docs/MANGA_READER_SHEETS_PARITY_20261003.md",
+      "successorFacts": {
+        "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
     },
     {
       "file": "entry/src/main/ets/features/reading/BookTurnTextureBuilder.ets",
@@ -926,8 +979,8 @@
       "owner": "ReaderDirectoryNavigationList / canonical navigation page and row Owner",
       "reason": "Approved manga hierarchy/current/metadata row variant adapts the existing canonical navigation list and finite Core depth. Standard text directory row geometry, prepared pages, ownership and bookmark/download targets remain retained; no general list or typography exemption.",
       "counts": {
-        "fontSize": 6,
-        "backgroundColor": 3
+        "fontSize": 13,
+        "backgroundColor": 4
       },
       "supersededLegacyCounts": {
         "fontSize": 3,
@@ -936,23 +989,31 @@
       "approvalEvidence": "evidence/2026-10-02-manga-ui-implementation/SCOPE.md",
       "designSource": "paired Reader-UI/design/manga-ui-20261002/; docs/MANGA_UI_DEMO_PARITY_AUDIT_20261003.md",
       "approvedSourceHead": "19be89908333ee8074d2624e9d7fb938e0b011d3",
-      "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE"
+      "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE",
+      "successorFacts": {
+        "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
     },
     {
       "file": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
       "kind": "approved-existing-manga-variant",
       "owner": "ReaderDirectoryNavigationSurface / canonical directory projection Owner",
       "reason": "Approved manga empty/search branch reuses the current directory surface and original query/clear callback. One additional compact empty/search carrier has finite 12fp text; original loading/recovery/navigation ownership stays retained.",
-      "counts": {
-        "fontSize": 2
-      },
+      "counts": {},
       "supersededLegacyCounts": {
         "fontSize": 1
       },
       "approvalEvidence": "evidence/2026-10-02-manga-ui-implementation/SCOPE.md",
       "designSource": "paired Reader-UI/design/manga-ui-20261002/; docs/MANGA_UI_DEMO_PARITY_AUDIT_20261003.md",
       "approvedSourceHead": "19be89908333ee8074d2624e9d7fb938e0b011d3",
-      "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE"
+      "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE",
+      "successorFacts": {
+        "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
+        "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
     },
     {
       "file": "entry/src/main/ets/features/reading/ReaderDirectoryRecoverySurface.ets",

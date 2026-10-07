@@ -1,3 +1,4 @@
+import { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } from './manga-directory-adaptive-probe.mjs';
 import { ReadingRecordIntent, ReadingRecordRecoveryError } from '../../entry/src/main/ets/features/reading/ReaderReadingRecordState.ts';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../entry/src/main/ets/app/BookRequestScheduler.ts';
 import { ReaderReadingImageResources, sameReaderReadingImageResource } from '../../entry/src/main/ets/features/reading/ReaderReadingImageResources.ts';
@@ -66,7 +67,7 @@ const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
   const fixtureRuntime = { captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {} };
-  dependencies = { bookshelfSourceDisplayName, ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, prepareMangaSheetFonts: async () => true, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
+  dependencies = { ...mangaDirectoryAdaptiveDependencies, bookshelfSourceDisplayName, ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, prepareMangaSheetFonts: async () => true, readingChapterLayoutMap, hasKnownReadingImageGeometry, errorMessageOf,
     ...readerTypographyRoles, readerRuleMutationEffects, RssPresentationProjection, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource, ReaderReadingRecordHost, ReadingRecordRecoveryError,
     hilog: { error() {} }, ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => fixtureRuntime), ...dependencies };
   // Older fixtures inject current() as the instance-storage seam. Keep their
@@ -107,7 +108,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   let expanded;
   do {
     expanded = false;
-    for (const helper of ['notifyPublishedRows','rowRenderKey','isPrimaryErrorRow','primaryErrorRowKey','rowHasError','requestedLast','performPanelAction','closePanel','invalidatePanelMotion','openPanel','dismissPanelKeyboard','preparePanelFonts','settlePanel','panelTravel','panelWidth','panelHeight','widePanel','clearMangaSourceSwitchSelection','waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireSourceManagementPresentation', 'retireSettingsPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'retireBookshelfCatalogPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey', 'cancelSourceSwitchCompletion', 'finishSourceSwitchReveal', 'sourceSwitchCompletionKey']) {
+    for (const helper of [...mangaDirectoryAdaptiveMembers, 'directoryCurrentPagePosition', 'directoryCurrentIndex', 'directoryEntries', 'directoryFontScale', 'directoryToolHeight', 'directoryInitialWidth', 'directoryHeaderChrome', 'directoryQuickHeight', 'notifyPublishedRows','rowRenderKey','isPrimaryErrorRow','primaryErrorRowKey','rowHasError','requestedLast','performPanelAction','closePanel','invalidatePanelMotion','openPanel','dismissPanelKeyboard','preparePanelFonts','settlePanel','panelTravel','panelWidth','panelHeight','widePanel','clearMangaSourceSwitchSelection','waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireSourceManagementPresentation', 'retireSettingsPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'retireBookshelfCatalogPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey', 'cancelSourceSwitchCompletion', 'finishSourceSwitchReveal', 'sourceSwitchCompletionKey']) {
     if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
       (capturedOwnerFields.includes(`this.${helper}(`) || type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`)))) { names.push(helper); expanded = true; }
     }
@@ -120,7 +121,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
     dependencies.SettingsHost ??= actualGeneralSettingsTypes(dependencies).SettingsHost;
     capturedOwnerFields += '\n'+type.members.filter(m=>['settingsHost','settingsPresentationIdentity'].includes(m.name?.getText(tree))).map(m=>m.getText(tree)).join('\n');
   }
-  const mangaPanelHelpers = ['performPanelAction', 'closePanel', 'invalidatePanelMotion', 'openPanel',
+  const mangaPanelHelpers = [...mangaDirectoryAdaptiveMembers, 'performPanelAction', 'closePanel', 'invalidatePanelMotion', 'openPanel',
     'dismissPanelKeyboard', 'preparePanelFonts', 'settlePanel', 'panelTravel', 'panelWidth', 'panelHeight', 'widePanel'];
   const ordinaryField = member => {
     if (member === undefined) return '';
@@ -129,8 +130,8 @@ export function productionMotionMethods(file, names, dependencies = {}) {
     return text.trim();
   };
   const panelFields = names.some(name => mangaPanelHelpers.includes(name)) && type.name?.getText(tree) === 'MangaReadingSurface'
-    ? ['panel', 'panelOffset', 'panelScrimOpacity', 'panelPhase', 'panelGeneration', 'panelActionGeneration',
-      'panelCloseTask', 'panelCloseResolve', 'panelFontsReady', 'panelFontGeneration', 'reduceMotion', 'directoryOpenRevision']
+    ? [...mangaDirectoryAdaptiveFields, 'isReaderIdentityCurrent', 'panel', 'panelOffset', 'panelScrimOpacity', 'panelPhase', 'panelGeneration', 'panelActionGeneration',
+      'panelCloseTask', 'panelCloseResolve', 'panelFontsReady', 'panelFontGeneration', 'reduceMotion', 'directoryOpenRevision', 'directoryCurrentChapterIndex']
       .map(name => ordinaryField(type.members.find(m => m.name?.getText(tree) === name))).join('\n')
     : '';
   // Reader lifecycle probes execute the real visual cancellation chain as

@@ -108,17 +108,19 @@ async function renderRecipe(recipe) {
     const pinnedRecipe = svgRadixSheetRecipes.find(value => value.file === recipe.file);
     assert.deepEqual(recipe, pinnedRecipe, `${recipe.file}: only the pinned manga sheet Radix recipes are allowed`);
     const input = SVG_RADIX_COMPONENT_SOURCES[recipe.component];
-    assert.ok(input, `${recipe.file}: Radix component is outside the pinned ten-icon input set`);
+    assert.ok(input, `${recipe.file}: Radix component is outside the pinned eleven-icon input set`);
     assert.equal(recipe.sourceFile, input.sourceFile);
     assert.equal(recipe.sourceSha256, input.sourceSha256);
     const sourcePath = path.join(RADIX_SOURCE_DIR, input.sourceFile);
     const source = await readFile(sourcePath, 'utf8');
     assert.equal(sha256(source), input.sourceSha256, `${recipe.sourceFile}: pinned Radix source hash drifted`);
     assert.match(source, /viewBox="0 0 15 15"/, `${recipe.sourceFile}: upstream viewBox must remain unchanged`);
-    assert.deepEqual([...new Set(source.match(/#[0-9a-f]{6}\b/gi))], ['#756F69'],
+    const canonicalColor = input.canonicalColor ?? '#756F69';
+    assert.deepEqual([...new Set(source.match(/#[0-9a-f]{6}\b/gi))], canonicalColor === 'currentColor' ? [] : [canonicalColor],
       `${recipe.sourceFile}: expected canonical Radix fill`);
-    const content = source.replaceAll('fill="#756F69"', `fill="${recipe.color}"`);
-    assert.equal(content.replaceAll(`fill="${recipe.color}"`, 'fill="#756F69"'), source,
+    assert.ok(source.includes(`fill="${canonicalColor}"`), `${recipe.sourceFile}: the pinned source paint exists`);
+    const content = source.replaceAll(`fill="${canonicalColor}"`, `fill="${recipe.color}"`);
+    assert.equal(content.replaceAll(`fill="${recipe.color}"`, `fill="${canonicalColor}"`), source,
       `${recipe.file}: only fixed path recoloring is allowed`);
     return { content, manifest: {
       file: `${recipe.file}.svg`, semanticRole: recipe.semanticRole, originType: recipe.originType,
@@ -290,8 +292,8 @@ async function assertSourceCatalogue() {
 async function assertRadixSourceCatalogue() {
   const files = (await readdir(RADIX_SOURCE_DIR)).filter(file => file.endsWith('.svg')).sort();
   const expected = Object.values(SVG_RADIX_COMPONENT_SOURCES).map(input => input.sourceFile).sort();
-  assert.equal(expected.length, 10, 'Radix input set is limited to the approved ten manga sheet components');
-  assert.deepEqual(files, expected, 'Radix source catalogue must exactly match the pinned ten components');
+  assert.equal(expected.length, 11, 'Radix input set is exactly the original ten components plus the reviewed directory ArrowLeftIcon');
+  assert.deepEqual(files, expected, 'Radix source catalogue must exactly match the pinned eleven components');
   const license = await readFile(path.join(RADIX_SOURCE_DIR, 'LICENSE'), 'utf8');
   assert.equal(sha256(license), SVG_RADIX_PACKAGE.licenseSha256, 'pinned Radix MIT license hash drifted');
   const receipt = await readFile(path.join(RADIX_SOURCE_DIR, 'SOURCE.json'), 'utf8');
@@ -305,6 +307,18 @@ async function assertRadixSourceCatalogue() {
   assert.equal(provenance.license, SVG_RADIX_PACKAGE.license);
   assert.equal(provenance.licenseSha256, SVG_RADIX_PACKAGE.licenseSha256);
   assert.deepEqual(provenance.components, SVG_RADIX_COMPONENT_SOURCES);
+  assert.equal(provenance.directoryArrow.designSource, 'Reader-UI/design/manga-directory/arrow-left.svg');
+  assert.equal(provenance.directoryArrow.designSourceSha256, SVG_RADIX_COMPONENT_SOURCES.ArrowLeftIcon.sourceSha256);
+  assert.equal(provenance.directoryArrow.provenanceFile, 'ArrowLeftIcon.PROVENANCE.json');
+  const arrowReceipt = await readFile(path.join(RADIX_SOURCE_DIR, provenance.directoryArrow.provenanceFile), 'utf8');
+  assert.equal(sha256(arrowReceipt), provenance.directoryArrow.provenanceSha256, 'reviewed directory arrow receipt changed');
+  const arrowProvenance = JSON.parse(arrowReceipt);
+  assert.equal(arrowProvenance.upstream, SVG_RADIX_PACKAGE.name);
+  assert.equal(arrowProvenance.version, SVG_RADIX_PACKAGE.version);
+  assert.equal(arrowProvenance.license, SVG_RADIX_PACKAGE.license);
+  assert.equal(arrowProvenance.export, 'ArrowLeftIcon');
+  assert.equal(arrowProvenance.sourceSha256, provenance.installedPackageFiles['index.js']);
+  assert.equal(arrowProvenance.svgSha256, SVG_RADIX_COMPONENT_SOURCES.ArrowLeftIcon.sourceSha256);
   for (const input of Object.values(SVG_RADIX_COMPONENT_SOURCES)) {
     assert.equal(sha256(await readFile(path.join(RADIX_SOURCE_DIR, input.sourceFile))), input.sourceSha256,
       `${input.sourceFile}: canonical upstream path/viewBox bytes changed`);

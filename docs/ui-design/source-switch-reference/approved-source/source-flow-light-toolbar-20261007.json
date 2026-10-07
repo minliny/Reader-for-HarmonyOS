@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-07T02:11:28.751Z",
+  "classification": "Pending user review: light toolbar refinement of the selected third drawer",
+  "request": "Generate a demo of the proposed visual refinement while preserving the overall architecture",
+  "supersedes": "source-flow-discovery-refinement-20261007.json",
+  "changes": {
+    "toolbar": {
+      "height": 44,
+      "marginBottom": 6,
+      "background": "transparent",
+      "border": 0,
+      "inset": 0
+    },
+    "count": {
+      "mutedPrefixAndUnit": true,
+      "greenNumber": true,
+      "font": "Inter 500/14/20",
+      "phaseFont": "11/16.5",
+      "numberUpdate": "Existing numeric child only"
+    },
+    "button": {
+      "width": 94,
+      "narrowWidth": 90,
+      "clickHeight": 44,
+      "visibleHeight": 32,
+      "background": "primary-soft",
+      "border": 0,
+      "radius": 8,
+      "staticIcon": "settings_gen_refresh.svg at14px",
+      "labelUpdate": "Existing label child only; SVG retained",
+      "runningIndicator": "Independent original circle, not refresh icon"
+    },
+    "book": {
+      "currentSource": "green/500, existing12px line"
+    },
+    "results": {
+      "rowHeight": 50,
+      "divider": "row-divider at55percent",
+      "timeUnit": "muted/11px"
+    },
+    "adaptive": {
+      "containerBelow310": "compact action width and gray label size",
+      "containerBelow265": "hide gray prefix; keep count and action, ellipsize suffix",
+      "stability": "State changes retain fixed icon slot/button width; keyed candidates keep their existing nodes"
+    },
+    "previewEntry": "Initial #source-switch opens the existing model drawer; ordinary reset/autoplay behavior retained"
+  },
+  "verification": {
+    "bundler": "esbuild0.28.2 PASS",
+    "bundleSyntax": "PASS",
+    "rendererTemplates": 21,
+    "switchTemplates": 3,
+    "pointerContracts": 5,
+    "modelChecks": 11,
+    "resourcePaths": "PASS",
+    "readOnlyReview": "PASS",
+    "browserRendered": "OPEN",
+    "browserBoundary": "The existing file protocol browser policy blocks automated access; no bypass attempted",
+    "native": "NOT_CHANGED"
+  },
+  "files": [
+    {
+      "path": "source-flow.css",
+      "sha256": "9e2a8ef5e5fdbb207f808ce935dd27c11215aaf77a1b0de0c1d18cd1852bb21d",
+      "bytes": 13147
+    },
+    {
+      "path": "source-flow-renderer.mjs",
+      "sha256": "b0945bcb35a20e9612efd3f6cf9a1030e720f378a6eb63c838a2c790cff08372",
+      "bytes": 4193
+    },
+    {
+      "path": "source-flow.mjs",
+      "sha256": "8731182669e81a5815c61f2557be72141bc2a38d80252beb7155f8e5bf9a6c26",
+      "bytes": 11815
+    },
+    {
+      "path": "source-flow.bundle.js",
+      "sha256": "265e20b053f3e982195c2bc8c2aeeb2fe2d9d8a52e0ffce98cfdf701d25f3f63",
+      "bytes": 206718
+    },
+    {
+      "path": "index.html",
+      "sha256": "59b05bb2a30a03cd22bb0fede4e77ed71374be359b2faa9ecc8e68fb0b7b0e0a",
+      "bytes": 3284
+    }
+  ],
+  "businessBoundary": "Existing demo uses simulated discovery and switch phases; source admission, stop, retained restart and key-based list updates remain with the existing model. No native application or VM operation.",
+  "responsiveBoundaryUpdate": {
+    "recordedAt": "2026-10-07T03:07:22.011Z",
+    "scope": "Product drawer narrow rules now use actual drawer container width below380; exterior demo header remains browser media below or equal380. Existing310/265 container rules retained.",
+    "previousCssSha256": "c17fcfea01c60ce458390cae1bf450cf6e5181166113cc2ffbce561251a885e3",
+    "updatedCssSha256": "9e2a8ef5e5fdbb207f808ce935dd27c11215aaf77a1b0de0c1d18cd1852bb21d",
+    "cssSyntax": {
+      "bundler": "esbuild0.28.2",
+      "warnings": 0,
+      "status": "PASS"
+    },
+    "existingChecks": {
+      "controllerSyntax": "PASS",
+      "bundleSyntax": "PASS",
+      "rendererTemplates": 21,
+      "switchTemplates": 3,
+      "pointerContracts": 5,
+      "modelChecks": 11
+    },
+    "browserRendered": "OPEN",
+    "nativeCodeChanged": false
+  }
+}

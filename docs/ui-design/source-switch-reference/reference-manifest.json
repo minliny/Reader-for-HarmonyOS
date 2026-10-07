@@ -6,149 +6,141 @@
   "sharedDefinitionSha256": "205de7f89121243e6ef4490f4863c6f4874e928a7eb5a66f52b41f0275c8d977",
   "generatedCss": "source-switch-reference.css",
   "generatedNative": "../../../entry/src/main/ets/features/source/SourceSwitchVisual.ts",
-  "sourceDemo": "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline",
+  "sourceDemo": "approved-source",
   "sourceDemoModified": false,
+  "sourceArchive": "approved-source/archive-manifest.json",
+  "sourceArchiveOrigin": "source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline",
   "selectedRefinement": {
-    "path": "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/source-flow-light-toolbar-20261007.json",
+    "path": "approved-source/source-flow-light-toolbar-20261007.json",
     "sha256": "1382712dfb081399a357a59c6b2a901b0b9023a69d19469b97cbebf0c47d2b2d",
     "acceptance": "User requested native optimization to this visible demo effect on 2026-10-07; automated browser rendering remains OPEN.",
     "historicalImageScope": "Historical third-drawer composition reference only; the 03 PNG predates the user-approved 2026-10-07 light-toolbar refinement."
   },
-  "dependencyPolicy": "Thin entry intentionally depends on retained adjacent DESIGN worktree; no font, SVG, cover or base CSS copies. It is not a standalone portable archive.",
+  "dependencyPolicy": "Portable inside a Reader workspace: exact local approved-source archive, generated URL-only stylesheet adapters, shared Host fonts/media and paired UI visual definition. No adjacent worktree required; historical catalogue and its direct local dependencies are included.",
   "dependencies": {
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/app.css": {
-      "sha256": "77415956ae6aa2548d00f1c6702d8b9aac14ece6cc3ff5f384bbeed6ae454d40",
-      "bytes": 9792,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/assets/source-flow-cover.png": {
-      "sha256": "a4760ecc3ec0f5742444cb6780fb9d7fb9186ed484a1e074761b4419582ff7a2",
-      "bytes": 2116978,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/catalogue.html": {
-      "sha256": "50cbd7c1f183c4c4486fa9af24a3b8737b1278c0f78b219b05ca4dc5fd06b243",
-      "bytes": 4219,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/library.css": {
-      "sha256": "497477593ee24eed663c55fd3444004933590ec57e8e007b126965cc420f8de2",
-      "bytes": 53302,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/reading.css": {
-      "sha256": "9608630307e4d2bed93c54aa8243d3235560b43fb8ffe99ee7a345635ef05b6c",
-      "bytes": 99922,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/shared.mjs": {
-      "sha256": "b115e606a2ab0350a8d8bbcde7a560405bc4698dabdd3654c2e0193ed6924b69",
-      "bytes": 3880,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/source-flow-model.mjs": {
-      "sha256": "f8a4075058c080e4d1389c77c8a870eba01fa5f7b89c914cd333f07dc48f9236",
-      "bytes": 8112,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/source-flow-pointer.mjs": {
-      "sha256": "0ab63d39a3e1e2f91ae15a48c6838708226f6738ec1db8f25225ff4f397a9dfe",
-      "bytes": 661,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/source-flow-renderer.mjs": {
-      "sha256": "b0945bcb35a20e9612efd3f6cf9a1030e720f378a6eb63c838a2c790cff08372",
-      "bytes": 4193,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/source-flow.css": {
-      "sha256": "9e2a8ef5e5fdbb207f808ce935dd27c11215aaf77a1b0de0c1d18cd1852bb21d",
-      "bytes": 13147,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/source-switch-renderer.mjs": {
-      "sha256": "00d8abf9b701ca40ddaa3fbff503d2c3858ab18a77c7db23e28521f78a126bf8",
-      "bytes": 19808,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/tokens.css": {
-      "sha256": "921db3f034c6d32ac5b62c39147c27f47eb08e83fcb92ca0c1b3cf89355577ea",
-      "bytes": 158245,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/ui-library.mjs": {
-      "sha256": "69416eabc7d80a70c60770ef7bd4daa0825d9a1ead133daf5eac9539806b9da0",
-      "bytes": 55224,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/ui-reading.mjs": {
-      "sha256": "0e90f332a983e66bb9c7ebc0eebae19c989f09c5e4eb35fa06ba1a7e06a0caba",
-      "bytes": 110805,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/entry/src/main/resources/rawfile/InterVariable.ttf": {
-      "sha256": "4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf",
-      "bytes": 879708,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/entry/src/main/resources/rawfile/LXGWWenKaiGBLite-Regular.ttf": {
-      "sha256": "1675c708cce181871d9a8adc987f35a0cabc6ff980685cd99f05d2655ea08c4c",
-      "bytes": 14116284,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/entry/src/main/resources/rawfile/LXGWWenKaiLite-Regular.ttf": {
-      "sha256": "140c99ba4e28e817cec49bf82a0c5fcdc4fe633fb9dfda16d0ee8d59a8545f15",
-      "bytes": 13872424,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/entry/src/main/resources/rawfile/NotoSansSC-VF.otf": {
-      "sha256": "d13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b",
-      "bytes": 15054748,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/entry/src/main/resources/rawfile/NotoSerifSC-Bold.ttf": {
-      "sha256": "3fb07709c24ed05993636d0b137917ea0bae5cf976f157d5e258fd068399a894",
-      "bytes": 14853692,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/entry/src/main/resources/rawfile/NotoSerifSC-Regular.ttf": {
-      "sha256": "9502147ceba7b5bc7fd3415083f6a5d133f22d8f9efb4974d4b85f3a97ea2d3a",
-      "bytes": 14854712,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/entry/src/main/resources/rawfile/ReaderMangaSans550.otf": {
-      "sha256": "c2028eca8a27dff3f67c59de85007c8eb30a4ce46b93cf9d139f00d6bcdac909",
-      "bytes": 7708476,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/entry/src/main/resources/rawfile/ReaderMangaSans600.otf": {
-      "sha256": "6829ecf59c4da77c541030f3d9385d7cca521b6acb2068f982f2cd84c1298d54",
-      "bytes": 7713748,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/entry/src/main/resources/rawfile/ReaderMangaSans900.otf": {
-      "sha256": "7c32c5d463417d843e28ac55c4dcc04e78f45502536e704f5395badda0a26d11",
-      "bytes": 5980,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/entry/src/main/resources/rawfile/SarasaMonoSC-Regular.ttf": {
-      "sha256": "95718854631c2386845e618aa5bc37908e5fb8a919eb56e40f70e1170d80af94",
-      "bytes": 25541448,
-      "crossWorktree": true
-    },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/entry/src/main/resources/rawfile/ZhuqueFangsong-Regular.ttf": {
-      "sha256": "558c62730844fe54ba220146ed62f859d4e2880188d92d985f8921c6e3743bc4",
-      "bytes": 8824084,
-      "crossWorktree": true
-    },
     "../../../../Reader-UI/design/source-switch/source-switch.visual.json": {
       "sha256": "205de7f89121243e6ef4490f4863c6f4874e928a7eb5a66f52b41f0275c8d977",
       "bytes": 12087,
       "crossWorktree": false
     },
+    "approved-source/LOGIC.md": {
+      "sha256": "af63b6f1a1f4bf05079cd4252a5bb8329394be8040b9b6bb1c2f441578ffde37",
+      "bytes": 467575,
+      "crossWorktree": false
+    },
+    "approved-source/app.bundle.js": {
+      "sha256": "a95c63f14e02929c7c54d3c107859550c259d8609140406a43bbf63783b02d38",
+      "bytes": 1265758,
+      "crossWorktree": false
+    },
+    "approved-source/app.css": {
+      "sha256": "77415956ae6aa2548d00f1c6702d8b9aac14ece6cc3ff5f384bbeed6ae454d40",
+      "bytes": 9792,
+      "crossWorktree": false
+    },
+    "approved-source/archive-manifest.json": {
+      "sha256": "f500abb812c2c31f052a49c3d052b403fb5ade1a1a166719f296cc38c414f41c",
+      "bytes": 3468,
+      "crossWorktree": false
+    },
+    "approved-source/assets/source-flow-cover.png": {
+      "sha256": "a4760ecc3ec0f5742444cb6780fb9d7fb9186ed484a1e074761b4419582ff7a2",
+      "bytes": 2116978,
+      "crossWorktree": false
+    },
+    "approved-source/catalogue.html": {
+      "sha256": "50cbd7c1f183c4c4486fa9af24a3b8737b1278c0f78b219b05ca4dc5fd06b243",
+      "bytes": 4219,
+      "crossWorktree": false
+    },
+    "approved-source/delivery.css": {
+      "sha256": "2f8a90cf87d21c6a5b276f45b15157bd005df11deb62e538b3df852492fea81b",
+      "bytes": 8056,
+      "crossWorktree": false
+    },
+    "approved-source/index.html": {
+      "sha256": "59b05bb2a30a03cd22bb0fede4e77ed71374be359b2faa9ecc8e68fb0b7b0e0a",
+      "bytes": 3284,
+      "crossWorktree": false
+    },
+    "approved-source/library.css": {
+      "sha256": "497477593ee24eed663c55fd3444004933590ec57e8e007b126965cc420f8de2",
+      "bytes": 53302,
+      "crossWorktree": false
+    },
+    "approved-source/reading.css": {
+      "sha256": "9608630307e4d2bed93c54aa8243d3235560b43fb8ffe99ee7a345635ef05b6c",
+      "bytes": 99922,
+      "crossWorktree": false
+    },
+    "approved-source/settings.css": {
+      "sha256": "847ba2241f936540d596aec3380a0fe8672f425e46e309bd397b4622c2b97d80",
+      "bytes": 20447,
+      "crossWorktree": false
+    },
+    "approved-source/shared.mjs": {
+      "sha256": "b115e606a2ab0350a8d8bbcde7a560405bc4698dabdd3654c2e0193ed6924b69",
+      "bytes": 3880,
+      "crossWorktree": false
+    },
+    "approved-source/source-flow-light-toolbar-20261007.json": {
+      "sha256": "1382712dfb081399a357a59c6b2a901b0b9023a69d19469b97cbebf0c47d2b2d",
+      "bytes": 3967,
+      "crossWorktree": false
+    },
+    "approved-source/source-flow-model.mjs": {
+      "sha256": "f8a4075058c080e4d1389c77c8a870eba01fa5f7b89c914cd333f07dc48f9236",
+      "bytes": 8112,
+      "crossWorktree": false
+    },
+    "approved-source/source-flow-pointer.mjs": {
+      "sha256": "0ab63d39a3e1e2f91ae15a48c6838708226f6738ec1db8f25225ff4f397a9dfe",
+      "bytes": 661,
+      "crossWorktree": false
+    },
+    "approved-source/source-flow-renderer.mjs": {
+      "sha256": "b0945bcb35a20e9612efd3f6cf9a1030e720f378a6eb63c838a2c790cff08372",
+      "bytes": 4193,
+      "crossWorktree": false
+    },
+    "approved-source/source-flow.css": {
+      "sha256": "9e2a8ef5e5fdbb207f808ce935dd27c11215aaf77a1b0de0c1d18cd1852bb21d",
+      "bytes": 13147,
+      "crossWorktree": false
+    },
+    "approved-source/source-flow.mjs": {
+      "sha256": "8731182669e81a5815c61f2557be72141bc2a38d80252beb7155f8e5bf9a6c26",
+      "bytes": 11815,
+      "crossWorktree": false
+    },
+    "approved-source/source-switch-renderer.mjs": {
+      "sha256": "00d8abf9b701ca40ddaa3fbff503d2c3858ab18a77c7db23e28521f78a126bf8",
+      "bytes": 19808,
+      "crossWorktree": false
+    },
+    "approved-source/source-switch.css": {
+      "sha256": "0b66eb0d4d60ec4a363ae80678ca18a80ac7e9a5d6c0d1ace9f6c22b5e60e8a5",
+      "bytes": 13311,
+      "crossWorktree": false
+    },
+    "approved-source/tokens.css": {
+      "sha256": "921db3f034c6d32ac5b62c39147c27f47eb08e83fcb92ca0c1b3cf89355577ea",
+      "bytes": 158245,
+      "crossWorktree": false
+    },
+    "approved-source/ui-library.mjs": {
+      "sha256": "69416eabc7d80a70c60770ef7bd4daa0825d9a1ead133daf5eac9539806b9da0",
+      "bytes": 55224,
+      "crossWorktree": false
+    },
+    "approved-source/ui-reading.mjs": {
+      "sha256": "0e90f332a983e66bb9c7ebc0eebae19c989f09c5e4eb35fa06ba1a7e06a0caba",
+      "bytes": 110805,
+      "crossWorktree": false
+    },
     "build-reference.mjs": {
-      "sha256": "f01304809f3494823f1b95229fa504e3a4ecfaa55e62b9442d9a6c993b89f8d2",
-      "bytes": 20026,
+      "sha256": "c5aec58d8ff62de8ec5260b723b0677f3fb963fdd2e5425dff8a84a2652a7af1",
+      "bytes": 22963,
       "crossWorktree": false
     },
     "reference-profile.mjs": {
@@ -246,6 +238,21 @@
       "bytes": 879708,
       "crossWorktree": false
     },
+    "../../../entry/src/main/resources/rawfile/LXGWWenKaiGBLite-Regular.ttf": {
+      "sha256": "1675c708cce181871d9a8adc987f35a0cabc6ff980685cd99f05d2655ea08c4c",
+      "bytes": 14116284,
+      "crossWorktree": false
+    },
+    "../../../entry/src/main/resources/rawfile/LXGWWenKaiLite-Regular.ttf": {
+      "sha256": "140c99ba4e28e817cec49bf82a0c5fcdc4fe633fb9dfda16d0ee8d59a8545f15",
+      "bytes": 13872424,
+      "crossWorktree": false
+    },
+    "../../../entry/src/main/resources/rawfile/NotoSansSC-UIBold.otf": {
+      "sha256": "995b908ebac24174fae7965b03324f21371dfe57bbfbe2794116d71ddde262cd",
+      "bytes": 7791444,
+      "crossWorktree": false
+    },
     "../../../entry/src/main/resources/rawfile/NotoSansSC-UIMedium.otf": {
       "sha256": "319a7e09915410a00906741980b6afabe5fe23ae3b46052570b9cdd2b20c715d",
       "bytes": 7709456,
@@ -256,28 +263,49 @@
       "bytes": 7715508,
       "crossWorktree": false
     },
+    "../../../entry/src/main/resources/rawfile/NotoSansSC-VF.otf": {
+      "sha256": "d13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b",
+      "bytes": 15054748,
+      "crossWorktree": false
+    },
     "../../../entry/src/main/resources/rawfile/NotoSerifSC-Bold.ttf": {
       "sha256": "3fb07709c24ed05993636d0b137917ea0bae5cf976f157d5e258fd068399a894",
       "bytes": 14853692,
       "crossWorktree": false
     },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/source-flow.mjs": {
-      "sha256": "8731182669e81a5815c61f2557be72141bc2a38d80252beb7155f8e5bf9a6c26",
-      "bytes": 11815,
-      "crossWorktree": true
+    "../../../entry/src/main/resources/rawfile/NotoSerifSC-Regular.ttf": {
+      "sha256": "9502147ceba7b5bc7fd3415083f6a5d133f22d8f9efb4974d4b85f3a97ea2d3a",
+      "bytes": 14854712,
+      "crossWorktree": false
     },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/source-flow-light-toolbar-20261007.json": {
-      "sha256": "1382712dfb081399a357a59c6b2a901b0b9023a69d19469b97cbebf0c47d2b2d",
-      "bytes": 3967,
-      "crossWorktree": true
+    "../../../entry/src/main/resources/rawfile/ReaderMangaSans550.otf": {
+      "sha256": "c2028eca8a27dff3f67c59de85007c8eb30a4ce46b93cf9d139f00d6bcdac909",
+      "bytes": 7708476,
+      "crossWorktree": false
     },
-    "../../../../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-density/app-baseline/index.html": {
-      "sha256": "59b05bb2a30a03cd22bb0fede4e77ed71374be359b2faa9ecc8e68fb0b7b0e0a",
-      "bytes": 3284,
-      "crossWorktree": true
+    "../../../entry/src/main/resources/rawfile/ReaderMangaSans600.otf": {
+      "sha256": "6829ecf59c4da77c541030f3d9385d7cca521b6acb2068f982f2cd84c1298d54",
+      "bytes": 7713748,
+      "crossWorktree": false
+    },
+    "../../../entry/src/main/resources/rawfile/ReaderMangaSans900.otf": {
+      "sha256": "bb589e9472aa1bfc3626725464584c9ffcdc4f95cc40de08f04e08a6734ca38a",
+      "bytes": 6740,
+      "crossWorktree": false
+    },
+    "../../../entry/src/main/resources/rawfile/SarasaMonoSC-Regular.ttf": {
+      "sha256": "95718854631c2386845e618aa5bc37908e5fb8a919eb56e40f70e1170d80af94",
+      "bytes": 25541448,
+      "crossWorktree": false
+    },
+    "../../../entry/src/main/resources/rawfile/ZhuqueFangsong-Regular.ttf": {
+      "sha256": "558c62730844fe54ba220146ed62f859d4e2880188d92d985f8921c6e3743bc4",
+      "bytes": 8824084,
+      "crossWorktree": false
     }
   },
   "derivedOriginalSourceSha256": {
+    "catalogue.html": "50cbd7c1f183c4c4486fa9af24a3b8737b1278c0f78b219b05ca4dc5fd06b243",
     "index.html": "59b05bb2a30a03cd22bb0fede4e77ed71374be359b2faa9ecc8e68fb0b7b0e0a",
     "source-flow-light-toolbar-20261007.json": "1382712dfb081399a357a59c6b2a901b0b9023a69d19469b97cbebf0c47d2b2d",
     "source-flow-model.mjs": "f8a4075058c080e4d1389c77c8a870eba01fa5f7b89c914cd333f07dc48f9236",
@@ -293,13 +321,15 @@
   "bundler": {
     "name": "esbuild",
     "version": "0.28.2",
-    "package": "../../../../../../evidence/opensource-completion/renderer-pilot/node_modules/esbuild/lib/main.js"
+    "packageRoot": "Reader project root",
+    "package": "evidence/opensource-completion/renderer-pilot/node_modules/esbuild/lib/main.js"
   },
   "adapters": [
     "shared animation durations/easing/reader fade",
     "width/height/font scale/safe-area profiles",
     "short/large-font book scroll and extreme-window flow chrome",
-    "chapter-start caption and completion copy"
+    "chapter-start caption and completion copy",
+    "URL-only portable stylesheet and historical catalogue adapters"
   ],
   "originalModelPreserved": "Fictional successful-source admission, stop/restart/late-response generation guards and 900/900/600ms transaction fixtures remain demo-only.",
   "verification": {
@@ -321,8 +351,18 @@
     "visualAcceptance": "OPEN"
   },
   "outputs": {
-    "index.html": "7420370b0f827e5797b8409745645c78610ca4341f8db1bdb382b27de77f7a58",
+    "index.html": "3bf40447e365f70e8fcacc1275eb7d33b484b6438a1d96e11e37123306faba00",
     "reference-shell.css": "8927c83ddb1e2cfde42f5cf3709a45d06bbc3e417296b5bf12f7ba5635a78f30",
-    "source-switch-reference.bundle.js": "9eebb8ea114d7e773f13b7aa70f6c422be51eb94cffad77becd74c0ba729fcca"
+    "source-switch-reference.bundle.js": "cb4291e3f569a9fc0251a747e157f146991483a95902e065c2d8445f8540477a",
+    "catalogue.html": "1824228d6c7c58491297882c2060baca3c7f21611ed8815477860db49e73df47",
+    "catalogue.bundle.js": "a95c63f14e02929c7c54d3c107859550c259d8609140406a43bbf63783b02d38",
+    "rebased/tokens.css": "921db3f034c6d32ac5b62c39147c27f47eb08e83fcb92ca0c1b3cf89355577ea",
+    "rebased/app.css": "5a991fbd27bddad0b17cb918ca3449b27a16362003547f267e727603aee0296c",
+    "rebased/library.css": "497477593ee24eed663c55fd3444004933590ec57e8e007b126965cc420f8de2",
+    "rebased/reading.css": "ebaaaaad40aff5fb5a8de545f48e1a299633badea6d1e8dc769f673d104fd900",
+    "rebased/source-flow.css": "244d848c037d527b385bf6eef8935944ec20cc942c15652c70a9e161411af239",
+    "rebased/settings.css": "847ba2241f936540d596aec3380a0fe8672f425e46e309bd397b4622c2b97d80",
+    "rebased/source-switch.css": "0b66eb0d4d60ec4a363ae80678ca18a80ac7e9a5d6c0d1ace9f6c22b5e60e8a5",
+    "rebased/delivery.css": "bb46af2e7f21f1c022384f4910e325324ed881361039ef5ea508375f1121ffad"
   }
 }

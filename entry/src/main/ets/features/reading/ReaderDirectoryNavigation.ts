@@ -403,10 +403,11 @@ export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavi
   const stateKey = readerDirectoryScopeKey(query.sourceId ?? 'local', query.bookId);
   if (query.locateCurrent) {
     const state = readerDirectoryBookState(stateKey);
-    if (state !== undefined) state.anchor = undefined;
+    if (state !== undefined && query.collapsedNodeIds === undefined) state.anchor = undefined;
     query = { ...query, anchorNodeId: undefined };
   }
-  const collapsedNodeIds = readerDirectoryCollapsedIds(stateKey);
+  // An explicit display override belongs to this view; Full keeps its folds.
+  const collapsedNodeIds = query.collapsedNodeIds ?? readerDirectoryCollapsedIds(stateKey);
   let opened = await gateway.open({ ...query, collapsedNodeIds }, isCurrent);
   if (opened.status !== 'ready' || !isCurrent()) {
     if (isCurrent() && opened.status === 'unavailable') onUnavailable?.(opened.reason);
@@ -425,10 +426,11 @@ export async function openReaderDirectoryNavigation(gateway: ReaderDirectoryNavi
   if (query.locateCurrent) {
     // Core supplies the nearest visible ancestor of a collapsed target.
     // Expand only that ancestry; unrelated groups and books keep their folds.
+    const expandedIds = query.collapsedNodeIds === undefined ? readerDirectoryBookState(stateKey)?.ids :
+      new Set<string>(collapsedNodeIds);
     for (let depth = 0; depth < 33 && opened.currentAncestorNodeId !== undefined; depth += 1) {
-      const state = readerDirectoryBookState(stateKey);
-      if (state === undefined || !state.ids.delete(opened.currentAncestorNodeId)) break;
-      opened = await gateway.open({ ...query, collapsedNodeIds: Array.from(state.ids) }, isCurrent);
+      if (expandedIds === undefined || !expandedIds.delete(opened.currentAncestorNodeId)) break;
+      opened = await gateway.open({ ...query, collapsedNodeIds: Array.from(expandedIds) }, isCurrent);
       if (opened.status !== 'ready' || !isCurrent()) return undefined;
     }
     opened.locateCurrent = true;

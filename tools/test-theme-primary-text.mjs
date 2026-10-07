@@ -1,3 +1,4 @@
+import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
 import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {labeledIconControls} from './lib/reader-labeled-icon-action-probe.mjs';
@@ -11,8 +12,8 @@ import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeR
 const root=path.resolve(import.meta.dirname,'..'), ets=path.join(root,'entry/src/main/ets');
 const source=file=>readFileSync(path.join(ets,'features',file),'utf8');
 const output={layer:'Actual SDK Builder retained observer calls plus all production fontColor AST consumers; no new VM pixels',builder:[],consumers:[],sharedConsumers:[]};
-const {owner:detail}=createReaderBuilderProbe(source('bookshelf/LocalBookDetail.ets'),['catalog','chapterRow','chapterEmptyMessage','visibleToc'],{});
-Object.assign(detail,{appThemeScheme:'day',book:{sourceId:'source',bookId:'book'},toc:[],removing:false,collapsedGroups:[],loadingMessage:'',readingEnabled:true,visibleToc:()=>[],onOpenDirectory:()=>{}});
+const {owner:detail}=localBookDetailSdk();
+Object.assign(detail,{appThemeScheme:'day',book:{sourceId:'source',bookId:'book',contentKind:'novel',title:'标准小说'},toc:[],removing:false,collapsedGroups:[],loadingMessage:'',readingEnabled:true,visibleToc:()=>[],onOpenDirectory:()=>{}});
 detail.catalog();
 for(const scheme of ['day','night','day']){
   detail.appThemeScheme=scheme;detail.replay();

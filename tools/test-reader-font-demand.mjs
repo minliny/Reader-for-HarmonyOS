@@ -71,7 +71,8 @@ assert.equal(registrar.readerFontFamilyReady('new-face'),false);
 // Native custom VF weight failed physically on the VM. Bind on-demand panel
 // admission to immutable, pre-instantiated assets, not a weight setter alone.
 const mangaFamilies=[families.READER_FONT_NOTO_SANS_SC_UI_550,
- families.READER_FONT_NOTO_SANS_SC_UI_600,families.READER_FONT_NOTO_SANS_SC_UI_900];
+ families.READER_FONT_NOTO_SANS_SC_UI_600,families.READER_FONT_NOTO_SANS_SC_UI_650,
+ families.READER_FONT_NOTO_SANS_SC_UI_900];
 assert.ok(!calls.some(c=>mangaFamilies.includes(c.family)),
  'shelf/startup must not load manga-only static faces');
 const provenance=JSON.parse(readFileSync(new URL('../docs/ui-design/MANGA_SHEET_FONTS_PROVENANCE.json',import.meta.url),'utf8'));
@@ -79,7 +80,7 @@ const hash=relative=>createHash('sha256').update(readFileSync(new URL(`../${rela
 assert.equal(hash(provenance.source),provenance.sourceSha256);
 assert.equal(hash(provenance.reused400.output),provenance.reused400.sha256);
 assert.equal(provenance.tool,'fonttools 4.60.2 instantiateVariableFont');
-assert.deepEqual(provenance.outputs.map(f=>f.axis.wght),[550,600,900]);
+assert.deepEqual(provenance.outputs.map(f=>f.axis.wght),[550,600,650,900]);
 for(const output of provenance.outputs){
  assert.equal(output.variable,false);assert.equal(hash(output.output),output.sha256);
  if(output.axis.wght!==900){
@@ -87,7 +88,7 @@ for(const output of provenance.outputs){
   assert.ok(output.glyphCount>30000&&output.unicodeCount>30000,'keep full CJK chapter coverage');
  }else{
   assert.equal(output.coverage,'fixedPanelTitles');assert.ok(output.bytes<100000);
-  assert.deepEqual(output.requiredTitles,['章节目录','阅读方式','漫画阅读设置','更多']);
+  assert.deepEqual(output.requiredTitles,['章节目录','阅读方式','漫画阅读设置','更多','本书下载','本话下载']);
  }
 }
 const beforeManga=calls.length;
@@ -97,13 +98,18 @@ assert.deepEqual(calls.slice(beforeManga).map(c=>c.src),provenance.outputs.map(f
 const mangaPending=pending.splice(0);
 mangaPending[0].resolve();mangaPending[1].resolve();
 await new Promise(resolve=>setImmediate(resolve));
-assert.equal(mangaReady,false,'two completed faces cannot authorize a panel using a third');
-mangaPending[2].reject(Error('900 failed'));await assert.rejects(manga,/900 failed/);
-assert.equal(registrar.readerFontFamilyReady(mangaFamilies[2]),false);
+assert.equal(mangaReady,false,'chapter and group faces cannot authorize a panel while its header face is pending');
+assert.equal(registrar.readerFontFamilyReady(families.READER_FONT_NOTO_SANS_SC_UI_650),false);
+mangaPending[2].resolve();
+await new Promise(resolve=>setImmediate(resolve));
+assert.equal(registrar.readerFontFamilyReady(families.READER_FONT_NOTO_SANS_SC_UI_650),true);
+assert.equal(mangaReady,false,'the registered header does not authorize a still-pending fixed panel title');
+mangaPending[3].reject(Error('900 failed'));await assert.rejects(manga,/900 failed/);
+assert.equal(registrar.readerFontFamilyReady(mangaFamilies[3]),false);
 const mangaRetry=registrar.prepareMangaSheetFonts();
-assert.equal(calls.length,beforeManga+4,'only failed face is reloaded');
+assert.equal(calls.length,beforeManga+5,'only failed face is reloaded');
 pending.shift().resolve();assert.equal(await mangaRetry,true);
-await registrar.prepareMangaSheetFonts();assert.equal(calls.length,beforeManga+4);
+await registrar.prepareMangaSheetFonts();assert.equal(calls.length,beforeManga+5);
 
 const previewLoads=[];const previewPending=[];const previewReady=new Set(['HarmonyOS Sans']);
 const Preview=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets',import.meta.url),

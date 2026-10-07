@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Reader · 小说换源完整流程</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="library.css">
+  <link rel="stylesheet" href="reading.css">
+  <link rel="stylesheet" href="source-flow.css?v=light-discovery-toolbar-20261007">
+</head>
+<body class="source-flow-demo" data-reduced="false">
+  <header class="source-flow-demo-header">
+    <div>
+      <p class="source-flow-demo-eyebrow">Reader · 独立交互稿</p>
+      <h1>小说换源完整流程</h1>
+      <p>从阅读控制栏打开换源窗口，查看书源逐条加入，再选择书源继续阅读。</p>
+    </div>
+    <a href="catalogue.html#reader-controls">原页面索引（历史稿）</a>
+  </header>
+  <main class="source-flow-demo-layout">
+    <section class="source-flow-preview" aria-label="换源流程交互预览">
+      <div class="source-flow-viewport-holder">
+        <div id="viewport" class="viewport" data-size="phone" data-theme="day" aria-label="Reader 阅读页面">
+          <div id="flow-reader" class="source-flow-layer"></div>
+          <div id="flow-controls" class="source-flow-layer"></div>
+          <div id="flow-modal" class="source-flow-layer"></div>
+          <div id="flow-transition" class="source-flow-layer"></div>
+          <div id="flow-toast" class="source-flow-layer"></div>
+        </div>
+      </div>
+    </section>
+    <aside class="source-flow-demo-tools" aria-label="流程演示工具">
+      <h2>完整演示</h2>
+      <p class="source-flow-demo-instruction">点击画布控制栏中的“换源”，也可以自动播放全过程。</p>
+      <div class="source-flow-demo-actions">
+        <button id="flow-auto" class="source-flow-demo-primary" type="button">自动演示全过程</button>
+        <button id="flow-reset" type="button">回到控制栏</button>
+      </div>
+      <label class="source-flow-demo-reduced"><input id="flow-reduced" type="checkbox">减少动画</label>
+      <ol id="flow-steps" class="source-flow-demo-steps" aria-label="流程步骤">
+        <li data-step="controls" aria-current="step"><span>控制栏</span><small>从阅读入口点击换源</small></li>
+        <li data-step="opening"><span>换源抽屉</span><small>展开书籍摘要和书源列表</small></li>
+        <li data-step="discovering"><span>成功书源增量加入</span><small>检查成功后才进入列表</small></li>
+        <li data-step="switching"><span>换源动画</span><small>选择书源并衔接阅读位置</small></li>
+        <li data-step="completed"><span>恢复阅读</span><small>显示新书源并继续当前章节</small></li>
+      </ol>
+      <output id="flow-status" class="source-flow-demo-status" role="status" aria-live="polite">已进入阅读控制栏，点击“换源”开始。</output>
+      <p class="source-flow-demo-boundary">本稿使用定时模拟的书源响应与阅读内容，用于查看布局、动态刷新和换源动画。</p>
+    </aside>
+  </main>
+  <script src="source-flow.bundle.js?v=light-discovery-toolbar-20261007"></script>
+</body>
+</html>
