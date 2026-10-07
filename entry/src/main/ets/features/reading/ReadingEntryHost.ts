@@ -100,6 +100,9 @@ export class ReadingEntryHost {
   private projectionPending: DetailProjectionIntent | undefined;
   private preparationGeneration: number = 0;
   private membershipGeneration: number | string = 0;
+  private mangaDisplayRefreshTask: Promise<void> | undefined;
+  private mangaDisplayRefreshSession: RemoteReadingSession | undefined;
+  private mangaDisplayRefreshedSession: RemoteReadingSession | undefined;
 
   constructor(runtime: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) { this.runtime = runtime; }
   static forRuntime(runtime: ReaderRuntimeOwner = ReaderRuntimeOwner.current()): ReadingEntryHost {
@@ -115,6 +118,7 @@ export class ReadingEntryHost {
     this.lease = undefined; this.state = { ...this.state, scopeId: this.state.scopeId + 1,
       candidateAdmissionActive: false }; this.probeGeneration += 1; this.preparationGeneration += 1;
     this.projectionPending = undefined;
+    this.mangaDisplayRefreshTask = undefined; this.mangaDisplayRefreshSession = undefined; this.mangaDisplayRefreshedSession = undefined;
   }
 
   async openLocal(selection: ShelfBook, lease: ReadingEntryLease, resumeImmediately: boolean = false): Promise<void> {
@@ -243,12 +247,51 @@ export class ReadingEntryHost {
 
   /** Existing reader session-ready event owns catalog/book projection here;
    * the page only publishes its physical chapter/ready milestones. */
-  readerSessionReady(session: RemoteReadingSession): boolean {
+  readerSessionReady(session: RemoteReadingSession, refreshDirectoryDisplay: boolean = false): boolean {
     const lease = this.lease, scope = this.state.scopeId, book = this.state.book;
     if (lease === undefined || book === undefined || !this.current(scope, lease)() || !this.sameBook(session, book)) return false;
+    const previous = this.state.toc;
     this.install(session);
-    this.state = { ...this.state, book: this.sessionDetail(session, book.sourceName), toc: this.catalog(session), loadingMessage: '' };
-    this.publish(scope, lease); return true;
+    const toc = session.contentKind === 'manga' ? this.mangaDirectoryProjection(session, previous) : this.catalog(session);
+    this.state = { ...this.state, book: this.sessionDetail(session, book.sourceName), toc, loadingMessage: '' };
+    this.publish(scope, lease);
+    if (session.contentKind === 'manga') void this.refreshMangaDirectoryDisplay(refreshDirectoryDisplay);
+    return true;
+  }
+
+  /** One directory-only request for this owner. Prepared-pixel reuse and
+   * explicit directory opening join the same task; page turns do not call it. */
+  refreshMangaDirectoryDisplay(forceRead: boolean = false): Promise<void> {
+    const lease = this.lease, scope = this.state.scopeId, session = this.state.session;
+    if (lease === undefined || session?.contentKind !== 'manga' || !this.current(scope, lease)()) return Promise.resolve();
+    if (this.mangaDisplayRefreshSession === session && this.mangaDisplayRefreshTask !== undefined) return this.mangaDisplayRefreshTask;
+    if (!forceRead && this.mangaDisplayRefreshedSession === session) return Promise.resolve();
+    const generation = this.state.sessionGeneration;
+    const current = (): boolean => this.current(scope, lease)() && generation === this.state.sessionGeneration && this.state.session === session;
+    const allowNetwork = session.acquisitionMode !== 'offline' &&
+      this.runtime.mangaOfflineProbeFor?.(session.identity.sourceId, session.identity.bookId) !== true;
+    this.mangaDisplayRefreshSession = session;
+    const task: Promise<void> = new RemoteReadingFlowGateway(this.runtime).refreshMangaDirectoryDisplaySession(session, current, allowNetwork)
+      .then((refreshed: RemoteReadingSession): void => {
+        if (!current()) return;
+        const previous = lease.currentDirectory();
+        this.install(refreshed);
+        const toc = this.mangaDirectoryProjection(refreshed, previous);
+        this.state = { ...this.state, toc };
+        this.mangaDisplayRefreshedSession = this.state.session;
+        this.publish(scope, lease);
+      }).catch((error: Error): void => {
+        if (current()) {
+          this.mangaDisplayRefreshedSession = session;
+          this.diagnostic(lease, 'manga-directory-display', error);
+        }
+      }).finally((): void => {
+        if (this.mangaDisplayRefreshTask === task) {
+          this.mangaDisplayRefreshTask = undefined; this.mangaDisplayRefreshSession = undefined;
+        }
+      });
+    this.mangaDisplayRefreshTask = task;
+    return task;
   }
   /** Captured by the real reader-ready boundary; a later invocation cannot
    * borrow a replacement reader/session. No native work before invocation. */
@@ -469,6 +512,7 @@ export class ReadingEntryHost {
     if (!this.runtimeCurrent() || !lease.isCurrent()) throw new Error('READING_ENTRY_OWNER_RETIRED');
     const scope = this.state.scopeId + 1; this.lease = lease; this.probeGeneration += 1; this.projectionPending = undefined;
     this.membershipGeneration = lease.membership().generation;
+    this.mangaDisplayRefreshTask = undefined; this.mangaDisplayRefreshSession = undefined; this.mangaDisplayRefreshedSession = undefined;
     this.state = { scopeId: scope, sessionGeneration: this.state.sessionGeneration, book, seed, toc: [], inBookshelf,
       loadingMessage, verdict: book.sourceId === LOCAL_SOURCE_ID ? 'readable' : 'verifying', candidateAdmissionActive: false, candidateAdmissionFailed: false };
     this.readableRevision = -1; this.install(session); this.runtime.bookAcquisitions().setPreparationVisible(false);
@@ -614,6 +658,15 @@ export class ReadingEntryHost {
     return session.entries.map(entry => ({ index: entry.index, title: entry.title, level: entry.level,
       displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
       navigable: entry.navigable !== false && entry.url.trim().length > 0, downloadState: 'unknown' }));
+  }
+  private mangaDirectoryProjection(session: RemoteReadingSession, previous: LocalReadingTocEntry[]): LocalReadingTocEntry[] {
+    const byIndex: Map<number, LocalReadingTocEntry> = new Map();
+    for (const row of previous) byIndex.set(row.index, row);
+    return this.catalog(session).map((entry: LocalReadingTocEntry): LocalReadingTocEntry => {
+      const retained = byIndex.get(entry.index);
+      return { ...entry, downloadState: retained?.title === entry.title ? retained.downloadState : 'unknown',
+        bookmarks: retained?.title === entry.title ? retained.bookmarks : undefined };
+    });
   }
   private detail(seed: RemoteReadingBookSeed, name: string): ReadingBookDetail {
     return { sourceId: seed.sourceId, sourceName: name.trim() || seed.sourceId, bookId: seed.bookId, title: seed.title,

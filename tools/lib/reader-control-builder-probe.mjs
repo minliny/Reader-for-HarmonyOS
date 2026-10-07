@@ -77,7 +77,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     addDeclaredHelpers(['onDirectoryDataChanged', 'directoryDataSnapshot', 'directoryEntries',
       'isReaderIdentityCurrent', 'directoryRevision', 'quickFooterMeasured',
       'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentCatalogEntry',
-      'sourceId', 'bookId', 'directoryCurrentChapterIndex']);
+      'sourceId', 'bookId', 'directoryCurrentChapterIndex', 'onRemoteSessionReady']);
   const members = names.map(name => {
     const member = struct.members.find(n => n.name?.getText(original) === name);
     assert.ok(member, `production member ${name}`);

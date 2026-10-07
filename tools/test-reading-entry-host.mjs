@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
-import {ProductionHost,compileHost,read,setRuntime,readingEvidence,content} from './lib/reading-entry-owner-probe.mjs';
+import {ProductionHost,compileHost,read,setRuntime,readingEvidence,content,BookAcquisitionCoordinator} from './lib/reading-entry-owner-probe.mjs';
 import {fixture,deferred,tick,until,seed,book,session} from './lib/reading-entry-index-fixture.mjs';
+import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
+import {MangaBookPresentation} from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
+const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 const checkpoints=[];
 function mangaFixture(){
  const f=fixture(),sourceId='s1',bookId='book',chapterId='https://source/book/0',pageId='mp1:'+'1'.repeat(64);
@@ -312,5 +315,140 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
   'shared typed manga/audio identities cannot enter a text cached-chapter warm sweep');
  assert.ok(f.preparations.persistedSeeds.every(row=>row.contentKind==='text'),'cached sweep seeds preserve their finite kind fact');
  f.close();checkpoints.push('actual-shared-typed-seeds-and-direct-preparation-owner-exclude-manga-audio');
+}
+// The real prepared-pixel shortcut must still reach the actual entry owner
+// and cached Gateway. A delayed directory projection neither blocks pixels
+// nor borrows an index-only match, and repeated directory intents join it.
+{
+ const f=mangaFixture(),retained={...session(),contentKind:'manga',requiresContextRefresh:true};
+ retained.entries=retained.entries.map((entry,index)=>({...entry,title:`✿·${199+index}回\n`,level:undefined}));
+ const cached={sourceId:'s1',bookId:'book',tocAvailable:true,sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1',
+  continuationVariables:{},chapters:retained.entries.map(entry=>({chapterIndex:entry.index,title:entry.title,url:entry.url,variables:{},
+   level:1,navigable:true,proofState:'verified',displayTitle:`${199+entry.index}回`,isVip:true}))};
+ const gate=deferred();let cacheReads=0,network=0;
+ f.runtime.request=async(method,params)=>{assert.equal(method,'cache.book.status');assert.equal(params.sourceId,'s1');assert.equal(params.bookId,'book');
+  cacheReads++;await gate.promise;return{data:cached};};
+ f.coordinator.acquireBook=async()=>{network++;throw Error('verified display read cannot acquire online');};
+ f.host.bindReader({...book(),contentKind:'manga'},retained,retained.entries.map(entry=>({index:entry.index,title:entry.title,downloadState:'completed',bookmarks:[]})),true,f.lease);
+ const pageId=f.chapter.manifest.pages[0].pageId;
+ f.chapter.chapterIndex=0;f.chapter.chapterTitle=retained.entries[0].title;f.chapter.manifest.chapter.chapterId=retained.entries[0].url;
+ const saved={kind:'manga',chapter:f.chapter.manifest.chapter,manifestVersion:'manifest',pageId,pageOrdinalFallback:0,x:.27,y:.61,progressRevision:2};
+ const prepared={chapter:f.chapter,targetOrdinal:0,recoveryRequired:false,progress:{token:{epoch:2,revision:2},location:saved}};
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),
+  ['open','acquireCatalog','openDirectory'],{MangaSessionGateway:class{async entry(){return prepared;}},MangaBookPresentation,AppStorage:{setOrCreate(){}}});
+ const pixels=[],restored=[],controller={chapter:f.chapter,savedLocation:saved,displayedOrdinal:0,recoveryRequired:false,
+  async awaitPendingProgress(){},async setPreviewMode(){},async openPrepared(value){assert.equal(value,prepared);pixels.push('open');},pageAt:()=>({pageId})};
+ const surface=Object.assign(new Surface(),{sourceId:'s1',bookId:'book',runtime:f.runtime,controller,mounted:true,offline:false,
+  remoteSession:retained,remoteBookSeed:{...seed(),contentKind:'manga'},fitPreference:'width',
+  publish(){pixels.push('publish');},restore:(...args)=>restored.push(args),configureAdjacentChapter(){},openPanel:async()=>{},
+  onRemoteSessionReady:(value,refresh)=>f.host.readerSessionReady(value,refresh)});
+ await surface.open(controller);
+ assert.equal(surface.opened,true);assert.deepEqual(pixels,['open','publish']);assert.deepEqual(restored,[[0,.61,.27]]);
+ assert.equal(cacheReads,1,'the old prepared-session branch reads current display facts after its pixels');
+ const pending=f.host.refreshMangaDirectoryDisplay(true);
+ assert.equal(f.host.refreshMangaDirectoryDisplay(true),pending,'open/full/quick intents join the finite owner task');
+ assert.equal(f.host.snapshot().session,retained,'a pending display read keeps the admitted reading snapshot');
+ gate.resolve();await pending;
+ const updated=f.host.snapshot();assert.notEqual(updated.session,retained);
+ assert.equal(updated.session.entries[0].title,'✿·199回\n');assert.equal(updated.session.entries[0].displayTitle,'199回');
+ assert.equal(updated.session.entries[0].level,1);assert.equal(updated.session.entries[0].isVip,true);
+ assert.equal(updated.session.requiresContextRefresh,false,'complete current context proof removes the old display gate on a replacement binding');
+ assert.equal(updated.toc[0].downloadState,'completed');assert.deepEqual(updated.toc[0].bookmarks,[]);
+ assert.equal(controller.chapter,f.chapter);assert.equal(controller.savedLocation,saved);assert.deepEqual(pixels,['open','publish']);assert.equal(network,0);
+ assert.equal(retained.entries[0].displayTitle,undefined,'Core presentation never mutates the retained raw snapshot');
+ await f.host.refreshMangaDirectoryDisplay();assert.equal(cacheReads,1,'normal session-ready repeats do not re-read after one successful binding');
+ surface.remoteSession=updated.session;cached.chapters[0].displayTitle='199回 · 更新';
+ await surface.openDirectory();await f.host.refreshMangaDirectoryDisplay();
+ assert.equal(cacheReads,2,'explicit Quick directory opening checks current display facts once');
+ assert.equal(f.host.snapshot().toc[0].displayTitle,'199回 · 更新');assert.equal(surface.controller,controller);
+ f.close();checkpoints.push('actual-prepared-manga-reuse-current-Core-display-readback-dedup-quick-open-keeps-pixels-manifest-xy-downloads');
+}
+
+// Real Gateway strict read and normal catalog-recovery boundary, with only
+// Core responses/network availability as ports. Equal indices alone never
+// admit presentation from a different canonical title, URL or request.
+{
+ const original={...session(),contentKind:'manga'};
+ original.entries=original.entries.map(entry=>({...entry,title:`✿·${99+entry.index}回\n`,level:undefined}));
+ const status=()=>({sourceId:'s1',bookId:'book',tocAvailable:true,sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1',continuationVariables:{},
+  chapters:original.entries.map(entry=>({chapterIndex:entry.index,title:entry.title,url:entry.url,variables:{},proofState:'verified',navigable:true,level:1,displayTitle:`${99+entry.index}回`}))});
+ const fresh=()=>({...original,sourceVersion:'v2',catalogVersion:'c2',contextVersion:'x2',
+  entries:original.entries.map(entry=>({...entry,level:1,navigable:true,displayTitle:`${99+entry.index}回`}))});
+ for(const scenario of ['legacy','legacy-unproven','source-mismatch','title-change','url-change','variables-change','malformed-cached-variables','missing-new-proof','network-failure','offline','offline-version-mismatch','foreign','retired']){
+  const retained=structuredClone(original),cached=status(),next=fresh();let active=true,acquisitions=0;
+  if(['legacy','legacy-unproven'].includes(scenario)){delete retained.sourceVersion;delete retained.catalogVersion;delete retained.contextVersion;}
+  if(scenario==='legacy')retained.acquisitionMode='offline';
+  if(['source-mismatch','offline-version-mismatch'].includes(scenario))cached.sourceVersion='v2';
+  if(scenario==='legacy-unproven')cached.chapters[0].proofState='legacyUnknown';
+  if(['title-change','url-change','variables-change','missing-new-proof','network-failure','offline'].includes(scenario))cached.chapters[0].proofState='legacyUnknown';
+  if(scenario==='title-change')next.entries[1].title='另一章';
+  if(scenario==='url-change')next.entries[1].url='/different';
+  if(scenario==='variables-change')next.entries[1].variables=[{name:'token',value:'changed'}];
+  if(scenario==='malformed-cached-variables')cached.chapters[0].variables={token:12};
+  if(scenario==='missing-new-proof')delete next.contextVersion;
+  if(scenario==='foreign')cached.sourceId='other';
+  const runtime={async request(method){assert.equal(method,'cache.book.status');if(scenario==='retired')active=false;return{data:cached};},
+   bookAcquisitions:()=>({async acquireBook(value,options,priority){acquisitions++;assert.equal(value.sourceId,'s1');assert.equal(value.bookId,'book');
+    assert.equal(options.forceRefresh,true);assert.equal(priority,'background');if(scenario==='network-failure')throw Error('network unavailable');return next;}})};
+  const gateway=new RemoteReadingFlowGateway(runtime);
+  if(['legacy','legacy-unproven','source-mismatch'].includes(scenario)){
+   const rebound=await gateway.refreshMangaDirectoryDisplaySession(retained,()=>active,scenario!=='legacy');
+   assert.equal(acquisitions,scenario==='legacy'?0:1);assert.equal(rebound.sourceVersion,scenario==='legacy'?'v1':'v2');assert.equal(rebound.entries[0].displayTitle,'99回');
+   assert.equal(rebound.catalogVersion,scenario==='legacy'?'c1':'c2');assert.equal(rebound.contextVersion,scenario==='legacy'?'x1':'x2');
+   if(scenario==='legacy')assert.equal(rebound.acquisitionMode,'offline','proved cache refresh preserves the offline reading mode');
+   assert.deepEqual(rebound.entries.map(row=>[row.index,row.title,row.url]),retained.entries.map(row=>[row.index,row.title,row.url]));
+   assert.equal(retained.sourceVersion,scenario.startsWith('legacy')?undefined:'v1','new source proof belongs to a replacement directory binding');
+  } else {
+   await assert.rejects(gateway.refreshMangaDirectoryDisplaySession(retained,()=>active,!scenario.startsWith('offline')&&scenario!=='malformed-cached-variables'));
+   assert.equal(acquisitions,['offline','offline-version-mismatch','malformed-cached-variables','foreign','retired'].includes(scenario)?0:1,scenario+' uses only its authorized recovery path');
+  }
+  assert.equal(retained.entries[0].displayTitle,undefined);assert.deepEqual(original.entries.map(row=>row.title),retained.entries.map(row=>row.title));
+ }
+ checkpoints.push('actual-manga-display-Gateway-full-snapshot-proofs-normal-legacy-recovery-mismatch-offline-network-failure-retired-negative');
+}
+
+// The real coordinator must look up the current source version and reach a
+// manga detail/TOC transport on forceRefresh. A fake returned session alone
+// would miss the legacy text-only catalog admission and stale seed version.
+{
+ const retained={...session(),contentKind:'manga'},requests=[];
+ retained.entries=retained.entries.map(entry=>({...entry,title:`✿·${99+entry.index}回\n`}));
+ const currentSource='v2';
+ const execute=async(method,params={})=>{
+  requests.push({method,params});
+  if(method==='cache.book.status')return{data:{sourceId:'s1',bookId:'book',tocAvailable:true,sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1',
+   continuationVariables:{},chapters:retained.entries.map(entry=>({chapterIndex:entry.index,title:entry.title,url:entry.url,variables:{},proofState:'invalid'}))}};
+  if(method==='source.list')return{data:{sources:[{sourceId:'s1',name:'Comic',baseUrl:'https://source',enabled:true,sourceVersion:currentSource}]}};
+  if(method==='search-book.get')return{data:{book:null}};
+  if(method==='book.detail'){
+   assert.equal(params.sourceId,'s1');assert.equal(params.bookUrl,'book');assert.equal(params.book.variables,undefined,'the old seed cannot inject variables under a new source version');
+   return{data:{sourceId:'s1',sourceVersion:currentSource,contentKind:'manga',book:{bookId:'book',title:'Book',author:'Writer'},tocUrl:'/toc',variables:{}}};
+  }
+  if(method==='book.toc')return{data:{sourceId:'s1',bookId:'book',sourceVersion:currentSource,contentKind:'manga',catalogVersion:'c2',contextVersion:'x2',catalogInstalled:true,
+   continuationVariables:{},readableChapterIndexes:[0,1,2],toc:retained.entries.map(entry=>({index:entry.index,title:entry.title,url:entry.url,variables:{},level:1,displayTitle:`${99+entry.index}回`}))}};
+  throw Error('catalog recovery cannot dispatch '+method);
+ };
+ const coordinator=new BookAcquisitionCoordinator(execute,()=>false);
+ const runtime={request:(...args)=>coordinator.request(...args),bookAcquisitions:()=>coordinator};
+ const rebound=await new RemoteReadingFlowGateway(runtime).refreshMangaDirectoryDisplaySession(retained,()=>true,true);
+ assert.equal(rebound.contentKind,'manga');assert.equal(rebound.sourceVersion,currentSource);assert.equal(rebound.catalogVersion,'c2');
+ assert.equal(rebound.entries[0].displayTitle,'99回');assert.equal(retained.sourceVersion,'v1');assert.equal(retained.entries[0].displayTitle,undefined);
+ assert.deepEqual(requests.map(row=>row.method),['cache.book.status','source.list','search-book.get','book.detail','book.toc']);
+ assert.equal(requests.some(row=>row.method==='chapter.content'),false,'catalog-only permission never opens a novel body lane');
+ coordinator.close();checkpoints.push('actual-coordinator-manga-catalog-recovery-discovers-new-source-version-no-stale-seed-or-text-body');
+}
+
+// A delayed old display response cannot publish through a new book/scope.
+{
+ const f=fixture(),retained={...session(),contentKind:'manga'},gate=deferred();
+ f.runtime.request=async(method)=>{assert.equal(method,'cache.book.status');await gate.promise;return{data:{sourceId:'s1',bookId:'book',tocAvailable:true,
+  sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1',continuationVariables:{},chapters:retained.entries.map(entry=>({chapterIndex:entry.index,
+   title:entry.title,url:entry.url,variables:{},proofState:'verified',level:1,navigable:true,displayTitle:'旧投影'}))}};};
+ f.host.bindReader({...book(),contentKind:'manga'},retained,[],true,f.lease);f.host.readerSessionReady(retained);
+ const pending=f.host.refreshMangaDirectoryDisplay();
+ f.host.bindReader(book('new'),session('new'),[],false,f.lease);const before=f.host.snapshot(),changes=f.changes.length;
+ gate.resolve();await pending;
+ assert.equal(f.changes.length,changes);assert.deepEqual(f.host.snapshot(),before);f.close();
+ checkpoints.push('actual-manga-display-old-response-cannot-borrow-new-book-scope-or-generation');
 }
 console.log(JSON.stringify({status:'PASS',checkpoints,scope:'complete production owner and Gateways through installed SDK emitter + actual coordinator/preparation; controlled native IO; Index/native target proof remains separate'}));

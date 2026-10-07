@@ -188,6 +188,8 @@ export type RemoteReadingAtomicResolution = {
 
 export type RemoteReadingOpenOptions = {
   forceRefresh?: boolean;
+  /** The admitted manga coordinator requests a catalog only, never a text body. */
+  allowMangaCatalog?: boolean;
   isCurrent?: () => boolean;
   /** Pause an owned queued acquisition without cancelling a started chain. */
   canDispatch?: () => boolean;
@@ -217,7 +219,7 @@ export class RemoteReadingFlowGateway {
     seed: RemoteReadingBookSeed,
     options: RemoteReadingOpenOptions = {},
   ): Promise<RemoteReadingSession> {
-    this.assertTextContentKind(seed.contentKind, 'book.detail');
+    this.assertTextContentKind(seed.contentKind, 'book.detail', options.allowMangaCatalog === true);
     const coordinator = this.runtimeOwner.bookAcquisitions?.();
     if (coordinator !== undefined) return coordinator.acquireBook(seed, options);
     const identity = createRemoteReadingIdentity(seed.sourceId, seed.bookId);
@@ -256,7 +258,7 @@ export class RemoteReadingFlowGateway {
         'book.detail',
       );
     }
-    this.assertTextContentKind(detailResult.data['contentKind'], 'book.detail');
+    this.assertTextContentKind(detailResult.data['contentKind'], 'book.detail', options.allowMangaCatalog === true);
     const book = this.decodeBookDetail(rawBook);
     if (detailResult.data['contentKind'] === 'text') book.contentKind = 'text';
     book.authorIdentity = readBookAuthorIdentity(rawBook['authorIdentity'], book.author,
@@ -354,8 +356,9 @@ export class RemoteReadingFlowGateway {
     }
   }
 
-  private async readCachedSession(seed: RemoteReadingBookSeed, isCurrent?: () => boolean): Promise<RemoteReadingSession> {
-    this.assertTextContentKind(seed.contentKind, 'cache.book.status');
+  private async readCachedSession(seed: RemoteReadingBookSeed, isCurrent?: () => boolean,
+    requireDirectoryProof: boolean = false): Promise<RemoteReadingSession> {
+    this.assertTextContentKind(seed.contentKind, 'cache.book.status', requireDirectoryProof);
     const identity = createRemoteReadingIdentity(seed.sourceId, seed.bookId);
     assertRemoteReadingNonBlankString(seed.detailUrl, 'detailUrl');
     assertRemoteReadingNonBlankString(seed.title, 'title');
@@ -369,6 +372,10 @@ export class RemoteReadingFlowGateway {
       includeChapterStates: false,
     }, isCurrent);
     this.assertIdentity(result.data, identity, 'cache.book.status');
+    if (requireDirectoryProof && ['sourceVersion', 'catalogVersion', 'contextVersion'].some((field: string): boolean =>
+      typeof result.data[field] !== 'string' || (result.data[field] as string).trim().length === 0)) {
+      throw new RemoteReadingGatewayError('sourceVersionChanged', '目录展示缺少当前来源证明', 'cache.book.status');
+    }
     if (result.data['tocAvailable'] !== true) {
       throw new RemoteReadingGatewayError(
         'cachedSessionUnavailable',
@@ -395,6 +402,9 @@ export class RemoteReadingFlowGateway {
     const snapshot = this.decodeCatalogSnapshot(result.data, 'cache.book.status');
     for (let position = 0; position < rawChapters.length; position += 1) {
       const raw = this.requireObject(rawChapters[position], 'cache.book.status chapter');
+      if (requireDirectoryProof && raw['proofState'] !== 'verified') {
+        throw new RemoteReadingGatewayError('sourceVersionChanged', '目录展示来源尚未验证', 'cache.book.status');
+      }
       const index = this.requireChapterIndex(raw, 'chapterIndex', 'cache.book.status chapter');
       if (index !== position) {
         throw new RemoteReadingGatewayError(
@@ -419,6 +429,9 @@ export class RemoteReadingFlowGateway {
     if (!entries.some((entry): boolean => entry.navigable !== false && entry.url.trim().length > 0)) {
       throw new RemoteReadingGatewayError('cachedSessionUnavailable', 'REMOTE_TOC_NOT_DOWNLOADED', 'cache.book.status');
     }
+    if (requireDirectoryProof && invalidVariables) {
+      throw new RemoteReadingGatewayError('invalidResponse', '目录展示包含无效章节变量', 'cache.book.status');
+    }
     return {
       acquisitionMode: 'offline',
       sourceVersion,
@@ -441,7 +454,7 @@ export class RemoteReadingFlowGateway {
       ),
       entries,
       hostRequirements: [],
-      requiresContextRefresh: invalidVariables || sourceVersion !== seed.sourceVersion,
+      requiresContextRefresh: invalidVariables || (!requireDirectoryProof && sourceVersion !== seed.sourceVersion),
     };
   }
 
@@ -462,6 +475,63 @@ export class RemoteReadingFlowGateway {
       hostRequirements: contextIsCurrent && !cached.requiresContextRefresh ? ['httpExecute'] : [],
       requiresContextRefresh: !contextIsCurrent || cached.requiresContextRefresh,
     };
+  }
+
+  /** Rebind only an already admitted manga catalog's presentation. Cached
+   * companions need complete current proofs and the full canonical snapshot;
+   * a legacy/mismatched cache may use the existing normal catalog recovery.
+   * Neither path touches chapter manifests, downloaded bytes or positions. */
+  async refreshMangaDirectoryDisplaySession(session: RemoteReadingSession,
+    isCurrent?: () => boolean, allowNetwork: boolean = true): Promise<RemoteReadingSession> {
+    if (session.contentKind !== 'manga') return session;
+    const seed: RemoteReadingBookSeed = { ...session.book, contentKind: 'manga',
+      sourceId: session.identity.sourceId, bookId: session.identity.bookId,
+      detailUrl: session.detailUrl, sourceVersion: session.sourceVersion,
+      searchVariables: session.continuationVariables };
+    try {
+      const cached = await this.readCachedSession(seed, isCurrent, true);
+      if (isCurrent?.() === false) throw new RemoteReadingGatewayError('cancelled', '目录展示请求已取消');
+      if ((session.sourceVersion !== undefined && session.sourceVersion.trim().length > 0 && cached.sourceVersion !== session.sourceVersion) ||
+        (session.catalogVersion !== undefined && session.catalogVersion.trim().length > 0 && cached.catalogVersion !== session.catalogVersion) ||
+        (session.contextVersion !== undefined && session.contextVersion.trim().length > 0 && cached.contextVersion !== session.contextVersion) ||
+        cached.requiresContextRefresh === true || !this.sameCanonicalDirectory(session, cached)) {
+        throw new RemoteReadingGatewayError('sourceVersionChanged', '目录展示绑定已更新', 'cache.book.status');
+      }
+      // All proof values come from this new Core response, including fields a
+      // legacy UI handoff omitted. The prior TOC object remains untouched.
+      return { ...cached, contentKind: 'manga', acquisitionMode: session.acquisitionMode,
+        hostRequirements: session.hostRequirements, tocUrl: session.tocUrl, book: session.book,
+        requiresContextRefresh: false };
+    } catch (error) {
+      if (isCurrent?.() === false || !allowNetwork ||
+        (error instanceof RemoteReadingGatewayError && (error.code === 'identityMismatch' || error.code === 'cancelled'))) throw error;
+      const coordinator = this.runtimeOwner.bookAcquisitions?.();
+      if (coordinator === undefined) throw error;
+      const refreshed = await coordinator.acquireBook(seed, { forceRefresh: true, isCurrent }, 'background');
+      if (isCurrent?.() === false) throw new RemoteReadingGatewayError('cancelled', '目录展示请求已取消');
+      if (refreshed.contentKind !== 'manga' || refreshed.identity.sourceId !== session.identity.sourceId ||
+        refreshed.identity.bookId !== session.identity.bookId ||
+        [refreshed.sourceVersion, refreshed.catalogVersion, refreshed.contextVersion].some((value: string | undefined): boolean =>
+          value === undefined || value.trim().length === 0) || !this.sameCanonicalDirectory(session, refreshed)) {
+        throw new RemoteReadingGatewayError('sourceVersionChanged', '目录展示未能保留原章节快照', 'book.toc');
+      }
+      // The new binding belongs to the new Core response; never mutate an old
+      // TOC to pretend it was produced by the current source version.
+      return { ...refreshed, book: session.book, detailUrl: session.detailUrl };
+    }
+  }
+
+  private sameCanonicalDirectory(previous: RemoteReadingSession, next: RemoteReadingSession): boolean {
+    if (previous.entries.length !== next.entries.length) return false;
+    for (let position = 0; position < previous.entries.length; position++) {
+      const before = previous.entries[position], after = next.entries[position];
+      if (before.index !== after.index || before.title !== after.title || before.url !== after.url) return false;
+      const oldVariables = mergeRemoteReadingVariables(previous.continuationVariables, before.variables ?? []);
+      const newVariables = mergeRemoteReadingVariables(next.continuationVariables, after.variables ?? []);
+      if (oldVariables.length !== newVariables.length || oldVariables.some((value, index): boolean =>
+        value.name !== newVariables[index].name || value.value !== newVariables[index].value)) return false;
+    }
+    return true;
   }
 
   /**
@@ -1048,8 +1118,9 @@ export class RemoteReadingFlowGateway {
     return book;
   }
 
-  private assertTextContentKind(value: unknown, command: RemoteReadingCommand): void {
+  private assertTextContentKind(value: unknown, command: RemoteReadingCommand, allowMangaCatalog: boolean = false): void {
     if (value === undefined || value === null || value === 'text') return;
+    if (value === 'manga' && allowMangaCatalog) return;
     if (value === 'manga' || value === 'audio')
       throw new RemoteReadingGatewayError('nonTextChapter', '当前版本未接入此类阅读器，书籍和已下载内容仍保留。', command);
     throw new RemoteReadingGatewayError('invalidResponse', 'Core returned an invalid contentKind', command);

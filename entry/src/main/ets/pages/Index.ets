@@ -1161,7 +1161,7 @@ struct Index {
           onDismissSourceSwitchFailure: (scopeId?: number): void => this.dismissSourceSwitchFailure(scopeId),
           resolveSourceSwitchTransactionId: (sourceId: string, bookId: string): Promise<string | undefined> =>
             this.resolveReaderSourceSwitchTransaction(sourceId, bookId),
-          onRemoteSessionReady: (session: RemoteReadingSession): void => this.onRemoteSessionReady(session),
+          onRemoteSessionReady: (session: RemoteReadingSession, refreshDirectoryDisplay?: boolean): void => this.onRemoteSessionReady(session, refreshDirectoryDisplay),
           sourceSwitchTransactionId: this.currentSourceSwitchTransactionId(),
           totalChapters: this.detailToc.length,
           requestedChapterIndex: this.requestedChapterIndex,
@@ -5093,6 +5093,7 @@ struct Index {
   private loadDirectoryOperationProjections(): void {
     const owner = this.mountedRuntimeOwner, book = this.detailBook, session = this.remoteReadingSession;
     if (owner === undefined || book === undefined) return;
+    if (session?.contentKind === 'manga') void this.getReadingEntryHost()?.refreshMangaDirectoryDisplay(true);
     const directory = this.getReaderDirectoryHost(owner);
     if (directory !== undefined) void directory.load(this.directoryBinding(owner, book)).catch((): void => {});
     const offline = this.getReadingOfflineHost(owner);
@@ -5689,14 +5690,21 @@ struct Index {
       failureKind ?? 'RENDER_FAILED', message);
   }
 
-  private onRemoteSessionReady(session: RemoteReadingSession): void {
+  private onRemoteSessionReady(session: RemoteReadingSession, refreshDirectoryDisplay: boolean = false): void {
     const book = this.detailBook;
     if (!this.readingSessionActive || book === undefined ||
       book.sourceId !== session.identity.sourceId || book.bookId !== session.identity.bookId) return;
     const host = this.getReadingEntryHost();
     if (host === undefined) return;
     if (host.snapshot().scopeId !== this.readingEntryScopeId) this.bindReadingEntryReader();
-    if (!host.readerSessionReady(session)) return;
+    if (refreshDirectoryDisplay) {
+      // A Quick-open intent comes from ArkUI's copied @Prop. Refresh the
+      // already owned session without reinstalling that DTO or invalidating
+      // the same in-flight full/reader directory projection.
+      void host.refreshMangaDirectoryDisplay(true);
+      return;
+    }
+    if (!host.readerSessionReady(session, refreshDirectoryDisplay)) return;
     if (this.directoryCurrentChapterIndex >= 0 && this.isRemoteCatalogNearEnd(session, this.directoryCurrentChapterIndex))
       this.refreshRemoteCatalogNearEnd(session);
     this.pendingRemoteDirectoryProjection = host.deferredDirectoryProjection();

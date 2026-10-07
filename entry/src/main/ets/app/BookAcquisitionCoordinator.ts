@@ -912,7 +912,7 @@ export class BookAcquisitionCoordinator {
     }
     let session: RemoteReadingSession;
     try {
-      session = await gateway.openSession(actual, { isCurrent });
+      session = await gateway.openSession(actual, { isCurrent, allowMangaCatalog: seed.contentKind === 'manga' });
     } catch (error) {
       if (this.bookJobCancelled(job)) throw new RemoteReadingGatewayError('cancelled', '书籍请求已取消');
       const classified = classifyRemoteReadingCommandFailure('book.toc', error);

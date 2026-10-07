@@ -120,7 +120,7 @@ export struct ReaderShell {
   onExitCancelled: (readerIdentity: string) => void = (_readerIdentity: string): void => {};
   onReadingReady: (chapterIndex: number, sourceId: string, bookId: string, generation: number) => void =
     (_chapterIndex: number, _sourceId: string, _bookId: string, _generation: number): void => {};
-  onRemoteSessionReady: (session: RemoteReadingSession) => void = (_session: RemoteReadingSession): void => {};
+  onRemoteSessionReady: (session: RemoteReadingSession, refreshDirectoryDisplay?: boolean) => void = (_session: RemoteReadingSession): void => {};
   onRetryFailedSourceSwitch: (scopeId?: number) => void = (): void => {};
   onDismissSourceSwitchFailure: (scopeId?: number) => void = (): void => {};
   resolveSourceSwitchTransactionId: (sourceId: string, bookId: string) => Promise<string | undefined> =
@@ -442,7 +442,9 @@ export struct ReaderShell {
         startAtChapterFirst: this.mangaStartAtChapterFirst,
         directoryTargetProof: this.requestedMangaDirectoryTargetProof,
         remoteSession: this.remoteSession, remoteBookSeed: this.remoteBookSeed,
-        onRemoteSessionReady: (session: RemoteReadingSession): void => this.onRemoteSessionReady(session),
+        onRemoteSessionReady: (session: RemoteReadingSession, refreshDirectoryDisplay?: boolean): void => {
+          if (_identity === this.mangaIdentityKey()) this.onRemoteSessionReady(session, refreshDirectoryDisplay);
+        },
         onChapterCommitted: (index: number, title: string): void => this.onMangaChapterReady(_identity, index, title),
         onBack: (): void => { if (_identity === this.mangaIdentityKey()) this.onExit(this.readingIdentityKey()); },
         onExitRequestHandler: (exit: () => void): void => this.onExitRequestHandler(exit),

@@ -95,7 +95,7 @@ export struct MangaReadingSurface {
   directoryTargetProof: JsonObject | undefined = undefined;
   @Prop @Watch('onDirectoryDataChanged') remoteSession: RemoteReadingSession | undefined = undefined;
   remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
-  onRemoteSessionReady: (session: RemoteReadingSession) => void = (): void => {};
+  onRemoteSessionReady: (session: RemoteReadingSession, refreshDirectoryDisplay?: boolean) => void = (): void => {};
   onChapterCommitted: (index: number, title: string) => void = (): void => {};
   offline: boolean = false;
   onSaveFailure: (message: string) => void = (_message: string): void => {};
@@ -901,6 +901,9 @@ export struct MangaReadingSurface {
     this.restore(next, 0);
   }
   private async openDirectory(): Promise<void> {
+    const session = this.remoteSession;
+    if (session?.contentKind === 'manga' && session.identity.sourceId === this.sourceId && session.identity.bookId === this.bookId)
+      this.onRemoteSessionReady(session, true);
     await this.openPanel('directory');
   }
   private async openSourceSwitch(): Promise<void> {

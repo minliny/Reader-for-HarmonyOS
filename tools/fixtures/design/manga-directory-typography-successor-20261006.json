@@ -1245,7 +1245,7 @@
       "historicalPath": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
       "historicalEntrySha256": "88d94d7ac330688bf2962f9f5fc377f89840232a59f42651559547d4bd5cafe8",
       "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
-      "sourceSha256": "433ffa22d2466c0aa9cf508a07e068d6ad51033687335e2260cac723c79135b9",
+      "sourceSha256": "7c880e796f953b50fc855538a3fd2a17e9fbecd87f7784eae478b98135052e7a",
       "carriers": [
         {
           "owner": "MangaReadingSurface",
@@ -1956,7 +1956,7 @@
       ],
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
-        "sourceHead": "c5dc6cbc8d706035ac5b2001f4ee5ee9b3c567eb",
+        "sourceHead": "eb588c75be0b1b78561c443904fabf7fcc2585c8",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     },
