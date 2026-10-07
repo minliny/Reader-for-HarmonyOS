@@ -3,6 +3,11 @@ import { ReadingRecordRecoveryError } from './ReaderReadingRecordState';
 import { ReaderReadingImageResources, sameReaderReadingImageResource } from './ReaderReadingImageResources';
 import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from './ReaderProgressProducerHost';
 import { TYPE_READER_READING_FAILURE_TITLE, TYPE_READER_READING_FAILURE_DETAIL } from '../common/ReaderTypography';
+import { SourceSwitchProgress } from '../source/SourceSwitchProgress';
+import { SOURCE_SWITCH_VISUAL } from '../source/SourceSwitchVisual';
+import type { SourceSwitchCompletionPresentation } from '../source/SourceSwitchCompletionPresentation';
+import type { AnimatorResult } from '@ohos.animator';
+import { SourceSwitchCompletionOverlay } from '../source/SourceSwitchCompletionOverlay';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertSpecId, type ReaderNativeAlertOptions, ReaderNativeAlertLease } from '../../app/ReaderNativeAlertOwner';
 import { ReaderParagraphLayoutOwner } from './ReaderParagraphLayoutOwner';
 import { ReaderPhysicalPaginationOwner } from './ReaderPhysicalPaginationOwner';
@@ -27,7 +32,8 @@ import { ReaderPageChrome } from './ReaderPageChrome';
 import { ReaderStatusBarPaper } from './ReaderStatusBarPaper';
 import { measureReaderPageChromeText, readerPageChromeTopTextStyle } from './ReaderPageChromeTextMeasurement';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import type { ReaderWindowMetricsSnapshot } from '../common/ReaderWindowMetrics';
+import { readerVisualSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight,
+  type ReaderWindowMetricsSnapshot } from '../common/ReaderWindowMetrics';
 import { settings, type BusinessError } from '@kit.BasicServicesKit';
 import { readerBrightnessWindowValue, readerBrightnessControlPercent, readerBrightnessSystemValue } from './ReaderBrightnessCurve';
 import { readerNativeHighlightValues, type ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
@@ -949,6 +955,10 @@ export struct ReadingExperience {
   resolveSourceSwitchTransactionId: (sourceId: string, bookId: string) => Promise<string | undefined> =
     async (_sourceId: string, _bookId: string): Promise<string | undefined> => undefined;
   @Prop sourceSwitchTransactionId: string | undefined = undefined;
+  @Prop @Watch('sourceSwitchCompletionChanged') sourceSwitchCompletion: SourceSwitchCompletionPresentation | undefined = undefined;
+  @Prop @Watch('sourceSwitchCompletionChanged') readingReadyGeneration: number = 0;
+  @Prop @Watch('sourceSwitchCompletionVisibleChanged') sourceSwitchCompletionVisible: boolean = false;
+  @Prop sourceSwitchPresentationVisible: boolean = false;
   @Prop @Watch('onRequestedChapterChanged') requestedChapterIndex: number | undefined = undefined;
   // Full Directory bookmark row: host-originated precise (chapter, offset)
   // anchor; mirrors the selectSearchResult exact-scalar jump. The requestId
@@ -1011,7 +1021,20 @@ export struct ReadingExperience {
   onTogglePageBookmark: (request: ReaderPageBookmarkToggleRequest) => void =
     (_request: ReaderPageBookmarkToggleRequest): void => {};
 
-  @State private phase: ReadingPhase = 'loading';
+  @State @Watch('sourceSwitchCompletionChanged') private phase: ReadingPhase = 'loading';
+  @State private sourceSwitchRevealOpacity: number = 0;
+  @State private sourceSwitchToastText: string = '';
+  @State private sourceSwitchVisualSelectionToken: number = -1;
+  private sourceSwitchCompletionEpoch: number = 0;
+  private sourceSwitchRevealAnimator: AnimatorResult | undefined = undefined;
+  private sourceSwitchToastTimer: number = -1;
+  private consumedSourceSwitchCompletions: Set<string> = new Set();
+  private sourceSwitchPresentedRevision: number = -1;
+  private sourceSwitchPresentedSelectionToken: number = -1;
+  private sourceSwitchPresentedContinuous: boolean = false;
+  private sourceSwitchPendingCompletionKey: string = '';
+  private sourceSwitchPendingCompletionSelectionToken: number = -1;
+  private sourceSwitchPendingCompletionLifecycleToken: number = -1;
   @State private chapterTitle: string = '';
   @State private showChapterTitle: boolean = false;
   @State private visibleFragments: ReadingSurfacePageFragment[] = [];
@@ -1907,6 +1930,7 @@ export struct ReadingExperience {
   }
 
   aboutToDisappear(): void {
+    this.cancelSourceSwitchCompletion();
     this.progressProducers.retireContinuous();
     this.nativeAlertOwner.retire();
     this.finishSessionCapsuleMorph();
@@ -2070,8 +2094,7 @@ export struct ReadingExperience {
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
           longPressSelectText: this.readerTextSelectionEnabled(),
           interactionEnabled: this.isReaderPageInteractionEnabled(),
-          onVisibleRangeChanged: (start: number, end: number, startProgress: number): void =>
-            this.onContinuousVisibleRangeChanged(start, end, startProgress),
+          onVisibleRangeChanged: this.sourceSwitchContinuousRangeObserver(this.continuousRenderRevision),
           onScrollStopped: (): void => this.onContinuousScrollStopped(),
           onReachStart: (): void => this.onContinuousReachStart(),
           onReachEnd: (): void => this.onContinuousReachEnd(),
@@ -2111,7 +2134,10 @@ export struct ReadingExperience {
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
           longPressSelectText: this.readerTextSelectionEnabled(),
           translateY: this.bookmarkPageOffsetY,
-          onCurrentPagePresented: (revision: number): void => this.onBookTurnArkUIFramePresented(revision),
+          onCurrentPagePresented: (revision: number): void => {
+            this.onBookTurnArkUIFramePresented(revision);
+            this.onSourceSwitchPagePresented(revision);
+          },
           onCurrentPageContentReady: (revision: number): void => this.onBookTurnArkUIContentReady(revision),
           onDynamicHighlights: (identity: string, rects: ReaderDynamicHighlightRect[]): void =>
             this.onPageDynamicHighlights(identity, rects),
@@ -2124,6 +2150,7 @@ export struct ReadingExperience {
           });
         }
       }
+      this.sourceSwitchCompletionWash();
       // Reader Control (RC-READER-CONTROL-01): tapping the center vertical band
       // raises the control layer, which overlays the reading surface.
       // The Panel stays mounted, but only this Host's linked session owns
@@ -2339,6 +2366,10 @@ export struct ReadingExperience {
         // The control overlay, including its transparent outside-tap owner,
         // must sit above selectable reading Text nodes on every control route.
         .zIndex(7)
+        // The selected demo replaces controls when the source drawer opens.
+        // Retain the real control session/close animation without painting it
+        // underneath the drawer's translucent scrim.
+        .visibility(this.sourceSwitchPresentationVisible ? Visibility.Hidden : Visibility.Visible)
         .hitTestBehavior(HitTestMode.Transparent);
       // Keep the raw page interaction owner mounted while the control session
       // opens/closes. Switching this full-screen node in the same commit as a
@@ -2418,6 +2449,8 @@ export struct ReadingExperience {
           sessionExitProgress: this.sessionLaunchFooterExitProgress,
         }).opacity(this.sessionLaunchFooterExiting ? 1 : this.sessionLaunchStageOpacity).zIndex(8).hitTestBehavior(HitTestMode.None);
       }
+      this.sourceSwitchPreparationContent();
+      this.sourceSwitchCompletionToast();
     }
     .width('100%')
     .height('100%')
@@ -2432,6 +2465,225 @@ export struct ReadingExperience {
       const height = this.numericAreaLength(newValue.height);
       this.admitReaderViewportSize(width, height, lifecycleToken);
     });
+  }
+
+  /** Core acceptance precedes target body/layout/first canonical persistence.
+   * Keep preparation visible across that real seam without changing any
+   * readiness, progress or interaction owner. A ready page must belong to the
+   * current selection; a predecessor page cannot dismiss this surface. */
+  private shouldShowSourceSwitchPreparation(): boolean {
+    const pending = this.sessionGateway === undefined ? this.sourceSwitchTransactionId !== undefined :
+      this.sessionGateway.hasPendingSourceSwitch();
+    return pending && this.isReaderIdentityCurrent() && this.phase !== 'failed' && this.sourceSwitchFailureMessage.length === 0 &&
+      !(this.phase === 'ready' && this.visiblePage !== undefined && this.visibleFragments.length > 0 &&
+        this.visiblePageSelectionToken === this.chapterSelectionToken);
+  }
+
+  @Builder
+  private sourceSwitchPreparationContent() {
+    if (this.shouldShowSourceSwitchPreparation()) {
+      SourceSwitchProgress({
+        sourceName: this.sourceName,
+        chapterTitle: this.chapter?.chapterTitle || this.chapterTitle,
+        statusText: '正在载入章节…',
+        reduceMotion: this.reduceMotion,
+        active: this.windowChromeActive,
+        topInset: readerVisualSafeTop(this.readerStatusBarMetrics(this.readerWindowMetricsRevision)),
+        bottomInset: readerInteractiveSafeBottom(this.readerStatusBarMetrics(this.readerWindowMetricsRevision)),
+      }).zIndex(9);
+    }
+  }
+
+  private sourceSwitchCompletionKey(completion: SourceSwitchCompletionPresentation): string {
+    return JSON.stringify([completion.transactionId, completion.sourceId, completion.bookId,
+      completion.readingReadyGeneration]);
+  }
+
+  private sourceSwitchCanonicalPageCurrent(): boolean {
+    const chapter = this.chapter;
+    return chapter !== undefined && chapter.sourceId === this.sourceId && chapter.bookId === this.bookId &&
+      chapter.cacheRefreshRequired !== true && chapter.sourceCorrectionRequired !== true && chapter.content.trim().length > 0 &&
+      this.materializedChapterSelectionToken === this.chapterSelectionToken &&
+      this.visiblePage !== undefined && this.visiblePageSelectionToken === this.chapterSelectionToken &&
+      this.visibleFragments.some((fragment: ReadingSurfacePageFragment): boolean => fragment.text.trim().length > 0 &&
+        fragment.imageHeight <= 0 && (fragment.nativeParagraph === undefined || fragment.nativeParagraphFirst));
+  }
+
+  private sourceSwitchContinuousRangeObserver(revision: number): (start: number, end: number, progress: number) => void {
+    return (start: number, end: number, progress: number): void => {
+      this.onContinuousVisibleRangeChanged(start, end, progress);
+      this.onSourceSwitchPagePresented(revision, true);
+    };
+  }
+
+  private onSourceSwitchPagePresented(revision: number, continuous: boolean = false): void {
+    const continuousStage = this.readerSettingsSnapshot.navigationMode === 'continuous' && this.hasContinuousRenderContent();
+    if (!this.mounted || this.exitRequested || this.phase !== 'ready' || continuous !== continuousStage ||
+      revision !== (continuous ? this.continuousRenderRevision : this.pageTurnRenderRevision) ||
+      !this.sourceSwitchCanonicalPageCurrent()) return;
+    // Exact resident content revision + native scheduling/list-layout callback.
+    // This admits view effects, never Core ACKs or physical display fences.
+    this.sourceSwitchPresentedRevision = revision;
+    this.sourceSwitchPresentedSelectionToken = this.chapterSelectionToken;
+    this.sourceSwitchPresentedContinuous = continuous;
+    this.sourceSwitchCompletionChanged();
+  }
+
+  private sourceSwitchCompletionCurrent(completion: SourceSwitchCompletionPresentation): boolean {
+    const continuousStage = this.readerSettingsSnapshot.navigationMode === 'continuous' && this.hasContinuousRenderContent();
+    return this.mounted && !this.exitRequested && this.appForeground && this.sourceSwitchCompletionVisible &&
+      this.isReaderIdentityCurrent() && completion.sourceId === this.sourceId && completion.bookId === this.bookId &&
+      completion.readingReadyGeneration === this.readingReadyGeneration && this.phase === 'ready' &&
+      this.sourceSwitchFailureMessage.length === 0 && this.sourceSwitchCanonicalPageCurrent() &&
+      this.sourceSwitchPendingCompletionKey === this.sourceSwitchCompletionKey(completion) &&
+      this.sourceSwitchPendingCompletionSelectionToken === this.chapterSelectionToken &&
+      this.sourceSwitchPendingCompletionLifecycleToken === this.lifecycleToken &&
+      this.sourceSwitchPresentedSelectionToken === this.chapterSelectionToken &&
+      this.sourceSwitchPresentedContinuous === continuousStage &&
+      this.sourceSwitchPresentedRevision === (continuousStage ? this.continuousRenderRevision : this.pageTurnRenderRevision) &&
+      this.chapter?.chapterIndex === completion.chapterIndex && this.visiblePage?.startScalar === completion.chapterOffset;
+  }
+
+  private sourceSwitchCompletionDisplayCurrent(): boolean {
+    return this.sourceSwitchCompletion !== undefined &&
+      this.sourceSwitchVisualSelectionToken === this.chapterSelectionToken &&
+      this.sourceSwitchCompletionCurrent(this.sourceSwitchCompletion);
+  }
+
+  private finishSourceSwitchReveal(): void {
+    const animator = this.sourceSwitchRevealAnimator;
+    this.sourceSwitchRevealAnimator = undefined;
+    if (animator !== undefined) {
+      // Native cancellation emits an end sample. It cannot mutate a successor
+      // completion, including one started in the same ArkUI property commit.
+      animator.onFrame = (_value: number): void => {};
+      animator.onFinish = (): void => {};
+      animator.cancel();
+    }
+    this.sourceSwitchRevealOpacity = 0;
+  }
+
+  private cancelSourceSwitchCompletion(consume: boolean = true): void {
+    if (consume && this.sourceSwitchCompletion !== undefined) {
+      this.consumedSourceSwitchCompletions.add(this.sourceSwitchCompletionKey(this.sourceSwitchCompletion));
+    }
+    this.sourceSwitchCompletionEpoch += 1;
+    this.finishSourceSwitchReveal();
+    if (this.sourceSwitchToastTimer >= 0) clearTimeout(this.sourceSwitchToastTimer);
+    this.sourceSwitchToastTimer = -1;
+    this.sourceSwitchToastText = '';
+    this.sourceSwitchVisualSelectionToken = -1;
+  }
+
+  private sourceSwitchCompletionVisibleChanged(): void {
+    if (!this.sourceSwitchCompletionVisible) this.cancelSourceSwitchCompletion();
+    else this.sourceSwitchCompletionChanged();
+  }
+
+  private sourceSwitchCompletionChanged(): void {
+    const completion = this.sourceSwitchCompletion;
+    if (completion === undefined) {
+      this.sourceSwitchPendingCompletionKey = '';
+      this.sourceSwitchPendingCompletionSelectionToken = -1;
+      this.sourceSwitchPendingCompletionLifecycleToken = -1;
+      this.cancelSourceSwitchCompletion(false);
+      return;
+    }
+    if (!this.mounted) return;
+    const key = this.sourceSwitchCompletionKey(completion);
+    if (this.sourceSwitchPendingCompletionKey !== key) {
+      this.sourceSwitchPendingCompletionKey = key;
+      this.sourceSwitchPendingCompletionSelectionToken = this.chapterSelectionToken;
+      this.sourceSwitchPendingCompletionLifecycleToken = this.lifecycleToken;
+    }
+    // A deferred same-selection reflow can admit once. A manual refresh or
+    // successor selection cannot reuse this older canonical receipt, even
+    // when its chapter/anchor and ready generation happen to be identical.
+    if (this.sourceSwitchPendingCompletionSelectionToken !== this.chapterSelectionToken ||
+      this.sourceSwitchPendingCompletionLifecycleToken !== this.lifecycleToken) {
+      this.cancelSourceSwitchCompletion();
+      return;
+    }
+    if (!this.appForeground || !this.sourceSwitchCompletionVisible || this.exitRequested || !this.isReaderIdentityCurrent() ||
+      completion.sourceId !== this.sourceId || completion.bookId !== this.bookId ||
+      completion.readingReadyGeneration !== this.readingReadyGeneration || this.phase === 'failed') {
+      this.cancelSourceSwitchCompletion();
+      return;
+    }
+    const chapter = this.chapter;
+    if (chapter?.sourceId === completion.sourceId && chapter.bookId === completion.bookId &&
+      (chapter.cacheRefreshRequired === true || chapter.sourceCorrectionRequired === true)) {
+      // A retained, unverified body is a degraded reading state, not a
+      // pending successful reveal. Later validation cannot revive this ACK.
+      this.cancelSourceSwitchCompletion();
+      return;
+    }
+    if (!this.sourceSwitchCompletionCurrent(completion)) {
+      // A same-selection reflow can finish after its real canonical ACK. It
+      // may admit the receipt once ready; an already-visible notice retires.
+      if (this.sourceSwitchToastText.length > 0 || this.sourceSwitchRevealOpacity > 0) this.cancelSourceSwitchCompletion();
+      return;
+    }
+    if (this.consumedSourceSwitchCompletions.has(key)) return;
+    this.cancelSourceSwitchCompletion(false);
+    this.consumedSourceSwitchCompletions.add(key);
+    const epoch = this.sourceSwitchCompletionEpoch;
+    const lifecycle = this.lifecycleToken;
+    const selection = this.chapterSelectionToken;
+    this.sourceSwitchVisualSelectionToken = selection;
+    const current = (): boolean => epoch === this.sourceSwitchCompletionEpoch && lifecycle === this.lifecycleToken &&
+      selection === this.chapterSelectionToken && this.sourceSwitchCompletion !== undefined &&
+      this.sourceSwitchCompletionKey(this.sourceSwitchCompletion) === key &&
+      this.sourceSwitchCompletionCurrent(completion);
+    this.sourceSwitchToastText = `已切换至 ${completion.sourceName || completion.sourceId}`;
+    // This timeout owns only the notice's display lifetime. Reading readiness,
+    // progress and source-switch ACKs are independent of either visual clock.
+    this.sourceSwitchToastTimer = setTimeout((): void => {
+      if (epoch !== this.sourceSwitchCompletionEpoch || lifecycle !== this.lifecycleToken) return;
+      this.sourceSwitchToastTimer = -1;
+      this.sourceSwitchToastText = '';
+    }, SOURCE_SWITCH_VISUAL.toastDurationMs);
+    if (this.reduceMotion) return;
+    const from = 1 - SOURCE_SWITCH_VISUAL.readerEnterFromOpacity;
+    this.sourceSwitchRevealOpacity = from;
+    const animator = this.getUIContext().createAnimator({
+      duration: SOURCE_SWITCH_VISUAL.readerEnterDurationMs,
+      easing: `cubic-bezier(${SOURCE_SWITCH_VISUAL.easingX1},${SOURCE_SWITCH_VISUAL.easingY1},${SOURCE_SWITCH_VISUAL.easingX2},${SOURCE_SWITCH_VISUAL.easingY2})`,
+      delay: 0, fill: 'forwards', direction: 'normal', iterations: 1, begin: from, end: 0,
+    });
+    this.sourceSwitchRevealAnimator = animator;
+    animator.onFrame = (value: number): void => {
+      if (this.sourceSwitchRevealAnimator !== animator) return;
+      if (!current()) { this.cancelSourceSwitchCompletion(); return; }
+      this.sourceSwitchRevealOpacity = value;
+    };
+    animator.onFinish = (): void => {
+      if (this.sourceSwitchRevealAnimator !== animator) return;
+      if (!current()) { this.cancelSourceSwitchCompletion(); return; }
+      this.sourceSwitchRevealAnimator = undefined;
+      this.sourceSwitchRevealOpacity = 0;
+    };
+    animator.play();
+  }
+
+  @Builder
+  private sourceSwitchCompletionWash() {
+    if (this.sourceSwitchRevealOpacity > 0 && this.sourceSwitchCompletionDisplayCurrent()) {
+      SourceSwitchCompletionOverlay({ mode: 'wash', washOpacity: this.sourceSwitchRevealOpacity,
+        paperTheme: this.visibleReadingAppearance().activeTheme, expanded: this.readingLayout().widthClass === 'expanded' })
+        .zIndex(1).hitTestBehavior(HitTestMode.None);
+    }
+  }
+
+  @Builder
+  private sourceSwitchCompletionToast() {
+    if (this.sourceSwitchToastText.length > 0 && this.sourceSwitchCompletionDisplayCurrent()) {
+      SourceSwitchCompletionOverlay({ mode: 'toast', toastText: this.sourceSwitchToastText,
+        safeLeft: readerInteractiveSafeLeft(this.readerStatusBarMetrics(this.readerWindowMetricsRevision)),
+        safeRight: readerInteractiveSafeRight(this.readerStatusBarMetrics(this.readerWindowMetricsRevision)),
+        safeBottom: readerInteractiveSafeBottom(this.readerStatusBarMetrics(this.readerWindowMetricsRevision)) })
+        .zIndex(10).hitTestBehavior(HitTestMode.None);
+    }
   }
 
   private admitReaderViewportSize(width: number, height: number, lifecycleToken: number): void {
@@ -5970,6 +6222,10 @@ export struct ReadingExperience {
         this.firstPageCompletionRetryCount = 0;
         this.chapterTitle = chapter.chapterTitle;
         this.physicalPagination.index.finishMeasurement();
+        // Canonical source-switch/control entry publishes a new page just as
+        // ordinary first-page publication does. Providers cache by revision;
+        // phase/array mutation alone cannot replace their initial empty page.
+        this.pageTurnRenderRevision += 1;
         this.traceInitialReadingPhase?.('presentation-submit', lifecycleToken);
         this.traceInitialReadingPhase?.('input-ready', lifecycleToken);
         // Publish the final page-turn owner before durable observers can act.
@@ -8358,6 +8614,7 @@ export struct ReadingExperience {
   }
 
   private onAppForegroundChanged(): void {
+    if (!this.appForeground) this.cancelSourceSwitchCompletion();
     this.onControlInputBoundaryChanged();
     if (!this.appForeground) {
       this.cancelAutomaticPageStart?.();
@@ -9561,6 +9818,7 @@ export struct ReadingExperience {
   }
 
   private onSessionLaunchReduceMotionChanged(): void {
+    if (this.reduceMotion) this.finishSourceSwitchReveal();
     if (this.reduceMotion) this.retirePageTurnForReduceMotion();
     if (!this.reduceMotion || this.sessionLaunch === undefined) return;
     this.sessionLaunch = this.sessionLaunchController.setReduceMotion(true);

@@ -9,6 +9,7 @@ import {
   READER_FONT_NOTO_SANS_SC,
   READER_FONT_NOTO_SANS_SC_UI_BOLD,
   READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
   READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600,
   READER_FONT_NOTO_SANS_SC_UI_900,
@@ -26,7 +27,7 @@ function bundledFontSource(family: string): Resource | undefined {
   if (family === READER_FONT_NOTO_SANS_SC_UI_550) return $rawfile('ReaderMangaSans550.otf');
   if (family === READER_FONT_NOTO_SANS_SC_UI_600) return $rawfile('ReaderMangaSans600.otf');
   if (family === READER_FONT_NOTO_SANS_SC_UI_900) return $rawfile('ReaderMangaSans900.otf');
-  if (family === 'ReaderNotoSansSCUIMedium') return $rawfile('NotoSansSC-UIMedium.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_MEDIUM) return $rawfile('NotoSansSC-UIMedium.otf');
   if (family === READER_FONT_NOTO_SANS_SC_UI_BOLD) return $rawfile('NotoSansSC-UIBold.otf');
   if (family === READER_FONT_NOTO_SANS_SC) return $rawfile('NotoSansSC-VF.otf');
   if (family === READER_FONT_LXGW_WENKAI_LITE) return $rawfile('LXGWWenKaiLite-Regular.ttf');
@@ -69,12 +70,28 @@ export function prepareReaderShelfFonts(): Promise<void> {
     .map((family: string): Promise<void> => prepareReaderFontFamily(family))).then((): void => {});
 }
 
+/** The selected novel drawer admits only its four checked physical faces.
+ * Keep its extra Medium face on demand instead of extending shelf startup. */
+export function sourceSwitchNovelFontsReady(): boolean {
+  return [READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
+    READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM]
+    .every((family: string): boolean => readerFontFamilyReady(family));
+}
+
+export function prepareSourceSwitchNovelFonts(): Promise<boolean> {
+  return Promise.all([READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
+    READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM]
+    .map((family: string): Promise<void> => prepareReaderFontFamily(family)))
+    .then((): boolean => sourceSwitchNovelFontsReady())
+    .catch((error: Error): boolean => { reportFontFailure(error); return false; });
+}
+
 export function prepareReaderFonts(): Promise<void> {
   return Promise.all([
     prepareReaderShelfFonts(),
     prepareReaderFontFamily(READER_FONT_NOTO_SERIF_SC_REGULAR),
     prepareReaderFontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR),
-    prepareReaderFontFamily('ReaderNotoSansSCUIMedium'),
+    prepareReaderFontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM),
     prepareReaderFontFamily('ReaderNotoSansSCUIBold'),
   ]).then((): void => {});
 }

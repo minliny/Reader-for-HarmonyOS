@@ -9,6 +9,7 @@ export const READER_FONT_NOTO_SANS_SC = 'ReaderNotoSansSC';
 // interpolate variable-font weights reliably on every device.
 export const READER_FONT_NOTO_SANS_SC_UI_BOLD = 'ReaderNotoSansSCUIBold';
 export const READER_FONT_NOTO_SANS_SC_UI_REGULAR = 'ReaderNotoSansSCUIRegular';
+export const READER_FONT_NOTO_SANS_SC_UI_MEDIUM = 'ReaderNotoSansSCUIMedium';
 // Manga demo uses exact 550 / 600 / 900 outlines, loaded on demand as static
 // faces. Requests against the custom variable face failed the VM visual check.
 export const READER_FONT_NOTO_SANS_SC_UI_550 = 'ReaderMangaSans550';

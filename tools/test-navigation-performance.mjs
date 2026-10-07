@@ -130,7 +130,9 @@ const sourceManagement = read('entry/src/main/ets/features/source/SourceManageme
 assert.match(sourceManagement, /LazyForEach\(this\.sourceDataSource,/,
   'Source Management must lazily materialize its variable-length list');
 const sourceSwitch = read('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
-assert.match(sourceSwitch, /Repeat\([\s\S]*\.virtualScroll\(\{ reusable: true \}\)/,
-  'Source Switch must virtualize its variable-length list');
+assert.match(sourceSwitch, /LazyForEach\(this\.candidateDataSource,/,
+  'Source Switch must lazily materialize its explicitly notified V1 candidate list');
+assert.doesNotMatch(sourceSwitch, /Repeat\([\s\S]*virtualScroll/,
+  'Source Switch must not use a virtual list incompatible with its V1 owner');
 
 console.log('navigation performance static contract: PASS');

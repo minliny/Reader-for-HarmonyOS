@@ -390,6 +390,74 @@ assert.equal(preparation, undefined, 'discovery must not enqueue unbounded catal
 assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', 'book.toc', 'chapter.content'].includes(method)), false,
   'explicit discovery returns candidates; catalog preparation belongs to the visible viewport');
 
+// Exercise the real Host → Gateway refresh path with independently completing
+// sources. The list contains successful same-book results, never dispatch or
+// failure placeholders; a previous successful search remains usable even if
+// its new search attempt fails.
+{
+  const f = sourceOwnerFixture({ open: false });
+  const requests = [];
+  const rows = [{ ...rawSourceRow('new', 'target'), latestChapterTitle: 'Chapter 20' }];
+  let releaseFast, releaseSlow;
+  const fast = new Promise(resolve => { releaseFast = resolve; });
+  const slow = new Promise(resolve => { releaseSlow = resolve; });
+  const original = f.runtime.request.bind(f.runtime);
+  f.runtime.request = async (method, params, options) => {
+    requests.push({ method, params });
+    if (method === 'source.list') return { data: { sources:
+      ['old', 'new', 'fast', 'slow', 'empty', 'broken'].map(sourceId =>
+        ({ sourceId, name: sourceId, enabled: true, sourceVersion: 'v1' })) } };
+    if (method === 'search-book.related') return { data: relatedData(rows) };
+    if (method === 'change.bookSource') {
+      const sourceId = params.sourceIds[0];
+      if (sourceId === 'new' || sourceId === 'broken') throw Error('source search failed');
+      if (sourceId === 'old' || sourceId === 'empty') return { data: { candidates: [] } };
+      await (sourceId === 'fast' ? fast : slow);
+      const row = rawSourceRow(sourceId, `${sourceId}-book`);
+      rows.push(row);
+      return { data: { candidates: [{ sourceId, bookUrl: row.bookUrl, bookName: row.name, author: row.author }] } };
+    }
+    return original(method, params, options);
+  };
+  const waitUntil = async predicate => {
+    for (let turn = 0; turn < 100 && !predicate(); turn++) await new Promise(setImmediate);
+    assert.equal(predicate(), true, 'the actual refresh must publish the expected state');
+  };
+  assert.equal(f.host.open(f.context, f.lease), true);
+  await waitUntil(() => f.host.current().state.kind === 'candidates' &&
+    f.host.current().state.refreshing === false);
+  assert.deepEqual(f.host.current().state.candidates.map(row => row.sourceId), ['new']);
+  assert.equal(f.host.current().state.candidates[0].latencyMs, undefined,
+    'a cached successful result does not need a new search timing to enter the list');
+  f.host.refresh(f.host.current().scopeId);
+  await waitUntil(() => requests.filter(row => row.method === 'change.bookSource').length === 6);
+  assert.equal(f.host.current().state.refreshing, true);
+  assert.deepEqual(f.host.current().state.candidates.map(row => row.sourceId), ['new'],
+    'pending, empty and failed searches do not create rows');
+  releaseFast();
+  await waitUntil(() => f.host.current().state.candidates?.some(row => row.sourceId === 'fast'));
+  assert.equal(f.host.current().state.refreshing, true,
+    'the first success appears while an independent source search is still running');
+  assert.deepEqual(new Set(f.host.current().state.candidates.map(row => row.sourceId)), new Set(['new', 'fast']));
+  releaseSlow();
+  await waitUntil(() => f.host.current().state.kind === 'candidates' &&
+    f.host.current().state.refreshing === false);
+  assert.deepEqual(new Set(f.host.current().state.candidates.map(row => row.sourceId)), new Set(['new', 'fast', 'slow']));
+  assert.equal(f.host.current().state.candidates.some(row => ['old', 'empty', 'broken'].includes(row.sourceId)), false,
+    'finished searches without a successful same-book result remain absent');
+  assert.equal(requests.some(row => ['book.detail', 'book.toc', 'chapter.content', 'search-book.delete'].includes(row.method)), false,
+    'browsing progressive search results does not pre-acquire content or delete prior successes');
+  assert.equal(requests.filter(row => row.method === 'change.bookSource').length, 6,
+    'one explicit refresh dispatches each enabled source once');
+  f.host.retire();
+
+  function rawSourceRow(sourceId, bookUrl) {
+    return { origin: sourceId, bookUrl, name: 'Book', author: 'Writer', time: Date.now(),
+      relationKey: 'same-book', relationRevision: '1', sourceVersion: 'v1' };
+  }
+}
+console.log('PASS: successful results appear progressively; failed/empty searches stay absent and cached successes remain');
+
 const runtime = {
   async request(method, params) {
     if (method === 'source.switch.commit') {

@@ -43,10 +43,12 @@ function fixture({cap=true}={}) {
       const ack=originalAck(p);durable={...ack.data};revision='r:2';return ack;
     }};
   const gateway=new ReadingSessionFlowGateway('target','book',{kind:'remote'},runtime,'original');
-  const Host=productionMotionMethods(sourceURL,['persistMeasuredCanonicalProgress','persistPreparedPageTurn'],{CoreReadingAnchor,
+  const Host=productionMotionMethods(sourceURL,['persistMeasuredCanonicalProgress','persistPreparedPageTurn','shouldShowSourceSwitchPreparation'],{CoreReadingAnchor,
     ReaderRuntimeOwner:{current:()=>runtime},hilog:{error(){}}});
   let retired=false;
   const owner=Object.assign(new Host(),{sourceId:'target',bookId:'book',activeGateway:()=>gateway,coreLayout:()=>layout,
+    sourceSwitchTransactionId:'original',sessionGateway:gateway,phase:'loading',sourceSwitchFailureMessage:'',
+    visibleFragments:[],visiblePage:undefined,visiblePageSelectionToken:-1,chapterSelectionToken:1,isReaderIdentityCurrent:()=>!retired,
     isPreparedPageTurnCommitCurrent:()=>!retired,isMountedToken:()=>!retired,errorMessage:e=>e.message});
   const prepared={context:{chapter:{sourceId:'target',bookId:'book',chapterTitle:'two',...anchor(40)},layoutMap:{scalarCount:()=>100}},page:{startScalar:40}};
   return{gateway,runtime,owner,prepared,calls,effects,readGates,writeGates,
@@ -61,6 +63,17 @@ const cases=[];
  const f=fixture(),stored=await f.save();assert.equal(stored.sourceSwitchTransactionId,'original');
  assert.equal(f.writes()[0].p.expectedProgressRevision,'r:1');assert.equal(f.gateway.hasPendingSourceSwitch(),false);
  assert.equal(f.writes()[0].p.transactionId,'original');cases.push('first/exact-owned-canonical-ACK');
+}
+{
+ const f=fixture(),gate=deferred();f.writeGates.push(gate);
+ assert.equal(f.owner.shouldShowSourceSwitchPreparation(),true);
+ const work=f.save();await settle();
+ assert.equal(f.owner.shouldShowSourceSwitchPreparation(),true,'preparation remains visible during the original canonical write');
+ gate.resolve();const stored=await work;assert.equal(stored.sourceSwitchTransactionId,'original');
+ assert.equal(f.owner.sourceSwitchTransactionId,'original','the parent Prop can still lag the exact canonical receipt');
+ assert.equal(f.owner.shouldShowSourceSwitchPreparation(),false,'actual canonical completion releases preparation despite a lagging parent Prop');
+ assert.equal(f.writes().length,1,'the loading presentation never introduces another progress write');
+ cases.push('target-prepare/real-canonical-ACK-releases-loading-with-lagging-Prop');
 }
 {
  const f=fixture();f.effects.push('lost','unknown');await assert.rejects(f.save());f.targetAlreadyStored();

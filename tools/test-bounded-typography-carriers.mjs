@@ -1,4 +1,4 @@
-import {approvedTypographyContract} from './lib/approved-manga-typography-carriers.mjs';
+import {approvedTypographyContract, approvedMangaTypography, novelSourceSwitchSuccessor} from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
@@ -9,6 +9,36 @@ const entries = registry.entries.filter(entry => entry.kind === 'bounded' && /So
 assert.equal(entries.length, 6, 'bounded existing Source and import title/action carriers');
 const approvedSource='entry/src/main/ets/features/source/SourceSwitchWindow.ets';
 assert.equal(approvedTypographyContract(read(approvedSource),approvedSource).registered,true,'fullviewport typography successor is exact and approved');
+const novelWindow=read(approvedSource),progressPath='entry/src/main/ets/features/source/SourceSwitchProgress.ets',progressSource=read(progressPath);
+assert.deepEqual(novelSourceSwitchSuccessor.files.map(entry=>entry.path),[approvedSource,progressPath]);
+assert.equal(novelSourceSwitchSuccessor.userSelection,'定下来第三个');
+assert.equal(novelSourceSwitchSuccessor.implementationAuthorization,'按这个效果，再独立 worktree 落地实现');
+assert.equal(approvedTypographyContract(progressSource,progressPath).count,4,'one exact shared novel progress actor has four public text carriers');
+const completionPath='entry/src/main/ets/features/source/SourceSwitchCompletionOverlay.ets',completionSource=read(completionPath);
+assert.equal(novelSourceSwitchSuccessor.completion.path,completionPath);
+assert.equal(approvedTypographyContract(completionSource,completionPath).count,1,'one exact separate completion text actor cannot enlarge historical source/reader policies');
+for(const [from,to] of [
+ ['.fontSize(TYPE_SOURCE_SWITCH_NOVEL_TOAST.fontSizeFp)','.fontSize(99)'],
+ ['.halfLeading(true)','.halfLeading(false)'],
+ ['SOURCE_SWITCH_VISUAL.toastPaddingX','SOURCE_SWITCH_VISUAL.toastPaddingY'],
+]){
+ const changed=completionSource.replace(from,to);assert.notEqual(changed,completionSource);
+ assert.throws(()=>approvedTypographyContract(changed,completionPath),/exact approved typography carrier|exact completion text actor native attributes/,'actual completion private tuple or native geometry drift is rejected');
+}
+assert.ok(approvedMangaTypography.files.find(entry=>entry.path===approvedSource).carriers.length>0,'historical manga physical carriers remain separately witnessed');
+for(const [from,to] of [
+  ['.fontSize(TYPE_SOURCE_SWITCH_NOVEL_NAME.fontSizeFp)','.fontSize(99)'],
+  ['.fontSize(TYPE_SOURCE_SWITCH_NOVEL_METADATA.fontSizeFp)','.fontSize(TYPE_SOURCE_SWITCH_NOVEL_METADATA.fontSizeFp).letterSpacing(0)'],
+  ['.fontSize(15)','.fontSize(99)'],
+]){
+ const changed=novelWindow.replace(from,to);assert.notEqual(changed,novelWindow,'actual selected novel or retained manga carrier mutation');
+ assert.throws(()=>approvedTypographyContract(changed,approvedSource),/exact approved typography carrier\/tuple changed/,'new private value, AUTO drift and retained manga edits are rejected');
+}
+const missingNovelImport=novelWindow.replace('TYPE_SOURCE_SWITCH_NOVEL_NAME,','');assert.notEqual(missingNovelImport,novelWindow);
+assert.throws(()=>approvedTypographyContract(missingNovelImport,approvedSource),/actual selected novel public role import/,'exact tuple must still import its real public role');
+const extraProgress=progressSource.replace("Text('正在切换书源')","Text('新插入').fontSize(TYPE_SOURCE_SWITCH_NOVEL_SWITCH_TITLE.fontSizeFp); Text('正在切换书源')");
+assert.notEqual(extraProgress,progressSource);
+assert.throws(()=>approvedTypographyContract(extraProgress,progressPath),/exact approved typography carrier\/tuple changed/,'a public role cannot admit a copied unregistered progress carrier');
 for (const entry of entries.filter(entry=>entry.origin.path!==approvedSource)) {
   const file = baseline.files.find(file => file.path === entry.origin.path);
   const expected = file.nodes.find(node => node.method === entry.origin.method && node.kind === entry.origin.kind && node.text === entry.origin.text);

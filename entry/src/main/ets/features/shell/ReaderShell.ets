@@ -1,3 +1,6 @@
+import curves from '@ohos.curves';
+import { SOURCE_SWITCH_VISUAL } from '../source/SourceSwitchVisual';
+import type { SourceSwitchCompletionPresentation } from '../source/SourceSwitchCompletionPresentation';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../reading/ReadingDirectoryRecovery';
 import { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
@@ -60,6 +63,7 @@ export struct ReaderShell {
   @Prop inBookshelf: boolean = true;
   @Prop bookAuthor: string = '';
   @Prop bookCoverUrl: string = '';
+  @Prop latestChapterTitle: string = '';
   onToggleShelf: () => void = (): void => {};
   onStopSourceSwitch: (scopeId?: number) => void = (): void => {};
   @Prop remoteSession: RemoteReadingSession | undefined = undefined;
@@ -68,6 +72,7 @@ export struct ReaderShell {
   @Prop sourceSwitchFailureMessage: string = '';
   @Prop sourceSwitchScopeId: number = 0;
   @Prop sourceSwitchTransactionId: string | undefined = undefined;
+  @Prop sourceSwitchCompletion: SourceSwitchCompletionPresentation | undefined = undefined;
   @Prop totalChapters: number = 0;
   @Prop requestedChapterIndex: number | undefined = undefined;
   @Prop mangaChapterRequestGeneration: number = 0;
@@ -192,6 +197,10 @@ export struct ReaderShell {
             if (_identity === this.readingIdentityKey()) this.onRemoteSessionReady(session);
           },
           sourceSwitchTransactionId: this.sourceSwitchTransactionId,
+          sourceSwitchCompletion: this.sourceSwitchCompletion,
+          readingReadyGeneration: this.readingReadyGeneration,
+          sourceSwitchCompletionVisible: this.visible && this.route === 'reading' && !this.sourceSwitchVisible,
+          sourceSwitchPresentationVisible: this.sourceSwitchVisible,
           requestedChapterIndex: this.requestedChapterIndex,
           requestedBookmarkAnchor: this.requestedBookmarkAnchor,
           bookmarkIdentity: this.bookmarkIdentity,
@@ -335,16 +344,23 @@ export struct ReaderShell {
   @Builder
   private sourceSwitchOverlayContent() {
         ForEach([this.sourceSwitchScopeId], (scopeId: number) => {
-        Stack({ alignContent: Alignment.Center }) {
+        Stack({ alignContent: this.contentKind === 'manga' ? Alignment.Center : Alignment.Bottom }) {
           Stack()
             .width('100%')
             .height('100%')
-            .backgroundColor(readerAppColor('app.ReaderShell.build.backgroundColor.40FFFFFF', this.appThemeScheme))
+            .backgroundColor(readerAppColor(this.contentKind === 'manga' ?
+              'app.ReaderShell.build.backgroundColor.40FFFFFF' : 'TOK_SS_DRAWER_SCRIM', this.appThemeScheme))
+            .transition(this.contentKind === 'manga' || this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
+              TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.openDurationMs,
+                curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) }),
+              TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.closeDurationMs,
+                curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) })))
             .onClick((): void => this.onCloseSourceSwitch(scopeId));
           SourceSwitchPanel({
             state: this.sourceSwitchState,
             currentSourceId: this.sourceId,
             bookTitle: this.bookTitle, author: this.bookAuthor, coverUrl: this.bookCoverUrl, currentSourceName: this.sourceName,
+            latestChapterTitle: this.latestChapterTitle,
             currentChapterTitle: this.directoryChapterTitle, reduceMotion: this.reduceMotion,
             contentKind: this.contentKind, allowCancelWhileSwitching: this.allowCancelSourceSwitchWhilePreparing,
             onStop: (): void => this.onStopSourceSwitch(scopeId),

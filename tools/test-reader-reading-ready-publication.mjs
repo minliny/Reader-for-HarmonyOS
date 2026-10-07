@@ -210,11 +210,19 @@ for(const path of ['first','recover','promote'])for(const hook of ['commit','cha
 }
 // Counterfactuals change only the relevant production order in temporary source,
 // exercising the same assertions instead of weakening them to follow the implementation.
+const firstMember=tree.statements.find(node=>node.name?.getText(tree)==='ReadingExperience')
+  .members.find(node=>node.name?.getText(tree)==='completeFirstPage').getText(tree);
 const firstNeedle='        this.schedulePageTurnPreparation();\n        this.admitCommittedProgress(stored);';
-assert.equal(source.split(firstNeedle).length,2);
-const firstMutant=source.replace(firstNeedle,'        this.admitCommittedProgress(stored);')
-  .replace('        this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);',
-    '        this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);\n        this.schedulePageTurnPreparation();');
+const firstPublicationNeedle="        this.pageTurnRenderRevision += 1;\n        this.traceInitialReadingPhase?.('presentation-submit', lifecycleToken);";
+const firstLatePreparationNeedle='        this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);\n        this.completeRapidPageTurnTransaction();';
+for(const needle of [firstNeedle,firstPublicationNeedle,firstLatePreparationNeedle])assert.equal(firstMember.split(needle).length,2);
+// Both current publication paths now invalidate before durable observers.
+// Recreate the original incomplete ordering only in this canonical member:
+// remove explicit first publication and move preparation after the observers.
+const firstBadMember=firstMember.replace(firstPublicationNeedle,"        this.traceInitialReadingPhase?.('presentation-submit', lifecycleToken);")
+  .replace(firstNeedle,'        this.admitCommittedProgress(stored);')
+  .replace(firstLatePreparationNeedle,'        this.prefetchNextChapter(chapter, lifecycleToken, selectionToken);\n        this.schedulePageTurnPreparation();\n        this.completeRapidPageTurnTransaction();');
+const firstMutant=source.replace(firstMember,firstBadMember);
 const scratch=mkdtempSync(join(tmpdir(),'reader-ready-publication-'));
 try {
 const firstFile=join(scratch,'first.ets');writeFileSync(firstFile,firstMutant);

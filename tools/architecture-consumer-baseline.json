@@ -1024,10 +1024,10 @@
       "file": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
       "kind": "approved-fullviewport-live-picker",
       "owner": "SourceSwitchHost / presentation scope and discovery lifecycle",
-      "reason": "User-approved incremental full-screen source picker replaces the old 385vp bounded popup. One exported Window and finite LiveRow preserve 80vp candidate rows, 100% viewport owner, actual latency/status and stop/retest. Honest durable unknown ACK recovery uses the original Host; no new shared producer exception.",
+      "reason": "Retains the exact approved manga full viewport and original 80vp actors; the user-selected novel variant adds a fixed reading drawer with compact successful-result rows and shared real preparation feedback. Every added text and background actor has an exact selected-design successor witness; transaction ownership and native/device acceptance remain separate.",
       "counts": {
         "fontSize": 18,
-        "backgroundColor": 6
+        "backgroundColor": 12
       },
       "supersededLegacyCounts": {
         "fontSize": 15,
@@ -1037,7 +1037,8 @@
       "approvalEvidence": "evidence/2026-10-02-manga-ui-implementation/SCOPE.md",
       "designSource": "paired Reader-UI/design/manga-ui-20261002/; docs/MANGA_UI_DEMO_PARITY_AUDIT_20261003.md",
       "approvedSourceHead": "19be89908333ee8074d2624e9d7fb938e0b011d3",
-      "proof": "tools/test-source-switch-host.mjs"
+      "proof": "tools/test-source-switch-host.mjs",
+      "visualSuccessorContract": "tools/fixtures/design/novel-source-switch-successor-20261006.json"
     },
     {
       "file": "entry/src/main/ets/pages/Index.ets",
@@ -1118,6 +1119,50 @@
         "backgroundColor": 1
       },
       "status": "REGISTERED_EXISTING_POLICY_NOT_MIGRATION_COMPLETION"
+    },
+    {
+      "file": "entry/src/main/ets/features/source/SourceSwitchProgress.ets",
+      "kind": "selected-novel-source-switch-progress",
+      "owner": "SourceSwitchHost / target reader first-page admission",
+      "reason": "One concrete shared novel source-switch progress actor spans the real transaction and target first-page preparation. Typography uses finite public roles and one exact themed paper background; no new dialog, style bag or native/device acceptance is implied.",
+      "counts": {
+        "backgroundColor": 1
+      },
+      "status": "REGISTERED_SELECTED_NOVEL_SOURCE_SWITCH_NOT_DEVICE_ACCEPTANCE",
+      "approvalEvidence": "evidence/source-switch-native-20261006/intake.json",
+      "designSource": "../../source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-concepts-20261006/page-alternatives-success-only/03-reading-drawer.png",
+      "visualSuccessorContract": "tools/fixtures/design/novel-source-switch-successor-20261006.json",
+      "proof": "tools/test-source-switch-index-owner-sdk.mjs"
+    },
+    {
+      "file": "entry/src/main/ets/features/source/SourceSwitchSpinner.ets",
+      "kind": "selected-novel-css-ring-native-adapter",
+      "owner": "SourceSwitchSpinner / foreground and reduced-motion presentation lifetime",
+      "reason": "Finite selected CSS ring adapter consumes ArkUI Shape/Path drawing and the platform linear animator. The two exact SVG annular sectors retain selected theme roles and zero private font/background calls; native pixels and vSync timing require VM evidence.",
+      "counts": {
+        "fontSize": 0,
+        "backgroundColor": 0
+      },
+      "status": "REGISTERED_SELECTED_NOVEL_SOURCE_SWITCH_NOT_DEVICE_ACCEPTANCE",
+      "approvalEvidence": "evidence/source-switch-native-20261006/intake.json",
+      "designSource": "../Reader-UI/design/source-switch/source-switch.visual.json",
+      "proof": "tools/test-source-switch-visual-sdk.mjs"
+    },
+    {
+      "file": "entry/src/main/ets/features/source/SourceSwitchCompletionOverlay.ets",
+      "kind": "selected-novel-source-switch-completion-view",
+      "owner": "ReadingExperience / exact source-switch completion visual receipt",
+      "reason": "One finite selected novel completion actor owns one TOAST public-role text and its exact pill background; wash reuses the actual ReaderPaperBackground child. Lifecycle, source identity, selected physical page and canonical ACK remain owned by the reader. Every actor binds the exact completion witness; the historical reading-page budget is unchanged.",
+      "counts": {
+        "fontSize": 0,
+        "backgroundColor": 1
+      },
+      "status": "REGISTERED_SELECTED_NOVEL_SOURCE_SWITCH_NOT_DEVICE_ACCEPTANCE",
+      "approvalEvidence": "evidence/source-switch-native-20261006/intake.json",
+      "designSource": "../Reader-UI/design/source-switch/source-switch.visual.json",
+      "visualSuccessorContract": "tools/fixtures/design/novel-source-switch-successor-20261006.json",
+      "visualSuccessorActor": "completion",
+      "proof": "tools/test-source-switch-visual-sdk.mjs"
     }
   ]
 }

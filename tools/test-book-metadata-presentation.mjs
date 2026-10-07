@@ -92,9 +92,11 @@ panel.displayedCandidates = candidates;
 panel.isSweeping = () => panel.state?.kind === 'candidates' && panel.state?.refreshing === true;
 panel.busy = () => false;
 panel.state = { kind: 'candidates', candidates };
-assert.equal(panel.statusText(), `查找完成 · ${group.sourceCount} 个来源`);
+// Selected source-flow-renderer.mjs sourceFlowStatus uses “查找结束”. The
+// exact source count and metadata/identity assertions remain independent.
+assert.equal(panel.statusText(), `查找结束 · 已找到 ${group.sourceCount} 个书源`);
 panel.state.refreshing = true;
-assert.equal(panel.statusText(), `正在查找 · ${group.sourceCount} 个来源`);
+assert.equal(panel.statusText(), `正在查找 · 已找到 ${group.sourceCount} 个书源`);
 panel.state.refreshError = '网络不可用';
 assert.equal(panel.errorText(), '网络不可用', 'refresh failure remains visible while records stay displayed');
 assert.equal(candidates.find(row => row.sourceId === 'source-1').acquisitionState, 'failed');

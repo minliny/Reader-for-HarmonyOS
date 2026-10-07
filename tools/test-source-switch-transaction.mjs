@@ -39,7 +39,13 @@ assert.match(sourceHost, /this\.gateway\.rollbackSwitch\(transactionId/);
 assert.match(index, /commit\.sourceSwitchTransactionId !== undefined[\s\S]*this\.getSourceSwitchHost\(\)\?\.targetCommitted\([\s\S]*commit\.sourceSwitchTransactionId\)/,
   'only the actual finalized ID from the canonical ACK releases the barrier');
 assert.match(sourceHost, /pending\.transactionId !== transactionId[\s\S]*this\.currentTransactionId\(identity\)/);
-assert.match(index, /if \(finalized !== undefined\) this\.cleanupRetiredSourceCache\(finalized\)/);
+const receiptStart = index.indexOf('private applyReadingCommit(');
+const receipt = index.slice(receiptStart, index.indexOf('private getReadingOfflineHost(', receiptStart));
+assert.ok(receiptStart >= 0);
+assert.match(receipt, /if \(finalized !== undefined\) \{\s*this\.cleanupRetiredSourceCache\(finalized\);/,
+  'cleanup remains the first action only after the exact finalized receipt');
+assert.ok(receipt.indexOf('this.cleanupRetiredSourceCache(finalized)') < receipt.indexOf('new SourceSwitchCompletionPresentation('),
+  'the pure completion view cannot replace or precede the existing canonical cleanup');
 assert.match(sourceHost, /close\(scopeId: number\)[\s\S]*this\.busyOrUnknown\(\)/);
 const failStart = reader.indexOf('private fail(');
 const failureOwner = reader.slice(failStart, reader.indexOf('\n  private ', failStart + 10));
@@ -85,8 +91,9 @@ assert.doesNotMatch(detailOpen, /this\.route\s*=\s*'reading'/,
 
 assert.match(window,
   /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/,
-  'Repeat must key candidates by exact composite identity');
-assert.match(window, /Repeat\(this\.displayedCandidates\)[\s\S]*\.virtualScroll\(\{ reusable: true \}\)/);
+  'LazyForEach must key candidates by exact composite identity');
+assert.match(window, /LazyForEach\(this\.candidateDataSource,[\s\S]*sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/);
+assert.doesNotMatch(window, /Repeat\([\s\S]*virtualScroll/);
 assert.match(window, /this\.state\.candidates\.filter\([\s\S]*candidate\.isCurrent !== true\)/,
   'the exact current identity is shown in context and excluded from alternate rows');
 assert.match(window, /candidate === undefined \|\| candidate\.isCurrent === true/,
