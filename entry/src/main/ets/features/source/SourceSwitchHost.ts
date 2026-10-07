@@ -526,7 +526,7 @@ export class SourceSwitchHost {
     const knownCandidates = (): SourceSwitchCandidate[] => context.readKnownCandidates?.() ?? context.knownCandidates;
     const initialKnown = knownCandidates();
     const previous = this.snapshot.state.kind === 'candidates' ?
-      this.gateway.withoutSearchTiming(this.snapshot.state.candidates) : [];
+      this.snapshot.state.candidates.slice() : [];
     if (!force && initialKnown.length > 0) this.snapshot = { ...this.snapshot,
       state: { kind: 'candidates', candidates: initialKnown, refreshing: false } };
     if (force && previous.length > 0) this.snapshot = { ...this.snapshot,
@@ -547,7 +547,8 @@ export class SourceSwitchHost {
       reset = false; dirty.clear();
       void this.gateway.loadCachedCandidates(context.query, current, knownCandidates(), batch).then((candidates): void => {
         if (!current()) return;
-        if (candidates.length > 0) this.snapshot = { ...this.snapshot, state: { kind: 'candidates', candidates,
+        if (candidates.length > 0) this.snapshot = { ...this.snapshot, state: {
+          ...(this.snapshot.state.kind === 'candidates' ? this.snapshot.state : {}), kind: 'candidates', candidates,
           refreshing: this.snapshot.state.kind === 'candidates' && this.snapshot.state.refreshing === true } };
         else if (this.snapshot.state.kind !== 'candidates' || this.snapshot.state.refreshing !== true) {
           this.snapshot = { ...this.snapshot, state: { kind: 'empty' } };

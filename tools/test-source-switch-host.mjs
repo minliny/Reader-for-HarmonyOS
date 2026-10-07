@@ -5,6 +5,13 @@ import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-pro
 import * as horizontal from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {fixture,settle,deferred,origin,target,session,rawCandidate,hostSource,Gateway,gatewayExports,read,setCurrentRuntime,ReadingSessionFlowGateway} from './lib/source-switch-owner-probe.mjs';
+// Exact Core book.search DTO; the Core measurement excludes scheduler waiting.
+function searchData(sourceId, candidates, durationMs, contentKind = 'text') {
+  return { data: { sourceId, sourceVersion: 'v1', contentKind,
+    books: candidates.map(({bookUrl,bookName,...book}) => ({...book,bookId:bookUrl,title:bookName})),
+    ...(durationMs === undefined ? {} : {searchTiming:{kind:'search',durationMs,measuredAt:Date.now(),sourceVersion:'v1'}}) } };
+}
+
 const checks=[];
 const TX='00000000-0000-4000-8000-000000000001/1';
 {
@@ -19,12 +26,12 @@ const TX='00000000-0000-4000-8000-000000000001/1';
     if(method==='search-book.related')return{data:{books:rows.slice(),snapshotRevision:'stream',complete:true,
       sourceVersions:registry.map(source=>({...source}))}};
     if(method==='search-book.batch.get')return{data:{complete:true,books:[],missing:params.identities}};
-    if(method==='change.bookSource'){
-      const id=params.sourceIds[0];started.push(id);
+    if(method==='book.search'){
+      const startedAt=now;const id=params.sourceId;started.push(id);
       if(id==='first')now=1500;if(id==='faster')now=1600;
       await gates.get(id).promise;
       rows.push({...rawCandidate,origin:id,bookUrl:`/${id}`,time:Math.floor(now/1000)});
-      return{data:{candidates:[{sourceId:id,bookUrl:`/${id}`,bookName:'Book',author:'Writer'}]}};
+      return searchData(id,[{sourceId:id,bookUrl:`/${id}`,bookName:'Book',author:'Writer'}],now-startedAt);
     }
     return baseRequest(method,params,options);
   };
@@ -53,12 +60,12 @@ const TX='00000000-0000-4000-8000-000000000001/1';
     // captured callbacks below exercise Host admission independently of the
     // Gateway's own cancellation, which also remains active.
     const pending=deferred();f.host.gateway.refreshCandidates=(query,current,excluded,onProgress,initial)=>{
-      progress.push(onProgress);assert.ok(initial.every(row=>row.latencyMs===undefined&&row.latencyKind===undefined));
+      progress.push(onProgress);assert.ok(initial.every(row=>row.latencyMs!==undefined&&row.latencyKind==='search'));
       return pending.promise;
     };
     f.host.refresh(before);
-    assert.ok(f.host.current().state.candidates.every(row=>row.latencyMs===undefined&&row.latencyKind===undefined),
-      'the immediate refreshing frame cannot display search timing from the previous sweep');
+    assert.deepEqual(f.host.current().state.candidates,originalCandidates,
+      'refresh retains genuine previous measurements until newer success supersedes them');
     assert.ok(originalCandidates.every(row=>row.latencyMs!==undefined),'old immutable rows are not modified');
     await settle();const oldProgress=progress.at(-1);
     f.host.stop(before);f.host.refresh(before);await settle();
@@ -70,7 +77,7 @@ const TX='00000000-0000-4000-8000-000000000001/1';
     assert.equal(f.host.current(),closed,'closed owner rejects late callbacks and final results');
     assert.equal(f.subscriptions.size,0);
   }finally{Date.now=originalNow;f.retire();for(const gate of gates.values())gate.resolve();}
-  checks.push('actual-owner-zero-to-streaming-latency-sort-refresh-clears-stale-time-and-generation-close-admission');
+  checks.push('actual-owner-zero-to-streaming-latency-sort-refresh-retains-versioned-time-and-generation-close-admission');
 }
 {
   const f=fixture({preview:true,failAcquire:true});await settle();
@@ -374,4 +381,61 @@ assert.notEqual(unsafe,hostSource);
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1,
     'negative control proves an old closure can mutate the reopened scope without the actual generation admission');
 }
+
+// A real forced sweep cannot relabel total failures as cached success. Keep
+// both old rows and their measured latency, including a late projection event.
+{
+  const f=fixture({open:false}),originalRequest=f.runtime.request.bind(f.runtime),attempts=[];
+  const timing={kind:'search',durationMs:64,measuredAt:1700000000000,sourceVersion:'v1'};
+  const rows=[{...rawCandidate,acquisition:{sourceVersion:'v1',searchTiming:timing}}];
+  f.runtime.request=async(method,params,options)=>{
+    if(method==='search-book.related')return{data:{books:rows,snapshotRevision:'failure-snapshot',complete:true,
+      sourceVersions:[{sourceId:'new',sourceVersion:'v1',enabled:true}]}};
+    if(method==='book.search'){attempts.push(params.sourceId);throw Error('private-url-and-cookie-must-not-reach-ui');}
+    return originalRequest(method,params,options);
+  };
+  assert.equal(f.host.open(f.context,f.lease),true);await settle();
+  assert.equal(attempts.length,0,'cached opening performs no hidden network sweep');
+  assert.equal(f.candidate().latencyMs,64);
+  f.host.refresh(f.host.current().scopeId);await settle();
+  assert.deepEqual(attempts,['old','new'],'force checks every enabled source exactly once');
+  assert.equal(f.host.current().state.kind,'candidates');assert.equal(f.host.current().state.refreshing,false);
+  assert.equal(f.candidate().latencyMs,64,'total failure cannot erase previously measured timing');
+  assert.match(f.host.current().state.refreshError,/全部失败/);
+  assert.doesNotMatch(f.host.current().state.refreshError,/private-url|cookie/);
+  for(const listener of f.subscriptions)listener({reset:false,identities:[{sourceId:'new',bookId:'target'}]});
+  await settle();assert.match(f.host.current().state.refreshError,/全部失败/,
+    'a delayed acquisition projection cannot overwrite failure feedback');
+  f.retire();checks.push('forced-all-source-failure-retains-durable-time-and-feedback-after-late-projection');
+}
+
+// Keyword matches belonging to a different book cannot mask failed same-book
+// discovery or replace a cached candidate's last genuine timing measurement.
+{
+  const f=fixture({open:false}),originalRequest=f.runtime.request.bind(f.runtime),attempts=[];
+  const rows=[{...rawCandidate,acquisition:{sourceVersion:'v1',searchTiming:{kind:'search',durationMs:64,
+    measuredAt:1700000000000,sourceVersion:'v1'}}}];
+  f.runtime.request=async(method,params,options)=>{
+    if(method==='search-book.related')return{data:{books:rows,snapshotRevision:'same-book-only',complete:true,
+      sourceVersions:[{sourceId:'new',sourceVersion:'v1',enabled:true}]}};
+    if(method==='search-book.batch.get')return{data:{books:[{origin:'new',bookUrl:'unrelated',name:'Unrelated Book',author:'Someone Else'}],
+      missing:[],complete:true}};
+    if(method==='book.search'){
+      attempts.push(params.sourceId);
+      if(params.sourceId==='old')throw Error('source failed');
+      return searchData('new',[{sourceId:'new',bookUrl:'unrelated',bookName:'Unrelated Book',author:'Someone Else'}],19);
+    }
+    return originalRequest(method,params,options);
+  };
+  assert.equal(f.host.open(f.context,f.lease),true);await settle();
+  assert.equal(f.candidate().latencyMs,64);
+  f.host.refresh(f.host.current().scopeId);await settle();
+  assert.deepEqual(attempts,['old','new']);assert.equal(f.host.current().state.kind,'candidates');
+  assert.deepEqual(f.host.current().state.candidates.map(row=>row.bookUrl),['target'],
+    'Core same-book relation excludes the successful unrelated keyword result');
+  assert.equal(f.candidate().latencyMs,64,'another book cannot overwrite the old same-book measurement');
+  assert.match(f.host.current().state.refreshError,/未找到新候选/);
+  f.retire();checks.push('unrelated-keyword-success-cannot-mask-same-book-failure-or-replace-latency');
+}
+
 console.log(JSON.stringify({status:'PASS',checks,scope:'actual full SourceSwitchHost/Gateway/IntentStore + actual progress lane/gateway; installed SDK exported full-viewport picker and actual live-row V1 state/closure propagation; runtime and AtomicFile IO are controlled fixtures; actual OS atomic/fsync, focus and layout remain unverified'}));

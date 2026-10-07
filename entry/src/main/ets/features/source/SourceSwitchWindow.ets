@@ -414,7 +414,7 @@ export struct SourceSwitchWindow {
     if (this.busy()) return '正在切换书源…';
     if (this.state.kind === 'success') return '已切换书源';
     if (this.state.kind === 'failure') return this.requiresReconciliation() ? '换源结果未确认' : '换源失败';
-    if (this.state.kind === 'discoveryError') return '查找失败';
+    if (this.state.kind === 'discoveryError' || (this.state.kind === 'candidates' && this.state.refreshError)) return '查找失败';
     if ((this.state.kind === 'candidates' || this.state.kind === 'empty') && this.state.stopped === true) {
       return this.contentKind === 'manga' ? `已停止 · 已发现 ${count} 个` : `已停止 · 已找到 ${count} 个书源`;
     }
@@ -559,7 +559,7 @@ export struct SourceSwitchWindow {
     if (this.busy()) return '正在切换书源…';
     if (this.state.kind === 'success') return '已切换书源';
     if (this.state.kind === 'failure') return this.requiresReconciliation() ? '换源结果未确认' : '换源失败';
-    if (this.state.kind === 'discoveryError') return '查找失败';
+    if (this.state.kind === 'discoveryError' || (this.state.kind === 'candidates' && this.state.refreshError)) return '查找失败';
     if ((this.state.kind === 'candidates' || this.state.kind === 'empty') && this.state.stopped === true) return '已停止';
     return '查找结束';
   }

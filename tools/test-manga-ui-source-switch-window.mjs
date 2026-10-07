@@ -21,7 +21,7 @@ class LayoutFrame { constructor(action) { this.action = action; } }
 const Controller = productionMotionMethods(page,
   ['candidateKey', 'publishCandidates', 'acceptState', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
     'listTouch', 'selectCandidate', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
-    'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
+    'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook', 'novelDiscoveryPhase',
     'headingHeight', 'discoveryHeight', 'columnsHeight', 'footerHeight', 'bookHeight', 'timingWidth', 'drawerHeight', 'safeTop', 'safeBottom', 'safeLeft', 'safeRight'],
   { sourceSwitchCandidateKey, sourceSwitchSourceCount, SourceSwitchLayoutFrame: LayoutFrame,
     ...novelPresentation, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
@@ -171,3 +171,16 @@ assert.equal(sourceSwitchNovelCompact(844),false);
 assert.equal(sourceSwitchNovelCompact(0),false);
 assert.match(source, /if \(this.scrollBook\(\)\) \{\s*ListItem\(\) \{ this.novelBookContext\(\);/);
 console.log('novel compact-window metadata scroll and usable candidate viewport PASS');
+
+// A failed re-search retains usable rows while both the visible phase and
+// accessibility summary report failure, rather than a normal completion.
+const failedRefresh = owner([a], 'text');
+failedRefresh.page.state = { kind: 'candidates', candidates: [a], refreshing: false,
+  refreshError: '本次换源搜索全部失败，已保留原有结果' };
+failedRefresh.page.acceptState();
+assert.equal(failedRefresh.page.novelDiscoveryPhase(), '查找失败');
+assert.equal(failedRefresh.page.statusText(), '查找失败');
+assert.equal(failedRefresh.page.errorText(), failedRefresh.page.state.refreshError);
+failedRefresh.page.requestRefresh();
+assert.deepEqual(failedRefresh.actions, ['refresh'], 'retained-row failure retries the full discovery flow');
+assert.equal(failedRefresh.page.displayedCandidates.length, 1, 'the failed refresh does not remove existing rows');
