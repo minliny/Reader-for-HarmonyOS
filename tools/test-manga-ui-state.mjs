@@ -84,7 +84,7 @@ assert.equal(gateway.current().screenTimeout, 'alwaysOn', 'manga writes preserve
 
 const Surface = productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url),
   ['adjacentChapter','pageOrdinal','openChapterEnd','seekPage']);
-const chapter = { chapterIndex: 8, manifest: { chapter: { chapterId: '/8' } } };
+const chapter = { chapterIndex: 8, manifest: { chapter: { sourceId: 's', bookId: 'b', chapterId: '/8' } } };
 const owner = Object.assign(new Surface(), { sourceId: 's', bookId: 'b', mounted: true, opened: true,
   horizontal: false, displayedPage: 3, horizontalPageCount: 4,
   confirmedPosition: { anchor: { ordinal: 3 } },

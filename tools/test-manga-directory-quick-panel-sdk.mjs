@@ -9,7 +9,7 @@ import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
 const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
-const names = [...mangaDirectoryAdaptiveFields, ...mangaDirectoryAdaptiveMembers, 'directoryCurrentChapterIndex', 'directoryEntries', 'directoryPanel', 'directoryTools', 'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'directoryBody', 'directoryFallback', 'adjacentChapter',
+const names = [...mangaDirectoryAdaptiveFields, ...mangaDirectoryAdaptiveMembers, 'directoryCurrentChapterIndex', 'directoryEntries', 'directoryCurrentCatalogEntry', 'directoryPanel', 'directoryTools', 'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'directoryBody', 'directoryFallback', 'adjacentChapter',
   'selectAdjacentChapter', 'pageOrdinal', 'accentColor', 'mutedColor', 'inkColor', 'lineColor',
   'directoryFontScale', 'directoryToolHeight', 'directoryHeaderChrome', 'directoryInitialWidth', 'directoryQuickHeight',
   'directoryColumnWidth', 'windowInteractiveInsets', 'interactiveInsets', 'panelInsets', 'controlsPresentedForWindow', 'persistentDirectory', 'panelContentInset', 'panelWidth'];
@@ -30,7 +30,7 @@ function fixture({ current = 71, night = false, stale = false, candidate = sourc
   Object.assign(owner, {
     sourceId: 'source', bookId: 'book', title: 'book · chapter', backgroundPreference: night ? 'ink' : 'paper',
     remoteSession: { contentKind: 'manga', identity: { sourceId: stale ? 'other' : 'source', bookId: 'book' }, entries },
-    controller: { chapter: { chapterIndex: current, manifest: { chapter: { chapterId: `chapter-${current}` } } }, totalPages: 24 },
+    controller: { chapter: { chapterIndex: current, manifest: { chapter: { sourceId: 'source', bookId: 'book', chapterId: `chapter-${current}` } } }, totalPages: 24 },
     horizontal: false, displayedPage: 4, panelPhase: 'open', panel: 'directory', chapterEnd: false,
     directoryQuery: '', directoryAscending: true, directoryRevision: 0, directoryOpenRevision: 2,
     publishedManifestVersion: 4, downloadEnabled: true, isReaderIdentityCurrent: () => true, stageWidth: 390, viewportWidth: 390,
@@ -70,6 +70,8 @@ const stale = fixture({ stale: true }); stale.owner.directoryTools();
 assert.equal(stale.nodes().find(node => node.accessibilityText === '下一章节').enabled, false,
   'stale session never supplies adjacent targets');
 assert.equal(stale.owner.directoryCurrentTitle(), 'book · chapter', 'a replaced source cannot supply the current footer title');
+const foreignManifest = fixture(); foreignManifest.owner.controller.chapter.manifest.chapter.sourceId = 'foreign';
+assert.equal(foreignManifest.owner.adjacentChapter(1), undefined, 'a foreign manifest cannot borrow the current catalog neighbors');
 const body = fixture(); body.owner.directoryBody(false);
 const quick = [...body.owner.children.values()][0].params;
 assert.equal(quick.mangaQuickDisplay, true, 'production v2 renderer receives bounded quick display');
