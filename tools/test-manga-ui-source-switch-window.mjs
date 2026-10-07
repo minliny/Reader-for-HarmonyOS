@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { novelPresentation } from './lib/source-switch-sdk-consumer.mjs';
+import { novelPresentation, sourceSwitchLiveSdk } from './lib/source-switch-sdk-consumer.mjs';
+import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 const { sourceSwitchNovelChapter, sourceSwitchNovelLatency, sourceSwitchNovelDrawerHeight, sourceSwitchNovelRowHeight, sourceSwitchNovelCompact } = novelPresentation;
 
@@ -14,8 +15,11 @@ const { sourceSwitchCandidateKey, sourceSwitchSourceCount } = new Function(`${st
 const dataStart=source.indexOf('class SourceSwitchCandidateDataSource');
 const dataEnd=source.indexOf('\n@Component',dataStart);
 assert.ok(dataStart>=0&&dataEnd>dataStart,'production V1 lazy data source is present');
-const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey',
-  `${stripTypeScriptTypes(source.slice(dataStart,dataEnd))};return SourceSwitchCandidateDataSource;`)(sourceSwitchCandidateKey);
+const holderStart=source.indexOf('class SourceSwitchCandidateRow');
+assert.match(source,/@Observed\s+class SourceSwitchCandidateRow/,'same-key metadata is observed by the native runtime');
+const SourceSwitchCandidateRow=new Function(`${stripTypeScriptTypes(source.slice(holderStart,source.indexOf('/** Native lazy admission',holderStart)))};return SourceSwitchCandidateRow;`)();
+const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey','SourceSwitchCandidateRow',
+  `${stripTypeScriptTypes(source.slice(dataStart,dataEnd))};return SourceSwitchCandidateDataSource;`)(sourceSwitchCandidateKey,SourceSwitchCandidateRow);
 const timers = new Map(); let nextTimer = 0;
 class LayoutFrame { constructor(action) { this.action = action; } }
 const Controller = productionMotionMethods(page,
@@ -58,20 +62,76 @@ const listener={onDataAdd:index=>notifications.push(['add',index]),
 lazyData.registerDataChangeListener(listener);lazyData.registerDataChangeListener(listener);
 assert.equal(lazyData.totalCount(),0);
 lazyData.publish([a,b]);assert.deepEqual(notifications,[['add',0],['add',1]],'empty-prefix results enter the existing native range');
-assert.equal(lazyData.totalCount(),2);assert.equal(lazyData.getData(1),b);
+assert.equal(lazyData.totalCount(),2);assert.equal(lazyData.getData(1).candidate,b);
 notifications.length=0;lazyData.publish([a,b,c]);assert.deepEqual(notifications,[['add',2]],'stable-prefix append notifies only the appended position');
 const enrichedA={...a,latestChapterTitle:'新章节',latencyMs:50};
-notifications.length=0;lazyData.publish([enrichedA,b,c]);assert.deepEqual(notifications,[['change',0]],'same-key new metadata refreshes its retained native row');
-assert.equal(lazyData.getData(0),enrichedA);
+const originalHolder=lazyData.getData(0);
+notifications.length=0;lazyData.publish([enrichedA,b,c]);assert.deepEqual(notifications,[],'same-key metadata uses ObjectLink without invalidating the native lazy child');
+assert.equal(lazyData.getData(0),originalHolder);assert.equal(originalHolder.candidate,enrichedA);
 notifications.length=0;lazyData.publish([b,c,enrichedA]);assert.deepEqual(notifications,[['reload']],'non-prefix authoritative order uses platform keyed reload');
 notifications.length=0;lazyData.publish([]);assert.deepEqual(notifications,[['reload']]);assert.equal(lazyData.totalCount(),0);
 lazyData.unregisterDataChangeListener(listener);notifications.length=0;
 lazyData.publish([a]);assert.deepEqual(notifications,[],'retired native listeners receive no later publication');
-assert.equal(lazyData.totalCount(),1);assert.equal(lazyData.getData(0),a);
+assert.equal(lazyData.totalCount(),1);assert.equal(lazyData.getData(0).candidate,a);
+assert.notEqual(lazyData.getData(0),originalHolder,'a deleted and re-added identity receives a new observer, not a retired holder');
 assert.doesNotMatch(source,/Repeat\([\s\S]*virtualScroll/,'V1 picker cannot reintroduce the unsupported renderer');
 assert.match(source,/LazyForEach\(this\.candidateDataSource/);
 assert.match(source,/\}\.width\('100%'\)\.height\(this\.rowHeight\(\)\);/,'native ListItem has a bounded row extent');
 assert.equal((source.match(/this\.displayedCandidates =/g)??[]).length,1,'all admitted arrays and clear operations pass through the synchronized publication method');
+
+// Same-key lazy caching retains the native child. Execute the installed SDK's
+// ObjectLink/proxy classes and the production row builder, rather than merely
+// checking an onDataChange notification. Ace layout/paint still needs VM proof.
+{
+  const native=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+  const deps=sourceSwitchLiveSdk(native,{setTimeout(){return 1;},clearTimeout(){}});
+  const data=new deps.SourceSwitchCandidateDataSource(),events=[];
+  data.registerDataChangeListener({onDataAdd:index=>events.push(['add',index]),onDataChange:index=>events.push(['change',index]),onDataReloaded:()=>events.push(['reload'])});
+  const cached={...item('retained'),latencyMs:undefined,latencyKind:undefined,latestChapterTitle:'旧章节'};
+  const unknownHolder=new deps.SourceSwitchCandidateRow(cached);
+  const unknownRow=new deps.SourceSwitchNovelRow(undefined,{row:unknownHolder,reduceMotion:true},undefined,7000);unknownRow.initialRender();
+  assert.ok(native.nodes(unknownRow).some(node=>node.type==='Text'&&node.create==='—'));
+  // The finite builder probe cannot remove a non-empty conditional branch.
+  // Prove the unknown-to-measured value contract through the real ObjectLink
+  // class separately; Ace's initial dash-to-number paint remains VM evidence.
+  const valueHolder=new deps.SourceSwitchCandidateRow(cached);
+  const valueLink=new native.properties.sdk.SynchedPropertyNestedObjectPU(valueHolder,unknownRow,'valueRow');
+  assert.equal(sourceSwitchNovelLatency(valueLink.get().candidate),'—');
+  valueHolder.candidate={...cached,latencyKind:'search',latencyMs:325};
+  assert.equal(sourceSwitchNovelLatency(valueLink.get().candidate),'325 ms');
+  data.publish([{...cached,latencyKind:'search',latencyMs:0}]);const holder=data.getData(0);events.length=0;
+  const linked=new deps.SourceSwitchNovelRow(undefined,{row:holder,reduceMotion:true},undefined,7001);linked.initialRender();
+  const hit=native.nodes(linked).find(node=>node.type==='Row');
+  assert.ok(native.nodes(linked).some(node=>node.type==='Text'&&node.create==='0'));
+  // Negative control uses the actual SDK's old ordinary-prop deep copy plus
+  // a bounded stable-key cache model. It does not execute Ace's native cache.
+  const oldProp=native.properties.deepCopy(cached),keyedCache=new Map([[key(cached),oldProp]]);
+  const legacyChanged={...cached,latencyKind:'search',latencyMs:325};
+  assert.equal(key(legacyChanged),key(cached));
+  assert.equal(sourceSwitchNovelLatency(keyedCache.get(key(legacyChanged))),'—',
+    'the old same-key ordinary-prop row keeps the initial dash despite a new candidate');
+  for(const duration of [325,441]){
+    const enriched={...cached,latencyKind:'search',latencyMs:duration,latestChapterTitle:`最新章节${duration}`};
+    data.publish([enriched]);native.properties.flush();
+    assert.equal(data.getData(0),holder,'metadata retains the same native observation owner');
+    assert.equal(linked.row,holder,'the real SDK ObjectLink keeps the original holder');
+    assert.equal(native.nodes(linked).find(node=>node.type==='Row'),hit,'same-key update does not remount/reset the hit target');
+    assert.ok(native.nodes(linked).some(node=>node.type==='Text'&&node.create===String(duration)),
+      'actual SDK observer updates the production latency text');
+    assert.ok(native.nodes(linked).some(node=>node.type==='Text'&&node.create===`最新章节${duration}`));
+    assert.deepEqual(events,[],'metadata creates no native replacement/add/reload operation');
+  }
+  data.publish([holder.candidate,b]);assert.deepEqual(events,[['add',1]]);events.length=0;
+  const secondHolder=data.getData(1);data.publish([b,holder.candidate]);
+  assert.deepEqual(events,[['reload']]);assert.equal(data.getData(0),secondHolder);assert.equal(data.getData(1),holder);
+  data.publish([]);data.publish([cached]);
+  assert.notEqual(data.getData(0),holder,'deleted and re-added key cannot reuse an old observer');
+  assert.equal(holder.candidate.latencyMs,441,'retired holder no longer receives subsequent publications');
+  const anotherScope=new deps.SourceSwitchCandidateDataSource();anotherScope.publish([cached]);
+  assert.notEqual(anotherScope.getData(0),data.getData(0),'a new picker scope has no previous holder ownership');
+  assert.doesNotMatch(source,/struct SourceSwitchLiveRow\b/, 'both content kinds retain the selected shared native row visual');
+  assert.match(source,/struct SourceSwitchNovelRow[\s\S]*?@ObjectLink row: SourceSwitchCandidateRow/);
+}
 console.log('source-switch V1 native data admission: empty, append, metadata, reload and listener retirement PASS');
 const progressive = owner(); progressive.page.state = { kind: 'discovering' }; progressive.page.acceptState();
 assert.equal(progressive.page.isSweeping(), true); assert.equal(progressive.page.statusText(), '正在查找 · 已发现 0 个');
@@ -135,7 +195,7 @@ assert.equal(novel.page.statusText(), '查找结束 · 已找到 2 个书源');
 novel.page.state = { kind: 'candidates', candidates: [c, b, fasterA], refreshing: true };
 novel.page.acceptState(); flush();
 assert.deepEqual(novel.page.displayedCandidates.map(key), [a,b,c].map(key), 'successful additions append without re-sorting existing novel rows');
-assert.deepEqual(Array.from({length:novel.page.candidateDataSource.totalCount()},(_value,index)=>key(novel.page.candidateDataSource.getData(index))),[a,b,c].map(key),'native data receives the same held-order novel projection');
+assert.deepEqual(Array.from({length:novel.page.candidateDataSource.totalCount()},(_value,index)=>key(novel.page.candidateDataSource.getData(index).candidate)),[a,b,c].map(key),'native data receives the same held-order novel projection');
 assert.equal(novel.page.displayedCandidates[0].latencyMs, 50, 'metadata still updates in place');
 novel.page.listTouch({type:'down'}); novel.page.heldKey = key(b);
 novel.page.state = { kind: 'candidates', candidates: [c, b, { ...fasterA, latestChapterTitle: '新章节' }], refreshing: true };
