@@ -1245,7 +1245,7 @@
       "historicalPath": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
       "historicalEntrySha256": "88d94d7ac330688bf2962f9f5fc377f89840232a59f42651559547d4bd5cafe8",
       "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
-      "sourceSha256": "7c880e796f953b50fc855538a3fd2a17e9fbecd87f7784eae478b98135052e7a",
+      "sourceSha256": "c5b45471cbf3fbcea71f83617358c4a8f533314efae2d096f0c87508035eda11",
       "carriers": [
         {
           "owner": "MangaReadingSurface",

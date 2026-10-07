@@ -374,7 +374,9 @@ export struct MangaReadingSurface {
     if (this.offline) {
       // Already admitted manga identity; only read Core's durable catalog. A
       // missing/invalid cached catalog must never fall through to online acquire.
-      const cached = await new RemoteReadingFlowGateway(this.runtime).openCachedSession(this.remoteBookSeed, current);
+      if (this.remoteBookSeed.contentKind !== undefined && this.remoteBookSeed.contentKind !== 'manga')
+        throw new Error('MANGA_SESSION_IDENTITY_MISMATCH');
+      const cached = await new RemoteReadingFlowGateway(this.runtime).openCachedCatalogSession(this.remoteBookSeed, current, false, true);
       cached.contentKind = 'manga';
       return cached;
     }
@@ -1059,7 +1061,8 @@ export struct MangaReadingSurface {
     const session = this.remoteSession;
     if (current === undefined || session?.contentKind !== 'manga' ||
       session.identity.sourceId !== this.sourceId || session.identity.bookId !== this.bookId ||
-      session.requiresContextRefresh === true) return undefined;
+      (session.requiresContextRefresh === true && session.acquisitionMode !== 'offline') ||
+      current.manifest.chapter.sourceId !== this.sourceId || current.manifest.chapter.bookId !== this.bookId) return undefined;
     const position = session.entries.findIndex((entry: RemoteReadingTocEntry): boolean =>
       entry.index === current.chapterIndex && entry.url === current.manifest.chapter.chapterId);
     if (position < 0) return undefined;
@@ -1289,13 +1292,21 @@ export struct MangaReadingSurface {
     const session = this.remoteSession;
     if (session === undefined) return this.directoryProjection ?? [];
     if (session.contentKind !== 'manga' || session.identity.sourceId !== this.sourceId ||
-      session.identity.bookId !== this.bookId || session.requiresContextRefresh === true) return [];
+      session.identity.bookId !== this.bookId || (session.requiresContextRefresh === true && session.acquisitionMode !== 'offline')) return [];
+    const chapter = this.controller?.chapter;
+    if (session.acquisitionMode === 'offline' && chapter !== undefined &&
+      (chapter.manifest.chapter.sourceId !== this.sourceId || chapter.manifest.chapter.bookId !== this.bookId ||
+      !session.entries.some((entry: RemoteReadingTocEntry): boolean => entry.index === chapter.chapterIndex && entry.url === chapter.manifest.chapter.chapterId))) return [];
+    const displayFactsCurrent = session.acquisitionMode !== 'offline' || chapter !== undefined &&
+      session.sourceVersion !== undefined && session.sourceVersion === chapter.manifest.sourceRuleVersion;
     const projection: Map<number, LocalReadingTocEntry> = new Map();
     for (const row of this.directoryProjection ?? []) projection.set(row.index, row);
     return session.entries.map((entry: RemoteReadingTocEntry): LocalReadingTocEntry => {
       const row = projection.get(entry.index);
-      return { index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable,
-        displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
+      const proved = displayFactsCurrent && (session.acquisitionMode !== 'offline' || entry.proofState === 'verified');
+      return { index: entry.index, title: entry.title, level: proved ? entry.level : undefined, navigable: entry.navigable,
+        displayTitle: proved ? entry.displayTitle : undefined, isVip: proved ? entry.isVip : undefined,
+        isPay: proved ? entry.isPay : undefined, contextTitle: proved ? entry.contextTitle : undefined,
         downloadState: row?.title === entry.title ? row.downloadState : 'unknown' };
     });
   }
@@ -1766,7 +1777,7 @@ export struct MangaReadingSurface {
     const session = this.remoteSession;
     if (session !== undefined) {
       if (session.contentKind !== 'manga' || session.identity.sourceId !== this.sourceId ||
-        session.identity.bookId !== this.bookId || session.requiresContextRefresh === true) return undefined;
+        session.identity.bookId !== this.bookId || (session.requiresContextRefresh === true && session.acquisitionMode !== 'offline')) return undefined;
       return this.directoryEntries().find((entry: LocalReadingTocEntry): boolean => entry.index === index && entry.navigable !== false);
     }
     // The Shell binds this projection to the same source/book reader identity.
@@ -1777,8 +1788,8 @@ export struct MangaReadingSurface {
     const session = this.remoteSession;
     const index = this.directoryCurrentIndex();
     if (session?.contentKind === 'manga' && session.identity.sourceId === this.sourceId &&
-      session.identity.bookId === this.bookId && session.requiresContextRefresh !== true) {
-      const entry = session.entries.find((entry: RemoteReadingTocEntry): boolean => entry.index === index);
+      session.identity.bookId === this.bookId && (session.requiresContextRefresh !== true || session.acquisitionMode === 'offline')) {
+      const entry = this.directoryCurrentCatalogEntry(index);
       if (entry !== undefined) return mangaDirectoryDisplay(entry).title;
     }
     if (this.controller?.chapter !== undefined)

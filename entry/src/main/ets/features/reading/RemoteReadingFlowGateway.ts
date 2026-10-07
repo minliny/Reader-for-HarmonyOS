@@ -345,8 +345,13 @@ export class RemoteReadingFlowGateway {
     seed: RemoteReadingBookSeed,
     isCurrent?: () => boolean,
   ): Promise<RemoteReadingSession> {
+    return this.readCachedCatalogAdmission(seed, isCurrent, false);
+  }
+
+  private async readCachedCatalogAdmission(seed: RemoteReadingBookSeed, isCurrent: (() => boolean) | undefined,
+    allowMangaCatalog: boolean): Promise<RemoteReadingSession> {
     try {
-      return await this.readCachedSession(seed, isCurrent);
+      return await this.readCachedSession(seed, isCurrent, false, allowMangaCatalog);
     } catch (error) {
       if (error instanceof RemoteReadingGatewayError && error.code === 'invalidResponse') {
         throw new RemoteReadingGatewayError('cacheDerivedCorrupt', error.message, 'cache.book.status',
@@ -357,8 +362,8 @@ export class RemoteReadingFlowGateway {
   }
 
   private async readCachedSession(seed: RemoteReadingBookSeed, isCurrent?: () => boolean,
-    requireDirectoryProof: boolean = false): Promise<RemoteReadingSession> {
-    this.assertTextContentKind(seed.contentKind, 'cache.book.status', requireDirectoryProof);
+    requireDirectoryProof: boolean = false, allowMangaCatalog: boolean = false): Promise<RemoteReadingSession> {
+    this.assertTextContentKind(seed.contentKind, 'cache.book.status', requireDirectoryProof || allowMangaCatalog);
     const identity = createRemoteReadingIdentity(seed.sourceId, seed.bookId);
     assertRemoteReadingNonBlankString(seed.detailUrl, 'detailUrl');
     assertRemoteReadingNonBlankString(seed.title, 'title');
@@ -398,7 +403,8 @@ export class RemoteReadingFlowGateway {
       catch (_) { invalidVariables = true; return []; }
     };
     const continuationVariables = cachedVariables(result.data['continuationVariables']);
-    const sourceVersion = this.optionalString(result.data, 'sourceVersion', 'cache.book.status') ?? seed.sourceVersion;
+    const cachedSourceVersion = this.optionalString(result.data, 'sourceVersion', 'cache.book.status');
+    const sourceVersion = cachedSourceVersion ?? seed.sourceVersion;
     const snapshot = this.decodeCatalogSnapshot(result.data, 'cache.book.status');
     for (let position = 0; position < rawChapters.length; position += 1) {
       const raw = this.requireObject(rawChapters[position], 'cache.book.status chapter');
@@ -415,10 +421,15 @@ export class RemoteReadingFlowGateway {
       }
       const level = raw['level'] === null || raw['level'] === undefined ? undefined : this.requireChapterIndex(raw, 'level', 'book.toc entry');
       if (level !== undefined && (level < 1 || level > 32)) throw new Error('invalid directory level');
+      const displayFactsCurrent = !allowMangaCatalog || raw['proofState'] === 'verified' &&
+        cachedSourceVersion !== undefined && cachedSourceVersion.trim().length > 0 &&
+        snapshot.catalogVersion !== undefined && snapshot.catalogVersion.trim().length > 0 &&
+        snapshot.contextVersion !== undefined && snapshot.contextVersion.trim().length > 0 &&
+        (seed.sourceVersion === undefined || seed.sourceVersion === cachedSourceVersion);
       entries.push({
-        ...(level === undefined ? {} : { level }), index,
+        ...(level === undefined || !displayFactsCurrent ? {} : { level }), index,
         title: this.requireString(raw, 'title', 'cache.book.status chapter'),
-        ...this.decodeDirectoryDisplayMetadata(raw, 'cache.book.status'),
+        ...(displayFactsCurrent ? this.decodeDirectoryDisplayMetadata(raw, 'cache.book.status') : {}),
         url: this.requireString(raw, 'url', 'cache.book.status chapter'),
         ...(typeof raw['navigable'] === 'boolean' ? { navigable: raw['navigable'] as boolean } : {}),
         ...(typeof raw['proofState'] === 'string' ? { proofState: raw['proofState'] as string } : {}),
@@ -467,8 +478,11 @@ export class RemoteReadingFlowGateway {
     seed: RemoteReadingBookSeed,
     isCurrent?: () => boolean,
     contextIsCurrent: boolean = false,
+    /** Catalog metadata for an already admitted manga reader; no body authority. */
+    allowMangaCatalog: boolean = false,
   ): Promise<RemoteReadingSession> {
-    const cached = await this.openCachedSession(seed, isCurrent);
+    const cached = await this.readCachedCatalogAdmission(seed, isCurrent, allowMangaCatalog);
+    if (allowMangaCatalog && seed.contentKind === 'manga') cached.contentKind = 'manga';
     return {
       ...cached,
       acquisitionMode: contextIsCurrent && !cached.requiresContextRefresh ? 'online' : 'offline',
