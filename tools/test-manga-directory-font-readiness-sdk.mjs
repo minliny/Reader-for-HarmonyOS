@@ -10,6 +10,7 @@ import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/Rea
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
 import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
+import { mangaDirectoryPresentation } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
 
 const surfacePath = new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets', import.meta.url);
 const listPath = new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url);
@@ -200,7 +201,7 @@ function nativeLifecycleFixture(text = source, manga = true) {
     branches.set(id, { branch });
     render();
   };
-  const entry = { index: 79, title: '03', navigable: true };
+  const entry = { index: 79, title: '03', level: 1, navigable: true };
   const { owner: mangaOwner } = createReaderBuilderProbe(mangaSurfaceSource,
     ['panel', 'panelPhase', 'directoryFallback', 'directoryOuterIdentity', 'directoryCurrentOpenInset', 'directoryQuickHeight', 'directoryQuickRemainingHeight', 'directoryQuickToolsHeight', 'directoryToolHeight', 'directoryFontScale', 'directoryHeaderChrome', 'panelContentHeight', 'panelHeight', 'panelInsets', 'interactiveInsets', 'windowInteractiveInsets', 'controlsPresentedForWindow', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'widePanel', 'persistentDirectory', 'selectDirectoryTarget', 'onWindowChromeChanged'],
     { ...properties.sdk, ...mangaSurfaceSdkDependencies }, properties.hooks);
@@ -221,7 +222,7 @@ function nativeLifecycleFixture(text = source, manga = true) {
   Object.assign(fallback, { mounted: true, sourceId: 'manga', bookId: 'book',
     entries: [entry], admittedEntries: [entry], projectedEntries: [entry], admittedIdentity: 'manga\u0000book',
     currentChapterIndex: 79, query: '', mangaScheme: 'day', rowHeight: 58,
-    mangaCatalogDisplay: false, mangaCatalogNarrow: false, layoutRows: [], presentation: new Map(), collapsedGroups: [],
+    mangaCatalogDisplay: false, mangaCatalogNarrow: false, layoutRows: [], presentation: mangaDirectoryPresentation([entry]), collapsedGroups: [],
     onSelectChapter: child.params.onSelectChapter });
   fallback.prepareLayout();
   let fallbackBuilds = 0;

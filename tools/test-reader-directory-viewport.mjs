@@ -17,7 +17,8 @@ const source = readFileSync(path, 'utf8');
 const timers = [];
 const ScrollAlign = { START: 'start', CENTER: 'center' };
 const List = productionMotionMethods(path, ['captureViewportAnchor', 'planPosition', 'schedulePosition',
-  'positionInitialCurrent', 'onViewChanged', 'onInteractionChanged', 'aboutToDisappear', 'onScrollCommand'], {
+  'positionInitialCurrent', 'onViewChanged', 'onInteractionChanged', 'aboutToDisappear', 'onScrollCommand',
+  'mangaLayoutByNode', 'mangaGridSpans', 'mangaLayoutPageRefs', 'mangaLayoutSignature'], {
   readerDirectoryScopeKey: (_source, book) => book,
   readerDirectoryViewportAnchor, readerDirectorySaveViewportAnchor, ScrollAlign,
   LengthMetrics: { vp: value => ({ value }) }, setTimeout: action => timers.push(action),
@@ -88,7 +89,17 @@ readerDirectoryClearViewportAnchors();
     bookId: 'unmount', view, pendingPages: [], firstVisibleIndex: 14000,
     dataSource: { currentView: () => view, loadedNode: index => index === 14000 ? node('last-visible') : undefined },
     scroller: { getItemRect: () => ({ y: -18, height: 40 }) } });
+  // Execute the real production finite-Map initializers, then prove disposal
+  // releases a populated layout rather than merely tolerating missing fields.
+  const retained = node('last-visible');
+  list.mangaLayoutByNode.set(retained.nodeId, { kind: 'row', columns: 1, startIndex: 14000,
+    nodes: [retained], labels: [{ kind: 'named', numberText: '', part: '' }], leader: true, rowLength: 1 });
+  list.mangaGridSpans.set(14000, 12); list.mangaLayoutPageRefs.set(13824, [retained]);
+  list.mangaLayoutSignature = 'quick-view:populated';
   list.aboutToDisappear();
+  assert.deepEqual([list.mangaLayoutByNode.size, list.mangaGridSpans.size, list.mangaLayoutPageRefs.size], [0, 0, 0],
+    'disposed directory releases every finite derived-layout and resident-page reference');
+  assert.equal(list.mangaLayoutSignature, '', 'disposed directory cannot reuse an old projection signature');
   assert.deepEqual([readerDirectoryViewportAnchor('unmount').nodeId,
     readerDirectoryViewportAnchor('unmount').rowFraction], ['last-visible', 0.45],
     'unmount during inertial motion captures its final row offset before Full takes ownership');

@@ -69,11 +69,19 @@ const page = Object.assign(new Page(), { sourceId: 's', bookId: 'b', contentKind
 page.admitEntries(false);
 assert.deepEqual(page.mangaLayoutRows.flatMap(row => row.entries.map(entry => entry.index)), entries.map(entry => entry.index),
   'the explicitly admitted manga fixture initializes layout with every original canonical entry');
-page.toggleMangaBranch(entries[1], page.identity()); page.toggleMangaBranch(entries[0], page.identity());
+const displayedEntry = index => {
+  const current = page.mangaLayoutRows.flatMap(row => row.entries).find(entry => entry.index === index);
+  assert.ok(current, `the real layout currently admits canonical entry ${index}`);
+  return current;
+};
+page.toggleMangaBranch(displayedEntry(17), page.identity());
+assert.deepEqual(page.mangaCollapsedGroups, [17], 'the inner group folds using its current context-enriched layout DTO');
+page.toggleMangaBranch(displayedEntry(7), page.identity());
 assert.deepEqual(page.mangaVisibleEntries().map(row => row.index), [7, 29, 41, 53]);
 assert.equal(page.mangaPresentation.get(entries[3].index).parentTitle, undefined);
-page.selectMangaEntry(entries[4], page.identity());
+page.selectMangaEntry(displayedEntry(41), page.identity());
 assert.deepEqual(page.mangaCollapsedGroups, [17, 7], 'a disabled root cannot manufacture a fold');
+assert.deepEqual(page.selected, [], 'a visible disabled root cannot select a chapter');
 page.locateCurrent(); timers.splice(0).forEach(fn => fn());
 assert.deepEqual(page.mangaCollapsedGroups, [], 'locate unfolds every exact ancestor');
 assert.deepEqual(scrolls.at(-1), [2, false, 'start', { extraOffset: { value: 183 } }]);

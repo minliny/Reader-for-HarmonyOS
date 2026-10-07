@@ -43,6 +43,11 @@ function fixture(initialEntries = entries) {
     onSelectChapter: index => selected.push(index), onOpenFullDirectory() {} });
   return { owner, selected, scrolled };
 }
+function displayedEntry(owner, index) {
+  const current = owner.layoutRows.flatMap(row => row.entries).find(entry => entry.index === index);
+  assert.ok(current, `the current fallback layout admits canonical entry ${index}`);
+  return current;
+}
 
 const hierarchy = Object.freeze([
   { index: 7, title: '组甲', level: 1, navigable: false },
@@ -62,13 +67,14 @@ const hierarchy = Object.freeze([
   owner.aboutToAppear(); owner.onFirstLayout(); flush();
   assert.equal(owner.rowPresentation(hierarchy[0]).readableDescendantCount, 3);
   assert.deepEqual(owner.rowPresentation(hierarchy[3]).ancestorGroupIndexes, [7, 17]);
-  owner.toggleBranch(hierarchy[2], owner.identity());
+  const currentChild = displayedEntry(owner, 23);
+  owner.toggleBranch(displayedEntry(owner, 17), owner.identity());
   assert.deepEqual(owner.collapsedGroups, [17]);
   assert.deepEqual(owner.projectedEntries.map(entry => entry.index), [7, 11, 17, 29, 41, 53, 67, 79, 83]);
   owner.toggleBranch(hierarchy[0], owner.identity());
   assert.deepEqual(owner.projectedEntries.map(entry => entry.index), [7, 41, 53, 67, 79, 83]);
   assert.deepEqual(selected, [], 'an explicit group is a fold action and never a chapter target');
-  owner.selectEntry(hierarchy[3], owner.identity());
+  owner.selectEntry(currentChild, owner.identity());
   assert.deepEqual(selected, [], 'a collapsed child loses selection authority');
   owner.toggleBranch(hierarchy[0], owner.identity());
   assert.deepEqual(owner.projectedEntries.map(entry => entry.index), [7, 11, 17, 29, 41, 53, 67, 79, 83],
@@ -85,9 +91,9 @@ const hierarchy = Object.freeze([
   owner.onLocateCurrent(); flush();
   assert.deepEqual(owner.collapsedGroups, [], 'locate expands exactly the current target ancestors');
   assert.deepEqual(scrolled.at(-1), [6, true, 'start', { extraOffset: { value: -12 } }]);
-  owner.selectEntry(hierarchy[4], owner.identity()); assert.deepEqual(selected, [23, 29]);
-  owner.selectEntry(hierarchy[7], owner.identity());
-  owner.selectEntry(hierarchy[9], owner.identity());
+  owner.selectEntry(displayedEntry(owner, 29), owner.identity()); assert.deepEqual(selected, [23, 29]);
+  owner.selectEntry(displayedEntry(owner, 67), owner.identity());
+  owner.selectEntry(displayedEntry(owner, 83), owner.identity());
   assert.deepEqual(owner.collapsedGroups, [], 'disabled rows without explicit children cannot manufacture groups');
   assert.deepEqual(selected, [23, 29]);
   owner.onViewInputsChanged();
@@ -376,10 +382,14 @@ for (const [label, candidate, listCandidate, failure] of [
 const responsiveParts = [{ index: 7, title: '41 上', level: 1, navigable: true },
   { index: 19, title: '41 中', level: 1, navigable: true }, { index: 31, title: '41 下', level: 1, navigable: true }];
 function checkViewport(candidate = source) {
-  for (const [initial, next, expected] of [[360, 580, [3]], [580, 360, [1, 1, 1]], [0, 353, [1, 1, 1]]]) {
+  // At 3.2x the stable three-digit part budget needs 688.48vp for three
+  // real lanes. Both 360 and 720 remain in the same wide viewport class.
+  for (const [initial, next, expected] of [[360, 720, [3]], [720, 360, [1, 1, 1]], [0, 353, [1, 1, 1]]]) {
     const probe = actualListProbe(candidate, 3.2), { owner } = probe;
     Object.assign(owner, fixture(responsiveParts).owner, { viewportWidth: initial, windowMetricsRevision: 0 });
     owner.aboutToAppear(); flush(); owner.initialRender();
+    assert.ok(responsiveParts.every(entry => owner.presentation.get(entry.index)?.hasChildren === false),
+      'the responsive parts fixture carries complete explicit leaf facts');
     const list = probe.list(), viewport = probe.viewport(); list.layoutReady = true;
     owner.scrollGeneration = 37; owner.pendingScroll = 'current';
     const identity = owner.admittedIdentity, projection = owner.projectedEntries;
@@ -436,12 +446,12 @@ function checkRetainedGroupFold(candidate = source, childCandidate = mangaDirect
 }
 function checkRetainedNamed(candidate = mangaDirectoryEntryRowSource) {
   const shared = mangaDirectoryEntryRowSdk({ source: candidate });
-  const entry = { index: 11, title: '第1话', level: 2, navigable: true, downloadState: 'unknown' };
+  const entry = { index: 11, title: '第1话 初见', level: 2, navigable: true, downloadState: 'unknown' };
   const presentation = mangaDirectoryPresentation([entry]);
   const owner = new shared.deps.MangaDirectoryEntryRow(undefined, { row: mangaDirectoryEntryRows([entry], presentation)[0],
     presentation, scheme: 'day', currentChapterIndex: 11 }, undefined, -1);
   owner.initialRender();
-  const nodes = shared.nodes(owner), row = nodes.find(node => node.type === 'Row'), title = nodes.find(node => node.type === 'Text' && node.create === '第1话');
+  const nodes = shared.nodes(owner), row = nodes.find(node => node.type === 'Row'), title = nodes.find(node => node.type === 'Text' && node.create === '第1话 初见');
   const actors = [...owner.observers];
   assert.equal(title.fontFamily, READER_FONT_NOTO_SANS_SC_UI_550); assert.deepEqual(title.fontWeight, [550, {enableVariableFontWeight: true}]);
   owner.currentChapterIndex = -1; shared.properties.flush();

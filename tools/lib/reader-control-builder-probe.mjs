@@ -1,3 +1,5 @@
+import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
+import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
 import * as directorySnapshot from '../../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
 import * as directoryDisplay from '../../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
 import * as directoryState from '../../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
@@ -58,16 +60,24 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   assert.equal(original.parseDiagnostics.length, 0, 'production ETS parses');
   const struct = componentDeclaration(original, hooks.componentName);
   assert.ok(struct, 'production component declaration exists');
-  // New finite display helpers are actual production members. Keep the older
-  // selectively mounted row probes on that same closure instead of stubbing it.
-  if (source.includes('export struct MangaDirectoryEntryRow'))
-    names = [...new Set([...names, 'statusText', 'contextTitle'])];
-  if (source.includes('export struct ReaderDirectoryNavigationList'))
-    names = [...new Set([...names, 'mangaDisplayNode', 'mangaTitle', 'mangaContextTitle',
+  // Capture only helpers declared by this exact production candidate. Frozen
+  // negative controls retain their older implementation instead of receiving
+  // invented successors or failing before their intended behavior assertion.
+  const addDeclaredHelpers = extra => {
+    const declared = new Set(struct.members.map(member => member.name?.getText(original)));
+    names = [...new Set([...names, ...extra.filter(name => declared.has(name))])];
+  };
+  if (struct.name?.getText(original) === 'MangaDirectoryEntryRow')
+    addDeclaredHelpers(['statusText', 'contextTitle']);
+  if (struct.name?.getText(original) === 'ReaderDirectoryNavigationList')
+    addDeclaredHelpers(['mangaDisplayNode', 'mangaTitle', 'mangaContextTitle',
       'mangaDownloadable', 'mangaStatusText', 'mangaAccessoryWidth', 'prepareMangaGridProjection',
-      'mangaLayoutByNode', 'mangaLayoutSignature', 'mangaLayoutPageRefs', 'chapterByIndex'])];
-  if (source.includes('export struct MangaReadingSurface'))
-    names = [...new Set([...names, 'onDirectoryDataChanged', 'directoryDataSnapshot', 'directoryEntries', 'isReaderIdentityCurrent', 'directoryRevision', 'quickFooterMeasured'])];
+      'mangaLayoutByNode', 'mangaLayoutSignature', 'mangaLayoutPageRefs', 'chapterByIndex']);
+  if (struct.name?.getText(original) === 'MangaReadingSurface')
+    addDeclaredHelpers(['onDirectoryDataChanged', 'directoryDataSnapshot', 'directoryEntries',
+      'isReaderIdentityCurrent', 'directoryRevision', 'quickFooterMeasured',
+      'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentCatalogEntry',
+      'sourceId', 'bookId', 'directoryCurrentChapterIndex']);
   const members = names.map(name => {
     const member = struct.members.find(n => n.name?.getText(original) === name);
     assert.ok(member, `production member ${name}`);
@@ -185,6 +195,37 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   assert.deepEqual(diagnostics, [], 'real SDK Builder/member transform has no diagnostics');
   const output = ts.createPrinter().printNode(ts.EmitHint.Unspecified, transformed, file);
   assert.match(output, /observeComponentCreation2/, 'exercise real SDK observer closures');
+  // A newly captured decorated production field may require property classes
+  // even in a narrow method probe. Use the installed SDK runtime, not value
+  // wrappers, and keep every explicitly supplied class/hook authoritative.
+  const propertyClasses = ['ObservedPropertySimplePU', 'ObservedPropertyObjectPU',
+    'SynchedPropertySimpleOneWayPU', 'SynchedPropertyObjectOneWayPU', 'SynchedPropertyOneWayPU', 'SynchedPropertyNestedObjectPU'];
+  const needsPropertyRuntime = propertyClasses.some(name => dependencies[name] === undefined &&
+    new RegExp(`\\b${name}\\b`).test(output)) ||
+    (/\bcreateStorageLink\(/.test(output) && dependencies.ObservedPropertySimplePU === undefined);
+  if (needsPropertyRuntime) {
+    const properties = createArkUIPropertyRuntimeProbe();
+    const explicitHooks = hooks;
+    dependencies = { ...properties.sdk, ...dependencies };
+    hooks = { ...properties.hooks, ...explicitHooks,
+      onObserverEnter(owner, id) {
+        properties.hooks.onObserverEnter(owner, id);
+        explicitHooks.onObserverEnter?.(owner, id);
+      },
+      onObserverExit(owner, id) {
+        try { explicitHooks.onObserverExit?.(owner, id); }
+        finally { properties.hooks.onObserverExit(); }
+      },
+      onChildUpdate(child, params) {
+        properties.hooks.onChildUpdate(child, params);
+        explicitHooks.onChildUpdate?.(child, params);
+      },
+      onChildUpdated(child, params) {
+        properties.flush();
+        explicitHooks.onChildUpdated?.(child, params);
+      },
+    };
+  }
   let activeOwner, activeId;
   // The SDK lowers a component .animation modifier to Context start/reset
   // instructions surrounding its native attributes. Record those unmodified
@@ -293,7 +334,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LayoutPolicy', 'AccessibilityRoleType',
       'LineCapStyle', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
-    ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, ...directoryDisplay, ...directoryState, ...directorySnapshot, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
+    ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, ...directoryDisplay, ...directoryState, ...directorySnapshot, MangaBookPresentation, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
     ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect: {width: 393,height:852}, interactiveSafeInsets: {top:0,left:0,right:0,bottom:0} }) },
     readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
     ...dependencies };

@@ -204,7 +204,8 @@ for (const [label, candidate, failure] of [
   state.owner.row = mangaDirectoryEntryRows([{ ...original, title: '禁用章节', navigable: false }], new Map())[0];
   state.properties.flush();
   assert.equal(read.enabled, false); assert.equal(read.opacity, .36);
-  assert.equal(read.accessibilityText, '禁用章节，暂不可读');
+  assert.equal(read.accessibilityText, '禁用章节，暂不可读，已暂停',
+    'current download status remains independent of canonical readability');
   read.onClick(); download.onClick();
   assert.deepEqual(state.selected, []); assert.deepEqual(state.downloaded, [], 'latest disabled facts fence retained chapter and download callbacks');
   state.owner.row = { kind: 'row', columns: 1, startIndex: 0, entries: [], labels: [] };

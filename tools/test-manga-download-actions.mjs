@@ -493,7 +493,7 @@ const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/Rea
   'widePanel','persistentDirectory','directoryColumnWidth','panelWidth','panelContentInset','panelHeight','panelContentHeight',
   'panelInsets','interactiveInsets','windowInteractiveInsets','controlsPresentedForWindow','pageOrdinal'],{...mangaDirectoryAdaptiveDependencies,...deps.mangaSurfaceSdkDependencies}).owner;
  const entries=[{index:2,title:'Volume',navigable:false,level:1},{index:7,title:'Chapter',navigable:true,level:2},{index:9,title:'Renamed chapter',navigable:true,level:2}];
- Object.assign(owner,{sourceId:'source',bookId:'book',remoteSession:{entries},downloadEnabled:true,
+ Object.assign(owner,{sourceId:'source',bookId:'book',remoteSession:{contentKind:'manga',identity:{sourceId:'source',bookId:'book'},entries},downloadEnabled:true,
   directoryProjection:[{index:7,title:'Chapter',downloadState:'paused'},{index:9,title:'Other title',downloadState:'completed'}],
   directoryQuery:'',directoryAscending:true,directoryRevision:0,directoryOpenRevision:0,publishedManifestVersion:'version',
   backgroundPreference:'paper',panelPhase:'open',stageWidth:500,stageHeight:900,viewportWidth:500,viewportHeight:900,

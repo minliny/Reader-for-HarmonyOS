@@ -166,7 +166,7 @@ function checkDownloadBudget(candidate = source) {
   const ready = { ...gridView, viewId: 'download-budget', visibleTotal: 3, nodes: numeric };
   const data = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('download layout uses resident targets'));
   data.replace(ready);
-  const { owner } = probe('day', false, 300, 3.2, candidate);
+  const { owner } = probe('day', false, 350, 3.2, candidate);
   Object.assign(owner, { dataSource: data, view: ready, chapterDownloadEnabled: true,
     chapterByIndex: new Map(numeric.map(native => [native.chapterIndex, { index: native.chapterIndex, title: native.title, navigable: true, downloadState: 'completed' }])) });
   const item = data.getData(0), placement = owner.mangaCellPlacement(item);
@@ -202,7 +202,7 @@ checkInitialWidth();
 const omittedInitialWidth = source.replaceAll('this.mangaViewportWidth : this.mangaInitialViewportWidth', 'this.mangaViewportWidth : 0');
 assert.notEqual(omittedInitialWidth, source);
 assert.throws(() => checkInitialWidth(omittedInitialWidth), /actual known parent width/);
-const omittedDownloadBudget = source.replaceAll('this.chapterDownloadEnabled ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 0', '0');
+const omittedDownloadBudget = source.replaceAll('(glyph ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 0)', '0');
 assert.notEqual(omittedDownloadBudget, source);
 assert.throws(() => checkDownloadBudget(omittedDownloadBudget), /reserves its own 24vp/);
 function checkCurrentWeight(candidate = source) {
@@ -221,12 +221,22 @@ assert.throws(() => checkCurrentWeight(wrongCurrentWeight), /explicitly declares
       nodes: seamNodes.slice(0, 256) };
     const local = new production.ReaderDirectoryNavigationDataSource(offset => requests.push(offset));
     local.replace(localView);
-    local.admit(256, { viewId: label, visibleTotal: seamNodes.length, nodes: seamNodes.slice(256) });
     const { owner, actions } = probe();
-    Object.assign(owner, { dataSource: local, view: localView });
+    Object.assign(owner, { dataSource: local, view: localView, firstVisibleIndex: -1, initialPositionPending: false });
+    const preceding = local.getData(255), before = owner.mangaCellPlacement(preceding);
+    const precedingAnchor = [before.startIndex, before.columns, owner.mangaCellOrdinal(preceding)];
+    owner.admitMangaPages([{ offset: 256, page: {
+      viewId: label, visibleTotal: seamNodes.length, nodes: seamNodes.slice(256),
+    } }]);
+    const after = owner.mangaCellPlacement(preceding);
+    assert.deepEqual([after.startIndex, after.columns, owner.mangaCellOrdinal(preceding)], precedingAnchor,
+      'admitting the following resident page preserves the real preceding cell row anchor');
     const options = owner.mangaGridLayoutOptions(), item = local.getData(256);
     assert.equal(owner.mangaCellPlacement(item).columns, expectedColumns);
     assert.equal(owner.mangaCellOrdinal(item), expectedOrdinal, label);
+    assert.equal(owner.mangaCellPlacement(item).startIndex, 256 - expectedOrdinal);
+    assert.equal(owner.mangaCellPlacement(item).nodes[expectedOrdinal].nodeId, seamNodes[256].nodeId,
+      'absolute row phase never replaces a real boundary node with a placeholder');
     assert.deepEqual(options.onGetIrregularSizeByIndex(256), [1, 12 / expectedColumns]);
     owner.mangaNumberCell(item);
     [...owner.nodes.values()].find(native => native.type === 'Stack' && native.onClick && native.accessibilityText).onClick();
@@ -236,7 +246,9 @@ assert.throws(() => checkCurrentWeight(wrongCurrentWeight), /explicitly declares
   };
   const continuous = Array.from({ length: 400 }, (_, at) => node(at));
   continuous[0] = node(0, '卷', { kind: 'group', chapterIndex: undefined, hasChildren: true });
-  verifySeam(continuous, 4, 3, 'same-parent numeric row continues across 255/256');
+  const continuousOwner = verifySeam(continuous, 4, 0, 'same-parent numeric rows retain absolute Core slot phase at 255/256');
+  assert.equal(continuousOwner.mangaCellPlacement(continuousOwner.dataSource.getData(255)).startIndex, 252);
+  assert.equal(continuousOwner.mangaCellOrdinal(continuousOwner.dataSource.getData(255)), 3);
   const separated = continuous.map((item, at) => at < 256 ? item : { ...item, parentId: 'next-volume' });
   const nextParent = verifySeam(separated, 4, 0, 'a new authoritative parent starts its own row');
   assert.equal(nextParent.mangaCellTop(nextParent.dataSource.getData(256)), 12);
@@ -454,7 +466,8 @@ function retainedMangaPaint(candidate = source, numeric = false) {
   const captured = retainedData.getData(0);
   const properties = createArkUIPropertyRuntimeProbe();
   const extra = ['view', 'onViewChanged', 'chapterEntries', 'onChapterEntriesChanged', 'chapterByIndex',
-    'chapterSource', 'chapterSignatures', 'mangaPresentationRevision', 'currentChapterIndex'];
+    'chapterSource', 'chapterSignatures', 'mangaPresentationRevision', 'currentChapterIndex',
+    'mangaGridSpans', 'mangaLayoutByNode', 'mangaLayoutSignature', 'mangaLayoutPageRefs'];
   const result = createReaderBuilderProbe(candidate, [...new Set([...names, ...extra])],
     { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk }, properties.hooks);
   const owner = result.owner, reads = [], downloads = [];
@@ -513,7 +526,7 @@ function retainedMangaPaint(candidate = source, numeric = false) {
   assert.equal(owner.canDownloadTarget(nextNode), false, 'a removed node cannot retain download authority');
 }
 retainedMangaPaint(source); retainedMangaPaint(source, true);
-const capturedTitle = source.replace('Text(this.mangaPaintNode(item.node).title)', 'Text(item.node.title)');
+const capturedTitle = source.replaceAll('Text(this.mangaTitle(item.node))', 'Text(item.node.title)');
 assert.notEqual(capturedTitle, source);
 assert.throws(() => retainedMangaPaint(capturedTitle), /retained title reads the current canonical node/,
   'the original item.node.title capture is rejected by actual retained SDK observers');

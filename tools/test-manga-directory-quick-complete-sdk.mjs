@@ -123,7 +123,8 @@ function retainedContext(candidate = listSource) {
   assert.deepEqual(built.owner.observers, actors, 'context revision preserves the actual native Text actor');
 }
 retainedContext();
-const capturedContext = listSource.replace("    const revision = this.mangaPresentationRevision;\n    if (revision < 0 || this.dataSource.currentView()?.viewId !== this.view.viewId) return '';", '');
+const capturedContext = listSource.replace('return context ? `${context} / ${this.mangaTitle(node)}` : this.mangaTitle(node);',
+  'return context ? `${context} / ${item.node.title}` : item.node.title;');
 assert.notEqual(capturedContext, listSource); assert.throws(() => retainedContext(capturedContext), /observes current group and ancestor facts/);
 await openingMatrix();
 for (const [name, surface, list, reason] of [
