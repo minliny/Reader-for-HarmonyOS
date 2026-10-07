@@ -17,6 +17,9 @@ import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteracti
 import { NoCoverCover } from '../bookshelf/NoCoverCover';
 import { sourceSwitchCandidateKey, sourceSwitchSourceCount } from './SourceSwitchGateway';
 import type { SourceSwitchCandidate } from './SourceSwitchGateway';
+import type { BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
+import type { RemoteReadingVariable } from '../reading/RemoteReadingContract';
+import type { ReaderSourceCategory } from './ReaderSourceCategory';
 import { SourceSwitchProgress } from './SourceSwitchProgress';
 import { sourceSwitchNovelChapter, sourceSwitchNovelLatency, sourceSwitchNovelDrawerHeight,
   sourceSwitchNovelRowHeight, sourceSwitchNovelCompact, sourceSwitchNovelScale, sourceSwitchNovelBookHeight,
@@ -53,16 +56,69 @@ class SourceSwitchLayoutFrame extends FrameCallback {
   onIdle(_remaining: number): void { this.action(); }
 }
 
-/** Same V1 holder/ObjectLink pattern as the existing SearchResultCard. The
- * business candidate remains immutable; replacing this observed property
- * updates a retained native row even while its LazyForEach key is unchanged. */
+/** Platform projection of the complete candidate contract. The same observed
+ * instance survives a business-key update, so ObjectLink observes each actual
+ * row field without depending on ordinary-prop copying or struct accessors. */
 @Observed
 class SourceSwitchCandidateRow {
-  candidate: SourceSwitchCandidate;
-  constructor(candidate: SourceSwitchCandidate) { this.candidate = candidate; }
+  acquisitionState?: 'discovered' | 'catalogReady' | 'readable' | 'failed' | 'attemptFailed' | 'stale';
+  acquisitionMessage?: string;
+  verifiedChapterUrl?: string;
+  sourceVersion?: string;
+  searchVariables?: RemoteReadingVariable[];
+  sourceId: string = '';
+  sourceName?: string;
+  category: ReaderSourceCategory = 'novel';
+  sourceOrder?: number;
+  bookUrl: string = '';
+  bookName: string = '';
+  author?: string;
+  authorIdentity?: BookAuthorIdentityProof;
+  coverUrl?: string;
+  latestChapterTitle?: string;
+  currentChapterTitle?: string;
+  currentChapterIndex?: number;
+  chapterWordCount?: number;
+  checkedAt?: number;
+  latencyMs?: number;
+  latencyKind?: 'search';
+  latencyMeasuredAt?: number;
+  offline?: boolean;
+  timeout?: boolean;
+  isCurrent?: boolean;
+
+  constructor(candidate: SourceSwitchCandidate) { this.update(candidate); }
+
+  update(next: SourceSwitchCandidate): void {
+    this.acquisitionState = next.acquisitionState;
+    this.acquisitionMessage = next.acquisitionMessage;
+    this.verifiedChapterUrl = next.verifiedChapterUrl;
+    this.sourceVersion = next.sourceVersion;
+    this.searchVariables = next.searchVariables;
+    this.sourceId = next.sourceId;
+    this.sourceName = next.sourceName;
+    this.category = next.category;
+    this.sourceOrder = next.sourceOrder;
+    this.bookUrl = next.bookUrl;
+    this.bookName = next.bookName;
+    this.author = next.author;
+    this.authorIdentity = next.authorIdentity;
+    this.coverUrl = next.coverUrl;
+    this.latestChapterTitle = next.latestChapterTitle;
+    this.currentChapterTitle = next.currentChapterTitle;
+    this.currentChapterIndex = next.currentChapterIndex;
+    this.chapterWordCount = next.chapterWordCount;
+    this.checkedAt = next.checkedAt;
+    this.latencyMs = next.latencyMs;
+    this.latencyKind = next.latencyKind;
+    this.latencyMeasuredAt = next.latencyMeasuredAt;
+    this.offline = next.offline;
+    this.timeout = next.timeout;
+    this.isCurrent = next.isCurrent;
+  }
 }
 
-/** Native lazy admission keeps one observed holder for each business identity.
+/** Native lazy admission keeps one observed projection for each business identity.
  * Metadata uses ObjectLink; notifications only admit membership/order changes. */
 class SourceSwitchCandidateDataSource implements IDataSource {
   private rows: SourceSwitchCandidateRow[] = [];
@@ -89,7 +145,7 @@ class SourceSwitchCandidateDataSource implements IDataSource {
       const retained = previous.get(keys[index]);
       if (retained === undefined) rows.push(new SourceSwitchCandidateRow(candidates[index]));
       else {
-        if (retained.candidate !== candidates[index]) retained.candidate = candidates[index];
+        retained.update(candidates[index]);
         rows.push(retained);
       }
     }
@@ -106,7 +162,7 @@ class SourceSwitchCandidateDataSource implements IDataSource {
 @Component
 struct SourceSwitchNovelRow {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @ObjectLink row: SourceSwitchCandidateRow;
+  @ObjectLink candidate: SourceSwitchCandidateRow;
   @Prop @Watch('pressAdmissionChanged') rowEnabled: boolean = true;
   @Prop selected: boolean = false;
   @State private pressed: boolean = false;
@@ -118,7 +174,7 @@ struct SourceSwitchNovelRow {
 
   private pressAdmissionChanged(): void { if (!this.rowEnabled) this.pressed = false; }
   private rowTouch(event: TouchEvent): void {
-    this.pressed = this.rowEnabled && this.row.candidate.isCurrent !== true && event.type === TouchType.Down;
+    this.pressed = this.rowEnabled && this.candidate.isCurrent !== true && event.type === TouchType.Down;
     if (this.pressed) this.onPress();
   }
   private dividerColor(): ResourceColor {
@@ -129,18 +185,18 @@ struct SourceSwitchNovelRow {
   build() {
     Row({ space: SOURCE_SWITCH_VISUAL.rowGap }) {
       Column({ space: SOURCE_SWITCH_VISUAL.rowTextGap }) {
-        Text(this.row.candidate.sourceName || this.row.candidate.sourceId).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_NAME.fontFamily)
+        Text(this.candidate.sourceName || this.candidate.sourceId).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_NAME.fontFamily)
           .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_NAME.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_NAME.fontSizeFp).lineHeight(TYPE_SOURCE_SWITCH_NOVEL_NAME.lineHeightFp).halfLeading(true)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(sourceSwitchNovelChapter(this.row.candidate)).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.fontFamily).fontWeight(TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.fontSizeFp).lineHeight(TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.lineHeightFp).halfLeading(true)
+        Text(sourceSwitchNovelChapter(this.candidate)).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.fontFamily).fontWeight(TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.fontSizeFp).lineHeight(TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.lineHeightFp).halfLeading(true)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.alignItems(HorizontalAlign.Start).layoutWeight(1);
-      if (this.row.candidate.latencyKind === 'search' && this.row.candidate.latencyMs !== undefined &&
-        Number.isFinite(this.row.candidate.latencyMs) && this.row.candidate.latencyMs >= 0) {
+      if (this.candidate.latencyKind === 'search' && this.candidate.latencyMs !== undefined &&
+        Number.isFinite(this.candidate.latencyMs) && this.candidate.latencyMs >= 0) {
         Flex({ direction: FlexDirection.Row, justifyContent: FlexAlign.End, alignItems: ItemAlign.Baseline }) {
-          Text(`${Math.round(this.row.candidate.latencyMs)}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontFamily)
+          Text(`${Math.round(this.candidate.latencyMs)}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontFamily)
             .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_LATENCY.fontSizeFp)
             .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_LATENCY.lineHeightFp).halfLeading(true).fontFeature('"tnum" 1')
             .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -161,8 +217,8 @@ struct SourceSwitchNovelRow {
       .backgroundColor(this.selected || this.pressed ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent)
       .border({ width: { bottom: SOURCE_SWITCH_VISUAL.rowDividerWidth }, color: this.dividerColor() })
       .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.rowEnterDurationMs, curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) }))
-      .enabled(this.rowEnabled && this.row.candidate.isCurrent !== true).accessibilityGroup(true)
-      .accessibilityText(`${this.row.candidate.sourceName || this.row.candidate.sourceId}，${sourceSwitchNovelChapter(this.row.candidate)}，搜索用时 ${sourceSwitchNovelLatency(this.row.candidate)}`)
+      .enabled(this.rowEnabled && this.candidate.isCurrent !== true).accessibilityGroup(true)
+      .accessibilityText(`${this.candidate.sourceName || this.candidate.sourceId}，${sourceSwitchNovelChapter(this.candidate)}，搜索用时 ${sourceSwitchNovelLatency(this.candidate)}`)
       .onTouch((event: TouchEvent): void => this.rowTouch(event))
       .onClick((): void => this.onSelect());
   }
@@ -466,13 +522,13 @@ export struct SourceSwitchWindow {
         }
         LazyForEach(this.candidateDataSource, (row: SourceSwitchCandidateRow) => {
           ListItem() {
-            SourceSwitchNovelRow({ row: row, rowHeight: this.rowHeight(), timingColumnWidth: this.timingWidth(), reduceMotion: this.reduceMotion,
+            SourceSwitchNovelRow({ candidate: row, rowHeight: this.rowHeight(), timingColumnWidth: this.timingWidth(), reduceMotion: this.reduceMotion,
               rowEnabled: this.state.kind === 'candidates' && !this.busy(),
-              selected: this.selectedKey === this.candidateKey(row.candidate),
-              onPress: (): void => { this.heldKey = this.candidateKey(row.candidate); },
-              onSelect: (): void => this.selectCandidate(this.candidateKey(row.candidate)) });
+              selected: this.selectedKey === this.candidateKey(row),
+              onPress: (): void => { this.heldKey = this.candidateKey(row); },
+              onSelect: (): void => this.selectCandidate(this.candidateKey(row)) });
           }.width('100%').height(this.rowHeight());
-        }, (row: SourceSwitchCandidateRow): string => sourceSwitchCandidateKey(row.candidate.sourceId, row.candidate.bookUrl));
+        }, (candidate: SourceSwitchCandidateRow): string => sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl));
         if (this.scrollBook() && this.displayedCandidates.length === 0) {
           ListItem() { this.novelEmptyMessage(); }.height(this.emptyHeight());
         }

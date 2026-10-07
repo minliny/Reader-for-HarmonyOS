@@ -68,10 +68,10 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  const dataSource=tree.statements.find(node=>node.name?.getText(tree)==='SourceSwitchCandidateDataSource');
  assert.ok(dataSource,'the real V1 lazy data source is part of the production window');
  const rowHolder=tree.statements.find(node=>node.name?.getText(tree)==='SourceSwitchCandidateRow');
- assert.ok(rowHolder,'production observed source-switch holder is part of the window');
+ assert.ok(rowHolder,'production observed source-switch projection is part of the window');
  const SourceSwitchCandidateRowValue=new Function(stripTypeScriptTypes(rowHolder.getText(tree).replace(/^@Observed\s*/,''))+';return SourceSwitchCandidateRow;')();
  // The production decorator's proxy behavior is provided by the installed SDK,
- // never a test-written proxy. The actual holder constructor remains unchanged.
+ // never a test-written proxy. The actual projection constructor remains unchanged.
  function SourceSwitchCandidateRow(candidate){return p.properties.sdk.ObservedObject.createNew(new SourceSwitchCandidateRowValue(candidate),undefined);}
  require(sdk+'/lib/validate_ui_syntax.js').observedClassCollection.add('SourceSwitchCandidateRow');
  const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey','SourceSwitchCandidateRow',stripTypeScriptTypes(dataSource.getText(tree))+';return SourceSwitchCandidateDataSource;')(gatewayExports.sourceSwitchCandidateKey,SourceSwitchCandidateRow);
@@ -101,7 +101,7 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  // row's ObjectLink as a passable parameter only for the parent payload;
  // child compilation below still uses the unmodified production ObjectLink
  // declaration and installed SDK runtime. No native lazy removal is modeled.
- const rowParameterMetadata=windowSource.replace(/@ObjectLink row: SourceSwitchCandidateRow;/g,'@Prop row: SourceSwitchCandidateRow;');
+ const rowParameterMetadata=windowSource.replace(/@ObjectLink candidate: SourceSwitchCandidateRow;/g,'@Prop candidate: SourceSwitchCandidateRow;');
  p.hooks.childSources.SourceSwitchNovelRow=rowParameterMetadata;
  for(const [name,path] of [['NoCoverCover','features/bookshelf/NoCoverCover.ets'],['SearchSpinner','features/search/SearchSpinner.ets'],['SourceSwitchSpinner','features/source/SourceSwitchSpinner.ets'],['SourceSwitchProgress','features/source/SourceSwitchProgress.ets'],['ReaderPaperBackground','features/reading/ReaderPaperBackground.ets'],['SourceSwitchCompletionOverlay','features/source/SourceSwitchCompletionOverlay.ets']]){
    p.hooks.childSources[name]=sources[name]??read(path);deps[name]=createReaderBuilderProbe(p.hooks.childSources[name],boundedMembers(p.hooks.childSources[name]),deps,p.hooks).Component;

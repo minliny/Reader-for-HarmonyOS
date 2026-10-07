@@ -28,6 +28,11 @@ for (const file of files) {
     for (const d of tree.parseDiagnostics)
         parseFailures.push({ file, line: tree.getLineAndCharacterOfPosition(d.start ?? 0).line + 1, message: ts.flattenDiagnosticMessageText(d.messageText, ' ') });
     for (const n of tree.statements) {
+        // Register actual observed model declarations before filtering for UI
+        // actors; @ObjectLink lowering also consumes non-component metadata.
+        if (ts.isClassDeclaration(n) && n.name && ts.getAllDecorators(n).some(d =>
+            (ts.isCallExpression(d.expression) ? d.expression.expression : d.expression).getText(tree) === 'Observed'))
+            syntax.observedClassCollection.add(n.name.getText(tree));
         if (!n.members || !n.name || !n.members.some(m => m.name?.getText(tree) === 'build'))
             continue;
         const name = n.name.getText(tree), properties = n.members.filter(ts.isPropertyDeclaration), members = new Set(properties.map(m => m.name?.getText(tree)).filter(Boolean));
