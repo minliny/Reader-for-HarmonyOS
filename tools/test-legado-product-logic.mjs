@@ -98,8 +98,8 @@ assert.match(sourceSwitchWindow, /readerInteractiveSafeLeft\(metrics\)[\s\S]*rea
   'source-switch keeps asymmetric safe edges for both phone and tablet hosts');
 assert.match(sourceSwitchWindow, /padding\(\{ left: this\.safeLeft\(\) \+ 16, right: this\.safeRight\(\) \+ 16 \}\)[\s\S]*margin\(\{ top: this\.safeTop\(\) \+ 8 \}\)/,
   'the floating header keeps the approved safe-edge geometry at any viewport size');
-assert.match(sourceSwitchWindow, /contentStartOffset\(this\.listStartInset\(\)\)\.contentEndOffset\(this\.safeBottom\(\) \+ 20\)/,
-  'the full-height candidate list preserves independent header and bottom clearance');
+assert.match(sourceSwitchWindow, /contentStartOffset\(this\.listStartInset\(\)\)\.contentEndOffset\(this\.contentKind === 'manga' \? this\.safeBottom\(\) \+ 20 : 0\)/,
+  'the manga list retains bottom clearance while the novel drawer owns its safe edge outside the candidate viewport');
 assert.doesNotMatch(sourceSwitchWindow, /new SurfaceWidthSpec\(300, 0, 0, 'center'\)/,
   'source-switch consumer does not duplicate its outer width');
 

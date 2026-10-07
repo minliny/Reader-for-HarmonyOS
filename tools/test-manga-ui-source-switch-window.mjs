@@ -2,18 +2,29 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { novelPresentation } from './lib/source-switch-sdk-consumer.mjs';
+import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
+const { sourceSwitchNovelChapter, sourceSwitchNovelLatency, sourceSwitchNovelDrawerHeight, sourceSwitchNovelRowHeight, sourceSwitchNovelCompact } = novelPresentation;
 
 const page = new URL('../entry/src/main/ets/features/source/SourceSwitchWindow.ets', import.meta.url);
 const source = readFileSync(page, 'utf8');
 const gateway = readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchGateway.ts', import.meta.url), 'utf8');
 const identities = gateway.slice(gateway.indexOf('export function sourceSwitchCandidateKey'), gateway.indexOf('function deduplicateSourceSwitchCandidates'));
 const { sourceSwitchCandidateKey, sourceSwitchSourceCount } = new Function(`${stripTypeScriptTypes(identities).replaceAll('export ', '')}; return { sourceSwitchCandidateKey, sourceSwitchSourceCount };`)();
+const dataStart=source.indexOf('class SourceSwitchCandidateDataSource');
+const dataEnd=source.indexOf('\n@Component',dataStart);
+assert.ok(dataStart>=0&&dataEnd>dataStart,'production V1 lazy data source is present');
+const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey',
+  `${stripTypeScriptTypes(source.slice(dataStart,dataEnd))};return SourceSwitchCandidateDataSource;`)(sourceSwitchCandidateKey);
 const timers = new Map(); let nextTimer = 0;
 class LayoutFrame { constructor(action) { this.action = action; } }
 const Controller = productionMotionMethods(page,
-  ['candidateKey', 'acceptState', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
-    'listTouch', 'selectCandidate', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText'],
+  ['candidateKey', 'publishCandidates', 'acceptState', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
+    'listTouch', 'selectCandidate', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
+    'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
+    'headingHeight', 'discoveryHeight', 'columnsHeight', 'footerHeight', 'bookHeight', 'timingWidth', 'drawerHeight', 'safeTop', 'safeBottom', 'safeLeft', 'safeRight'],
   { sourceSwitchCandidateKey, sourceSwitchSourceCount, SourceSwitchLayoutFrame: LayoutFrame,
+    ...novelPresentation, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
     Curve: { EaseInOut: 'curve' }, ScrollAlign: { START: 'start' }, TouchType: { Down: 'down', Up: 'up', Cancel: 'cancel' },
     setTimeout: callback => { const id = ++nextTimer; timers.set(id, callback); return id; },
     clearTimeout: id => timers.delete(id) });
@@ -21,13 +32,14 @@ const Candidate = productionMotionMethods(page, ['latencyText', 'chapterText']);
 const key = candidate => sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
 const item = (id, latencyMs = 300, bookUrl = `${id}-book`) => ({ sourceId: id, bookUrl, bookName: '书', category: 'novel',
   sourceName: id, latencyMs, latencyKind: 'search', acquisitionState: 'discovered' });
-function owner(initial = []) {
+function owner(initial = [], contentKind = 'manga') {
   const page = new Controller(); const selected = [], frames = [], actions = [];
   let offset = 0;
-  Object.assign(page, { state: { kind: 'candidates', candidates: initial }, displayedCandidates: [], latestCandidates: [],
+  Object.assign(page, { contentKind, state: { kind: 'candidates', candidates: initial }, displayedCandidates: [], latestCandidates: [],
+    candidateDataSource: new SourceSwitchCandidateDataSource(),
     retestingKeys: [], pendingSearchKeys: new Set(), wasRefreshing: false, mounted: true, foreground: true,
     touching: false, scrolling: false, heldKey: '', selectedKey: '', selectionPending: false, listMounted: true,
-    firstVisibleIndex: 0, firstVisibleListIndex: 2, contextHeight: 0, statusHeight: 0, listStartInset: () => 0, reorderTimer: -1, presentationEpoch: 0, anchorEpoch: 0, restoringAnchor: false, reduceMotion: false,
+    firstVisibleIndex: 0, firstVisibleListIndex: 2, contextHeight: 0, statusHeight: 0, containerHeight:0, containerWidth:0, readerWindowMetricsRevision:-1, listStartInset: () => 0, reorderTimer: -1, presentationEpoch: 0, anchorEpoch: 0, restoringAnchor: false, reduceMotion: false,
     onSelectCandidate: candidate => selected.push(candidate), onStop: () => actions.push('stop'),
     onRetry: () => actions.push('retry'), onRefresh: () => actions.push('refresh'), onRollback: () => actions.push('rollback'),
     getUIContext: () => ({ animateTo: (_options, apply) => apply(), postFrameCallback: frame => frames.push(frame.action) }),
@@ -39,8 +51,31 @@ function owner(initial = []) {
 }
 function flush() { const jobs = [...timers.values()]; timers.clear(); for (const job of jobs) job(); }
 const a = item('a', 600), b = item('b', 200), c = item('c', 100);
+// VM-SS-001: notifications must admit a mounted empty V1 lazy range, then
+// preserve native row identities during append and same-key metadata changes.
+const lazyData=new SourceSwitchCandidateDataSource(),notifications=[];
+const listener={onDataAdd:index=>notifications.push(['add',index]),
+  onDataChange:index=>notifications.push(['change',index]),onDataReloaded:()=>notifications.push(['reload'])};
+lazyData.registerDataChangeListener(listener);lazyData.registerDataChangeListener(listener);
+assert.equal(lazyData.totalCount(),0);
+lazyData.publish([a,b]);assert.deepEqual(notifications,[['add',0],['add',1]],'empty-prefix results enter the existing native range');
+assert.equal(lazyData.totalCount(),2);assert.equal(lazyData.getData(1),b);
+notifications.length=0;lazyData.publish([a,b,c]);assert.deepEqual(notifications,[['add',2]],'stable-prefix append notifies only the appended position');
+const enrichedA={...a,latestChapterTitle:'新章节',latencyMs:50};
+notifications.length=0;lazyData.publish([enrichedA,b,c]);assert.deepEqual(notifications,[['change',0]],'same-key new metadata refreshes its retained native row');
+assert.equal(lazyData.getData(0),enrichedA);
+notifications.length=0;lazyData.publish([b,c,enrichedA]);assert.deepEqual(notifications,[['reload']],'non-prefix authoritative order uses platform keyed reload');
+notifications.length=0;lazyData.publish([]);assert.deepEqual(notifications,[['reload']]);assert.equal(lazyData.totalCount(),0);
+lazyData.unregisterDataChangeListener(listener);notifications.length=0;
+lazyData.publish([a]);assert.deepEqual(notifications,[],'retired native listeners receive no later publication');
+assert.equal(lazyData.totalCount(),1);assert.equal(lazyData.getData(0),a);
+assert.doesNotMatch(source,/Repeat\([\s\S]*virtualScroll/,'V1 picker cannot reintroduce the unsupported renderer');
+assert.match(source,/LazyForEach\(this\.candidateDataSource/);
+assert.match(source,/\}\.width\('100%'\)\.height\(this\.rowHeight\(\)\);/,'native ListItem has a bounded row extent');
+assert.equal((source.match(/this\.displayedCandidates =/g)??[]).length,1,'all admitted arrays and clear operations pass through the synchronized publication method');
+console.log('source-switch V1 native data admission: empty, append, metadata, reload and listener retirement PASS');
 const progressive = owner(); progressive.page.state = { kind: 'discovering' }; progressive.page.acceptState();
-assert.equal(progressive.page.isSweeping(), true); assert.equal(progressive.page.statusText(), '正在查找 · 0 个来源');
+assert.equal(progressive.page.isSweeping(), true); assert.equal(progressive.page.statusText(), '正在查找 · 已发现 0 个');
 progressive.page.state = { kind: 'candidates', candidates: [a, b], refreshing: true }; progressive.page.acceptState(); flush();
 progressive.page.listTouch({ type: 'down' }); progressive.page.heldKey = key(a);
 const fasterA = { ...a, latencyMs: 50 };
@@ -59,6 +94,7 @@ progressive.page.requestRefresh(); assert.equal(progressive.actions.length, 0, '
 assert.equal(progressive.page.displayedCandidates.length, 3);
 progressive.page.state = { kind: 'empty' }; progressive.page.acceptState();
 assert.equal(progressive.page.displayedCandidates.length, 0); assert.equal(progressive.page.latestCandidates.length, 0);
+assert.equal(progressive.page.candidateDataSource.totalCount(),0,'empty state clears the native source too');
 
 const variants = owner([{ ...a, isCurrent: true }, item('a', 100, 'alternate')]); flush();
 variants.page.selectCandidate(key(a)); assert.equal(variants.selected.length, 0);
@@ -72,7 +108,7 @@ refreshed.page.state = { kind: 'candidates', candidates: [a, b], refreshing: tru
 assert.ok(!refreshed.page.retestingKeys.includes(key(a)), 'a fresh equal-duration sample still completes remeasurement');
 refreshed.page.requestRefresh(); assert.deepEqual(refreshed.actions, ['stop']);
 refreshed.page.state = { kind: 'candidates', candidates: [a, b], stopped: true }; refreshed.page.acceptState();
-assert.equal(refreshed.page.isSweeping(), false); assert.equal(refreshed.page.statusText(), '已停止 · 2 个来源');
+assert.equal(refreshed.page.isSweeping(), false); assert.equal(refreshed.page.statusText(), '已停止 · 已发现 2 个');
 
 const anchored = owner([a, b, c]); flush(); anchored.setOffset(83); anchored.page.firstVisibleIndex = 1;
 anchored.page.state = { kind: 'candidates', candidates: [b, c, a] }; anchored.page.acceptState(); flush();
@@ -89,7 +125,55 @@ assert.equal(row.latencyText(), '0 ms'); assert.equal(row.chapterText(), '已发
 row.candidate = { ...row.candidate, latencyKind: undefined, latencyMs: 80 }; assert.equal(row.latencyText(), '待检测', 'legacy latency is not search timing');
 row.pendingProbe = true; assert.equal(row.latencyText(), '重测中'); row.searching = false; assert.equal(row.latencyText(), '待重测');
 row.candidate = { ...row.candidate, acquisitionState: 'catalogReady' }; assert.equal(row.chapterText(), '目录已就绪');
-assert.equal((source.match(/SearchSpinner\(\{/g) ?? []).length, 1);
+assert.equal((source.match(/SearchSpinner\(\{/g) ?? []).length, 1, 'historical manga keeps its native spinner');
+assert.equal((source.match(/SourceSwitchSpinner\(\{/g) ?? []).length, 1, 'selected novel uses its SVG arc animator');
 assert.match(source, /Text\('搜索延迟'\)/); assert.doesNotMatch(source, /SourceSwitchDemo|sourceSwitchDemoEvents/);
 assert.match(source, /duration: this\.reduceMotion \? 0 : 220/);
 console.log('source-switch live window: progressive state, stable touch identity, real callbacks, zero/failure/refresh, search latency, anchor and lifecycle PASS');
+
+// The novel drawer has fixed outside-list headers, compact rows and arrival
+// ordering, while the existing manga geometry/anchor checks above remain.
+const novel = owner([a, b], 'text'); flush();
+assert.equal(novel.page.listHeaderCount(), 0);
+assert.equal(novel.page.listHeaderHeight(), 0);
+assert.equal(novel.page.rowHeight(), 50);
+assert.equal(novel.page.statusText(), '查找结束 · 已找到 2 个书源');
+novel.page.state = { kind: 'candidates', candidates: [c, b, fasterA], refreshing: true };
+novel.page.acceptState(); flush();
+assert.deepEqual(novel.page.displayedCandidates.map(key), [a,b,c].map(key), 'successful additions append without re-sorting existing novel rows');
+assert.deepEqual(Array.from({length:novel.page.candidateDataSource.totalCount()},(_value,index)=>key(novel.page.candidateDataSource.getData(index))),[a,b,c].map(key),'native data receives the same held-order novel projection');
+assert.equal(novel.page.displayedCandidates[0].latencyMs, 50, 'metadata still updates in place');
+novel.page.listTouch({type:'down'}); novel.page.heldKey = key(b);
+novel.page.state = { kind: 'candidates', candidates: [c, b, { ...fasterA, latestChapterTitle: '新章节' }], refreshing: true };
+novel.page.acceptState(); novel.page.selectCandidate(key(a)); assert.equal(novel.selected.length, 0);
+novel.page.listTouch({type:'up'}); novel.page.selectCandidate(key(b));
+assert.equal(novel.selected.length, 1); assert.equal(novel.selected[0].sourceId, 'b');
+assert.equal(novel.actions.length, 0, 'selection calls the real owner without synthetic refresh/commit');
+assert.equal(sourceSwitchNovelChapter({ ...a, latestChapterTitle: ' 新章节 ', acquisitionState:'failed' }), '新章节');
+assert.equal(sourceSwitchNovelChapter({ ...a, latestChapterTitle: undefined, acquisitionState:'failed' }), '暂无最新章节');
+assert.equal(sourceSwitchNovelLatency({ ...a, latencyMs:0 }), '0 ms');
+assert.equal(sourceSwitchNovelLatency({ ...a, latencyKind:undefined, timeout:true, offline:true }), '—', 'cached success does not become a failed or pending-check row');
+for (const latencyMs of [undefined, -1, Infinity, NaN]) assert.equal(sourceSwitchNovelLatency({ ...a, latencyMs }), '—');
+assert.equal(sourceSwitchNovelDrawerHeight(844,24),699);
+assert.equal(sourceSwitchNovelDrawerHeight(390,24),366);
+assert.equal(sourceSwitchNovelDrawerHeight(844,160),684);
+assert.equal(sourceSwitchNovelDrawerHeight(-1,24),0);
+assert.equal(sourceSwitchNovelDrawerHeight(NaN,24),0);
+assert.equal(sourceSwitchNovelRowHeight(1),50); assert.equal(sourceSwitchNovelRowHeight(2),100);
+assert.equal(sourceSwitchNovelRowHeight(NaN),50);
+assert.match(source, /sourceSwitchNovelDrawerHeight\(this.frameHeight\(\), this.safeTop\(\)\)/);
+assert.match(source, /if \(this.state.kind === 'switching'\)/);
+assert.match(source, /TransitionEffect.move\(TransitionEdge.BOTTOM\)/);
+assert.doesNotMatch(source.slice(source.indexOf('struct SourceSwitchNovelRow'), source.indexOf('/** Real reading')), /待检测|重测中|超时|离线|待重测|chevron/);
+console.log('novel source-switch drawer: real successful-result stream, stable selection, fixed headers, density, safe-window geometry and honest cached latency PASS');
+
+const compact = owner([a,b,c], 'text'); compact.page.containerHeight=390; compact.page.contextHeight=88;
+assert.equal(compact.page.compactWindow(),true);
+assert.equal(compact.page.listHeaderCount(),1,'short-window book context remains reachable inside the result scroller');
+assert.equal(compact.page.listHeaderHeight(),100, 'header extent follows the selected fixed book box, not a smaller measured text box');
+const resultViewport=sourceSwitchNovelDrawerHeight(390,24)-44-42-28-35-24;
+assert.ok(resultViewport>=3*compact.page.rowHeight(),'short-window fixed chrome leaves at least three row heights to scroll after the book context');
+assert.equal(sourceSwitchNovelCompact(844),false);
+assert.equal(sourceSwitchNovelCompact(0),false);
+assert.match(source, /if \(this.contentKind !== 'manga' && this.scrollBook\(\)\) \{\s*ListItem\(\) \{ this.novelBookContext\(\);/);
+console.log('novel compact-window metadata scroll and usable candidate viewport PASS');

@@ -9,6 +9,7 @@ import {
   READER_FONT_NOTO_SERIF_SC_REGULAR,
 } from './ReaderFontFamilies.ts';
 import { DOWNLOAD_VISUAL } from './SharedDownloadVisualSpec.ts';
+import { MANGA_DIRECTORY_VISUAL } from '../manga/MangaDirectoryVisual';
 
 /** The owner of a text size: app/system scaling or the reader appearance snapshot. */
 export type ReaderFontScalePolicy = 'system' | 'readerAppearance';
@@ -131,6 +132,10 @@ export const TYPE_SEARCH_SOURCE_INPUT = new ReaderTextStyle(
   READER_FONT_INTER, 400, 12, undefined, undefined, 'system', 'figmaNode');
 export const TYPE_SEARCH_DIRECTORY_INPUT = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 400, 10, undefined, undefined, 'system', 'figmaNode');
+// The frozen complex-directory demo specifies an explicit 13/20 line box.
+export const TYPE_SEARCH_MANGA_DIRECTORY_INPUT = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, MANGA_DIRECTORY_VISUAL.searchFontSize,
+  MANGA_DIRECTORY_VISUAL.searchLineHeight, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_READER_QUICK_INPUT = new ReaderTextStyle(
   READER_FONT_INTER, 400, 10, undefined, undefined, 'system', 'figmaNode');
 export const TYPE_SEARCH_RSS_HINT = new ReaderTextStyle(
@@ -204,6 +209,59 @@ export const TYPE_SOURCE_SWITCH_LATENCY = new ReaderTextStyle(
   READER_FONT_INTER, 400, 9, 10, undefined, 'system', 'figmaNode');
 export const TYPE_SOURCE_SWITCH_CHAPTER = new ReaderTextStyle(
   READER_FONT_INTER, 500, 9, 10, undefined, 'system', 'figmaNode');
+
+// Selected 2026-10-06 novel source drawer.
+// Generated from Reader-UI/design/source-switch/source-switch.visual.json. Do not edit.
+// SHA256 205de7f89121243e6ef4490f4863c6f4874e928a7eb5a66f52b41f0275c8d977
+// Historical compact-popup and manga roles above are unchanged. Static UI
+// Regular/Medium faces and Inter axes 400/500 are shared with the generated reference.
+export const TYPE_SOURCE_SWITCH_NOVEL_HEADING = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 24, 32.4, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_BOOK_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 18, 25.2, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_METADATA = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 13, 19.5, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_CAPTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, 19.2, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_CURRENT_SOURCE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 500, 12, 19.2, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_COLUMN = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, 16.5, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_ACTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 500, 13, 20, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, 20, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT = new ReaderTextStyle(
+  READER_FONT_INTER, 500, 14, 20, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_PHASE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, 16.5, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_NAME = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 500, 14, 20, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_CHAPTER = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, 18, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_LATENCY = new ReaderTextStyle(
+  READER_FONT_INTER, 400, 13, 20, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_LATENCY_UNIT = new ReaderTextStyle(
+  READER_FONT_INTER, 400, 11, 20, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_FOOTER = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, 18, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_EMPTY = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 13, 22.1, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_TOAST = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, 19.8, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_SWITCH_TITLE = new ReaderTextStyle(
+  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 20, 30, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_SWITCH_SOURCE = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 500, 15, 24, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_SWITCH_STATUS = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 13, 22.1, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_SWITCH_CAPTION = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 12, 20.4, undefined, 'system', 'appBaseline');
+export const TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 500, 12, 20, undefined, 'system', 'appBaseline');
+
+export const TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW = new ReaderTextStyle(
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 11, 20, undefined, 'system', 'appBaseline');
 
 // Source-management rows use one compact metadata tuple for category, URL and
 // the optional latest-check summary. They remain a single role so those three

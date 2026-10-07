@@ -2,6 +2,8 @@ import { actionMenuProbe } from './lib/reader-action-menu-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks } from 'node:module';
+import { performance } from 'node:perf_hooks';
+import { setInterval as intervals, setTimeout as delay } from 'node:timers/promises';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
@@ -105,14 +107,30 @@ assert.deepEqual(sharedMenu.nodes(menu).filter(n=>n.type==='Text').map(n=>n.crea
 console.log('PASS PH56–59 production SDK methods/Builders: measured regions/API fallback, reader underlay, bookmark threshold+ACK ordering, safe force refresh and two-action More; OEM pixels are not asserted');
 
 const {fixture:durableFixture}=await import('./lib/reading-operation-durable-probe.mjs');
-const {makeIndex:actualDirectoryIndex,settled}=await import('./lib/reading-directory-sdk-consumer.mjs');
+const {makeIndex:actualDirectoryIndex}=await import('./lib/reading-directory-sdk-consumer.mjs');
+// Cold Core query/create/confirm/settle/readback is actual external I/O, not a
+// 400ms UI-performance contract. Keep the same real idle boundary and business
+// assertions, with a bounded timer and diagnostic state on a genuine timeout.
+async function bookmarkSettlement(f,outcome){
+ const started=performance.now(),signal=AbortSignal.timeout(5000);
+ try{
+  for await(const tick of intervals(10,undefined,{signal})){
+   if(!f.directory.busy()&&!f.offline.busy()){await delay(5);return;}
+  }
+ }catch(error){
+  if(error.name!=='AbortError')throw error;
+  assert.fail('actual bookmark settlement timeout '+JSON.stringify({outcome,elapsedMs:Math.round(performance.now()-started),
+   directoryBusy:f.directory.busy(),offlineBusy:f.offline.busy(),lastMethod:f.calls.at(-1)?.method,
+   requests:f.calls.map(c=>c.method).filter(Boolean)}));
+ }
+}
 for(const outcome of ['success','write-failed','projection-failed']){
  const f=await durableFixture(true),x=actualDirectoryIndex(f),i=x.idx;let result,finished=0;
  i.detailToc=[{index:0,title:'C',bookmarks:[],downloadState:'completed'}];
  if(outcome==='write-failed')f.options.beforeMethod='bookmark.create';
  const native=f.runtime.request.bind(f.runtime);f.runtime.request=async(m,p,o)=>{if(outcome==='projection-failed'&&m==='bookmark.list')throw Error('projection');return native(m,p,o);};
  i.toggleReaderPageBookmark({chapterIndex:0,chapterOffset:10,chapterTitle:'C',bookText:'original',bookmarkTimes:[],onSettled:r=>{result=r;finished++;}});
- await settled(f);assert.equal(result,outcome!=='write-failed','qualified original write survives subsequent projection failure');assert.equal(finished,1);
+ await bookmarkSettlement(f,outcome);assert.equal(result,outcome!=='write-failed','qualified original write survives subsequent projection failure');assert.equal(finished,1);
  assert.equal(f.writes().length,1);
  if(outcome==='projection-failed'){assert.equal(i.directoryOperation.projection.receipt.confirmation,'confirmed');assert.equal(i.directoryOperation.projection.receipt.readback,'failed');}
  if(outcome==='write-failed')assert.equal(i.directoryOperation.projection.receipt.confirmation,'unknown');

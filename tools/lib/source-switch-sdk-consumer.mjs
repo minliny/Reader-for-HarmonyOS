@@ -2,14 +2,23 @@ import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './gener
 import {actualSourceManagementTypes,actualSourceManagementHostField} from './source-management-owner-probe.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField} from './bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
+import {searchListLazyRequests} from './reader-content-search-list-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {fixture,settle as settleOwner,deferred,origin,target,session,Runtime,read,gatewayExports,setCurrentRuntime,Core} from './source-switch-owner-probe.mjs';
 const {ProductionHost:ReadingEntryHost,setRuntime:setEntryRuntime}=await import('./reading-entry-owner-probe.mjs');
 const evidence=await import('../../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
 import * as horizontal from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import * as metricsApi from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import * as novelPresentation from '../../entry/src/main/ets/features/source/SourceSwitchNovelPresentation.ts';
+import * as sourceVisual from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
+import * as fontFamilies from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import {readerAppColor} from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import {SourceSwitchCompletionPresentation} from '../../entry/src/main/ets/features/source/SourceSwitchCompletionPresentation.ts';
+import * as appearanceRender from '../../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+import * as sourceNames from '../../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts';
 const {ReaderNativeAlertOwner}=await import('./reader-native-alert-sdk-probe.mjs');
 const {ReadingOfflineHost}=await import('./reader-reading-owner-sdk-probe.mjs');
 const settle=async()=>{await settleOwner();await new Promise(setImmediate);await settleOwner();};
@@ -20,37 +29,75 @@ const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','
  'retireSettingsPresentation','retireSourceManagementPresentation','nextNavigationGeneration','isCurrentRuntime','openReading','onRemoteSessionReady','installRemoteReadingSession',
  'getReadingEntryHost','readingEntryLease','applyReadingEntrySnapshot','bindReadingEntryReader','retireReadingEntryPresentation',
  'detailReadableAdmission','detailBookKey','chooseCachedChapterRefresh','showReadingFailure','showIndexAlert',
- 'applyReadingCommit','getReadingOfflineHost','cleanupRetiredSourceCache','sourceSwitchOverlayContent',
+ 'applyReadingCommit','getReadingOfflineHost','cleanupRetiredSourceCache','sourceDisplayName','sourceSwitchOverlayContent',
  ...(read('pages/Index.ets').includes('private retireBookshelfCatalogPresentation(') ? ['retireBookshelfCatalogPresentation'] : [])];
 export const sourceSwitchMethods=methods.filter(n=>n!=='sourceSwitchOverlayContent');
-const states=['sourceSwitchVisible','sourceSwitchState','sourceSwitchFailureMessage','sourceSwitchScopeId'];
+const states=['sourceSwitchVisible','sourceSwitchState','sourceSwitchFailureMessage','sourceSwitchScopeId','sourceSwitchCompletion','sourceSwitchNamedCandidate','readingContentKind'];
+export {novelPresentation};
+/** Only the two approved theme resources cross this controlled platform port.
+ * Channel values come from the real registry; production ColorMetrics, rather
+ * than a string parser in the component, owns alpha composition on HarmonyOS. */
+export function sourceSwitchColorMetricsSdk() {
+ const registry=JSON.parse(readFileSync(new URL('../../../Reader-UI/theme/registry.json',import.meta.url)));
+ const resources=new Map();
+ for(const role of ['TOK_GREEN','TOK_ROW_DIVIDER'])for(const scheme of ['day','night']){
+  const c=registry.appRoles[role][scheme];
+  resources.set(readerAppColor(role,scheme),{red:c.r,green:c.g,blue:c.b,alpha:Math.round(c.a*255)});
+ }
+ return{resourceColor(value){assert.ok(resources.has(value),'finite native source-switch color resource');return resources.get(value);},
+  rgba(red,green,blue,alpha){return{color:`sdk-rgba:${red},${green},${blue},${alpha}`};}};
+}
+/** Actual checked-load registrar with a controlled platform receipt boundary.
+ * A submitted load never supplies readiness; callers can hold or reject it. */
+export function sourceSwitchFontSdk({ready=()=>true,load=async()=>{},warn=()=>{}}={}) {
+ const source=read('features/common/ReaderFonts.ets').replace(/import[\s\S]*?from\s+['"][^'"]+['"];\s*/g,'').replace(/^export /gm,'');
+ return new Function(...Object.keys(fontFamilies),'$rawfile','loadReaderFontChecked','readerFontLoadReady','hilog',
+  stripTypeScriptTypes(source)+';return {registerReaderFonts,sourceSwitchNovelFontsReady,prepareSourceSwitchNovelFonts};')
+  (...Object.values(fontFamilies),value=>value,load,ready,{warn});
+}
 /** Compose the actual exported live picker and its actual row/cover/spinner
- * components. Native Repeat, scroller and frame scheduling are controlled ports;
+ * components. Native lazy ranges, scroller and frame scheduling are controlled ports;
  * production state, UI builders and callback guards are emitted by the SDK. */
-export function sourceSwitchLiveSdk(p,extra={}) {
- const windowSource=read('features/source/SourceSwitchWindow.ets');
+export function sourceSwitchLiveSdk(p,extra={},sources={}) {
+ const windowSource=sources.SourceSwitchPanel??read('features/source/SourceSwitchWindow.ets');
  const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
  const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
  const tree=ts.createSourceFile('/tmp/SourceSwitchLiveFixture.ets',windowSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  const frame=tree.statements.find(node=>node.name?.getText(tree)==='SourceSwitchLayoutFrame');
  const SourceSwitchLayoutFrame=new Function('FrameCallback',stripTypeScriptTypes(frame.getText(tree))+';return SourceSwitchLayoutFrame;')(class FrameCallback{});
+ const dataSource=tree.statements.find(node=>node.name?.getText(tree)==='SourceSwitchCandidateDataSource');
+ assert.ok(dataSource,'the real V1 lazy data source is part of the production window');
+ const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey',stripTypeScriptTypes(dataSource.getText(tree))+';return SourceSwitchCandidateDataSource;')(gatewayExports.sourceSwitchCandidateKey);
  const gatewayTree=ts.createSourceFile('/tmp/SourceCountFixture.ts',read('features/source/SourceSwitchGateway.ts'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
  const count=gatewayTree.statements.find(node=>node.name?.getText(gatewayTree)==='sourceSwitchSourceCount');
  const sourceSwitchSourceCount=new Function(stripTypeScriptTypes(count.getText(gatewayTree)).replace(/^export /,'')+';return sourceSwitchSourceCount;')();
- const Repeat=items=>({each(generator){this.generator=generator;return this;},key(){return this;},virtualScroll(){return this;},render(){items.forEach((item,index)=>this.generator({item,index}));}});
- const deps={...p.deps,...horizontal,...metricsApi,...gatewayExports,sourceSwitchSourceCount,SourceSwitchLayoutFrame,Repeat,
-   Scroller:class Scroller{},ScrollAlign:{START:'start'},TouchType:{Down:'down',Up:'up',Cancel:'cancel'},
-   Curve:{EaseInOut:'ease-in-out'},ImageFit:{Cover:'cover'},ButtonType:{Normal:'normal'},
-   registerReaderFonts(){},uiContext:{getFont:()=>({}),animateTo(_options,action){action();},postFrameCallback(){}},...extra};
+ // Request an explicit bounded range using the existing SDK lazy callback
+ // probe. Ace's actual visible range and pixel paint remain VM evidence.
+ const LazyForEach={create(id,owner,source,generate,key){
+   const indices=Array.from({length:Math.min(8,source.totalCount())},(_item,index)=>index);
+   searchListLazyRequests(indices).LazyForEach.create(id,owner,source,generate,key);
+ },pop(){}};
+ const effect=(kind,parameters)=>({kind,parameters,animation(options){return{...this,options,animation:this.animation};}});
+ const deps={...p.deps,...horizontal,...metricsApi,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...gatewayExports,SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
+   curves:{cubicBezierCurve(...values){return{kind:'cubic-bezier',values};}},
+   ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},
+   Scroller:class Scroller{},ScrollAlign:{START:'start'},TouchType:{Down:'down',Move:'move',Up:'up',Cancel:'cancel'},
+   Curve:{EaseInOut:'ease-in-out',EaseOut:'ease-out'},ImageFit:{Cover:'cover',Fill:'fill'},ButtonType:{Normal:'normal'},
+   GradientDirection:{Bottom:'GradientDirection.Bottom'},ImageInterpolation:{High:'ImageInterpolation.High'},ImageRepeat:{XY:'ImageRepeat.XY'},
+   TransitionEdge:{BOTTOM:'bottom'},TransitionEffect:{IDENTITY:effect('identity'),OPACITY:effect('opacity'),
+    move:edge=>effect('move',edge),asymmetric:(appear,disappear)=>effect('asymmetric',{appear,disappear})},
+   ...sourceSwitchFontSdk(),uiContext:{getFont:()=>({}),animateTo(_options,action){action();},postFrameCallback(){},
+    createAnimator(_options){return{onFrame(){},play(){},cancel(){}};}},...extra};
  p.hooks.lifecycleChildren=true;
  p.hooks.childSources.SourceSwitchPanel=windowSource;
  p.hooks.childSources.SourceSwitchLiveRow=windowSource;
- for(const [name,path] of [['NoCoverCover','features/bookshelf/NoCoverCover.ets'],['SearchSpinner','features/search/SearchSpinner.ets']]){
-   p.hooks.childSources[name]=read(path);deps[name]=createReaderBuilderProbe(p.hooks.childSources[name],boundedMembers(p.hooks.childSources[name]),deps,p.hooks).Component;
+ p.hooks.childSources.SourceSwitchNovelRow=windowSource;
+ for(const [name,path] of [['NoCoverCover','features/bookshelf/NoCoverCover.ets'],['SearchSpinner','features/search/SearchSpinner.ets'],['SourceSwitchSpinner','features/source/SourceSwitchSpinner.ets'],['SourceSwitchProgress','features/source/SourceSwitchProgress.ets'],['ReaderPaperBackground','features/reading/ReaderPaperBackground.ets'],['SourceSwitchCompletionOverlay','features/source/SourceSwitchCompletionOverlay.ets']]){
+   p.hooks.childSources[name]=sources[name]??read(path);deps[name]=createReaderBuilderProbe(p.hooks.childSources[name],boundedMembers(p.hooks.childSources[name]),deps,p.hooks).Component;
  }
  deps.SourceSwitchLiveRow=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchLiveRow'),deps,{...p.hooks,componentName:'SourceSwitchLiveRow'}).Component;
+ deps.SourceSwitchNovelRow=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchNovelRow'),deps,{...p.hooks,componentName:'SourceSwitchNovelRow'}).Component;
  deps.SourceSwitchPanel=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchWindow'),deps,{...p.hooks,componentName:'SourceSwitchWindow'}).Component;
- deps.SourceSwitchPanel.prototype.__Repeat=Repeat;
  return deps;
 }
 export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
@@ -64,7 +111,7 @@ export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
    settingsSnapshot:{reduceMotion:false},directoryChapterTitle:'Chapter 1',directoryReturnTarget:'detail',
    route:reading?'reading':'detail',readingOriginRoute:'detail',detailReturnRoute:'bookshelf',readingSessionActive:reading,detailBook:{...origin,sourceName:'Old'},
    shelfBooks:[origin],detailToc:[{index:0,title:'Chapter 1',navigable:true}],detailInBookshelf:f.context.inBookshelf,
-   mangaSourceSwitchCommitGeneration:-1,mangaSourceSwitchSelectionVisible:false,sourceSwitchHost:undefined,readingEntryScopeId:-1,readableAdmissions:[],shelfOperation:{generation:0,busy:false,removalKey:''},searchDetailCandidates:[],searchHost:{searchedSourceIds:()=>[]},
+   mangaSourceSwitchCommitGeneration:-1,mangaSourceSwitchSelectionVisible:false,sourceSwitchHost:undefined,readingEntryScopeId:-1,readableAdmissions:[],shelfOperation:{generation:0,busy:false,removalKey:''},searchDetailCandidates:[],searchHost:{searchedSourceIds:()=>[],sources:()=>[]},sourceSources:[],sourceToolsSnapshot:{sources:[]},
    remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteReadableChapterIndexes:[],remoteReadableChapterOrder:new Map(),
    directoryCurrentChapterIndex:0,requestedChapterIndex:0,readingReadyGeneration:1,bookshelfCatalogEpoch:0,bookshelfBackgroundEpoch:0,
    nativeAlertOwner:new ReaderNativeAlertOwner(),effects:[],cleanup:[],refreshBookshelf(){this.effects.push('refreshShelf');},
@@ -83,7 +130,7 @@ export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
  index.settingsHost=actualGeneralSettingsHostField(index,settingsTypes.SettingsHost);
  const acquire=f.runtime.bookAcquisitions;f.runtime.bookAcquisitions=()=>({...acquire(),readingProjectionRevision:()=>0,setPreparationVisible(){}});
  const mount=()=>{index.sourceSwitchOverlayContent();return p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchPanel).at(-1);};
- const rows=()=>p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchLiveRow);
+ const rows=()=>p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchLiveRow||x instanceof leafDeps.SourceSwitchNovelRow);
  return{p,index,mount,rows,leafDeps};
 }
 export function failureChain(x){

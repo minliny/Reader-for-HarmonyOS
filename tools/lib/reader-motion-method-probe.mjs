@@ -107,7 +107,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   let expanded;
   do {
     expanded = false;
-    for (const helper of ['notifyPublishedRows','rowRenderKey','isPrimaryErrorRow','primaryErrorRowKey','rowHasError','requestedLast','performPanelAction','closePanel','invalidatePanelMotion','openPanel','dismissPanelKeyboard','preparePanelFonts','settlePanel','panelTravel','panelWidth','panelHeight','widePanel','clearMangaSourceSwitchSelection','waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireSourceManagementPresentation', 'retireSettingsPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'retireBookshelfCatalogPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey']) {
+    for (const helper of ['notifyPublishedRows','rowRenderKey','isPrimaryErrorRow','primaryErrorRowKey','rowHasError','requestedLast','performPanelAction','closePanel','invalidatePanelMotion','openPanel','dismissPanelKeyboard','preparePanelFonts','settlePanel','panelTravel','panelWidth','panelHeight','widePanel','clearMangaSourceSwitchSelection','waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireSourceManagementPresentation', 'retireSettingsPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'retireBookshelfCatalogPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey', 'cancelSourceSwitchCompletion', 'finishSourceSwitchReveal', 'sourceSwitchCompletionKey']) {
     if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
       (capturedOwnerFields.includes(`this.${helper}(`) || type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`)))) { names.push(helper); expanded = true; }
     }
@@ -133,6 +133,22 @@ export function productionMotionMethods(file, names, dependencies = {}) {
       'panelCloseTask', 'panelCloseResolve', 'panelFontsReady', 'panelFontGeneration', 'reduceMotion', 'directoryOpenRevision']
       .map(name => ordinaryField(type.members.find(m => m.name?.getText(tree) === name))).join('\n')
     : '';
+  // Reader lifecycle probes execute the real visual cancellation chain as
+  // well as their original owner methods. Preserve its finite actual state,
+  // including inactive defaults; do not replace the production cleanup with
+  // fixture noops or acquire visual state in non-reader probes.
+  const completionFields = type.name?.getText(tree) === 'ReadingExperience' &&
+    names.some(name => ['cancelSourceSwitchCompletion', 'finishSourceSwitchReveal'].includes(name))
+    ? ['sourceSwitchCompletion', 'sourceSwitchCompletionEpoch', 'sourceSwitchRevealAnimator',
+      'sourceSwitchRevealOpacity', 'sourceSwitchToastTimer', 'sourceSwitchToastText',
+      'sourceSwitchVisualSelectionToken', 'consumedSourceSwitchCompletions']
+      .filter(name => !names.includes(name))
+      .map(name => {
+        const member = type.members.find(m => m.name?.getText(tree) === name);
+        assert.ok(member, `production completion state accompanies its real helper: ${name}`);
+        return ordinaryField(member);
+      }).join('\n')
+    : '';
   const fields = names.includes('notifyPublishedRows') ? type.members.find(m => m.name?.getText(tree) === 'publishedRowKeys')?.getText(tree) : '';
   if (names.includes('notifyPublishedRows')) assert.ok(fields, 'production manga publication state accompanies its real helper');
   const methods = names.flatMap(name => type.members.filter(m => m.name?.getText(tree) === name).map(m => m.getText(tree))).join('\n');
@@ -143,7 +159,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
     paragraphLayout = new ReaderParagraphLayoutOwner(); physicalPagination = new ReaderPhysicalPaginationOwner();
     progressProducers = new ReaderProgressProducerHost();
     nativeAlertOwner = new ReaderNativeAlertOwner();
-    nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${fields ?? ''} ${panelFields} ${chromePorts} ${capturedOwnerFields} ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
+    nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${fields ?? ''} ${panelFields} ${completionFields} ${chromePorts} ${capturedOwnerFields} ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
   // Existing probes describe pre-refactor component fields. Route those fixture
   // assignments to the real production owners; no production struct accessors
   // or duplicated batching/index-admission algorithm is introduced.

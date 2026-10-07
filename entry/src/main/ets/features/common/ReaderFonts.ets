@@ -12,6 +12,7 @@ import {
   READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
   READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600,
+  READER_FONT_NOTO_SANS_SC_UI_650,
   READER_FONT_NOTO_SANS_SC_UI_900,
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
@@ -26,6 +27,7 @@ function bundledFontSource(family: string): Resource | undefined {
   if (family === READER_FONT_NOTO_SANS_SC_UI_REGULAR) return $rawfile('NotoSansSC-UIRegular.otf');
   if (family === READER_FONT_NOTO_SANS_SC_UI_550) return $rawfile('ReaderMangaSans550.otf');
   if (family === READER_FONT_NOTO_SANS_SC_UI_600) return $rawfile('ReaderMangaSans600.otf');
+  if (family === READER_FONT_NOTO_SANS_SC_UI_650) return $rawfile('ReaderMangaSans650.otf');
   if (family === READER_FONT_NOTO_SANS_SC_UI_900) return $rawfile('ReaderMangaSans900.otf');
   if (family === READER_FONT_NOTO_SANS_SC_UI_MEDIUM) return $rawfile('NotoSansSC-UIMedium.otf');
   if (family === READER_FONT_NOTO_SANS_SC_UI_BOLD) return $rawfile('NotoSansSC-UIBold.otf');
@@ -54,7 +56,9 @@ export function readerFontFamilyReady(family: string): boolean {
  * for every checked receipt, including dynamic current/group text roles. */
 export function prepareMangaSheetFonts(): Promise<boolean> {
   const families: string[] = [READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+    READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
     READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600,
+    READER_FONT_NOTO_SANS_SC_UI_650,
     READER_FONT_NOTO_SANS_SC_UI_900];
   return Promise.all(families.map((family: string): Promise<void> =>
     prepareReaderFontFamily(family))).then((): boolean =>
@@ -82,6 +86,22 @@ export function prepareReaderShelfFonts(): Promise<void> {
   return Promise.all([READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
     READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD]
     .map((family: string): Promise<void> => prepareReaderFontFamily(family))).then((): void => {});
+}
+
+/** The selected novel drawer admits only its four checked physical faces.
+ * Keep its extra Medium face on demand instead of extending shelf startup. */
+export function sourceSwitchNovelFontsReady(): boolean {
+  return [READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
+    READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM]
+    .every((family: string): boolean => readerFontFamilyReady(family));
+}
+
+export function prepareSourceSwitchNovelFonts(): Promise<boolean> {
+  return Promise.all([READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
+    READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM]
+    .map((family: string): Promise<void> => prepareReaderFontFamily(family)))
+    .then((): boolean => sourceSwitchNovelFontsReady())
+    .catch((error: Error): boolean => { reportFontFailure(error); return false; });
 }
 
 export function prepareReaderFonts(): Promise<void> {

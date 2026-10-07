@@ -38,6 +38,7 @@ export struct SourceSwitchPanel {
   @Prop author: string = '';
   @Prop coverUrl: string = '';
   @Prop currentSourceName: string = '';
+  @Prop latestChapterTitle: string = '';
   @Prop currentChapterTitle: string = '';
   @Prop contentKind: string = 'text';
   @Prop reduceMotion: boolean = false;
@@ -56,7 +57,8 @@ export struct SourceSwitchPanel {
       state: this.state,
       currentSourceId: this.currentSourceId,
       bookTitle: this.bookTitle, author: this.author, coverUrl: this.coverUrl,
-      currentSourceName: this.currentSourceName, currentChapterTitle: this.currentChapterTitle,
+      currentSourceName: this.currentSourceName, latestChapterTitle: this.latestChapterTitle,
+      currentChapterTitle: this.currentChapterTitle,
       contentKind: this.contentKind,
       allowCancelWhileSwitching: this.allowCancelWhileSwitching,
       reduceMotion: this.reduceMotion, consumeTopInset: this.consumeTopInset, onStop: this.onStop,

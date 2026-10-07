@@ -5,6 +5,16 @@ import { verifyArchitectureRegistration, registeredProducerTypographySlots } fro
 const root=process.cwd(),baseline=JSON.parse(readFileSync('tools/architecture-consumer-baseline.json','utf8')),contract=JSON.parse(readFileSync('tools/fixtures/architecture-shared-producers.json','utf8'));
 const inventory=JSON.parse(execFileSync(process.execPath,['tools/audit-architecture-consumers.mjs','--stdout=json'],{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024,stdio:['ignore','pipe','ignore']}));
 const result=verifyArchitectureRegistration(inventory,baseline,contract,root);
+for(const novelFile of ['entry/src/main/ets/features/source/SourceSwitchWindow.ets','entry/src/main/ets/features/source/SourceSwitchProgress.ets']){
+ const source=readFileSync(novelFile,'utf8'),role=novelFile.endsWith('/SourceSwitchWindow.ets')?'TOK_SS_WINDOW_BG':'TOK_SS_PROGRESS_BG';
+ const changed=source.replace(`readerAppColor('${role}', this.appThemeScheme)`,"readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)");assert.notEqual(changed,source);
+ assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file===novelFile?changed:readFileSync(file,'utf8')),
+  /exact selected novel source background carriers changed/,'same-count selected novel private background change rejects');
+ const inflated=structuredClone(baseline);inflated.uiPolicies.find(row=>row.file===novelFile).counts.backgroundColor++;
+ assert.throws(()=>verifyArchitectureRegistration(inventory,inflated,contract,root),/exact selected novel source background budget/,'selected design witness does not permit a higher background budget');
+ const missingWitness=structuredClone(baseline);delete missingWitness.uiPolicies.find(row=>row.file===novelFile).visualSuccessorContract;
+ assert.throws(()=>verifyArchitectureRegistration(inventory,missingWitness,contract,root),/binds exact witness/,'new selected actor keeps an explicit finite successor contract');
+}
 assert.equal(result.budgetRows,93,'original retained business budgets');assert.equal(result.transferredBudgetRows,7);assert.equal(result.historicalBudgetRows,100,'93 + seven exact reversible approved transfers preserve all original100');assert.equal(result.producers,14);
 assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup'].sort(),'only exact finite shared producers gain owner treatment');
 const header='entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets',original=readFileSync(header,'utf8');

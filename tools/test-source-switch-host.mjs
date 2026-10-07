@@ -333,7 +333,6 @@ for(const loseSyncAt of [3,4]) {
   const scope=f.host.current().scopeId;
   const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});
   const owner=p.consumer(source,boundedMembers(source,'SourceSwitchWindow'),deps,{state:f.host.current().state},'SourceSwitchWindow');
-  owner.__Repeat=deps.SourceSwitchPanel.prototype.__Repeat;
   owner.onRetry=()=>f.host.retry(scope);owner.onClose=()=>f.host.close(scope);
   f.lease.changed=snapshot=>{owner.updateStateVars({state:snapshot.state,currentSourceId:'old'});p.properties.flush();};
   owner.aboutToAppear();owner.initialRender();const nodes=p.nodes(owner);

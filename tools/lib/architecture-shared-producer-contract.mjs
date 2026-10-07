@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { novelSourceSwitchSuccessorPath } from './approved-manga-typography-carriers.mjs';
 const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript'),options=createRequire(import.meta.url)(sdk+'/lib/ets_checker.js').compilerOptions;
 const physical=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin','width','height','constraintSize','opacity','clip','responseRegion']);
@@ -102,6 +103,33 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
  const registered=new Set(registry.map(r=>relative(r.file)));
  for(const row of inventory.rows.filter(r=>r.elements.length))assert.ok(registered.has(row.file),'unregistered actual UI file: '+row.file);
  for(const row of baseline.uiPolicies??[]){assert.ok(row.reason?.length>20&&row.owner?.length>0&&row.kind?.length>0,'outside100 needs actual owner/reason');assert.ok(inventory.rows.some(r=>r.file===relative(row.file)&&r.elements.length),'orphan UI policy '+row.file);}
+ // The selected novel source surface extends one existing manga policy and
+ // adds one actual progress actor. A raised count is not an exemption: every
+ // background's owner, method and expression must match the concrete witness.
+ const novel=JSON.parse(readSource(novelSourceSwitchSuccessorPath));
+ assert.deepEqual(novel.files.map(entry=>entry.path),[
+  'entry/src/main/ets/features/source/SourceSwitchWindow.ets',
+  'entry/src/main/ets/features/source/SourceSwitchProgress.ets'], 'only exact selected novel source background actors');
+ assert.equal(novel.completion?.path,'entry/src/main/ets/features/source/SourceSwitchCompletionOverlay.ets','only the exact additional completion view');
+ for(const entry of [...novel.files,novel.completion]){
+  const policy=baseline.uiPolicies.find(row=>row.file===entry.path);assert.ok(policy,'actual selected novel source UI policy');
+  assert.equal(policy.visualSuccessorContract,novelSourceSwitchSuccessorPath,'selected novel source policy binds exact witness');
+  assert.deepEqual(policy.counts,entry.architectureCounts,'exact selected novel source background budget');
+  if(entry.historicalArchitecturePolicy){
+   const old=entry.historicalArchitecturePolicy;
+   assert.equal(policy.kind,old.kind,'selected novel successor retains exact historical policy kind');
+   assert.deepEqual(policy.supersededLegacyCounts,old.supersededLegacyCounts,'selected novel successor retains original business budget witness');
+   assert.equal(policy.counts.fontSize,old.counts.fontSize,'selected novel public roles do not raise private typography budget');
+  }
+  const backgrounds=sharedProducerShape(readSource(entry.path),entry.path).styles.filter(style=>style.property==='backgroundColor');
+  assert.deepEqual(backgrounds,entry.backgrounds,'exact selected novel source background carriers changed: '+entry.path);
+  assert.equal(entry.architectureCounts.backgroundColor,backgrounds.length,'selected novel source count is fully witnessed');
+  if(entry===novel.completion){
+   assert.equal(policy.visualSuccessorActor,'completion','completion policy cannot claim a historical actor');
+   assert.deepEqual(policy.counts,{fontSize:0,backgroundColor:1},'completion cannot raise the historical reading-page budget');
+   assert.deepEqual(sharedProducerShape(readSource(entry.path),entry.path),entry.shape,'exact completion view class/props/native styles changed');
+  }
+ }
  for(const producer of contract.producers){
   if(producer.registrationKind==='legacy-business-budget'){
     // These three named existing controls retain their immutable historical

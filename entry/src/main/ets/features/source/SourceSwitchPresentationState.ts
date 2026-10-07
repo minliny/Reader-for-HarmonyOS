@@ -3,10 +3,10 @@ import type { SourceSwitchCandidate } from './SourceSwitchGateway';
 /**
  * SourceSwitch overlay window state (Window State 7态, SS-SOURCE-SWITCH-01).
  * The seven states follow the Source Switch state contract. Candidate-state
- * geometry comes from SourceSwitch/Window (Phone 943:15215 / Tablet 943:15705,
- * both mounting 568:656). States without a dedicated visible Figma frame stay
- * fail-closed for visual acceptance; the owning Index still drives the real
- * gateway transitions.
+ * manga geometry comes from SourceSwitch/Window (Phone 943:15215 / Tablet
+ * 943:15705, both mounting 568:656). Novel presentation follows the selected
+ * 2026-10-06 demo drawer. The owning Host still drives real gateway transitions;
+ * native visual acceptance is recorded separately from the selected demo.
  */
 export interface SourceSwitchDiscoveringState {
   kind: 'discovering';

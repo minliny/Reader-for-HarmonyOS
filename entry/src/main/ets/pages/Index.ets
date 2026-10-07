@@ -1,7 +1,10 @@
+import curves from '@ohos.curves';
+import { SOURCE_SWITCH_VISUAL } from '../features/source/SourceSwitchVisual';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../features/rss/RssMutationRecoveryContract';
 import { RssPresentationProjection } from '../features/rss/RssPresentationProjection';
 import type { RssRouteOperationProjection, RssRouteBinding } from '../features/rss/RssRouteOperationHost';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertLease, type ReaderNativeAlertOptions, type ReaderNativeAlertSpecId } from '../app/ReaderNativeAlertOwner';
+import { SourceSwitchCompletionPresentation } from '../features/source/SourceSwitchCompletionPresentation';
 import { readerRecoveryView, type ReaderRecoveryView } from '../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../features/common/ReaderRecoveryNotice';
 import { ReaderRecoveryAction } from '../features/common/ReaderRecoveryAction';
@@ -47,7 +50,7 @@ import {
 } from '../features/bookshelf/BookshelfHost';
 import { BookshelfProjectionOwner, type BookshelfProjectionBinding, type BookshelfProjectionSnapshot } from '../features/bookshelf/BookshelfProjectionOwner';
 import { BookshelfCatalogOwner, type BookshelfCatalogBinding, type BookshelfCatalogSnapshot, type BookshelfCatalogSeeds } from '../features/bookshelf/BookshelfCatalogOwner';
-import { bookshelfSourceDisplayName, type BookshelfNamedSource } from '../features/bookshelf/BookshelfSourceNameProjection';
+import { bookshelfSourceDisplayName, readableBookshelfSourceName, type BookshelfNamedSource } from '../features/bookshelf/BookshelfSourceNameProjection';
 import { DiscoverPage } from '../features/discover/DiscoverPage';
 import {
   DiscoverOrchestrator,
@@ -475,6 +478,10 @@ struct Index {
   @State private sourceSwitchState: SourceSwitchPanelState = { kind: 'discovering' };
   @State private sourceSwitchFailureMessage: string = '';
   @State private sourceSwitchScopeId: number = 0;
+  @State private sourceSwitchCompletion: SourceSwitchCompletionPresentation | undefined = undefined;
+  // One admitted row's display metadata, never transaction/progress authority.
+  // Core shelf readback may not persist the source's human-readable name.
+  private sourceSwitchNamedCandidate: SourceSwitchCandidate | undefined = undefined;
   private sourceSwitchHost: SourceSwitchHost | undefined;
   @State private mangaSourceSwitchSelectionVisible: boolean = false;
   @State private mangaSourceSwitchSelectionBusy: boolean = false;
@@ -1138,6 +1145,7 @@ struct Index {
           bookId: this.detailBook.bookId,
           bookTitle: this.detailBook.title,
           bookAuthor: this.detailBook.author, bookCoverUrl: this.detailBook.coverUrl ?? '',
+          latestChapterTitle: this.detailBook.lastChapter ?? '',
           sourceId: this.detailBook.sourceId,
           sourceName: this.detailBook.sourceName,
           bookKind: this.detailBook.kind,
@@ -1148,6 +1156,7 @@ struct Index {
               readerEntryPresentation(this.detailBook.sourceId, this.detailBook.bookId),
           sourceSwitchFailureMessage: this.sourceSwitchFailureMessage,
           sourceSwitchScopeId: this.sourceSwitchScopeId,
+          sourceSwitchCompletion: this.sourceSwitchCompletion,
           onRetryFailedSourceSwitch: (scopeId?: number): void => this.retryFailedSourceSwitch(scopeId),
           onDismissSourceSwitchFailure: (scopeId?: number): void => this.dismissSourceSwitchFailure(scopeId),
           resolveSourceSwitchTransactionId: (sourceId: string, bookId: string): Promise<string | undefined> =>
@@ -1172,6 +1181,10 @@ struct Index {
           bookmarkLoadMessage: this.controlBookmarkProjectionMessage(),
           directoryCurrentChapterIndex: this.directoryCurrentChapterIndex,
           directoryChapterTitle: this.directoryChapterTitle,
+          directoryCurrentPageOrdinal: this.detailBook.mangaPosition?.chapterIndex === this.directoryCurrentChapterIndex ?
+            this.detailBook.mangaPosition?.pageOrdinal ?? -1 : -1,
+          directoryCurrentPageTotal: this.detailBook.mangaPosition?.chapterIndex === this.directoryCurrentChapterIndex ?
+            this.detailBook.mangaPosition?.totalPages ?? -1 : -1,
           directoryOpenedFromControl: this.directoryReturnTarget === 'readerControl',
           offlineBookOperationActive: this.offlineOperationActive,
           directoryRecovery: this.directoryRecovery(),
@@ -4741,6 +4754,7 @@ struct Index {
       this.route !== 'reading') {
       return;
     }
+    if (this.readingContentKind === 'manga') this.refreshDetailMangaPosition();
     this.directoryReturnTarget = 'readerControl';
     this.preparedReaderRoute = 'directory';
     this.route = 'directory';
@@ -5097,17 +5111,24 @@ struct Index {
   @Builder
   private sourceSwitchOverlayContent() {
         ForEach([this.sourceSwitchScopeId], (scopeId: number) => {
-        Stack({ alignContent: Alignment.Center }) {
+        Stack({ alignContent: this.detailBook?.contentKind === 'manga' ? Alignment.Center : Alignment.Bottom }) {
           Stack()
             .width('100%')
             .height('100%')
-            .backgroundColor(readerAppColor('app.Index.build.backgroundColor.40FFFFFF', this.appThemeScheme))
+            .backgroundColor(readerAppColor(this.detailBook?.contentKind === 'manga' ?
+              'app.Index.build.backgroundColor.40FFFFFF' : 'TOK_SS_DRAWER_SCRIM', this.appThemeScheme))
+            .transition(this.detailBook?.contentKind === 'manga' || this.settingsSnapshot.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
+              TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.openDurationMs,
+                curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) }),
+              TransitionEffect.OPACITY.animation({ duration: SOURCE_SWITCH_VISUAL.closeDurationMs,
+                curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) })))
             .onClick((): void => this.closeSourceSwitch(scopeId));
           SourceSwitchPanel({
             state: this.sourceSwitchState,
             currentSourceId: this.detailBook?.sourceId ?? '',
             bookTitle: this.detailBook?.title ?? '', author: this.detailBook?.author ?? '',
             coverUrl: this.detailBook?.coverUrl ?? '', currentSourceName: this.detailBook?.sourceName ?? '',
+            latestChapterTitle: this.detailBook?.lastChapter ?? '',
             currentChapterTitle: this.directoryChapterTitle || this.detailBook?.mangaPosition?.chapterTitle || '',
             contentKind: this.detailBook?.contentKind ?? 'text',
             allowCancelWhileSwitching: this.canCancelMangaSourcePreparation(),
@@ -5571,7 +5592,15 @@ struct Index {
       void this.switchMangaSource(candidate, current);
       return;
     }
-    if (scopeId !== undefined) void this.sourceSwitchHost?.pick(candidate, scopeId);
+    if (scopeId !== undefined) {
+      if (this.sourceSwitchVisible && this.sourceSwitchState.kind === 'candidates') {
+        const key = sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
+        const admitted = this.sourceSwitchState.candidates.find((row: SourceSwitchCandidate): boolean =>
+          sourceSwitchCandidateKey(row.sourceId, row.bookUrl) === key);
+        if (admitted !== undefined) this.sourceSwitchNamedCandidate = admitted;
+      }
+      void this.sourceSwitchHost?.pick(candidate, scopeId);
+    }
   }
   private retryFailedSourceSwitch(scopeId?: number): void {
     const book = this.detailBook, candidate = this.failedSourceSwitchCandidate;
@@ -5869,7 +5898,16 @@ struct Index {
     if (commit.sourceSwitchTransactionId !== undefined) {
       const finalized = this.getSourceSwitchHost()?.targetCommitted(
         { sourceId: commit.sourceId, bookId: commit.bookId }, commit.sourceSwitchTransactionId);
-      if (finalized !== undefined) this.cleanupRetiredSourceCache(finalized);
+      if (finalized !== undefined) {
+        this.cleanupRetiredSourceCache(finalized);
+        // The existing exact Core-confirmed producer owns completion. This
+        // receipt only decorates its already-ready current novel page.
+        if (this.readingContentKind === 'text' && this.readingSessionActive) {
+          this.sourceSwitchCompletion = new SourceSwitchCompletionPresentation(
+            commit.sourceSwitchTransactionId, commit.sourceId, commit.bookId, this.readingReadyGeneration,
+            this.sourceDisplayName(commit.sourceId, this.detailBook?.sourceName ?? ''), commit.chapterIndex, commit.chapterOffset);
+        }
+      }
     }
     const session = this.remoteReadingSession;
     if (session !== undefined && session.identity.sourceId === commit.sourceId &&
@@ -5954,7 +5992,12 @@ struct Index {
   }
 
   private sourceDisplayName(sourceId: string, persistedName: string = ''): string {
-    return bookshelfSourceDisplayName(sourceId, persistedName,
+    const saved = persistedName.trim();
+    const candidate = this.sourceSwitchNamedCandidate;
+    const candidateName = candidate?.sourceId === sourceId ? (candidate.sourceName ?? '').trim() : '';
+    const name = saved === '书源已移除' || readableBookshelfSourceName(sourceId, saved) ? saved :
+      (readableBookshelfSourceName(sourceId, candidateName) ? candidateName : saved);
+    return bookshelfSourceDisplayName(sourceId, name,
       [this.searchHost.sources(), this.sourceSources, this.sourceToolsSnapshot.sources]);
   }
 
@@ -6211,6 +6254,7 @@ struct Index {
     this.downloadHost?.retire();
     this.downloadHost = undefined;
     this.downloadPresentationIdentity = '';
+    this.sourceSwitchCompletion = undefined;
     this.retireSettingsPresentation();
     this.retireSourceManagementPresentation();
     this.retireSourceSwitchPresentation();

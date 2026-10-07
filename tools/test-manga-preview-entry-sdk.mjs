@@ -20,6 +20,9 @@ component('ReaderShell',shell);component('MangaReadingSurface',read('features/ma
 component('SourceSwitchPanel',panel);component('SourceSwitchWindow',window);component('ArkWebExecutionHost','');
 for(const name of ['ReadingExperience','ReaderFullDirectory','ReaderStatusBarPaper'])component(name,'');
 const noOp=()=>{};
+// This manga binding probe exercises the native identity branch only. Novel
+// opacity/easing and full Window font admission have their actual SDK suites.
+const transitionIdentity={kind:'identity'};
 const runtimePort={supportsCoreCapability:()=>true},Runtime=runtimeOwnerIdentityProbe(()=>runtimePort);
 const settingsTypes=actualGeneralSettingsTypes({ReaderRuntimeOwner:Runtime});
 const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:Runtime});
@@ -53,7 +56,8 @@ function indexOwner(overrides={}){
  for(const statement of tree.statements)for(const member of statement.members??[])if(member.getText(tree).includes('@Builder'))map.CUSTOM_BUILDER_METHOD.add(member.name.getText(tree));
  const native=new Set(['Stack','Row','Column','Blank','Text','Button','Image','If','ForEach','Scroll']);
  const deps={...mangaSurfaceSdkDependencies,ReaderShell:Child,SourceSwitchPanel:Child,ArkWebExecutionHost:Child,
-  deviceInfo:{deviceType:'phone'},ReaderRuntimeOwner:Runtime,LOCAL_SOURCE_ID:localSource.text};
+  deviceInfo:{deviceType:'phone'},ReaderRuntimeOwner:Runtime,LOCAL_SOURCE_ID:localSource.text,
+  TransitionEffect:{IDENTITY:transitionIdentity}};
  const visit=node=>{if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&/^[A-Z]/.test(node.expression.text)&&!native.has(node.expression.text)){
   const name=node.expression.text;if(!syntax.componentCollection.customComponents.has(name))component(name,'');deps[name]=Child;
  }ts.forEachChild(node,visit);};visit(tree);
@@ -101,15 +105,29 @@ console.log('PASS SDK actual Index→Shell→Surface exact first-page generation
 for(const locked of [false,true]){
  const owner=indexOwner({sourceSwitchVisible:true,mangaSourceSwitchCommitGeneration:locked?2:-1});owner.initialRender();
  const props=child(owner,'ReaderShell');assert.equal(props.allowCancelSourceSwitchWhilePreparing,!locked);
+ assert.equal(props.contentKind,'manga','the actual Index payload retains the manga presentation branch');
  // Execute the real reader Shell overlay to preserve the complete binding chain.
  assert.equal(props.sourceSwitchScopeId,owner.sourceSwitchScopeId,'Index forwards its actual initialized keyed-overlay scope');
  const shellOwner=reactiveBuilder(shell,[...shellConstructorFields,'build','mangaSurface','mangaIdentityKey','keepsMangaReadingSession','onMangaChapterReady','selectAdjacentMangaChapter','sourceSwitchOverlayContent','overlayStatusBarUnderlay','chromeMetrics'],{
-  ...mangaSurfaceSdkDependencies,MangaReadingSurface:Child,SourceSwitchPanel:Child,ReaderRuntimeOwner:{current:()=>({})}}, {initialParams:props});
+  ...mangaSurfaceSdkDependencies,MangaReadingSurface:Child,SourceSwitchPanel:Child,TransitionEffect:{IDENTITY:transitionIdentity},ReaderRuntimeOwner:{current:()=>({})}}, {initialParams:props});
  shellOwner.initialRender();
+ const scrim=[...shellOwner.nodes.values()].find(node=>node.transition!==undefined);
+ assert.equal(scrim.transition,transitionIdentity,'the real manga Shell scrim retains native identity transition');
  const panelProps=[...shellOwner.children.values()].find(row=>row.params.currentSourceId!==undefined).params;
+ assert.equal(panelProps.contentKind,'manga');
  assert.equal(panelProps.allowCancelWhileSwitching,!locked);
  const detail=indexOwner({route:'detail',readingSessionActive:false,sourceSwitchVisible:true,mangaSourceSwitchCommitGeneration:locked?2:-1});
  detail.initialRender();assert.equal(child(detail,'SourceSwitchPanel').allowCancelWhileSwitching,!locked);
+ const detailScrims=[...detail.nodes.values()].filter(node=>node.type==='Stack'&&typeof node.onClick==='function');
+ assert.equal(detailScrims.length,1,'the actual manga Index overlay has one dismissing scrim');
+ assert.equal(detailScrims[0].width,'100%');assert.equal(detailScrims[0].height,'100%');
+ assert.equal(detailScrims[0].transition,transitionIdentity,'the real manga Index scrim preserves the same native identity transition');
+ assert.equal(detailScrims[0].backgroundColor,'#40FFFFFF','the manga detail scrim retains its existing day palette');
+ // The SDK emits this outer frame immediately before its inner scrim. Bind
+ // alignment to that frame so another centered Index stack cannot satisfy it.
+ const detailFrame=detail.nodes.get(detailScrims[0].id-1);
+ assert.equal(detailFrame.type,'Stack');assert.equal(detailFrame.create.alignContent,'Alignment.Center');
+ assert.equal(detailFrame.width,'100%');assert.equal(detailFrame.height,'100%');
  // Compile the real Panel wrapper to verify it forwards the parent decision.
  const wrapper=reactiveBuilder(panel,[...panelConstructorFields,'build'],{SourceSwitchWindow:Child},{initialParams:panelProps});
  wrapper.initialRender();

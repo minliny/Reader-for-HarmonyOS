@@ -10,7 +10,7 @@ const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=n
 function sourceOwner(input=source,options={}){
   const p=boundedSurfaceSdk(options),deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});
   const o=p.consumer(input,boundedMembers(input,'SourceSwitchWindow'),deps,{state:{kind:'discoveryError',message:'source unavailable'}},'SourceSwitchWindow');
-  o.__Repeat=deps.SourceSwitchPanel.prototype.__Repeat;o.aboutToAppear();return{p,o};
+  o.aboutToAppear();return{p,o};
 }
 function ttsOwner(input=tts,options={},params={}){
   const p=boundedSurfaceSdk(options),keyboard=[];
@@ -26,7 +26,7 @@ const currentProps=(owner,source)=>Object.fromEntries([...source.matchAll(/@Prop
   const root=[...o.nodes.values()].find(n=>n.type==='Stack'&&n.width==='100%'&&n.height==='100%');assert.ok(root);
   const texts=p.nodes(o).filter(n=>n.type==='Text');assert.ok(texts.some(n=>n.create==='更换书源'));
   const message=texts.find(n=>n.create==='source unavailable'),button=p.nodes(o).find(n=>n.type==='Button'&&n.createWithLabel?.[0]==='重试');assert.ok(message&&button);button.onClick();assert.equal(retry,1);
-  const close=p.nodes(o).find(n=>n.type==='Button'&&n.width===44&&n.height===44&&n.accessibilityText==='返回'&&n.onClick);assert.ok(close);close.onClick();assert.equal(closed,1);
+  const close=p.nodes(o).find(n=>n.type==='Button'&&n.width===44&&n.height===44&&n.accessibilityText==='关闭更换书源'&&n.onClick);assert.ok(close);close.onClick();assert.equal(closed,1);
   o.updateStateVars({state:{kind:'discoveryError',message:'new message'},currentSourceId:''});p.properties.flush();assert.equal(message.create,'new message');
   metrics.windowRect=new metricsApi.ReaderRectVp(0,0,270,320);o.readerWindowMetricsRevision++;p.properties.flush();
   assert.equal([...o.nodes.values()].find(n=>n.type==='Stack'&&n.width==='100%'&&n.height==='100%').id,root.id,'viewport/props keep the same actual source root actor');

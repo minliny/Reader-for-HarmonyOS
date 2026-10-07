@@ -18,6 +18,7 @@ const shelfFlow = read('entry/src/main/ets/features/bookshelf/BookshelfFlowGatew
 const multiSelect = read('entry/src/main/ets/features/bookshelf/BookshelfMultiSelectPage.ets');
 const management = read('entry/src/main/ets/features/bookshelf/BookshelfManagementPage.ets');
 const sourceTools = read('entry/src/main/ets/features/source/SourceToolsPage.ets');
+const sourceSwitch = read('entry/src/main/ets/features/source/SourceSwitchWindow.ets');
 
 const acquisition = read('entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
 const scheduler = read('entry/src/main/ets/app/BookRequestScheduler.ts');
@@ -100,5 +101,10 @@ assert.match(sourceTools,
   'source-tools long collection must use the V1-compatible lazy data-source path');
 assert.doesNotMatch(sourceTools, /Repeat\([\s\S]*virtualScroll/,
   'source-tools V1 component must not use unsupported Repeat virtualScroll');
+assert.match(sourceSwitch,
+  /class SourceSwitchCandidateDataSource implements IDataSource[\s\S]*LazyForEach\(this\.candidateDataSource/,
+  'source-switch V1 live results must use the native lazy data-source path');
+assert.doesNotMatch(sourceSwitch, /Repeat\([\s\S]*virtualScroll/,
+  'source-switch V1 component must not use unsupported Repeat virtualScroll');
 
 console.log('performance regression contracts: PASS');
