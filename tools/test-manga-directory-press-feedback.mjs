@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { productionMangaDirectoryPressFeedback } from './lib/manga-directory-press-feedback-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryPressFeedback.ets', import.meta.url), 'utf8');
-const prototype = readFileSync(new URL('../../evidence/manga-directory-20261006/reference/src/prototype.css', import.meta.url), 'utf8');
+const prototype = readFileSync(new URL('../../Reader-UI/design/manga-directory/reference.css', import.meta.url), 'utf8');
+assert.equal(createHash('sha256').update(prototype).digest('hex'), '6a37247662ce1bdb2805d5dc4b768b3676ebd0ab77a06b16b55647d859c174c7',
+  'paired UI reference preserves the original approved prototype CSS bytes');
 assert.match(prototype, /button:not\(:disabled\):active \{ opacity:\.73/);
 assert.match(prototype, /button:disabled \{ opacity:\.36/);
 assert.match(prototype, /:focus-visible \{ outline:2px solid var\(--accent\); outline-offset:3px/);

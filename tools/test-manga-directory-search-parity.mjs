@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSearchField.ets', import.meta.url), 'utf8');
-const reference = readFileSync(new URL('../../evidence/manga-directory-20261006/reference/src/prototype.css', import.meta.url), 'utf8');
+const reference = readFileSync(new URL('../../Reader-UI/design/manga-directory/reference.css', import.meta.url), 'utf8');
+assert.equal(createHash('sha256').update(reference).digest('hex'), '6a37247662ce1bdb2805d5dc4b768b3676ebd0ab77a06b16b55647d859c174c7',
+  'paired UI reference preserves the original approved prototype CSS bytes');
 assert.match(reference, /\.search-field \{ min-height:44px;[^}]*gap:9px; padding:0 11px; border-radius:12px; border:1px/);
 assert.match(reference, /font:400 13px\/20px 'Reader Sans'/);
 assert.match(reference, /input::placeholder \{ color:var\(--faint\)/);
