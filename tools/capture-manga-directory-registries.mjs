@@ -28,7 +28,8 @@ const docs = 'docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md';
 const readJson = file => JSON.parse(readFileSync(file, 'utf8'));
 const baselineFile = 'tools/architecture-consumer-baseline.json';
 const contractFile = 'tools/fixtures/architecture-shared-producers.json';
-const typographyFile = 'tools/fixtures/design/approved-manga-typography-carriers-20261005.json';
+// Historical approval bytes are immutable; only this exact selected successor is recaptured.
+const typographyFile = 'tools/fixtures/design/manga-directory-typography-successor-20261006.json';
 const baseline = readJson(baselineFile), contract = readJson(contractFile), typography = readJson(typographyFile);
 const originalBaseline = structuredClone(baseline), originalContract = structuredClone(contract), originalTypography = structuredClone(typography);
 const inventory = JSON.parse(execFileSync(process.execPath, ['tools/audit-architecture-consumers.mjs', '--stdout=json'],

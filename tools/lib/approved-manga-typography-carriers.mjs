@@ -45,11 +45,65 @@ function retainsHistoricalCarriers(entry) {
   }
 }
 for (const entry of novelSourceSwitchSuccessor.files) retainsHistoricalCarriers(entry);
+
+export const mangaDirectoryTypographySuccessorPath = 'tools/fixtures/design/manga-directory-typography-successor-20261006.json';
+export const mangaDirectoryTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/manga-directory-typography-successor-20261006.json', import.meta.url), 'utf8'));
+// Exact retained occurrence indices from the immutable historical fixture.
+// Only the seven user-selected directory/detail consumers have successors;
+// ordinary novel rows and non-directory manga controls cannot disappear.
+const directoryRetainedHistorical = {
+  'entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets': { carriers: [0], nativeDefaults: [0, 1] },
+  'entry/src/main/ets/features/bookshelf/LocalBookDetail.ets': { carriers: [6, 10, 11, 12, 19, 20, 21, 22], nativeDefaults: [] },
+  'entry/src/main/ets/features/common/PageBackBar.ets': { carriers: [], nativeDefaults: [] },
+  'entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets': { carriers: [], nativeDefaults: [] },
+  'entry/src/main/ets/features/manga/MangaReadingSurface.ets': { carriers: [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36], nativeDefaults: [0, 1, 2, 3] },
+  'entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets': { carriers: [6, 7, 8], nativeDefaults: [] },
+  'entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets': { carriers: [2], nativeDefaults: [] },
+};
+const directoryReadSource = file => readFileSync(new URL('../../' + file, import.meta.url), 'utf8');
+const directoryDigest = bytes => createHash('sha256').update(bytes).digest('hex');
+/** A closed directory successor witness, never a rewritten historical approval.
+ * readSource is the same finite source seam used by architecture negative controls. */
+export function validateMangaDirectoryTypographySuccessor(successor, readSource = directoryReadSource) {
+  assert.equal(successor.schema, 1);
+  assert.equal(successor.historicalFixture, novelSourceSwitchSuccessor.historicalFixture, 'directory binds the original exact historical fixture');
+  assert.equal(successor.historicalFixtureSha256, novelSourceSwitchSuccessor.historicalFixtureSha256, 'directory cannot change historical approval identity');
+  const historicalBytes = readSource(successor.historicalFixture);
+  assert.equal(directoryDigest(historicalBytes), successor.historicalFixtureSha256, 'historical manga typography fixture stays immutable');
+  const historical = JSON.parse(historicalBytes);
+  assert.equal(successor.visualSpecSource, '../Reader-UI/design/manga-directory/visual.json', 'only the frozen directory visual source');
+  assert.equal(successor.generatedVisualSource, 'entry/src/main/ets/features/manga/MangaDirectoryVisual.ts', 'only its finite native generated spec');
+  assert.equal(directoryDigest(readSource(successor.visualSpecSource)), successor.visualSpecSha256, 'directory typography witness binds exact visual source');
+  const generated = readSource(successor.generatedVisualSource);
+  assert.ok(generated.split('\n').includes('// Visual definition SHA256 ' + successor.visualSpecSha256), 'directory native spec binds the same visual source');
+  assert.equal(successor.implementationEvidence, 'docs/MANGA_DIRECTORY_VISUAL_PARITY_20261007.md', 'directory successor keeps its explicit implementation record');
+  assert.deepEqual(successor.files.map(entry => entry.path), Object.keys(directoryRetainedHistorical), 'only the seven exact directory typography successors, no copies or wildcard');
+  for (const entry of successor.files) {
+    assert.equal(entry.historicalPath, entry.path, 'directory successor cannot inherit another file approval');
+    const original = historical.files.find(file => file.path === entry.path);
+    assert.ok(original, 'directory successor has an exact historical consumer');
+    assert.equal(entry.historicalEntrySha256, directoryDigest(JSON.stringify(original)), 'exact historical directory consumer record stays immutable');
+    for (const field of ['roles', 'fontFamilies']) for (const [name, value] of Object.entries(original[field]))
+      assert.deepEqual(entry[field][name], value, 'directory retains every original public role/physical family: ' + name);
+    for (const field of ['carriers', 'nativeDefaults']) {
+      const remaining = entry[field].map(carrier => JSON.stringify(carrier));
+      for (const index of directoryRetainedHistorical[entry.path][field]) {
+        const originalCarrier = original[field][index];
+        assert.ok(originalCarrier, 'exact retained historical directory occurrence exists');
+        const found = remaining.indexOf(JSON.stringify(originalCarrier));
+        assert.ok(found >= 0, 'retained historical directory ' + field + ' missing or changed: ' + entry.path);
+        remaining.splice(found, 1);
+      }
+    }
+  }
+  return successor;
+}
+validateMangaDirectoryTypographySuccessor(mangaDirectoryTypographySuccessor);
 export const typographyCarrierShape = node => JSON.parse(JSON.stringify({ owner: node.owner, method: node.method, kind: node.kind, text: node.text,
   modifiers: Object.fromEntries(Object.entries(node.modifiers).map(([property, value]) => [property, { expression: value.expression, extra: value.extra }])) }));
 export const approvedTypographyFile = file => {
   const fullPath = file.startsWith('entry/') ? file : 'entry/src/main/ets/' + (file.startsWith('features/') || file.startsWith('pages/') ? file : 'features/' + file);
-  return novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
+  return mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
 };
 /** A finite approved reference or selected demo contract, separate from shared roles.
  * Every concrete file/struct/method/native text carrier and all five authored

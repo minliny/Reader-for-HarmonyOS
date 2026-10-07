@@ -1,4 +1,4 @@
-import {approvedTypographyContract, approvedMangaTypography, novelSourceSwitchSuccessor} from './lib/approved-manga-typography-carriers.mjs';
+import {approvedTypographyContract, approvedMangaTypography, novelSourceSwitchSuccessor, mangaDirectoryTypographySuccessor, mangaDirectoryTypographySuccessorPath, validateMangaDirectoryTypographySuccessor} from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
@@ -66,6 +66,45 @@ for (const entry of entries.filter(entry=>entry.origin.path!==approvedSource)) {
     assert.throws(() => sharedTypographyReplacement(file.path, expected, page.replace(`this.${targetMethod}();`, `/* this.${targetMethod}(); */`)), /actual AST call/);
   }
 }
+// Directory updates are an independent finite successor, never a recapture of
+// the immutable historical approval that the novel source successor also binds.
+assert.equal(mangaDirectoryTypographySuccessorPath, 'tools/fixtures/design/manga-directory-typography-successor-20261006.json');
+assert.equal(mangaDirectoryTypographySuccessor.historicalFixtureSha256, novelSourceSwitchSuccessor.historicalFixtureSha256);
+assert.equal(validateMangaDirectoryTypographySuccessor(mangaDirectoryTypographySuccessor), mangaDirectoryTypographySuccessor);
+for (const entry of mangaDirectoryTypographySuccessor.files) {
+  const source = read(entry.path);
+  assert.equal(approvedTypographyContract(source, entry.path).count, entry.carriers.length, 'exact selected directory carriers remain mounted and recognized');
+}
+const changedHistoricalRead = path => path === mangaDirectoryTypographySuccessor.historicalFixture ? read(path) + '\n' : read(path);
+assert.throws(() => validateMangaDirectoryTypographySuccessor(mangaDirectoryTypographySuccessor, changedHistoricalRead), /historical manga typography fixture stays immutable/, 'even whitespace cannot silently recapture historical approval bytes');
+const alteredDirectoryHistory = structuredClone(mangaDirectoryTypographySuccessor);
+alteredDirectoryHistory.historicalFixtureSha256 = '0'.repeat(64);
+assert.throws(() => validateMangaDirectoryTypographySuccessor(alteredDirectoryHistory), /cannot change historical approval identity/, 'directory cannot admit its rewritten history by changing the expected hash');
+const wildcardDirectory = structuredClone(mangaDirectoryTypographySuccessor);
+wildcardDirectory.files[0].path = 'entry/src/main/ets/features/bookshelf/*';
+assert.throws(() => validateMangaDirectoryTypographySuccessor(wildcardDirectory), /only the seven exact/, 'directory witness cannot become a path wildcard');
+const copiedDirectory = structuredClone(mangaDirectoryTypographySuccessor);
+copiedDirectory.files.push(structuredClone(copiedDirectory.files[0]));
+assert.throws(() => validateMangaDirectoryTypographySuccessor(copiedDirectory), /only the seven exact/, 'copied registered directory file cannot acquire another carrier set');
+const changedDirectoryOrigin = structuredClone(mangaDirectoryTypographySuccessor);
+changedDirectoryOrigin.files[0].historicalEntrySha256 = '0'.repeat(64);
+assert.throws(() => validateMangaDirectoryTypographySuccessor(changedDirectoryOrigin), /exact historical directory consumer record stays immutable/, 'one directory actor cannot rewrite its prior exact approval record');
+const missingRetainedDirectory = structuredClone(mangaDirectoryTypographySuccessor);
+const originalDirectory = approvedMangaTypography.files.find(entry => entry.path === missingRetainedDirectory.files[0].path);
+const retainedIndex = missingRetainedDirectory.files[0].carriers.findIndex(carrier => JSON.stringify(carrier) === JSON.stringify(originalDirectory.carriers[0]));
+assert.ok(retainedIndex >= 0);
+missingRetainedDirectory.files[0].carriers.splice(retainedIndex, 1);
+assert.throws(() => validateMangaDirectoryTypographySuccessor(missingRetainedDirectory), /retained historical directory carriers missing or changed/, 'ordinary novel directory carrier cannot disappear into a manga successor');
+const wrongDirectoryVisualRead = path => path === mangaDirectoryTypographySuccessor.visualSpecSource ? read(path) + '\n' : read(path);
+assert.throws(() => validateMangaDirectoryTypographySuccessor(mangaDirectoryTypographySuccessor, wrongDirectoryVisualRead), /binds exact visual source/, 'directory witness keeps the independently frozen visual definition');
+const directoryPath = mangaDirectoryTypographySuccessor.files[0].path, directorySource = read(directoryPath);
+const privateDirectory99 = directorySource.replace('.fontSize(visual.summaryFontSize)', '.fontSize(99)');
+assert.notEqual(privateDirectory99, directorySource);
+assert.throws(() => approvedTypographyContract(privateDirectory99, directoryPath), /exact approved typography carrier\/tuple changed/, 'new directory successor rejects a same-count private99 tuple');
+const duplicateDirectoryText = directorySource.replace("Text(this.bookTitle || '漫画目录')", "Text('unregistered directory copy').fontSize(13); Text(this.bookTitle || '漫画目录')");
+assert.notEqual(duplicateDirectoryText, directorySource);
+assert.throws(() => approvedTypographyContract(duplicateDirectoryText, directoryPath), /exact approved typography carrier\/tuple changed/, 'exact directory carrier occurrence counts reject copied text actors');
+
 const file = baseline.files.find(file => file.path.endsWith('/LocalImportDialog.ets'));
 for (const node of file.nodes.filter(node => node.method === 'fileSelectionPanel' && [1, 2, 3].includes(node.index))) {
   assert.equal(typographyCarrierMethod(file.path, node, read(file.path)), 'fileSelectionBody');
