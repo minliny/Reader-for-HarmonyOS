@@ -14,6 +14,107 @@ function searchData(sourceId, candidates, durationMs, contentKind = 'text') {
 
 const checks=[];
 const TX='00000000-0000-4000-8000-000000000001/1';
+
+// The production owner and Gateway must use the same alternative membership
+// that the real drawer paints. A durable current comic is not a found source.
+function currentOnlyMangaFixture({ mode = 'found', gate, cacheAlternative = false } = {}) {
+  const f = fixture({ open: false }), baseRequest = f.runtime.request.bind(f.runtime), attempts = [];
+  f.context.query.contentKind = 'manga';
+  const registry = ['old', 'new'].map(sourceId => ({ sourceId, name: sourceId,
+    enabled: true, sourceVersion: 'v1', bookSource: { bookSourceType: 2 } }));
+  registry.push({ sourceId: 'novel', name: 'Novel', enabled: true, sourceVersion: 'v1',
+    bookSource: { bookSourceType: 0 } });
+  const rows = [{ ...rawCandidate, origin: 'old', bookUrl: 'book' }];
+  if (cacheAlternative) rows.push({ ...rawCandidate });
+  f.runtime.request = async (method, params, options) => {
+    if (method === 'source.list') return { data: { sources: registry } };
+    if (method === 'search-book.related') return { data: { books: rows.slice(),
+      snapshotRevision: 'manga-relation', complete: true,
+      sourceVersions: registry.map(({ sourceId, sourceVersion, enabled }) => ({ sourceId, sourceVersion, enabled })) } };
+    if (method === 'search-book.batch.get') return { data: { complete: true, books: [], missing: params.identities } };
+    if (method === 'book.search') {
+      attempts.push(params.sourceId);
+      assert.notEqual(params.sourceId, 'novel', 'manga discovery stays in the comic category');
+      if (mode === 'all-failed' || (mode === 'alternative-failed' && params.sourceId === 'new')) {
+        throw Error('private-source-failure');
+      }
+      if (params.sourceId === 'new' && gate !== undefined) await gate.promise;
+      if (params.sourceId === 'old') return searchData('old', [{ sourceId: 'old', bookUrl: 'book',
+        bookName: 'Book', author: 'Writer' }], 20, 'manga');
+      if (mode === 'current-only') return searchData('new', [], 10, 'manga');
+      rows.push({ ...rawCandidate });
+      return searchData('new', [{ sourceId: 'new', bookUrl: 'target', bookName: 'Book', author: 'Writer' }], 10, 'manga');
+    }
+    return baseRequest(method, params, options);
+  };
+  return { ...f, attempts, rows };
+}
+async function settleMangaDiscovery() { await settle(); await new Promise(setImmediate); await settle(); }
+{
+  const f = currentOnlyMangaFixture();
+  assert.equal(f.host.open(f.context, f.lease), true); await settleMangaDiscovery();
+  assert.deepEqual(f.attempts, ['old', 'new'], 'current-only cache must execute real comic search');
+  assert.equal(f.host.current().state.kind, 'candidates');
+  assert.equal(f.host.current().state.refreshing, false);
+  assert.deepEqual(f.host.current().state.candidates.filter(gatewayExports.sourceSwitchIsAlternative)
+    .map(row => row.sourceId), ['new']);
+  assert.ok(f.rows.some(row => row.origin === 'old' && row.bookUrl === 'book'),
+    'discovery preserves the Core current-source relation and binding');
+  assert.ok(gatewayExports.sourceSwitchIsAlternative({ sourceId: 'live', bookUrl: '/live', bookName: 'Book', category: 'comic' }),
+    'an unknown current flag retains the existing live-seed display semantics');
+  f.retire(); checks.push('current-only-manga-cache-performs-real-comic-search-and-publishes-alternative');
+}
+{
+  const f = currentOnlyMangaFixture({ cacheAlternative: true });
+  assert.equal(f.host.open(f.context, f.lease), true); await settleMangaDiscovery();
+  assert.deepEqual(f.attempts, [], 'a cached alternative still opens without a hidden network sweep');
+  assert.equal(f.host.current().state.kind, 'candidates');
+  assert.equal(f.host.current().state.candidates.filter(gatewayExports.sourceSwitchIsAlternative).length, 1);
+  f.retire(); checks.push('cached-manga-alternative-preserves-no-hidden-search-contract');
+}
+for (const mode of ['current-only', 'all-failed', 'alternative-failed']) {
+  const f = currentOnlyMangaFixture({ mode });
+  assert.equal(f.host.open(f.context, f.lease), true); await settleMangaDiscovery();
+  assert.deepEqual(f.attempts, ['old', 'new']);
+  assert.equal(f.host.current().state.kind, mode === 'current-only' ? 'empty' : 'discoveryError',
+    'the current source can neither establish alternatives nor mask discovery failure');
+  if (mode !== 'current-only') assert.match(f.host.current().state.message,
+    mode === 'all-failed' ? /全部失败/ : /未找到新候选/);
+  f.retire(); checks.push(`current-only-manga-${mode}-cannot-publish-false-success`);
+}
+{
+  const f = currentOnlyMangaFixture({ cacheAlternative: true, mode: 'all-failed' });
+  assert.equal(f.host.open(f.context, f.lease), true); await settleMangaDiscovery();
+  assert.equal(f.host.current().state.candidates.filter(gatewayExports.sourceSwitchIsAlternative).length, 1);
+  f.rows.splice(1);
+  const withdrawnAt = f.changes.length;
+  f.host.refresh(f.host.current().scopeId); await settleMangaDiscovery();
+  assert.deepEqual(f.attempts, ['old', 'new']);
+  assert.equal(f.host.current().state.kind, 'discoveryError');
+  assert.match(f.host.current().state.message, /全部失败/);
+  assert.ok(f.changes.slice(withdrawnAt).some(snapshot => snapshot.state.kind === 'discovering'),
+    'a complete relation withdrawal publishes zero alternatives before the failed sweep settles');
+  assert.equal(f.host.current().state.candidates, undefined,
+    'a later search failure cannot restore alternatives that Core has withdrawn');
+  assert.deepEqual(f.rows.map(row => row.origin), ['old'], 'the current relation stays intact');
+  f.retire(); checks.push('complete-core-alternative-withdrawal-then-search-failure-does-not-resurrect-previous');
+}
+for (const action of ['stop', 'close']) {
+  const gate = deferred(), f = currentOnlyMangaFixture({ gate });
+  assert.equal(f.host.open(f.context, f.lease), true); await settleMangaDiscovery();
+  assert.deepEqual(f.attempts, ['old', 'new']);
+  assert.equal(f.host.current().state.kind, 'discovering');
+  const scope = f.host.current().scopeId;
+  if (action === 'stop') {
+    f.host.stop(scope);
+    assert.equal(f.host.current().state.kind, 'empty');
+    assert.equal(f.host.current().state.stopped, true);
+  } else assert.equal(f.host.close(scope), true);
+  const retired = f.host.current();
+  gate.resolve(); await settleMangaDiscovery();
+  assert.equal(f.host.current(), retired, 'a late Core search publication cannot revive a stopped or closed pane');
+  f.retire(); checks.push(`current-only-manga-${action}-rejects-late-search-projection`);
+}
 {
   const f=fixture({open:false}),baseRequest=f.runtime.request.bind(f.runtime),rows=[],started=[],progress=[];
   const sources=['first','faster','slow'],gates=new Map(sources.map(id=>[id,deferred()]));

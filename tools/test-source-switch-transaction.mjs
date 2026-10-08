@@ -14,6 +14,7 @@ const window = readFileSync(resolve(repo,
   'entry/src/main/ets/features/source/SourceSwitchWindow.ets'), 'utf8');
 
 const sourceHost = readFileSync(resolve(repo, 'entry/src/main/ets/features/source/SourceSwitchHost.ts'), 'utf8');
+const sourceGateway = readFileSync(resolve(repo, 'entry/src/main/ets/features/source/SourceSwitchGateway.ts'), 'utf8');
 const commitSuccess = sourceHost.slice(
   sourceHost.indexOf("if (outcome.status === 'success')"),
   sourceHost.indexOf('private async rollbackTransaction'),
@@ -94,8 +95,10 @@ assert.match(window,
   'LazyForEach must key candidates by exact composite identity');
 assert.match(window, /LazyForEach\(this\.candidateDataSource,[\s\S]*sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/);
 assert.doesNotMatch(window, /Repeat\([\s\S]*virtualScroll/);
-assert.match(window, /this\.state\.candidates\.filter\([\s\S]*candidate\.isCurrent !== true\)/,
+assert.match(window, /this\.state\.candidates\.filter\(sourceSwitchIsAlternative\)/,
   'the exact current identity is shown in context and excluded from alternate rows');
+assert.match(sourceGateway, /export function sourceSwitchIsAlternative\(candidate: SourceSwitchCandidate\): boolean \{\s*return candidate\.isCurrent !== true;/,
+  'owner, Gateway and drawer share the current-source exclusion with unchanged unknown-flag semantics');
 assert.match(window, /candidate === undefined \|\| candidate\.isCurrent === true/,
   'click admission resolves the latest exact identity, including same-source alternate URLs');
 

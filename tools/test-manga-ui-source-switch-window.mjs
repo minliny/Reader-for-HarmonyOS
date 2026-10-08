@@ -11,7 +11,7 @@ const page = new URL('../entry/src/main/ets/features/source/SourceSwitchWindow.e
 const source = readFileSync(page, 'utf8');
 const gateway = readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchGateway.ts', import.meta.url), 'utf8');
 const identities = gateway.slice(gateway.indexOf('export function sourceSwitchCandidateKey'), gateway.indexOf('function deduplicateSourceSwitchCandidates'));
-const { sourceSwitchCandidateKey, sourceSwitchSourceCount } = new Function(`${stripTypeScriptTypes(identities).replaceAll('export ', '')}; return { sourceSwitchCandidateKey, sourceSwitchSourceCount };`)();
+const { sourceSwitchCandidateKey, sourceSwitchSourceCount, sourceSwitchIsAlternative } = new Function(`${stripTypeScriptTypes(identities).replaceAll('export ', '')}; return { sourceSwitchCandidateKey, sourceSwitchSourceCount, sourceSwitchIsAlternative };`)();
 const dataStart=source.indexOf('class SourceSwitchCandidateDataSource');
 const dataEnd=source.indexOf('\n@Component',dataStart);
 assert.ok(dataStart>=0&&dataEnd>dataStart,'production V1 lazy data source is present');
@@ -27,7 +27,7 @@ const Controller = productionMotionMethods(page,
     'listTouch', 'selectCandidate', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
     'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook', 'novelDiscoveryPhase',
     'headingHeight', 'discoveryHeight', 'columnsHeight', 'footerHeight', 'bookHeight', 'timingWidth', 'drawerHeight', 'safeTop', 'safeBottom', 'safeLeft', 'safeRight'],
-  { sourceSwitchCandidateKey, sourceSwitchSourceCount, SourceSwitchLayoutFrame: LayoutFrame,
+  { sourceSwitchCandidateKey, sourceSwitchSourceCount, sourceSwitchIsAlternative, SourceSwitchLayoutFrame: LayoutFrame,
     ...novelPresentation, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
     Curve: { EaseInOut: 'curve' }, ScrollAlign: { START: 'start' }, TouchType: { Down: 'down', Up: 'up', Cancel: 'cancel' },
     setTimeout: callback => { const id = ++nextTimer; timers.set(id, callback); return id; },

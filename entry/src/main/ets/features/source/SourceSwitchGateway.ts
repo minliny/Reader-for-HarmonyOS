@@ -95,6 +95,12 @@ export function sourceSwitchCandidateKey(sourceId: string, bookUrl: string): str
   return `${sourceId.length}:${sourceId}:${bookUrl.length}:${bookUrl}`;
 }
 
+/** The current binding is metadata, not a selectable alternative. Unknown
+ * flags retain the existing live-seed display semantics. */
+export function sourceSwitchIsAlternative(candidate: SourceSwitchCandidate): boolean {
+  return candidate.isCurrent !== true;
+}
+
 /** Match the search card's distinct-source unit; alternate URLs stay selectable. */
 export function sourceSwitchSourceCount(candidates: SourceSwitchCandidate[]): number {
   const sources = new Set<string>();
@@ -483,11 +489,11 @@ export class SourceSwitchGateway {
         const freshKeys = new Set(discovery.candidates.map((candidate: SourceSwitchCandidate): string =>
           sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)));
         if (!candidates.some((candidate: SourceSwitchCandidate): boolean =>
-          freshKeys.has(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)))) {
+          sourceSwitchIsAlternative(candidate) && freshKeys.has(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)))) {
           throw new Error(discovery.failureSummary ?? '本次换源搜索未找到新候选，部分书源请求失败，已保留原有结果。');
         }
       }
-      return candidates.length === 0 ? { kind: 'noSources' } : { kind: 'sources', candidates };
+      return !candidates.some(sourceSwitchIsAlternative) ? { kind: 'noSources' } : { kind: 'sources', candidates };
     } catch (error) {
       if (!current()) return { kind: 'noSources' };
       throw error;

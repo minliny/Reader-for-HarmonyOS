@@ -15,7 +15,7 @@ import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   readerVisualSafeTop } from '../common/ReaderWindowMetrics';
 import { NoCoverCover } from '../bookshelf/NoCoverCover';
-import { sourceSwitchCandidateKey, sourceSwitchSourceCount } from './SourceSwitchGateway';
+import { sourceSwitchCandidateKey, sourceSwitchSourceCount, sourceSwitchIsAlternative } from './SourceSwitchGateway';
 import type { SourceSwitchCandidate } from './SourceSwitchGateway';
 import type { BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 import type { RemoteReadingVariable } from '../reading/RemoteReadingContract';
@@ -320,7 +320,7 @@ export struct SourceSwitchWindow {
       this.discoveryActionPressRunning !== this.isSweeping())) this.discoveryActionPressed = false;
     if (this.state.kind !== 'candidates') {
       this.wasRefreshing = false;
-      if (this.state.kind === 'empty') {
+      if (this.state.kind === 'empty' || this.state.kind === 'discovering') {
         this.cancelPresentation();
         this.publishCandidates([]);
         this.latestCandidates = [];
@@ -338,7 +338,7 @@ export struct SourceSwitchWindow {
       for (const candidate of this.displayedCandidates) this.pendingSearchKeys.add(this.candidateKey(candidate));
     }
     this.wasRefreshing = refreshing;
-    this.latestCandidates = this.state.candidates.filter((candidate: SourceSwitchCandidate): boolean => candidate.isCurrent !== true);
+    this.latestCandidates = this.state.candidates.filter(sourceSwitchIsAlternative);
     for (const candidate of this.latestCandidates) {
       const key = this.candidateKey(candidate);
       const latency = candidate.latencyMs;

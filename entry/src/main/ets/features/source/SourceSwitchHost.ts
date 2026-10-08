@@ -11,7 +11,7 @@ import { remoteReadingFailureKindOf } from '../reading/RemoteContentAdmission';
 import type { RemoteReadingIdentity } from '../reading/RemoteReadingContract';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import type { SourceSwitchPanelState } from './SourceSwitchPresentationState';
-import { buildSourceSwitchCommitParams, sourceSwitchCandidateKey, SourceSwitchGateway,
+import { buildSourceSwitchCommitParams, sourceSwitchCandidateKey, sourceSwitchIsAlternative, SourceSwitchGateway,
   type PendingSourceSwitch, type SourceSwitchCandidate, type SourceSwitchCommitOutcome,
   type SourceSwitchProbeQuery } from './SourceSwitchGateway';
 import type { SourceSwitchTransactionProjection } from './SourceSwitchGateway';
@@ -186,7 +186,7 @@ export class SourceSwitchHost {
     if (!this.currentScope(scopeId) || !this.snapshot.visible || this.busyOrUnknown()) return;
     this.generation += 1; this.stopDiscovery();
     const state = this.snapshot.state;
-    this.snapshot = { ...this.snapshot, state: state.kind === 'candidates' ?
+    this.snapshot = { ...this.snapshot, state: state.kind === 'candidates' && state.candidates.some(sourceSwitchIsAlternative) ?
       { ...state, refreshing: false, stopped: true } : { kind: 'empty', stopped: true } };
     this.publish();
   }
@@ -527,10 +527,11 @@ export class SourceSwitchHost {
     const initialKnown = knownCandidates();
     const previous = this.snapshot.state.kind === 'candidates' ?
       this.snapshot.state.candidates.slice() : [];
-    if (!force && initialKnown.length > 0) this.snapshot = { ...this.snapshot,
-      state: { kind: 'candidates', candidates: initialKnown, refreshing: false } };
-    if (force && previous.length > 0) this.snapshot = { ...this.snapshot,
+    if (force && previous.some(sourceSwitchIsAlternative)) this.snapshot = { ...this.snapshot,
       state: { kind: 'candidates', candidates: previous, refreshing: true } };
+    else if (!force && initialKnown.some(sourceSwitchIsAlternative)) this.snapshot = { ...this.snapshot,
+      state: { kind: 'candidates', candidates: initialKnown, refreshing: false } };
+    else this.snapshot = { ...this.snapshot, state: { kind: 'discovering' } };
     this.publish();
     let projecting = true, again = false, reset = false;
     const dirty = new Map<string, RemoteReadingIdentity>();
@@ -547,10 +548,11 @@ export class SourceSwitchHost {
       reset = false; dirty.clear();
       void this.gateway.loadCachedCandidates(context.query, current, knownCandidates(), batch).then((candidates): void => {
         if (!current()) return;
-        if (candidates.length > 0) this.snapshot = { ...this.snapshot, state: {
+        if (candidates.some(sourceSwitchIsAlternative) ||
+          (this.snapshot.state.kind === 'candidates' && this.snapshot.state.refreshing === true)) this.snapshot = { ...this.snapshot, state: {
           ...(this.snapshot.state.kind === 'candidates' ? this.snapshot.state : {}), kind: 'candidates', candidates,
           refreshing: this.snapshot.state.kind === 'candidates' && this.snapshot.state.refreshing === true } };
-        else if (this.snapshot.state.kind !== 'candidates' || this.snapshot.state.refreshing !== true) {
+        else {
           this.snapshot = { ...this.snapshot, state: { kind: 'empty' } };
         }
         this.publish();
@@ -562,25 +564,29 @@ export class SourceSwitchHost {
     };
     this.unsubscribe = this.runtime.bookAcquisitions().subscribe(refreshProjection);
     const publishProgress = (candidates: SourceSwitchCandidate[]): void => {
-      if (!current() || candidates.length === 0) return;
-      this.snapshot = { ...this.snapshot, state: { kind: 'candidates', candidates, refreshing: true } };
+      if (!current()) return;
+      // A complete Core projection may withdraw an old alternative while the
+      // search is still running. Publish its membership even when only the
+      // current binding remains; the shared predicate keeps that row hidden.
+      this.snapshot = { ...this.snapshot, state: candidates.some(sourceSwitchIsAlternative)
+        ? { kind: 'candidates', candidates, refreshing: true } : { kind: 'discovering' } };
       this.publish();
     };
     try {
       const cached = force ? [] : await this.gateway.loadCachedCandidates(context.query, current, knownCandidates());
       if (!current()) return;
-      const outcome = cached.length > 0 ? { kind: 'sources' as const, candidates: cached }
+      const outcome = cached.some(sourceSwitchIsAlternative) ? { kind: 'sources' as const, candidates: cached }
         : await this.gateway.refreshCandidates(context.query, current, force ? [] : context.searchedSourceIds,
           publishProgress, force ? previous : initialKnown);
       if (!current()) return;
-      this.snapshot = { ...this.snapshot, state: outcome.kind === 'noSources' || outcome.candidates.length === 0
+      this.snapshot = { ...this.snapshot, state: outcome.kind === 'noSources' || !outcome.candidates.some(sourceSwitchIsAlternative)
         ? { kind: 'empty' } : { kind: 'candidates', candidates: outcome.candidates, refreshing: false } };
       this.publish();
     } catch (error) {
       if (!current()) return;
       const message = errorMessageOf(error);
-      const retained = this.snapshot.state.kind === 'candidates' ? this.snapshot.state.candidates : previous;
-      this.snapshot = { ...this.snapshot, state: retained.length > 0
+      const retained = this.snapshot.state.kind === 'candidates' ? this.snapshot.state.candidates : [];
+      this.snapshot = { ...this.snapshot, state: retained.some(sourceSwitchIsAlternative)
         ? { kind: 'candidates', candidates: retained, refreshing: false, refreshError: message }
         : { kind: 'discoveryError', message } }; this.publish();
     } finally { projecting = false; if (again) refreshProjection({ reset: false, identities: [] }); }
