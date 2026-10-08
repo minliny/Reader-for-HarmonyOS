@@ -86,7 +86,8 @@ const mangaChromeMembers=['windowChromeActive','windowChromeOverlayActive','isRe
  'backgroundPreference','loginRequiredForControls','aboutToAppear','aboutToDisappear','toggleControls','controlsPresentedForWindow',
  'refreshLoginRequiredForControls','onWindowChromeChanged','applyWindowChrome','applyWindowPolicyForChromeOwner','restoreAppWindowChrome',
  'paperColor','inkColor','loginRequired','imageError','notifyPublishedRows','requestedLast','measureVisibleWindow','onRowAppear',
- 'viewportWidth','viewportHeight','stageWidth','stageHeight','widePanel','persistentDirectory','directoryColumnWidth'];
+ 'viewportWidth','viewportHeight','stageWidth','stageHeight','widePanel','persistentDirectory','directoryColumnWidth',
+ 'rollbackChapterController','rollbackChapterImages','previousChapterPixels'];
 const mangaMaskSceneMembers=[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,'build','panelOverlay','panelOffset','panelScrimOpacity','panelPhase','panelGeneration',
  'panelActionGeneration','panelCloseTask','panelCloseResolve','reduceMotion','windowMetricsRevision','onDirectoryMetricsChanged',
  'quickHeaderMeasured','quickToolsMeasured','quickFooterMeasured','openPanel','closePanel','invalidatePanelMotion','settlePanel',

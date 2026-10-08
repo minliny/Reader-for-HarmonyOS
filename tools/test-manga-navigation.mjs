@@ -32,11 +32,16 @@ const MangaLayoutFrame=new Function('FrameCallback',`${stripTypeScriptTypes(fram
 const timers=[],scrolls=[],frames=[],measurements=[];
 function flushLayout(width,height) {
   timers.splice(0).forEach(callback=>callback());
-  nativeWidth=width;nativeHeight=height;
-  for(const frame of frames.splice(0)) {
-    assert.ok(frame instanceof MangaLayoutFrame,'deliver the actual production callback class');
-    frame.onFrame(0);
+  for(let phase=0;phase<2;phase++) {
+    const batch=frames.splice(0);
+    for(const frame of batch) {
+      assert.ok(frame instanceof MangaLayoutFrame,'deliver the actual production callback class');
+      frame.onFrame(0);
+    }
+    nativeWidth=width;nativeHeight=height;
+    for(const frame of batch) frame.onIdle(2_000_000);
   }
+  assert.equal(frames.length,0,'scroll application and geometry confirmation use two rendered frames');
 }
 let xOffset=250;let clipped=100;let nativeWidth=1000;let nativeHeight=1000;
 const Surface=productionMotionMethods(surfaceURL,
@@ -85,6 +90,7 @@ assert.match(surfaceSource,/onExitRequestHandler\([\s\S]*?this\.handleBack\(\)/)
 assert.match(surfaceSource,/iconAction\([\s\S]*?'返回',[\s\S]*?this\.handleBack\(\)/);
 console.log('PASS unified system/button back: first leaves zoom, second awaits accepted progress before exit');
 
+assert.equal(mangaUserError('MANGA_SESSION_CONTENT_CHANGED'),'章节内容已更新，请重新打开本章。');
 assert.match(mangaUserError('MANGA_REGION_ANIMATION_UNSUPPORTED'),/动画/);
 assert.match(mangaUserError('REMOTE_READING_IMAGE_NOT_DOWNLOADED'),/联网/);
 assert.equal(mangaUserError('READING_IMAGE_REPROCESS_REQUIRED'),'图片处理规则已更新，需联网重新下载');

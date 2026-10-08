@@ -248,7 +248,7 @@ console.log('PASS actual Owner select/finish/release and Ability background/fore
 // offline dependency, and a missing cached catalog never reaches acquireBook.
 let catalogReads=0,onlineAcquires=0,catalogFails=false;
 const entry={targetOrdinal:0,recoveryRequired:false,chapter:{chapterIndex:0,chapterTitle:'本章',totalPages:1,pageStart:0,cached:true,resources:[],manifest:{chapter:{sourceId:scope.sourceId,bookId:scope.bookId,chapterId:'/chapter'},sourceRuleVersion:'r',manifestVersion:'v',decodeRevision:'v',pages:[{ordinal:0,pageId:'page-0'}],displayHints:{}}},progress:{token:{epoch:1,revision:0},location:null}};
-const Surface=productionMotionMethods(url('features/manga/MangaReadingSurface.ets'),['open','acquireCatalog','aboutToDisappear'],{
+const Surface=productionMotionMethods(url('features/manga/MangaReadingSurface.ets'),['rollbackChapterImages','open','acquireCatalog','aboutToDisappear'],{
   MangaSessionGateway:class{async entry(){return entry;}},
   RemoteReadingFlowGateway:class{async openCachedSession(){catalogReads++;if(catalogFails)throw Error('no cached catalog');return {identity:scope,entries:[],acquisitionMode:'offline'};}},
   MangaBookPresentation, AppStorage: { setOrCreate() {} },

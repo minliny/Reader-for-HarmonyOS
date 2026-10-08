@@ -37,7 +37,7 @@ assert.equal(stopCallbacks.length, 2);
 function stop(owner, index) {
   new Function(`${stripTypeScriptTypes(`const callback = ${stopCallbacks[index]};`)}\nreturn callback;`).call(owner)();
 }
-const methods = ['publish', 'requestedLast', 'saveVisible', 'rememberVisible', 'positionIdentity', 'effectiveFit', 'rowDisplayWidth', 'rowDisplayHeight', 'rowDisplayTop', 'rowDisplayLeft', 'visibleX', 'changeZoom', 'restore', 'finishLayout', 'onViewportScroll', 'flushViewportObservation', 'onViewportTouch', 'measureVisibleWindow', 'onRowAppear', 'confirmMountedTurn', 'displayChapterTitle', 'changeFit', 'toggleDirection', 'turnPage', 'seekPage', 'handleBack', 'refreshImages', 'aboutToDisappear'];
+const methods = ['rollbackChapterImages', 'publish', 'requestedLast', 'saveVisible', 'rememberVisible', 'positionIdentity', 'effectiveFit', 'rowDisplayWidth', 'rowDisplayHeight', 'rowDisplayTop', 'rowDisplayLeft', 'visibleX', 'changeZoom', 'restore', 'finishLayout', 'onViewportScroll', 'flushViewportObservation', 'onViewportTouch', 'measureVisibleWindow', 'onRowAppear', 'confirmMountedTurn', 'displayChapterTitle', 'changeFit', 'toggleDirection', 'turnPage', 'seekPage', 'handleBack', 'refreshImages', 'aboutToDisappear'];
 const timers = [];
 // Optional baseline path executes the pre-fix methods against the same assertions.
 const Surface = productionMotionMethods(surfaceURL, methods.filter(name => memberNames.has(name)), {
@@ -84,8 +84,9 @@ async function fixture(horizontal = false, offline = true) {
   });
   return {surface, runtime, controller, projection, native, writes, failures,
     holdSave(promise) { saveHold = promise; }, holdImage(promise) { imageHold = promise; },
-    timer() { const callback = timers.shift(); assert.ok(callback); callback(); },
-    frame() { const callback = frames.shift(); assert.ok(callback instanceof MangaLayoutFrame); callback.onFrame(0); },
+    frames,
+    frame() { const callback = frames.shift(); assert.ok(callback instanceof MangaLayoutFrame); callback.onFrame(0); callback.onIdle(2_000_000); },
+    flushFrames() { let count=0; while(frames.length) {assert.ok(++count<=16,'restoration cannot create an unbounded render retry loop');this.frame();} },
     close() { surface.aboutToDisappear(); timers.length = 0; frames.length = 0; }
   };
 }
@@ -98,9 +99,9 @@ zoom.surface.changeZoom(3);
 await zoom.surface.saveVisible();
 assert.equal(zoom.writes[0].location.x, anchor.x, 'queued zoom must save the confirmed old x, not new scale with old native offset');
 assert.equal(zoom.writes[0].location.y, anchor.y);
-zoom.timer();
+zoom.frame();
 zoom.surface.rememberVisible();
-assert.deepEqual(zoom.surface.visibleAnchor, anchor, 'timer issuance is not native layout completion');
+assert.deepEqual(zoom.surface.visibleAnchor, anchor, 'the scroll frame alone is not native geometry confirmation');
 await zoom.surface.saveVisible();
 assert.equal(zoom.writes[1].location.y, anchor.y);
 zoom.frame();
@@ -110,26 +111,26 @@ zoom.native.width = 1500; zoom.native.height = 1500; zoom.native.y = -150; zoom.
 stop(zoom.surface, 0); await tick();
 assert.equal(zoom.surface.restoringAnchor, false, 'an actual matching layout event releases the barrier without a frame retry loop');
 assert.deepEqual(zoom.writes.map(write => [write.location.x, write.location.y]), [[0.1, 0.51], [0.1, 0.51], [0.1, 0.51]]);
-zoom.surface.changeZoom(2); zoom.timer(); zoom.frame();
+zoom.surface.changeZoom(2); zoom.frame(); zoom.frame();
 zoom.native.width = 1000; zoom.native.height = 1000; zoom.native.y = -100; zoom.native.xOffset = 200;
 stop(zoom.surface, 1); await tick();
 assert.equal(zoom.surface.restoringAnchor, false, 'horizontal scroll stop also confirms the final stable geometry');
 assert.equal(zoom.writes.at(-1).location.x, 0.2);
 zoom.close();
-console.log('PASS actual Surface + Controller + Gateway: zoom before timer, after timer, early frame, matching native layout and serial manga-only CAS');
+console.log('PASS actual Surface + Controller + Gateway: zoom before rendered scroll, after rendered scroll, early geometry frame, matching native layout and serial manga-only CAS');
 
 const touch = await fixture();
-touch.surface.rememberVisible(); touch.surface.changeZoom(3); touch.timer();
+touch.surface.rememberVisible(); touch.surface.changeZoom(3); touch.frame();
 touch.surface.onViewportTouch();
 touch.surface.changeZoom(2.5); // A newer restore owns the logical target and barrier.
 touch.frame(); touch.frame();
 assert.equal(touch.surface.restoringAnchor, true, 'old restore and touch callbacks cannot settle the newer restore');
 await touch.surface.saveVisible();
 assert.equal(touch.writes[0].location.y, 0.51);
-touch.timer(); touch.native.width = 1250; touch.native.height = 1250; touch.native.y = -125; touch.native.xOffset = 125;
+touch.frame(); touch.native.width = 1250; touch.native.height = 1250; touch.native.y = -125; touch.native.xOffset = 125;
 touch.frame(); assert.equal(touch.surface.restoringAnchor, false);
 touch.surface.changeZoom(3); touch.surface.onViewportTouch();
-touch.timer(); // Canceled before the queued scroll: it must not enqueue a new frame.
+touch.frame(); // Canceled before the queued scroll: it must not enqueue a new frame.
 assert.equal(touch.surface.restoringAnchor, true);
 touch.native.width = 1500; touch.native.height = 1500; touch.native.y = -300; touch.native.xOffset = 300;
 touch.frame(); await touch.surface.saveVisible();
@@ -229,7 +230,7 @@ assert.equal(fit.writes[0].location.y, 0.51);
 assert.equal(fit.controller.tile(1, 5), undefined, 'the actual preview transition releases the old tile');
 fit.surface.aboutToDisappear(); save.resolve(); image.resolve(); await fitting; await tick();
 assert.deepEqual(fit.failures, [], 'accepted old-position CAS survives close without weakening admission');
-assert.equal(timers.length, 0, 'late fit completion cannot restore a disposed surface');
+assert.equal(timers.length, 0);assert.equal(fit.frames.length, 0, 'late fit completion cannot restore a disposed surface');
 fit.close();
 console.log('PASS actual preview cleanup + exit: old position is accepted before lease release and survives close through existing CAS lane');
 
@@ -263,10 +264,10 @@ for (const scenario of ['same-manifest', 'changed-exact', 'changed-unresolved', 
   if (scenario === 'failure') {
     await assert.rejects(refreshing, /MANGA_REFRESH_FIXTURE_FAILED/);
     assert.equal(f.controller.chapter, originalChapter); assert.ok(f.controller.tile(1, 5)?.image);
-    assert.deepEqual(f.surface.visibleAnchor, latest); assert.equal(timers.length, 0);
+    assert.deepEqual(f.surface.visibleAnchor, latest); assert.equal(timers.length, 0); assert.equal(f.frames.length, 0);
   } else if (scenario === 'exit') {
     await assert.rejects(refreshing, /MANGA_SESSION_CANCELLED/);
-    assert.equal(f.controller.chapter, undefined); assert.equal(timers.length, 0);
+    assert.equal(f.controller.chapter, undefined); assert.equal(timers.length, 0); assert.equal(f.frames.length, 0);
   } else {
     await refreshing;
     if (scenario === 'changed-unresolved') {
@@ -282,7 +283,7 @@ for (const scenario of ['same-manifest', 'changed-exact', 'changed-unresolved', 
       assert.notEqual(f.controller.chapter, originalChapter, 'the exact refresh replaces the chapter object');
       assert.deepEqual(f.surface.visibleAnchor, latest, 'same manifest must preserve the newer confirmed touch position');
       const scrolls = []; f.surface.scroller.scrollBy = (_x, y) => scrolls.push(y);
-      timers.splice(0).forEach(callback => callback());
+      f.flushFrames();
       assert.ok(scrolls.length > 0);
       assert.ok(scrolls.every(y => y === 200), 'an uncanceled restore must not reissue the old 100vp offset');
     } else if (scenario === 'changed-exact') {

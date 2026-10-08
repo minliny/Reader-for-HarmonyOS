@@ -70,13 +70,13 @@ function fixture({sameImages=false,prepareFailure=false,originIndex=0,targetInde
   activePorts=ports;
   const origin=controller(originIndex,'origin',sameImages), target=controller(targetIndex,'target',sameImages);
   const owner=new Surface(), data=new DataSource();
-  const native={offset:225,width:300,height:300,invalid:false,unmounted:false};
+  const native={offset:225,width:300,height:300,invalid:false,unmounted:false,layoutReady:true,earlyScrollCalls:0};
   const heights=()=>owner.controller===target&&native.targetHeights!==undefined?native.targetHeights:[300,300,300];
   const top=index=>heights().slice(0,index).reduce((sum,height)=>sum+height,0);
   const maximum=()=>Math.max(0,heights().reduce((sum,height)=>sum+height,0)-owner.viewportHeight);
-  const scroller={getItemRect(index){if(native.unmounted)throw new Error('native row not mounted');return {x:0,y:native.invalid?NaN:top(index)-native.offset,width:native.width,height:owner.controller===target&&native.targetHeights!==undefined?heights()[index]:native.height};},
-    getItemIndex(_x,y){return heights().findIndex((_height,index)=>top(index)<=y+native.offset&&top(index+1)>y+native.offset);},
-    scrollToIndex(index){native.offset=Math.min(top(index),maximum());},scrollBy(_x,y){native.offset=Math.min(native.offset+y,maximum());},
+  const scroller={getItemRect(index){if(native.unmounted||!native.layoutReady)throw new Error('native row not mounted');return {x:0,y:native.invalid?NaN:top(index)-native.offset,width:native.width,height:owner.controller===target&&native.targetHeights!==undefined?heights()[index]:native.height};},
+    getItemIndex(_x,y){if(!native.layoutReady)return -1;return heights().findIndex((_height,index)=>top(index)<=y+native.offset&&top(index+1)>y+native.offset);},
+    scrollToIndex(index){if(!native.layoutReady){native.earlyScrollCalls++;return;}native.pendingOffset=Math.min(top(index),maximum());},scrollBy(_x,y){if(!native.layoutReady){native.earlyScrollCalls++;return;}native.pendingOffset=Math.min((native.pendingOffset??native.offset)+y,maximum());},
     isAtEnd(){return native.offset>=maximum();}};
   const horizontal={offset:30,currentOffset(){return{xOffset:this.offset,yOffset:0};},scrollTo(value){this.offset=value.xOffset;}};
   const candidate={controller:target,landing:'first',targetOrdinal:0,landingTileIndex:0,location:{y:0,x:0},
@@ -95,6 +95,7 @@ function fixture({sameImages=false,prepareFailure=false,originIndex=0,targetInde
     publishedRowKeys:new Map(),mountedTurnRowKey:'',chapterCommitted:true,
     boundaryBusy:false,boundaryDragging:false,boundaryDirection:'',boundaryDistance:0,boundaryArmed:false,boundaryFailure:'',boundaryGeneration:0,boundaryReset:0,
     nativeTransitionImages:new Set(),nativeTransitionTimer:-1,previousChapterPixels:[],chapterTransitions:transitions,
+    rollbackChapterImages:new Set(),boundaryPaintGeneration:0,rollbackPainting:false,
     scroller,horizontalScroller:horizontal,scalePolicy:new PhotoViewScaleModel(),offline:false,
     remoteSession:{sourceVersion:'source-v1',contentKind:'manga',identity:{sourceId:'s',bookId:'b'},entries},
     isReaderIdentityCurrent:()=>true,
@@ -106,11 +107,11 @@ function fixture({sameImages=false,prepareFailure=false,originIndex=0,targetInde
     preparePanelFonts:async()=>false,
   });
   data.projection.publish(origin.chapter.manifest,()=>origin.pageGeometry(),undefined,1,ordinal=>origin.pageAt(ordinal));
-  data.registerDataChangeListener({onDataReloaded(){ports.notifications++;},onDataChange(){ports.notifications++;}});
+  data.registerDataChangeListener({onDataReloaded(){ports.notifications++;native.layoutReady=false;},onDataChange(){ports.notifications++;}});
   assert.equal(owner.rememberVisible(),true);
   origin.onChange=()=>owner.publish();
   function flushTimers(delay=0){activePorts=ports;for(const[id,timer]of[...ports.timers])if(timer.delay===delay){ports.timers.delete(id);timer.callback();}}
-  function flushFrames(){activePorts=ports;const batch=ports.frames.splice(0);for(const frame of batch)frame.onFrame(0);}
+  function flushFrames(){activePorts=ports;const batch=ports.frames.splice(0);for(const frame of batch)frame.onFrame(0);native.layoutReady=true;if(native.pendingOffset!==undefined){native.offset=native.pendingOffset;native.pendingOffset=undefined;}for(const frame of batch)frame.onIdle(2_000_000);}
   return {owner,ports,origin,target,candidate,native,entries,flushTimers,flushFrames};
 }
 async function begin(f){activePorts=f.ports;f.owner.onBoundaryActivity(true);const pending=f.owner.turnBoundaryChapter(1);await tick();assert.equal(f.owner.controller,f.target);return {pending};}
@@ -126,6 +127,41 @@ function imageBuilder(f,row,uri=f.owner.controller.tile(row.ordinal,row.tileInde
 async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFrames();await tick();
   for(let i=0;i<2;i++) imageBuilder(f,f.owner.data.getData(i)).onComplete();
   f.flushFrames();await tick();}
+{
+  let calls=0;
+  const frame=new MangaLayoutFrame(()=>calls++);
+  frame.onFrame(0);assert.equal(calls,0,'frame start cannot establish rendered native geometry');
+  frame.onIdle(2_000_000);frame.onIdle(2_000_000);assert.equal(calls,1,'one idle receipt runs layout work exactly once');
+  outcomes.push('official FrameCallback phases keep geometry work after rendering, with one receipt per posted frame');
+}
+{
+  const f=fixture({originIndex:4,targetIndex:0});
+  f.owner.controller=f.target;f.owner.publish();f.owner.restore(0,1);
+  assert.equal(f.native.layoutReady,false);
+  f.flushTimers();assert.equal(f.native.earlyScrollCalls,0);assert.equal(f.native.offset,225);
+  f.flushFrames();assert.equal(f.owner.restoringAnchor,true,'the first rendered frame admits scrolling, not its resulting geometry');
+  assert.equal(f.owner.appliedLayoutGeneration,-1);
+  f.flushFrames();await tick();
+  assert.equal(f.native.earlyScrollCalls,0);assert.equal(f.owner.restoringAnchor,false);
+  assert.equal(f.owner.scroller.isAtEnd(),true,'previous chapter tail is reached after the scroll renders');
+
+  // Counterfactual timing uses the actual restore body with only its scheduler
+  // replaced by the old JS timer. The native port rejects pre-layout scrolls.
+  const declaration=tree.statements.find(node=>node.name?.getText(tree)==='MangaReadingSurface');
+  const restoreText=declaration.members.find(node=>node.name?.getText(tree)==='restore').getText(tree);
+  const oldText=restoreText.replace('this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {','setTimeout((): void => {')
+    .replace('this.finishLayout(generation);\n    }));','this.finishLayout(generation);\n    }, 0);');
+  assert.notEqual(oldText,restoreText);
+  const legacy=new Function('setTimeout','ScrollAlign',`${stripTypeScriptTypes(`class LegacyRestore {${oldText}}`)};return LegacyRestore`)(
+    (callback,delay)=>{const id=activePorts.nextTimer++;activePorts.timers.set(id,{callback,delay});return id;},{START:0});
+  const old=fixture({originIndex:4,targetIndex:0});old.owner.controller=old.target;old.owner.publish();
+  old.ports.frames.length=0;
+  legacy.prototype.restore.call(old.owner,0,1);old.flushTimers();
+  assert.equal(old.native.earlyScrollCalls,2,'timer restoration attempts index/offset before the candidate layout exists');
+  old.flushFrames();old.flushFrames();await tick();
+  assert.equal(old.owner.scroller.isAtEnd(),false,'the old timer leaves native geometry away from the desired tail');
+  outcomes.push('chapter replacement restores after native data layout and confirms a later rendered scroll; old timer counterfactual misses the tail');
+}
 {
   const f=fixture(), old=f.owner.confirmedPosition;
   f.owner.onBoundaryActivity(true);assert.deepEqual(f.owner.boundaryOrigin.anchor,old.anchor);const frozen=f.owner.boundaryOrigin;
@@ -159,9 +195,10 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
   const f=fixture({sameImages:true});
   const oldRow=f.owner.data.getData(0), oldURI=f.origin.tile(0,0).image.fileUri, oldKey=f.owner.rowRenderKey(oldRow);
   const stale=imageBuilder(f,oldRow,oldURI,oldKey,f.origin);const {pending}=await begin(f);
-  assert.equal(oldURI,f.target.tile(0,0).image.fileUri);assert.equal(oldKey,f.owner.rowRenderKey(f.owner.data.getData(0)));
+  assert.equal(oldURI,f.target.tile(0,0).image.fileUri);assert.notEqual(oldKey,f.owner.rowRenderKey(f.owner.data.getData(0)));
   stale.onComplete();stale.onError();assert.equal(f.owner.nativeTransitionImages.size,0);
   const row=f.owner.data.getData(0);
+  imageBuilder(f,row,oldURI,f.owner.rowRenderKey(row),f.origin).onComplete();assert.equal(f.owner.nativeTransitionImages.size,0,'owner guard rejects even a reused current key/URI');
   imageBuilder(f,row,'file://wrong.png').onComplete();assert.equal(f.owner.nativeTransitionImages.size,0);
   imageBuilder(f,row,f.target.tile(0,0).image.fileUri,'stale-render-key').onComplete();assert.equal(f.owner.nativeTransitionImages.size,0);
   await completeVisible(f);await pending;assert.equal(f.ports.presentCount,1);
@@ -169,6 +206,8 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
 }
 {
   const f=fixture();const {pending}=await begin(f);f.flushTimers();f.flushFrames();await tick();
+  f.flushFrames();await tick();
+  assert.equal(f.owner.restoringAnchor,false,'the second rendered frame confirms the restored layout before rectangle fault injection');
   for(let i=0;i<2;i++) imageBuilder(f,f.owner.data.getData(i)).onComplete();
   f.native.invalid=true;f.flushFrames();await tick();assert.equal(f.ports.commits.length,0);
   f.native.invalid=false;f.native.unmounted=true;assert.doesNotThrow(()=>f.owner.confirmBoundaryFrame());assert.equal(f.ports.commits.length,0);
@@ -184,12 +223,38 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
   outcomes.push('preparation failure preserves the old controller, leases and confirmed coordinate');
 }
 {
-  const f=fixture();const original=f.owner.confirmedPosition;const {pending}=await begin(f);
+  const f=fixture();const original=f.owner.confirmedPosition;
+  const staleOrigin=imageBuilder(f,f.owner.data.getData(0));const {pending}=await begin(f);
   imageBuilder(f,f.owner.data.getData(0)).onError();await pending;
   assert.equal(f.owner.controller,f.origin);assert.deepEqual(f.owner.visibleAnchor,original.anchor);
   assert.equal(f.origin.calls.some(c=>c[0]==='close'),false);assert.equal(f.ports.commits.length,0);
   assert.equal(typeof f.origin.onChange,'function');
-  outcomes.push('native Image failure rolls the prepared view back to retained old pixels and its exact anchor');
+  assert.ok(f.owner.previousChapterPixels.length>0);assert.equal(f.owner.rollbackChapterController,f.origin);
+  assert.equal(f.owner.boundaryEnabled(),false);
+  const activated=f.ports.activateCount;
+  await f.owner.turnBoundaryChapter(1);assert.equal(f.ports.activateCount,activated,'retry/manual controls cannot overtake the origin paint fence');
+  f.flushFrames();f.flushFrames();await tick();
+  assert.equal(f.owner.restoringAnchor,false);assert.deepEqual(f.owner.confirmedPosition.anchor,original.anchor);
+  assert.ok(f.owner.previousChapterPixels.length>0,'rendered restore alone cannot remove the origin overlay');
+  staleOrigin.onComplete();assert.equal(f.owner.rollbackChapterImages.size,0,'the earlier origin mount cannot confirm this rollback');
+  const last=f.owner.last;
+  for(let index=f.owner.first;index<last;index++) imageBuilder(f,f.owner.data.getData(index)).onComplete();
+  f.flushFrames();assert.ok(f.owner.previousChapterPixels.length>0,'every visible origin Image must complete');
+  imageBuilder(f,f.owner.data.getData(last)).onComplete();f.flushFrames();
+  assert.equal(f.owner.previousChapterPixels.length,0);assert.equal(f.owner.rollbackChapterController,undefined);
+  assert.equal(f.owner.boundaryEnabled(),true);
+  outcomes.push('native Image failure retains origin pixels through two-frame restore and every fresh visible Image before unlocking another pull');
+}
+{
+  const f=fixture();const {pending}=await begin(f);
+  const staleCandidate=imageBuilder(f,f.owner.data.getData(0));
+  await f.owner.cancelBoundaryChapter();await pending;
+  assert.equal(f.owner.controller,f.origin);assert.ok(f.owner.previousChapterPixels.length>0);
+  staleCandidate.onComplete();assert.equal(f.owner.rollbackChapterImages.size,0);
+  f.flushFrames();f.flushFrames();assert.ok(f.owner.previousChapterPixels.length>0);
+  for(let index=f.owner.first;index<=f.owner.last;index++) imageBuilder(f,f.owner.data.getData(index)).onComplete();
+  f.flushFrames();assert.equal(f.owner.previousChapterPixels.length,0);assert.equal(f.ports.commits.length,0);
+  outcomes.push('explicit cancellation retains origin until its restored native paint and rejects a late candidate callback');
 }
 for(const [label,action] of [
   ['zoom',f=>f.owner.changeZoom(2)],
@@ -242,6 +307,7 @@ for(const targetHeights of [[500,50],[200,50]]){
   f.native.targetHeights=targetHeights;Object.assign(f.candidate,{landing:'last',targetOrdinal:1,landingTileIndex:0,location:{x:0,y:1}});
   activePorts=f.ports;f.owner.onBoundaryActivity(true);const pending=f.owner.turnBoundaryChapter(-1);await tick();
   assert.equal(f.owner.controller,target);f.flushTimers();f.flushFrames();await tick();
+  f.flushFrames();await tick();
   assert.equal(f.owner.restoringAnchor,false);assert.equal(f.owner.confirmedPosition.anchor.ordinal,0,'native bottom clamp may display an earlier page first');
   assert.equal(f.owner.scroller.isAtEnd(),true);
   imageBuilder(f,f.owner.data.getData(1)).onComplete();f.flushFrames();await tick();assert.equal(f.ports.presentCount,0,'last image alone does not admit the earlier visible image');
@@ -257,6 +323,42 @@ outcomes.push('previous-chapter short last image and whole short chapter use the
   assert.equal(f.ports.cancelCount,0);assert.equal(f.owner.boundaryBusy,false);
   outcomes.push('external chapter notification failure still retires old chapter leases exactly once and unlocks the gesture');
 }
+
+// cachedCount(0) does not mount the controller's extra prefetch neighbour.
+// The native SDK rejects getItemRect for that offscreen index; both platform
+// forms must preserve current pixels and admit only every actually visible tile.
+for (const offscreenRect of ['throw', 'zero']) {
+  const f = fixture();
+  f.native.offset = 0;
+  assert.equal(f.owner.rememberVisible(), true);
+  const getNativeRect = f.owner.scroller.getItemRect;
+  let offscreenQueries = 0;
+  f.owner.scroller.getItemRect = (index) => {
+    const rect = getNativeRect(index);
+    if (rect.y >= f.owner.viewportHeight || rect.y + rect.height <= 0) {
+      offscreenQueries++;
+      if (offscreenRect === 'throw') throw new Error('controlled SDK offscreen index');
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+    return rect;
+  };
+  assert.equal(f.owner.requestedLast(), 2, 'the controller still prepares one offscreen neighbour');
+  const retained = f.owner.captureChapterPixels();
+  assert.equal(retained.length, 2, 'only actual visible old images are retained');
+  assert.equal(offscreenQueries, 0, 'retained old pixels never request an offscreen native rectangle');
+  const { pending } = await begin(f);
+  f.flushTimers(); f.flushFrames(); await tick();
+  imageBuilder(f, f.owner.data.getData(0)).onComplete();
+  f.flushFrames(); await tick();
+  assert.equal(f.ports.presentCount, 0, 'the other visible image is still required');
+  imageBuilder(f, f.owner.data.getData(1)).onComplete();
+  f.flushFrames(); await pending;
+  assert.equal(f.ports.presentCount, 1);
+  assert.equal(offscreenQueries, 0, 'paint admission never queries the unmounted prefetch neighbour');
+  assert.ok(f.target.calls.filter(call => call[0] === 'tiles').some(call => call[1].some(tile => tile.tileIndex === 2)),
+    'native paint admission does not remove controller prefetch');
+}
+outcomes.push('cachedCount(0) offscreen native rectangles may throw or be zero: retention and paint use only measured visible tiles while controller prefetch stays intact');
 
 // The official SDK emits the exact production PullToRefresh callback closures.
 {

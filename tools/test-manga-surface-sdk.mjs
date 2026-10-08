@@ -16,8 +16,11 @@ const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/mang
 const MangaStripProjection=new Function(`${stripTypeScriptTypes(projectionSource)};return MangaStripProjection`)();
 const dataSource=tree.statements.find(node=>node.name?.getText(tree)==='MangaStripDataSource').getText(tree);
 const MangaStripDataSource=new Function('MangaStripProjection',`${stripTypeScriptTypes(dataSource)};return MangaStripDataSource`)(MangaStripProjection);
+const frame=tree.statements.find(node=>node.name?.getText(tree)==='MangaLayoutFrame');
+assert.ok(frame,'restore uses the actual post-render callback class');
+const MangaLayoutFrame=new Function('FrameCallback',`${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {});
 const runtime=createArkUIPropertyRuntimeProbe();
-const scrolls=[];
+const scrolls=[],frames=[];
 class ListScroller {getItemRect(){return {x:0,y:-100,width:500,height:500};}scrollToIndex(...args){scrolls.push(args);}scrollBy(...args){scrolls.push(args);}}
 class Scroller {currentOffset(){return {xOffset:0};}scrollTo(){}}
 class PhotoViewScaleModel {}
@@ -58,7 +61,8 @@ assert.throws(()=>checkViewportTap(unrestrictedTap),/full-screen tap must bound 
   'the old unrestricted native constructor is rejected without modeling touch recognition');
 console.log('PASS actual SDK viewport Tap constructor distanceThreshold=6vp, normal toggle callback and existing panel/end fences; unrestricted constructor counterfactual rejected. Native swipe/tap arbitration requires VM evidence.');
 const {owner,output}=createReaderBuilderProbe(source,names,{
-  ...runtime.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource,ListScroller,Scroller,PhotoViewScaleModel,
+  ...runtime.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource,MangaLayoutFrame,ListScroller,Scroller,PhotoViewScaleModel,
+  uiContext:{postFrameCallback:frame=>frames.push(frame)},
   ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeInsets,
   ScrollAlign:{START:0},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},
   LazyForEach:nativeBoundary,Gesture:nativeBoundary,GestureGroup:nativeBoundary,
@@ -113,12 +117,15 @@ let completed=false;const saving=owner.saveVisible().then(()=>{completed=true;})
 await new Promise(r=>setImmediate(r));assert.equal(completed,false);assert.deepEqual(saved,[0,0,0.05]);
 resolve();await saving;assert.equal(completed,true);
 owner.restore(0,0.75);owner.aboutToDisappear=()=>{owner.mounted=false;owner.layoutGeneration++;};owner.aboutToDisappear();
-await new Promise(r=>setTimeout(r,5));assert.equal(scrolls.length,0);
+assert.equal(frames.length,1,'restore queued a real rendered-frame callback');
+const disposedFrame=frames.shift();disposedFrame.onFrame(0);runtime.flush();disposedFrame.onIdle(2_000_000);
+await new Promise(r=>setImmediate(r));assert.equal(scrolls.length,0);
 console.log('PASS actual ArkUI SDK surface lowering; save waits for CAS; disposed layout cannot scroll (native paint not tested)');
 
 const tabletRuntime=createArkUIPropertyRuntimeProbe();
 const tablet=createReaderBuilderProbe(source,names,{
-  ...tabletRuntime.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource,ListScroller,Scroller,PhotoViewScaleModel,
+  ...tabletRuntime.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource,MangaLayoutFrame,ListScroller,Scroller,PhotoViewScaleModel,
+  uiContext:{postFrameCallback:frame=>frames.push(frame)},
   ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeInsets,
   ScrollAlign:{START:0},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},
   LazyForEach:nativeBoundary,Gesture:nativeBoundary,GestureGroup:nativeBoundary,

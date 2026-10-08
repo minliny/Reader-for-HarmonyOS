@@ -403,7 +403,7 @@ for(const scenario of ['close','clear']){
   if(method==='manga.chapter.get'){if(params.chapterIndex===42){started();if(scenario==='close')await new Promise(resolve=>release=resolve);return {data:next};}return {data:structuredClone(chapter)};}return {data:{token:{epoch:23,revision:0},location:null}};
  },async prefetchReadingImage(){images++;}};
  const c=new Controller(rt);await c.open('s','b',0);c.configureNextChapter(42,'/next');await start;
- if(scenario==='close'){c.close();release();}else {await new Promise(r=>setImmediate(r));alive=false;await c.selectPage(7);}
+ if(scenario==='close'){c.close();release();}else {await new Promise(r=>setImmediate(r));alive=false;await assert.rejects(c.selectPage(7),/MANGA_SESSION_CONTENT_CHANGED/);}
  await new Promise(r=>setImmediate(r));assert.equal(images,0);c.close();
 }
 console.log('PASS optional adjacent work cannot survive session close or recapture a cleared content scope');

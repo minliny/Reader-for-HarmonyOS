@@ -16,7 +16,8 @@ const fields = [...mangaDirectoryAdaptiveFields, 'mounted', 'panel', 'panelOffse
   'directoryRevision', 'directoryOpenRevision', 'chapterEnd', 'controlsVisible', 'backgroundPreference',
   'panelFontsReady', 'panelFontGeneration', 'brightnessOwner', 'exiting', 'zoom', 'directoryAscending', 'brightnessPercent', 'showPageNumbers', 'fitPreference', 'horizontal',
   'quickHeaderMeasured', 'quickToolsMeasured', 'quickFooterMeasured', 'windowMetricsRevision',
-  'downloadActionsChapterIndex', 'downloadActions', 'downloadActionsLoading', 'downloadActionsFailure'];
+  'downloadActionsChapterIndex', 'downloadActions', 'downloadActionsLoading', 'downloadActionsFailure',
+  'rollbackChapterController', 'rollbackChapterImages', 'previousChapterPixels'];
 const methods = [...mangaDirectoryAdaptiveMembers, 'openPanel', 'closePanel', 'invalidatePanelMotion', 'dismissPanelKeyboard', 'settlePanel',
   'preparePanelFonts', 'performPanelAction', 'beginPanelDrag', 'updatePanelDrag', 'finishPanelDrag', 'panelTravel', 'panelHeight',
   'panelWidth', 'panelContentHeight', 'windowInteractiveInsets', 'interactiveInsets', 'panelInsets', 'controlsPresentedForWindow', 'widePanel', 'persistentDirectory', 'directoryColumnWidth', 'tabletDirectory', 'panelTitle', 'panelOverlay', 'directoryPanel',

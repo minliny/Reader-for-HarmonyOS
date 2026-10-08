@@ -339,6 +339,7 @@
     "test-manga-reading-directory-fallback.mjs",
     "test-manga-region-decode.mjs",
     "test-manga-resource-gateway.mjs",
+    "test-manga-rollback-paint-sdk.mjs",
     "test-manga-runtime-image-lane.mjs",
     "test-manga-scroll-observation-sdk.mjs",
     "test-manga-scroll-stability-sdk.mjs",

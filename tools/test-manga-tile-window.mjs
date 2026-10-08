@@ -3,14 +3,17 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
-function load(name, dependencies = {}) {
-  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+function load(name, dependencies = {}, file = new URL(`${name}.ts`, root)) {
+  const source = readFileSync(file, 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }
 const MangaSessionGateway = load('MangaSessionGateway');
 const MangaResourceGateway = load('MangaResourceGateway');
 const Controller = load('MangaSessionController', { MangaSessionGateway, MangaResourceGateway });
 const Projection = load('MangaStripProjection');
+const RULES_MUTATION_METHODS = load('RULES_MUTATION_METHODS', {}, new URL('../settings/RulesMutationContract.ts', root));
+const readerRuleMutationEffects = load('readerRuleMutationEffects', { RULES_MUTATION_METHODS }, new URL('../../app/ReaderRuleMutationEffects.ts', root));
+const ReadingEntryPreparation = load('ReadingEntryPreparation', { readerRuleMutationEffects }, new URL('../reading/ReadingEntryPreparation.ts', root));
 const Surface = productionMotionMethods(new URL('MangaReadingSurface.ets', root), ['updateViewport','requestedLast','onRowAppear','displayChapterTitle']);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
@@ -129,3 +132,99 @@ console.log('PASS preview change retires pending region work and width reentry s
   assert.ok(f.controller.tile(0, 3).image); assert.equal(f.controller.tile(0, 3).error, undefined); f.controller.close();
 }
 console.log('PASS shared tile failure and explicit retry preserve one current attempt');
+
+// Drive the actual content fence rather than toggling a fixture boolean. A
+// settled ordinary position write keeps decoded tiles admitted; a catalog
+// mutation permanently retires this chapter's content snapshot.
+function fencedFixture() {
+  const f = fixture(), preparation = new ReadingEntryPreparation({}, false);
+  f.runtime.captureReadingContentValidity = (sourceId, bookId) => preparation.captureContentValidity(sourceId, bookId);
+  const mutate = method => {
+    const params = { sourceId: 's', bookId: 'b' };
+    assert.equal(preparation.beginRequest(method, params), true);
+    preparation.finishRequest(method, params);
+  };
+  return { ...f, preparation, mutate };
+}
+{
+  const f = fencedFixture(); await f.controller.openPrepared(structuredClone(entry), true);
+  const work = f.controller.setTileWindow([{ ordinal: 0, tileIndex: 3 }]); await tick();
+  f.mutate('reading.progress.update'); f.pending[0].gate.resolve(); await work;
+  assert.ok(f.controller.tile(0, 3).image); assert.equal(f.controller.tile(0, 3).error, undefined);
+  assert.equal(f.controller.tileLoads.has('0:3'), false); f.controller.close(); f.preparation.close();
+}
+console.log('PASS actual ordinary progress mutation does not revoke the pending tile content fence');
+{
+  const f = fencedFixture(); await f.controller.openPrepared(structuredClone(entry), true);
+  const work = f.controller.setTileWindow([{ ordinal: 0, tileIndex: 0 }, { ordinal: 0, tileIndex: 3 }]); await tick();
+  let terminalPublished = false;
+  f.controller.onChange = () => { if (f.controller.tile(0, 3)?.error === 'MANGA_SESSION_CONTENT_CHANGED') terminalPublished = true; };
+  f.mutate('book.detail'); f.pending[0].gate.resolve(); await work;
+  assert.equal(f.controller.tile(0, 3).image, undefined);
+  assert.equal(f.controller.tile(0, 3).error, 'MANGA_SESSION_CONTENT_CHANGED');
+  assert.equal(f.controller.tileLoads.has('0:3'), false); assert.equal(terminalPublished, true);
+  assert.ok(f.controller.tile(0, 0).image, 'the already displayed lease remains readable');
+  assert.equal(f.released.filter(uri => uri === f.pending[0].image.fileUri).length, 1);
+  const count = f.calls.length;
+  await assert.rejects(f.controller.setTileWindow([{ ordinal: 0, tileIndex: 3 }]), /MANGA_SESSION_CONTENT_CHANGED/);
+  await assert.rejects(f.controller.retryTile(0, 3), /MANGA_SESSION_CONTENT_CHANGED/);
+  await assert.rejects(f.controller.setVisible(0), /MANGA_SESSION_CONTENT_CHANGED/);
+  await assert.rejects(f.controller.savePosition(0, 0, 0), /MANGA_SESSION_CONTENT_CHANGED/);
+  assert.equal(f.calls.length, count, 'a revoked snapshot cannot loop through another decode');
+  let readClockCalls = 0;
+  f.controller.preparation = { startCurrent() { readClockCalls++; }, recordVisible() { readClockCalls++; return Promise.resolve(); } };
+  f.controller.acknowledgeVisible(); assert.equal(readClockCalls, 0, 'retained old pixels cannot restart the read clock');
+  f.controller.preparation = undefined; f.controller.onChange = undefined;
+  f.controller.close(); f.preparation.close();
+}
+console.log('PASS actual catalog revocation settles the visible tile as an error without bytes, retry, read clock or progress admission');
+{
+  const f = fencedFixture(), gate = deferred();
+  f.runtime.loadReadingImage = async (...args) => {
+    f.calls.push(args); await gate.promise;
+    return { fileUri: 'file://cancelled-header', width: 600, height: 800, intrinsicWidth: 600, intrinsicHeight: 3200, revision: 'r' };
+  };
+  const opening = f.controller.openPrepared(structuredClone(entry), true); await tick();
+  f.mutate('book.detail'); gate.resolve();
+  await assert.rejects(opening, /MANGA_SESSION_CONTENT_CHANGED/);
+  const page = f.controller.visiblePages()[0];
+  assert.equal(page.status, 'failed'); assert.equal(page.error, 'MANGA_SESSION_CONTENT_CHANGED'); assert.equal(page.image, undefined);
+  assert.equal(f.controller.pageLoads.has(0), false); assert.equal(f.controller.pageGeometry(0), undefined);
+  assert.equal(f.released.filter(uri => uri === 'file://cancelled-header').length, 1);
+  const count = f.calls.length; await assert.rejects(f.controller.retry(0), /MANGA_SESSION_CONTENT_CHANGED/);
+  assert.equal(f.calls.length, count); f.controller.close(); f.preparation.close();
+}
+console.log('PASS a revoked pending header publishes a failed page and rejects retry instead of leaving an orphan pending marker');
+{
+  const f = fencedFixture(); await f.controller.openPrepared(structuredClone(entry), true);
+  const old = f.controller.setTileWindow([{ ordinal: 0, tileIndex: 3 }]); await tick();
+  f.mutate('book.detail'); await f.controller.close(); await f.controller.openPrepared(structuredClone(entry), true);
+  const current = f.controller.setTileWindow([{ ordinal: 0, tileIndex: 3 }]); await tick();
+  assert.equal(f.pending.length, 2); const currentMarker = f.controller.tile(0, 3);
+  f.pending[0].gate.resolve(); await old;
+  assert.equal(f.controller.tile(0, 3), currentMarker); assert.equal(currentMarker.error, undefined); assert.equal(currentMarker.image, undefined);
+  assert.equal(f.controller.tileLoads.has('0:3'), true);
+  f.pending[1].gate.resolve(); await current;
+  assert.equal(currentMarker.image.fileUri, f.pending[1].image.fileUri); assert.equal(currentMarker.error, undefined);
+  assert.equal(f.released.filter(uri => uri === f.pending[0].image.fileUri).length, 1);
+  f.controller.close(); f.preparation.close();
+}
+console.log('PASS late revoked work cannot fail, revive or remove a reopened same-key tile owner');
+{
+  const f = fencedFixture(), narrow = structuredClone(entry), gate = deferred();
+  narrow.chapter.totalPages = 100;
+  narrow.chapter.manifest.pages = [0, 1, 2].map(ordinal => {
+    const id = `mp1:${String(ordinal + 1).repeat(64)}`;
+    return { ordinal, pageId: id, resourceRef: `manga:${id}` };
+  });
+  f.runtime.request = async method => { assert.equal(method, 'manga.pages.window'); await gate.promise; return { data: {} }; };
+  await f.controller.openPrepared(narrow, true); await tick();
+  const previousImage = f.controller.visiblePages().find(page => page.ordinal === 0).image;
+  const count = f.calls.length, selecting = f.controller.setVisible(90); await tick();
+  f.mutate('book.detail'); gate.resolve();
+  await assert.rejects(selecting, /MANGA_SESSION_CONTENT_CHANGED/);
+  assert.equal(f.controller.pageAt(90), undefined); assert.equal(f.calls.length, count);
+  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 0).image, previousImage);
+  f.controller.close(); f.preparation.close();
+}
+console.log('PASS a revoked bounded metadata window rejects as a content change before facts or image work can enter the chapter');

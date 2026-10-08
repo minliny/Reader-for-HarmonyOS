@@ -26,6 +26,7 @@ assert.equal(tree.parseDiagnostics.length,0);
 const frame=tree.statements.find(n=>n.name?.getText(tree)==='MangaLayoutFrame');assert.ok(frame);
 const MangaLayoutFrame=new Function('FrameCallback',`${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {});
 const timers=[],scrolls=[],frames=[],measurements=[];
+function renderFrame(){const frame=frames.shift();assert.ok(frame instanceof MangaLayoutFrame);frame.onFrame(0);frame.onIdle(2_000_000);}
 const Surface=productionMotionMethods(surfaceURL,
   ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','positionIdentity','rememberVisible','resizeViewport','restore','finishLayout','onViewportScroll','measureVisibleWindow'],{setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},
     MangaLayoutFrame});
@@ -39,10 +40,10 @@ surface.rememberVisible();assert.deepEqual(surface.visibleAnchor,{ordinal:0,y:0.
 surface.scroller.getItemRect=()=>{throw Error('new rectangles unavailable during reflow');};
 surface.rememberVisible();assert.equal(surface.visibleAnchor.y,0.55);
 surface.resizeViewport(350);surface.resizeViewport(700);
-assert.equal(surface.viewportWidth,700);timers.shift()();assert.equal(scrolls.length,0,'superseded resize must not restore');
-timers.shift()();assert.deepEqual(scrolls,[['index',2,false,'start'],['offset',0,332.5],['update']]);
+assert.equal(surface.viewportWidth,700);renderFrame();assert.equal(scrolls.length,0,'superseded resize must not restore');
+renderFrame();assert.deepEqual(scrolls,[['index',2,false,'start'],['offset',0,332.5],['update']]);
 assert.equal(frames.length,1,'only the current anchor restore admits a follow-up native frame');
-const admitted=frames.shift();assert.ok(admitted instanceof MangaLayoutFrame);admitted.onFrame(0);
+renderFrame();
 assert.deepEqual(measurements,[[0.5,0.5],[0.5,899.5]]);
 assert.deepEqual([surface.first,surface.last],[2,2],'real frame keeps the observed range while platform rectangles are unavailable');
 assert.equal(scrolls.length,3,'unavailable frame geometry must not add a viewport update');
