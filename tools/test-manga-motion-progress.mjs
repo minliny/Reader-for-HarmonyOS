@@ -41,14 +41,14 @@ const methods = ['rollbackChapterImages', 'publish', 'requestedLast', 'saveVisib
 const timers = [];
 // Optional baseline path executes the pre-fix methods against the same assertions.
 const Surface = productionMotionMethods(surfaceURL, methods.filter(name => memberNames.has(name)), {
-  setTimeout: callback => timers.push(callback), ScrollAlign: {START: 0}, MangaLayoutFrame, MangaBookPresentation, AppStorage:{setOrCreate(){}}
+  setTimeout: callback => timers.push(callback), ScrollAlign: {START: 0}, LengthMetrics: {vp: value => ({value, unit: 'vp'})}, MangaLayoutFrame, MangaBookPresentation, AppStorage:{setOrCreate(){}}
 });
 const pages = [0, 1, 2].map(ordinal => ({ordinal, pageId: `mp1:${String(ordinal).repeat(64)}`, resourceRef: `manga:mp1:${String(ordinal).repeat(64)}`}));
 const entry = {chapter: {manifest: {chapter: {sourceId: 's', bookId: 'b', chapterId: '/c'}, sourceRuleVersion: 'r', manifestVersion: 'v', decodeRevision: 'identity-v1', pages}, chapterIndex: 0, chapterTitle: 'c', totalPages: 3, pageStart: 0, cached: true, resources: []}, targetOrdinal: 1, recoveryRequired: false, progress: {token: {epoch: 1, revision: 0}, location: null}};
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return {promise, resolve}; }
 async function fixture(horizontal = false, offline = true) {
-  const writes = [], frames = [], failures = [];
+  const writes = [], frames = [], failures = [], jumps = [], splitScrolls = [];
   let saveHold, imageHold, revision = 0;
   const runtime = {supportsCoreCapability: () => true,
     async request(method, params) {
@@ -77,12 +77,24 @@ async function fixture(horizontal = false, offline = true) {
     horizontal, horizontalPage: 1, zoom: 2, scalePolicy: new Scale(), viewportWidth: 500, viewportHeight: 900,
     fitPreference: 'width', layoutGeneration: 0, viewportGeneration: 0, presentationGeneration: 0, appliedLayoutGeneration: -1, loginGeneration: 0,
     restoringAnchor: false, error: '', settingsGateway: {updateMangaDirection: async () => {}, updateMangaFit: async () => {}},
-    scroller: {getItemIndex: () => native.first, getItemRect: () => ({y: native.y, width: native.width, height: native.height}), scrollToIndex() {}, scrollBy() {}},
+    scroller: {getItemIndex: () => native.first, getItemRect: () => ({y: native.y, width: native.width, height: native.height}),
+      scrollToIndex(index, smooth, align, options) {
+        assert.equal(smooth, false); assert.equal(align, 0);
+        if (options !== undefined) assert.equal(options.extraOffset.unit, 'vp');
+        const offset = options?.extraOffset?.value ?? 0;
+        assert.ok(Number.isFinite(offset));
+        jumps.push({index, offset});
+        native.first = index; native.y = -offset;
+        // Width and height still come from native layout. Applying the atomic
+        // position request cannot make an old-size rectangle confirm a zoom.
+      },
+      scrollBy(_x, y) { splitScrolls.push(y); native.y = -y; }
+    },
     horizontalScroller: {currentOffset: () => ({xOffset: native.xOffset}), scrollTo() {}},
     getUIContext: () => ({postFrameCallback: callback => frames.push(callback)}),
     retainPreparationOnDisappear: () => false, updateViewport() {}, onSaveFailure: message => failures.push(message)
   });
-  return {surface, runtime, controller, projection, native, writes, failures,
+  return {surface, runtime, controller, projection, native, writes, failures, jumps, splitScrolls,
     holdSave(promise) { saveHold = promise; }, holdImage(promise) { imageHold = promise; },
     frames,
     frame() { const callback = frames.shift(); assert.ok(callback instanceof MangaLayoutFrame); callback.onFrame(0); callback.onIdle(2_000_000); },
@@ -282,10 +294,12 @@ for (const scenario of ['same-manifest', 'changed-exact', 'changed-unresolved', 
     } else if (scenario === 'same-manifest') {
       assert.notEqual(f.controller.chapter, originalChapter, 'the exact refresh replaces the chapter object');
       assert.deepEqual(f.surface.visibleAnchor, latest, 'same manifest must preserve the newer confirmed touch position');
-      const scrolls = []; f.surface.scroller.scrollBy = (_x, y) => scrolls.push(y);
+      f.jumps.length = 0; f.splitScrolls.length = 0;
       f.flushFrames();
-      assert.ok(scrolls.length > 0);
-      assert.ok(scrolls.every(y => y === 200), 'an uncanceled restore must not reissue the old 100vp offset');
+      assert.ok(f.jumps.length > 0);
+      assert.ok(f.jumps.every(jump => jump.index === f.projection.index(latest.ordinal, latest.y) && jump.offset === 200),
+        'an uncanceled atomic restore must use the latest target and 200vp, never the old 100vp offset');
+      assert.deepEqual(f.splitScrolls, [], 'an intra-row offset is part of the index request, not a delta applied to old rows');
     } else if (scenario === 'changed-exact') {
       assert.notEqual(f.controller.chapter, originalChapter, 'the exact refresh replaces the chapter object');
       assert.deepEqual(f.surface.visibleAnchor, {ordinal: 1, y: 0.51, x: 0.1}, 'a new manifest uses exact Core mapping, never old unpersisted coordinates');

@@ -25,15 +25,15 @@ const tree=ts.createSourceFile('/tmp/MangaStripAnchorProbe.ets',readFileSync(sur
 assert.equal(tree.parseDiagnostics.length,0);
 const frame=tree.statements.find(n=>n.name?.getText(tree)==='MangaLayoutFrame');assert.ok(frame);
 const MangaLayoutFrame=new Function('FrameCallback',`${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {});
-const timers=[],scrolls=[],frames=[],measurements=[];
+const timers=[],scrolls=[],frames=[],measurements=[],native={index:2,offset:237.5};
 function renderFrame(){const frame=frames.shift();assert.ok(frame instanceof MangaLayoutFrame);frame.onFrame(0);frame.onIdle(2_000_000);}
 const Surface=productionMotionMethods(surfaceURL,
   ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','positionIdentity','rememberVisible','resizeViewport','restore','finishLayout','onViewportScroll','measureVisibleWindow'],{setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},
-    MangaLayoutFrame});
+    LengthMetrics:{vp:value=>({value,unit:'vp'})},MangaLayoutFrame});
 const surface=Object.assign(new Surface(),{data:{totalCount:()=>p.totalCount(),getData:i=>p.row(i),projection:p},
  first:2,last:2,viewportWidth:500,viewportHeight:900,zoom:1,horizontalScroller:{currentOffset:()=>({xOffset:0}),scrollTo:()=>{}},opened:true,mounted:true,layoutGeneration:0,appliedLayoutGeneration:-1,presentationGeneration:0,
  controller:{chapter:{manifest},pageAt:ordinal=>manifest.pages[ordinal]},
- scroller:{getItemIndex:(x,y)=>{measurements.push([x,y]);return y<1?2:-1;},getItemRect:()=>({y:-237.5,width:500,height:500}),scrollToIndex:(...args)=>scrolls.push(['index',...args]),scrollBy:(...args)=>scrolls.push(['offset',...args])},
+ scroller:{getItemIndex:(x,y)=>{measurements.push([x,y]);return y<1?native.index:-1;},getItemRect:()=>({y:-native.offset,width:500,height:500}),scrollToIndex:(...args)=>{assert.equal(args[3].extraOffset.unit,'vp');native.index=args[0];native.offset=args[3].extraOffset.value;assert.ok(Number.isFinite(native.offset));scrolls.push(['index',...args]);},scrollBy:(...args)=>scrolls.push(['offset',...args])},
  getUIContext:()=>({postFrameCallback:frame=>frames.push(frame)}),
  updateViewport:()=>scrolls.push(['update'])});
 surface.rememberVisible();assert.deepEqual(surface.visibleAnchor,{ordinal:0,y:0.55,x:0});
@@ -41,12 +41,14 @@ surface.scroller.getItemRect=()=>{throw Error('new rectangles unavailable during
 surface.rememberVisible();assert.equal(surface.visibleAnchor.y,0.55);
 surface.resizeViewport(350);surface.resizeViewport(700);
 assert.equal(surface.viewportWidth,700);renderFrame();assert.equal(scrolls.length,0,'superseded resize must not restore');
-renderFrame();assert.deepEqual(scrolls,[['index',2,false,'start'],['offset',0,332.5],['update']]);
+renderFrame();assert.deepEqual(scrolls,[['index',2,false,'start',{extraOffset:{value:332.5,unit:'vp'}}],['update']],
+  'the native jump carries the original-image intra-row offset atomically');
+assert.deepEqual(native,{index:2,offset:332.5},'one native request consumes the index and offset together even while rectangles are unavailable');
 assert.equal(frames.length,1,'only the current anchor restore admits a follow-up native frame');
 renderFrame();
 assert.deepEqual(measurements,[[0.5,0.5],[0.5,899.5]]);
 assert.deepEqual([surface.first,surface.last],[2,2],'real frame keeps the observed range while platform rectangles are unavailable');
-assert.equal(scrolls.length,3,'unavailable frame geometry must not add a viewport update');
+assert.equal(scrolls.length,2,'unavailable frame geometry must not add a viewport update or split offset request');
 assert.equal(surface.restoringAnchor,true,'a delivered frame cannot declare unavailable native geometry stable');
 surface.resizeViewport(NaN);surface.resizeViewport(0);assert.equal(surface.viewportWidth,700);
 assert.equal(surface.visibleAnchor.y,0.55);
