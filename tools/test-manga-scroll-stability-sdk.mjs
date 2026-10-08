@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
+import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
 import { createDefaultReaderWindowMetrics, readerInteractiveSafeInsets } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { mangaUserError } from '../entry/src/main/ets/features/manga/MangaUserError.ts';
 
@@ -92,7 +92,7 @@ owner.publishedManifestVersion = manifest.manifestVersion;
 owner.data.projection.publish(manifest, index => geometry.get(index), undefined, 5, index => manifest.pages[index]);
 owner.publish(); // Production publishes row facts before LazyForEach mounts.
 const priorGesture = globalThis.Gesture; globalThis.Gesture = boundary;
-try { owner.initialRender(); }
+try { owner.initialRender(); mountMangaViewportBuilder(owner); }
 finally { if (priorGesture === undefined) delete globalThis.Gesture; else globalThis.Gesture = priorGesture; }
 assert.ok(lazy);
 const list = [...owner.nodes.values()].find(node => node.type === 'List');

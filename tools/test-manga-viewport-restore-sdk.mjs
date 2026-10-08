@@ -1,4 +1,4 @@
-import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
+import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -47,7 +47,7 @@ function fixture({tiles=12,height=750}={}) {
     globalThis:{Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary,TapGesture:boundary},
     GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
   },properties.hooks);
-  owner.initialRender();
+  owner.initialRender();mountMangaViewportBuilder(owner);
   const list=[...owner.nodes.values()].find(n=>n.type==='List');assert.ok(list?.onScrollIndex,'use the real SDK-generated List callback');
   const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/c'},manifestVersion:'v1',pages:[{ordinal:0,pageId:'p0'}]};
   const geometry={width:300,height:tiles*300,tileHeight:300};

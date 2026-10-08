@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "package": "@ohos/pulltorefresh",
+  "version": "2.1.1",
+  "canonicalRepository": "https://gitcode.com/CPF-ApplicationTPC/ohos_pull_to_refresh",
+  "archiveRepository": "https://gitee.com/openharmony-sig/ohos_pull_to_refresh",
+  "tagObject": "110c779e6bf081264293d788f9f3cd9897a20140",
+  "commit": "f4829f0913472cac588abd3e70d4edf58cf2d34a",
+  "tree": "2732346e51963d8f97005ecebd2c51a41b425434",
+  "license": "Apache-2.0",
+  "licenseSha256": "a07179393d3b144bd73650a75c36e2061c8cb7682dc34525b39b3b83fe76d7d0",
+  "patchSha256": "c3661072e6bef11da4a20527e01d5f5d38cf1eb0ca90396b8f1d3feb0bd35036",
+  "files": [
+    {
+      "path": "PullToRefresh.ets",
+      "upstreamPath": "library/src/main/ets/components/PullToRefresh/PullToRefresh.ets",
+      "upstreamSha256": "6b542f92c67baf0a3ef0d551afe255add539d9f56da78be0752b9b7b35220212",
+      "vendoredSha256": "91a6070a6ce8f5d50b5afeac64d4cac350c2208048944527e2446a4de1e4e060"
+    },
+    {
+      "path": "PullToRefreshConfigurator.ets",
+      "upstreamPath": "library/src/main/ets/components/PullToRefresh/PullToRefreshConfigurator.ets",
+      "upstreamSha256": "7948e645d3ad2836765b5f55c8a73d020818a3eafa58fdfc662f7b2dbb2b24bb",
+      "vendoredSha256": "e886763a57f9fcbe1a1edbe828ecb3e5d7c3430fee972a812b70976ab00b7fa9"
+    }
+  ]
+}

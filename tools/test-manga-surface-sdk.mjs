@@ -1,4 +1,4 @@
-import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
+import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -32,7 +32,7 @@ const nativeBoundary=new Proxy({}, {get:()=>()=>{}});
 function checkViewportTap(candidate=source) {
   const taps=[];
   const tap={create:options=>taps.push({options}),onAction:callback=>{taps.at(-1).callback=callback;},pop(){}};
-  const probe=createReaderBuilderProbe(candidate,['imageViewport','toggleControls'],{
+  const probe=createReaderBuilderProbe(candidate,['imageViewport','tileImage','toggleControls'],{
     TapGesture:tap,Gesture:nativeBoundary,GestureGroup:nativeBoundary,PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,
     globalThis:{Gesture:nativeBoundary,GestureGroup:nativeBoundary,PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,TapGesture:tap},
     LazyForEach:nativeBoundary,ScrollDirection:{Horizontal:0},GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
@@ -69,7 +69,7 @@ const {owner,output}=createReaderBuilderProbe(source,names,{
 assert.match(output,/LazyForEach/);
 assert.match(output,/onScrollStop/);
 owner.title='fixture chapter';owner.controlsVisible=true;
-owner.initialRender();
+owner.initialRender();mountMangaViewportBuilder(owner);
 const root=owner.nodes.get(0);
 assert.equal(root.type,'Column');
 assert.equal(root.padding,undefined,'the image root does not reserve system/gesture bands');
@@ -128,7 +128,7 @@ const tablet=createReaderBuilderProbe(source,names,{
 },tabletRuntime.hooks).owner;
 tablet.stageWidth=1180;tablet.stageHeight=820;tablet.viewportWidth=860;tablet.viewportHeight=820;
 tablet.panelFontsReady=true;tablet.bookTitle='山海纪行';tablet.directoryQuery='第5';
-tablet.initialRender();
+tablet.initialRender();mountMangaViewportBuilder(tablet);
 const directoryChild=[...tablet.children.values()].find(child=>child.params.mangaDisplay===true);
 assert.ok(directoryChild,'the real SDK mounts the shared native directory outside control visibility');
 assert.equal(directoryChild.params.currentChapterIndex,-1);
@@ -166,7 +166,7 @@ function overlayFixture(values, candidate=source) {
   Object.assign(probe.owner,{opened:true,showPageNumbers:true,controlsVisible:false,horizontalPageCount:36,
     panelFontsReady:true,bookTitle:'山海纪行',title:'当前第5话',directoryQuery:'第5',
     viewportWidth:390,viewportHeight:844,stageWidth:390,stageHeight:844,...values});
-  probe.owner.initialRender();
+  probe.owner.initialRender();mountMangaViewportBuilder(probe.owner);
   const nodes=[...probe.owner.nodes.values()];
   Object.defineProperty(nodes,'owner',{value:probe.owner});
   return nodes;

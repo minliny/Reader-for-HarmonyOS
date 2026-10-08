@@ -51,6 +51,8 @@ export class MangaSessionController {
   private previewMode: boolean = false;
   private mappedLocation: MangaLocation | undefined;
   private entryAtChapterFirst: boolean = false;
+  private candidatePendingPresentation: boolean = false;
+  private candidateCurrent: () => boolean = (): boolean => true;
   private signatureRecoveryUsed: boolean = false;
   private pendingReplacement: MangaPendingReplacement | undefined;
   private detachPreparation: (() => void) | undefined;
@@ -109,6 +111,7 @@ export class MangaSessionController {
     this.nextManifestAttempted = false; this.nextImageAttempted = false; this.nextImagePending = false;
   }
   private scheduleAdjacentPreparation(): void {
+    if (this.candidatePendingPresentation) return;
     if (this.preparation !== undefined) { this.scheduleWholeAdjacentPreparation(); return; }
     const chapter = this.chapterData;
     const next = this.nextChapter;
@@ -176,6 +179,7 @@ export class MangaSessionController {
   }
 
   private acknowledgeVisible(): void {
+    if (this.candidatePendingPresentation) return;
     const chapter = this.chapterData;
     if (chapter === undefined || this.preparation === undefined || !this.sessionContentCurrent()) return;
     const page = this.pages.get(this.displayOrdinal);
@@ -238,6 +242,69 @@ export class MangaSessionController {
     this.observePreparation();
     const admittedGeneration = await this.setVisible(startAtChapterFirst ? 0 : entry.targetOrdinal);
     if (admittedGeneration !== this.generation) throw new Error('MANGA_SESSION_CANCELLED');
+  }
+
+  /** A materialization lease protects this candidate externally. Do not admit
+   * the chapter, advance the read clock or save progress before native paint. */
+  async openCandidate(entry: MangaPreparedEntry, landing: 'first' | 'last', offline: boolean,
+    preview: boolean, isCurrent: () => boolean): Promise<void> {
+    this.releaseView();
+    this.candidatePendingPresentation = true; this.candidateCurrent = isCurrent;
+    this.allowNetwork = !offline; this.previewMode = preview;
+    this.chapterData = entry.chapter; this.totalPageCount = entry.chapter.totalPages;
+    this.captureSessionContent(entry.chapter); this.admitFacts(entry.chapter);
+    this.progressData = entry.progress; this.progressCursor = { state: entry.progress };
+    const ordinal = landing === 'last' ? this.totalPageCount - 1 : 0;
+    const generation = this.generation;
+    await this.setVisible(ordinal);
+    if (!isCurrent() || generation !== this.generation) throw new Error('MANGA_SESSION_CANCELLED');
+    const fact = this.facts.get(ordinal), page = this.pages.get(ordinal), geometry = this.geometry.get(ordinal);
+    if (fact === undefined || page?.status !== 'ready' || geometry === undefined) throw new Error(page?.error ?? 'MANGA_CANDIDATE_IMAGE_REQUIRED');
+    this.mappedLocation = { kind: 'manga', chapter: entry.chapter.manifest.chapter,
+      manifestVersion: entry.chapter.manifest.manifestVersion, pageId: fact.pageId,
+      pageOrdinalFallback: ordinal, x: 0, y: landing === 'last' ? 1 : 0, progressRevision: entry.progress.token.revision };
+    if (!preview) {
+      const tileIndex = landing === 'last' ? Math.floor((geometry.height - 1) / geometry.tileHeight) : 0;
+      await this.setTileWindow([{ ordinal, tileIndex }]);
+      if (!isCurrent() || generation !== this.generation) throw new Error('MANGA_SESSION_CANCELLED');
+      const tile = this.tiles.get(`${ordinal}:${tileIndex}`);
+      if (tile?.image === undefined) throw new Error(tile?.error ?? 'MANGA_CANDIDATE_IMAGE_REQUIRED');
+    }
+  }
+
+  /** Admission precedes the view swap; progress remains blocked until the
+   * Surface confirms the actual target Image.onComplete receipt. */
+  async activateCandidate(isCurrent: () => boolean): Promise<void> {
+    if (!this.candidatePendingPresentation || this.chapterData === undefined || !isCurrent()) throw new Error('MANGA_SESSION_CANCELLED');
+    const chapter = this.chapterData, generation = this.generation;
+    const current = (): boolean => generation === this.generation && isCurrent() && this.candidateCurrent() && this.sessionContentCurrent();
+    await this.awaitPendingProgress(chapter.manifest.chapter.sourceId, chapter.manifest.chapter.bookId);
+    if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+    const progress = await this.gateway.progress(chapter.manifest.chapter.sourceId, chapter.manifest.chapter.bookId, current);
+    await this.protectChapter(chapter, this.totalPageCount, current);
+    if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+    this.progressData = progress; this.progressCursor = { state: progress };
+    if (this.mappedLocation !== undefined) this.mappedLocation = { ...this.mappedLocation, progressRevision: progress.token.revision };
+    this.observePreparation();
+  }
+
+  confirmCandidatePresented(): void {
+    if (!this.candidatePendingPresentation || !this.candidateCurrent() || !this.sessionContentCurrent()) throw new Error('MANGA_SESSION_CANCELLED');
+    this.candidatePendingPresentation = false; this.candidateCurrent = (): boolean => true;
+    this.acknowledgeVisible(); this.scheduleAdjacentPreparation();
+  }
+
+  captureCandidateProtectionRollback(): ((isCurrent: () => boolean) => Promise<boolean>) | undefined {
+    return this.chapterData === undefined ? undefined : this.preparation?.candidateProtectionRollback(this.chapterData);
+  }
+
+  /** A cancelled post-admission candidate restores the still-displayed owner.
+   * Its leases and durable position were never replaced during preparation. */
+  async restoreChapterProtection(isCurrent: () => boolean): Promise<void> {
+    const chapter = this.chapterData;
+    if (chapter === undefined || !isCurrent() || !this.sessionContentCurrent()) return;
+    await this.protectChapter(chapter, this.totalPageCount, isCurrent);
+    if (isCurrent()) this.acknowledgeVisible();
   }
 
   async open(sourceId: string, bookId: string, chapterIndex: number, offline: boolean = false, resumeIntent: boolean = false,
@@ -430,7 +497,8 @@ export class MangaSessionController {
       this.displayOrdinal = ordinal;
       const generation = this.generation;
       const visibility = ++this.visibilityRevision;
-      const current = (): boolean => generation === this.generation && visibility === this.visibilityRevision;
+      const current = (): boolean => generation === this.generation && visibility === this.visibilityRevision &&
+        this.sessionContentCurrent() && (!this.candidatePendingPresentation || this.candidateCurrent());
       const start = Math.max(0, ordinal - 1);
       const limit = Math.min(3, this.totalPageCount - start);
       if (Array.from({ length: limit }, (_value, index) => start + index).some(index => !this.facts.has(index))) {
@@ -468,7 +536,7 @@ export class MangaSessionController {
       }
       const failure = this.pages.get(ordinal);
       if (failure?.status === 'failed' && failure.error === 'READING_IMAGE_SIGNATURE_EXPIRED' &&
-        this.allowNetwork && !this.signatureRecoveryUsed) {
+        this.allowNetwork && !this.signatureRecoveryUsed && !this.candidatePendingPresentation) {
         // The visible page alone may trigger one recovery. A refreshed manifest
         // cannot form an unbounded refresh loop if its credentials also expired.
         this.signatureRecoveryUsed = true;
@@ -483,7 +551,7 @@ export class MangaSessionController {
       }
       this.acknowledgeVisible();
       // The first readable region must not wait for optional neighbor traffic.
-      void Promise.all(Array.from(wanted).filter(index => index !== ordinal)
+      if (!this.candidatePendingPresentation) void Promise.all(Array.from(wanted).filter(index => index !== ordinal)
         .map(index => this.loadPage(index, chapter, generation))).catch((): void => {});
       this.scheduleAdjacentPreparation();
       return generation;
@@ -507,6 +575,7 @@ export class MangaSessionController {
 
   /** Freeze the actually displayed fact before releasing the view's resources. */
   async savePosition(ordinal: number, x: number, y: number): Promise<void> {
+    if (this.candidatePendingPresentation) throw new Error('MANGA_CANDIDATE_NOT_PRESENTED');
     if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 1 || y < 0 || y > 1) throw new Error('MANGA_PROGRESS_INVALID');
     const chapter = this.chapterData;
     const cursor = this.progressCursor;
@@ -543,9 +612,9 @@ export class MangaSessionController {
     await task;
   }
 
-  close(intent: 'exit' | 'chapter' = 'exit'): Promise<void> {
+  close(intent: 'exit' | 'chapter' | 'candidate' = 'exit'): Promise<void> {
     const closing = intent === 'exit' ? this.preparation?.close() : undefined;
-    if (intent === 'chapter') this.preparation?.leaveCurrent();
+    if (intent === 'chapter') this.preparation?.leaveCurrent(this.chapterData);
     this.releaseView();
     return closing ?? Promise.resolve();
   }
@@ -560,6 +629,7 @@ export class MangaSessionController {
     this.tiles.clear(); this.tileLoads.clear(); this.wantedTiles.clear(); this.sliced = false; this.geometry.clear();
     this.pages.clear(); this.pageLoads.clear(); this.wanted.clear(); this.chapterData = undefined; this.progressData = undefined; this.progressCursor = undefined;
     this.entryAtChapterFirst = false;
+    this.candidatePendingPresentation = false; this.candidateCurrent = (): boolean => true;
     this.requiresRecovery = false; this.pendingReplacement = undefined; this.mappedLocation = undefined; this.signatureRecoveryUsed = false; this.facts.clear(); this.requests.clear(); this.totalPageCount = 0; this.displayOrdinal = 0;
     this.onChange?.();
   }
@@ -627,7 +697,8 @@ export class MangaSessionController {
   private async loadTileOwned(tile: MangaTile, chapter: MangaChapterResult, geometry: MangaPageGeometry,
     fact: MangaManifestPage, generation: number): Promise<void> {
     const key = `${tile.ordinal}:${tile.tileIndex}`;
-    const current = (): boolean => generation === this.generation && this.wantedTiles.has(key) && this.tiles.get(key) === tile;
+    const current = (): boolean => generation === this.generation && this.wantedTiles.has(key) && this.tiles.get(key) === tile &&
+      this.sessionContentCurrent() && (!this.candidatePendingPresentation || this.candidateCurrent());
     const request = this.requests.get(fact.resourceRef)?.request;
     this.foregroundImageWork++;
     try {
@@ -677,7 +748,8 @@ export class MangaSessionController {
     if (fact === undefined) throw new Error('MANGA_PAGE_FACT_REQUIRED');
     const page: MangaVisiblePage = { ordinal, pageId: fact.pageId, status: 'pending' };
     this.pages.set(ordinal, page);
-    const current = (): boolean => generation === this.generation && this.pages.get(ordinal) === page && this.wanted.has(ordinal);
+    const current = (): boolean => generation === this.generation && this.pages.get(ordinal) === page && this.wanted.has(ordinal) &&
+      this.sessionContentCurrent() && (!this.candidatePendingPresentation || this.candidateCurrent());
     const request = this.requests.get(fact.resourceRef)?.request;
     this.onChange?.();
     this.foregroundImageWork++;

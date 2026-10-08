@@ -1217,6 +1217,8 @@ struct Index {
             this.applyDirectoryChapter(chapterIndex, chapterTitle);
           },
           onSelectChapter: (chapterIndex: number): void => this.onDirectoryChapterSelected(chapterIndex),
+          onAdjacentChapterCommitted: (chapterIndex: number, chapterTitle: string): void =>
+            this.applyMangaAdjacentChapter(chapterIndex, chapterTitle),
           onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number,
             positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
             this.onDirectoryNavigationTargetSelected(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
@@ -6028,6 +6030,14 @@ struct Index {
     this.directoryCurrentChapterIndex = chapterIndex;
     this.directoryChapterTitle = chapterTitle;
     if (this.readingContentKind === 'manga') this.mangaCommittedRequestGeneration = this.mangaChapterRequestGeneration;
+  }
+
+  private applyMangaAdjacentChapter(chapterIndex: number, chapterTitle: string): void {
+    if (!this.readingSessionActive || this.readingContentKind !== 'manga' || !this.isKnownDetailChapter(chapterIndex)) return;
+    this.requestedChapterIndex = chapterIndex;
+    this.requestedMangaDirectoryTargetProof = undefined;
+    this.mangaChapterStartRequestGeneration = -1;
+    this.applyDirectoryChapter(chapterIndex, chapterTitle);
   }
 
   private readingPrefetchLease(session: RemoteReadingSession, owner: ReaderRuntimeOwner,

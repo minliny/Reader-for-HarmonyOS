@@ -133,6 +133,7 @@ export struct ReaderShell {
   onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
+  onAdjacentChapterCommitted: (chapterIndex: number, chapterTitle: string) => void = (): void => {};
   onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
     (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
   // undefined = 未接线, 面板走自身的章首降级链 (selectBookmark 降级)。
@@ -444,6 +445,7 @@ export struct ReaderShell {
         remoteSession: this.remoteSession, remoteBookSeed: this.remoteBookSeed,
         onRemoteSessionReady: (session: RemoteReadingSession): void => this.onRemoteSessionReady(session),
         onChapterCommitted: (index: number, title: string): void => this.onMangaChapterReady(_identity, index, title),
+        onAdjacentChapterCommitted: (index: number, title: string): void => this.onMangaAdjacentChapterReady(_identity, index, title),
         onBack: (): void => { if (_identity === this.mangaIdentityKey()) this.onExit(this.readingIdentityKey()); },
         onExitRequestHandler: (exit: () => void): void => this.onExitRequestHandler(exit),
         onChapter: (direction: number): void => {
@@ -455,7 +457,7 @@ export struct ReaderShell {
 
   private mangaIdentityKey(): string {
     return JSON.stringify([this.sourceId, this.bookId, this.readingReadyGeneration,
-      this.requestedChapterIndex ?? null, this.mangaChapterRequestGeneration]);
+      this.mangaChapterRequestGeneration]);
   }
 
   private keepsMangaReadingSession(identity: string): boolean {
@@ -480,6 +482,15 @@ export struct ReaderShell {
     for (let next = current + direction; next >= 0 && next < this.tocEntries.length; next += direction) {
       if (this.tocEntries[next].navigable !== false) { this.onSelectChapter(this.tocEntries[next].index); return; }
     }
+  }
+
+  private onMangaAdjacentChapterReady(identity: string, chapterIndex: number, chapterTitle: string): void {
+    if (this.contentKind !== 'manga' || identity !== this.mangaIdentityKey() ||
+      !Number.isSafeInteger(chapterIndex) || !this.tocEntries.some(entry => entry.index === chapterIndex && entry.navigable !== false)) return;
+    // An internal transfer retains its Surface. Explicit directory/source
+    // requests still increment mangaChapterRequestGeneration and remount it.
+    this.onAdjacentChapterCommitted(chapterIndex, chapterTitle);
+    this.onReadingReady(chapterIndex, this.sourceId, this.bookId, this.readingReadyGeneration);
   }
 
   private readingIdentityKey(): string {

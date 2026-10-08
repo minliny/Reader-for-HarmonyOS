@@ -928,7 +928,7 @@
       "reason": "Approved immersive manga reading, stable image viewport and existing control/mode/settings/catalog/more/chapter-end sheets from r4. Physical reading background and measured viewport inputs are native render contracts; no novel typesetting or generic error duplication.",
       "counts": {
         "fontSize": 36,
-        "backgroundColor": 19
+        "backgroundColor": 20
       },
       "status": "REGISTERED_APPROVED_MANGA_ADAPTATION_NOT_DEVICE_ACCEPTANCE",
       "approvalEvidence": "evidence/2026-10-02-manga-ui-implementation/SCOPE.md",
@@ -938,6 +938,12 @@
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
         "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      },
+      "boundaryTurnRenderSuccessor": {
+        "previousBackgroundCount": 19,
+        "additionalNativeActor": "retainedChapterPixels paper backing",
+        "evidence": "docs/MANGA_BOUNDARY_TURN_UI_CONTRACT_20261008.md",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     },
@@ -1240,6 +1246,29 @@
       "visualSuccessorContract": "tools/fixtures/design/novel-source-switch-successor-20261006.json",
       "visualSuccessorActor": "completion",
       "proof": "tools/test-source-switch-visual-sdk.mjs"
+    },
+    {
+      "file": "entry/src/main/ets/features/manga/vendor/pulltorefresh/PullToRefresh.ets",
+      "kind": "pinned-open-source-native-gesture-adapter",
+      "owner": "@ohos/pulltorefresh V1 2.1.1 / Reader native chapter boundary adapter",
+      "reason": "One exact Apache-2.0 source-pinned upstream pull component preserves native Pan and five-stage resistance while adapting short chapters, fixed viewport, cancellation and async lifetime. It owns no text typography or chapter transaction.",
+      "counts": {},
+      "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN",
+      "proof": "entry/src/main/ets/features/manga/vendor/pulltorefresh/UPSTREAM.md",
+      "sdkProof": "tools/test-manga-boundary-pull-upstream-sdk.mjs"
+    },
+    {
+      "file": "entry/src/main/ets/features/manga/MangaBoundaryTurnFeedback.ets",
+      "kind": "finite-manga-boundary-feedback",
+      "owner": "MangaReadingSurface chapter transition / hint and status native actors",
+      "reason": "Two exact chapter-turn feedback variants consume existing public action, metadata and caption roles. The reading owner supplies chapter facts and current theme, preserving approved historical Surface typography and native image viewport geometry.",
+      "counts": {
+        "fontSize": 0,
+        "backgroundColor": 2
+      },
+      "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN",
+      "proof": "docs/MANGA_BOUNDARY_TURN_UI_CONTRACT_20261008.md",
+      "sdkProof": "tools/test-manga-boundary-surface-sdk.mjs"
     }
   ]
 }

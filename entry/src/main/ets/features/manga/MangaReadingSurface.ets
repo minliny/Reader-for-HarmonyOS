@@ -6,6 +6,7 @@ import deviceInfo from '@ohos.deviceInfo';
 import hilog from '@ohos.hilog';
 import curves from '@ohos.curves';
 import inputMethod from '@ohos.inputMethod';
+import vibrator from '@ohos.vibrator';
 import { FrameCallback } from '@kit.ArkUI';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderWindowCoordinator, ReaderWindowChromeStyle, ReaderWindowPolicy } from '../../app/ReaderWindowCoordinator';
@@ -17,6 +18,9 @@ import { RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadin
 import { MangaSessionGateway } from './MangaSessionGateway';
 import type { MangaManifest } from './MangaContract';
 import { MangaSessionController, MangaTileRequest } from './MangaSessionController';
+import { MangaChapterTransitionCoordinator, MangaChapterTransitionCandidate } from './MangaChapterTransitionCoordinator';
+import { PullToRefresh, PullDirection } from './vendor/pulltorefresh/PullToRefresh';
+import { MangaBoundaryTurnFeedback } from './MangaBoundaryTurnFeedback';
 import { PhotoViewScaleModel } from './vendor/photoview/PhotoViewScaleModel';
 import { MangaStripProjection, MangaStripRow } from './MangaStripProjection';
 import { ReaderIconButton } from '../common/ReaderIconButton';
@@ -36,6 +40,7 @@ import { prepareMangaSheetFonts, prepareReaderFontFamily } from '../common/Reade
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
 interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }
+interface MangaRetainedPixel { key: string; uri: string; x: number; y: number; width: number; height: number; }
 
 class MangaLayoutFrame extends FrameCallback {
   private readonly action: () => void;
@@ -95,6 +100,7 @@ export struct MangaReadingSurface {
   remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
   onRemoteSessionReady: (session: RemoteReadingSession) => void = (): void => {};
   onChapterCommitted: (index: number, title: string) => void = (): void => {};
+  onAdjacentChapterCommitted: (index: number, title: string) => void = (): void => {};
   offline: boolean = false;
   onSaveFailure: (message: string) => void = (_message: string): void => {};
   onBack: () => void = (): void => {};
@@ -169,7 +175,7 @@ export struct MangaReadingSurface {
   private confirmedPosition: MangaConfirmedPosition | undefined;
   private appliedLayoutGeneration: number = -1;
   private publishedManifestVersion: string = '';
-  private restoringAnchor: boolean = false;
+  @State private restoringAnchor: boolean = false;
   private pendingTurnOrdinal: number | undefined;
   private mountedTurnRowKey: string = '';
   private exiting: boolean = false;
@@ -200,6 +206,26 @@ export struct MangaReadingSurface {
   private seekingPage: number | undefined;
   @State private stageWidth: number = 1;
   @State private stageHeight: number = 1;
+  @State private boundaryDirection: PullDirection = '';
+  @State private boundaryDistance: number = 0;
+  @State private boundaryArmed: boolean = false;
+  @State private boundaryBusy: boolean = false;
+  @State private boundaryFailure: string = '';
+  @State private boundaryReset: number = 0;
+  private boundaryDragging: boolean = false;
+  private boundaryOrigin: MangaConfirmedPosition | undefined;
+  private boundaryGeneration: number = 0;
+  private chapterTransitions: MangaChapterTransitionCoordinator | undefined;
+  private pendingChapterTransition: MangaChapterTransitionCandidate | undefined;
+  private previousChapterController: MangaSessionController | undefined;
+  private nativeTransitionImageReady: boolean = false;
+  private nativeTransitionResolve: (() => void) | undefined;
+  private nativeTransitionReject: ((error: Error) => void) | undefined;
+  private nativeTransitionTimer: number = -1;
+  private boundaryRetryDirection: number = 1;
+  private boundaryHapticSent: boolean = false;
+  @State private previousChapterPixels: MangaRetainedPixel[] = [];
+  private nativeTransitionImages: Set<string> = new Set();
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -229,6 +255,8 @@ export struct MangaReadingSurface {
   aboutToDisappear(): void {
     // Withdraw before resetting watched state: disposal cannot reissue reader policy.
     this.mounted = false;
+    if (this.boundaryBusy || this.boundaryDragging || this.chapterTransitions?.pending === true)
+      void this.cancelBoundaryChapter().catch((): void => {});
     this.restoreAppWindowChrome();
     this.invalidatePanelMotion();
     this.panel = ''; this.panelPhase = 'closed'; this.panelOffset = 0; this.panelScrimOpacity = 0;
@@ -456,6 +484,8 @@ export struct MangaReadingSurface {
       manifest.manifestVersion, page.pageId]);
   }
   private rememberVisible(allowRestore: boolean = false): boolean {
+    // A pulled drawing transform cannot become a durable image coordinate.
+    if (this.boundaryDragging) return false;
     if (this.restoringAnchor && (!allowRestore || this.appliedLayoutGeneration !== this.layoutGeneration)) return false;
     if (this.data.totalCount() <= this.first) return false;
     const row = this.data.getData(this.first);
@@ -483,6 +513,7 @@ export struct MangaReadingSurface {
   }
   private resizeViewport(width: number, height: number = this.viewportHeight): void {
     if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0 || (width === this.viewportWidth && height === this.viewportHeight)) return;
+    if (this.boundaryBusy || this.boundaryDragging) void this.cancelBoundaryChapter().catch((): void => {});
     // The new layout's rectangles cannot reconstruct the old clipped position.
     // Use the logical coordinate captured while the previous width was active.
     const anchor = this.visibleAnchor;
@@ -516,14 +547,17 @@ export struct MangaReadingSurface {
     this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {
       if (!this.mounted || generation !== this.layoutGeneration) return;
       this.onViewportScroll();
+      if (this.pendingChapterTransition !== undefined) this.confirmBoundaryFrame();
     }));
   }
   private onViewportScroll(): void {
+    if (this.boundaryDragging) return;
     this.refreshLoginRequiredForControls();
     if (this.visibleAnchor !== undefined) this.displayedPage = this.visibleAnchor.ordinal;
-    if (!this.restoringAnchor) { this.rememberVisible(); return; }
+    if (!this.restoringAnchor) { this.rememberVisible(); if (this.pendingChapterTransition !== undefined) this.confirmBoundaryFrame(); return; }
     if (this.appliedLayoutGeneration !== this.layoutGeneration || !this.measureVisibleWindow()) return;
     if (this.rememberVisible(true)) this.restoringAnchor = false;
+    if (this.pendingChapterTransition !== undefined) this.confirmBoundaryFrame();
   }
   private queueViewportObservation(): void {
     if (!this.mounted || this.viewportObservationPending) return;
@@ -641,7 +675,7 @@ export struct MangaReadingSurface {
         if (item.known) requested.push({ ordinal: item.ordinal, tileIndex: item.tileIndex });
       }
       await controller.setTileWindow(requested);
-      if (this.mounted && generation === this.viewportGeneration && !this.chapterCommitted &&
+      if (this.mounted && generation === this.viewportGeneration && !this.chapterCommitted && this.pendingChapterTransition === undefined &&
         controller.tile(row.ordinal, row.tileIndex)?.image !== undefined && controller.chapter !== undefined) {
         this.chapterCommitted = true;
         this.onChapterCommitted(controller.chapter.chapterIndex,
@@ -651,11 +685,14 @@ export struct MangaReadingSurface {
       const message = error instanceof Error ? error.message : '图片加载失败';
       // A newer controller selection can cancel this window before its own
       // viewport callback runs. Cancellation is not a failure of visible pixels.
-      if (message !== 'MANGA_SESSION_CANCELLED' && this.mounted && generation === this.viewportGeneration)
-        this.error = message;
+      if (message !== 'MANGA_SESSION_CANCELLED' && this.mounted && generation === this.viewportGeneration) {
+        if (this.pendingChapterTransition !== undefined) this.nativeTransitionReject?.(new Error(message));
+        else this.error = message;
+      }
     }
   }
   private async saveVisible(): Promise<void> {
+    if (this.pendingChapterTransition !== undefined || this.boundaryDragging) return;
     if (!this.opened || this.recovering || this.controller === undefined || this.data.totalCount() <= this.first) return;
     try {
       if (!this.restoringAnchor && !this.rememberVisible()) return;
@@ -834,6 +871,10 @@ export struct MangaReadingSurface {
       this.isPrimaryErrorRow(row)]);
   }
   private async handleBack(intent?: 'navigation'): Promise<void> {
+    if (this.boundaryBusy || this.boundaryDragging) {
+      await this.cancelBoundaryChapter();
+      if (intent !== 'navigation') return;
+    }
     if (intent !== 'navigation') {
       if (this.panel.length > 0 || this.panelPhase === 'preparing') { void this.closePanel(); return; }
       if (this.chapterEnd) { this.chapterEnd = false; return; }
@@ -852,6 +893,7 @@ export struct MangaReadingSurface {
     }
   }
   private changeZoom(scale: number): void {
+    if (this.boundaryBusy || this.boundaryDragging) void this.cancelBoundaryChapter().catch((): void => {});
     if (!Number.isFinite(scale) || scale <= 0) return;
     this.presentationGeneration++;
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
@@ -862,6 +904,7 @@ export struct MangaReadingSurface {
     if (anchor !== undefined) this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
   }
   private toggleDirection(): void {
+    if (this.boundaryBusy || this.boundaryDragging) void this.cancelBoundaryChapter().catch((): void => {});
     this.presentationGeneration++;
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     this.rememberVisible();
@@ -958,6 +1001,7 @@ export struct MangaReadingSurface {
     }
   }
   private toggleControls(): void {
+    if (this.boundaryBusy) { void this.cancelBoundaryChapter().catch((): void => {}); return; }
     if (this.panel.length > 0 || this.chapterEnd) return;
     this.controlsVisible = !this.controlsVisible;
   }
@@ -971,6 +1015,8 @@ export struct MangaReadingSurface {
     if (required !== this.loginRequiredForControls) this.loginRequiredForControls = required;
   }
   private onWindowChromeChanged(): void {
+    if ((this.boundaryBusy || this.boundaryDragging) && (!this.windowChromeActive || this.windowChromeOverlayActive))
+      void this.cancelBoundaryChapter().catch((): void => {});
     if (!this.mounted || this.isReaderIdentityCurrent?.() === false) return;
     this.refreshLoginRequiredForControls();
     this.applyWindowChrome();
@@ -1014,6 +1060,7 @@ export struct MangaReadingSurface {
       });
   }
   private pageOrdinal(): number {
+    if (this.pendingChapterTransition !== undefined && this.boundaryOrigin !== undefined) return this.boundaryOrigin.anchor.ordinal;
     return this.horizontal ? this.horizontalPage : this.displayedPage;
   }
   private async seekPage(ordinal: number): Promise<void> {
@@ -1068,7 +1115,218 @@ export struct MangaReadingSurface {
   }
   private async selectAdjacentChapter(direction: number): Promise<void> {
     if (this.adjacentChapter(direction) === undefined) return;
-    await this.performPanelAction((): void => { this.chapterEnd = false; this.onChapter(direction); });
+    await this.performPanelAction(async (): Promise<void> => { this.chapterEnd = false; await this.turnBoundaryChapter(direction); });
+  }
+
+  private boundaryEnabled(): boolean {
+    return this.mounted && this.opened && !this.horizontal && this.zoom === 1 && !this.recovering && !this.exiting &&
+      this.panel.length === 0 && this.panelPhase === 'closed' && !this.chapterEnd && this.windowChromeActive &&
+      !this.windowChromeOverlayActive && !this.restoringAnchor && !this.loginRequiredForControls &&
+      this.error.length === 0 && !this.boundaryBusy && this.pendingChapterTransition === undefined;
+  }
+  private onBoundaryPull(direction: PullDirection, distance: number, armed: boolean): void {
+    if (armed && !this.boundaryHapticSent && !this.reduceMotion) {
+      this.boundaryHapticSent = true;
+      try { void vibrator.startVibration({ type: 'time', duration: 10 }, { usage: 'touch' }).catch((): void => {}); }
+      catch (_error) { /* Unsupported motors never own navigation. */ }
+    }
+    this.boundaryDirection = direction; this.boundaryDistance = distance; this.boundaryArmed = armed;
+  }
+  private onBoundaryActivity(active: boolean): void {
+    if (active && !this.boundaryDragging) {
+      this.boundaryHapticSent = false;
+      this.flushViewportObservation();
+      this.boundaryOrigin = this.confirmedPosition;
+    }
+    this.boundaryDragging = active;
+    if (!active && !this.boundaryBusy) {
+      this.boundaryOrigin = undefined;
+      this.queueViewportObservation();
+    }
+  }
+  private captureChapterPixels(): MangaRetainedPixel[] {
+    const pixels: MangaRetainedPixel[] = [];
+    for (let index = this.first; index <= this.requestedLast(); index++) {
+      const row = this.data.getData(index), image = this.controller?.tile(row.ordinal, row.tileIndex)?.image;
+      if (image === undefined) continue;
+      const rect = this.scroller.getItemRect(index);
+      if (!Number.isFinite(rect.y) || rect.y >= this.viewportHeight || rect.y + rect.height <= 0) continue;
+      pixels.push({ key: row.key, uri: image.fileUri,
+        x: rect.x + this.rowDisplayLeft(row) - this.horizontalScroller.currentOffset().xOffset,
+        y: rect.y + this.rowDisplayTop(row), width: this.rowDisplayWidth(row),
+        height: this.rowDisplayWidth(row) * row.height / row.width });
+    }
+    return pixels;
+  }
+  private async turnBoundaryChapter(direction: number): Promise<string> {
+    if (this.boundaryBusy || this.runtime === undefined || this.chapterTransitions?.pending === true) return '';
+    const target = this.adjacentChapter(direction), origin = this.controller;
+    if (target === undefined || origin?.chapter === undefined || !this.mounted || this.exiting) return '';
+    if (!this.boundaryDragging) { this.flushViewportObservation(); this.boundaryOrigin = this.confirmedPosition; }
+    const confirmed = this.boundaryOrigin;
+    if (confirmed === undefined || confirmed.controller !== origin || confirmed.manifest !== origin.chapter.manifest) return '';
+    const generation = ++this.boundaryGeneration;
+    const originManifest = origin.chapter.manifest;
+    const sourceVersion = this.remoteSession?.sourceVersion;
+    const width = this.viewportWidth, height = this.viewportHeight;
+    this.boundaryBusy = true; this.boundaryFailure = ''; this.boundaryRetryDirection = direction;
+    this.boundaryDirection = direction > 0 ? 'next' : 'previous';
+    let candidate: MangaChapterTransitionCandidate | undefined;
+    let presented = false;
+    const current = (): boolean => this.mounted && generation === this.boundaryGeneration && !this.exiting &&
+      this.isReaderIdentityCurrent?.() !== false && !this.windowChromeOverlayActive && this.windowChromeActive &&
+      this.viewportWidth === width && this.viewportHeight === height &&
+      this.remoteSession?.sourceVersion === sourceVersion && this.remoteSession?.requiresContextRefresh !== true &&
+      (this.controller === origin || this.controller === candidate?.controller) && origin.chapter?.manifest === originManifest;
+    try {
+      // Use the untouched pre-pull coordinate and allow save failure to abort
+      // the transfer. A failed CAS never silently advances to another chapter.
+      try { await origin.savePosition(confirmed.anchor.ordinal, confirmed.anchor.x ?? 0, confirmed.anchor.y); }
+      catch (saveError) {
+        this.onSaveFailure(saveError instanceof Error ? saveError.message : 'MANGA_PROGRESS_SAVE_FAILED');
+        throw saveError;
+      }
+      if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+      const saved = origin.savedLocation;
+      if (saved !== null) MangaBookPresentation.admitConfirmedLocation(this.sourceId, this.bookId, saved,
+        origin.chapter!, origin.totalPages, origin.pageAt(confirmed.anchor.ordinal));
+      if (this.chapterTransitions === undefined) this.chapterTransitions = new MangaChapterTransitionCoordinator(this.runtime);
+      candidate = await this.chapterTransitions.prepare({ currentController: origin, chapterIndex: target.index,
+        chapterUrl: target.url, landing: direction > 0 ? 'first' : 'last', offline: this.offline,
+        preview: this.effectiveFit() === 'contain', isCurrent: current });
+      if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+      // Old display leases remain owned until the replacement receives native
+      // image callbacks and a measured frame. No screenshot or full decode.
+      this.previousChapterPixels = this.captureChapterPixels();
+      if (this.previousChapterPixels.length === 0) throw new Error('MANGA_POSITION_NOT_VISIBLE');
+      await candidate.activate();
+      if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+      this.previousChapterController = origin;
+      origin.onChange = undefined;
+      this.pendingChapterTransition = candidate;
+      this.nativeTransitionImageReady = false; this.nativeTransitionImages.clear();
+      const painted = new Promise<void>((resolve, reject): void => {
+        this.nativeTransitionResolve = resolve; this.nativeTransitionReject = reject;
+        this.nativeTransitionTimer = setTimeout((): void => reject(new Error('MANGA_CHAPTER_PRESENTATION_TIMEOUT')), 15000);
+      });
+      this.boundaryDragging = false;
+      this.boundaryReset++;
+      this.controller = candidate.controller;
+      candidate.controller.onChange = (): void => { if (current()) this.publish(); };
+      this.publishedManifestVersion = ''; this.chapterCommitted = false;
+      this.confirmedPosition = undefined; this.visibleAnchor = undefined;
+      this.horizontalPage = candidate.targetOrdinal;
+      this.publish(); this.restore(candidate.targetOrdinal, candidate.location.y, candidate.location.x);
+      await painted;
+      if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
+      candidate.confirmPresented(); presented = true;
+      const admittedController = candidate.controller;
+      admittedController.onChange = (): void => { if (this.mounted && this.controller === admittedController) this.publish(); };
+      this.pendingChapterTransition = undefined; this.previousChapterPixels = [];
+      this.chapterCommitted = true;
+      const chapter = candidate.controller.chapter!;
+      this.onAdjacentChapterCommitted(chapter.chapterIndex, this.displayChapterTitle(chapter.chapterIndex, chapter.chapterTitle));
+      if (this.remoteSession !== undefined) this.configureAdjacentChapter(this.remoteSession, candidate.controller);
+      await this.saveVisible();
+      return '';
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'MANGA_CHAPTER_PREPARATION_FAILED';
+      if (!presented) {
+        if (this.controller === candidate?.controller && this.mounted) {
+          this.controller = origin; origin.onChange = (): void => this.publish();
+          this.pendingChapterTransition = undefined; this.publishedManifestVersion = '';
+          this.visibleAnchor = confirmed.anchor; this.confirmedPosition = confirmed;
+          this.publish(); this.restore(confirmed.anchor.ordinal, confirmed.anchor.y, confirmed.anchor.x ?? 0);
+        }
+        // A cancelled, late save/prepare must never cancel a newer intention.
+        if (candidate !== undefined) await candidate.cancel();
+        else if (generation === this.boundaryGeneration) await this.chapterTransitions?.cancel();
+      }
+      if (this.mounted && generation === this.boundaryGeneration && message !== 'MANGA_SESSION_CANCELLED') {
+        this.boundaryFailure = '章节准备失败，仍停留在当前画面。';
+        hilog.warn(0x5244, 'Reader', 'Boundary chapter preparation failed: %{public}s', message);
+      }
+      return '';
+    } finally {
+      // After presentation, origin leases must retire even if an external
+      // chapter notification fails. Chapter close is identity-aware.
+      if (presented) {
+        try { await origin.close('chapter'); }
+        catch (failure) {
+          try { this.onSaveFailure(failure instanceof Error ? failure.message : 'MANGA_SESSION_CLOSE_FAILED'); }
+          catch (_error) { /* A reporting callback cannot keep the gesture locked. */ }
+        }
+      }
+      if (generation === this.boundaryGeneration) {
+        this.clearBoundaryFrameWait(); this.pendingChapterTransition = undefined;
+        this.previousChapterController = undefined; this.previousChapterPixels = [];
+        this.boundaryBusy = false; this.boundaryDragging = false; this.boundaryOrigin = undefined;
+        this.boundaryReset++; this.boundaryDirection = ''; this.boundaryDistance = 0; this.boundaryArmed = false;
+      }
+    }
+  }
+  private onChapterImageComplete(row: MangaStripRow, uri: string, renderKey: string,
+    owner: MangaSessionController | undefined, manifest: MangaManifest | undefined): void {
+    const candidate = this.pendingChapterTransition;
+    if (candidate === undefined || this.controller !== candidate.controller || owner !== this.controller ||
+      manifest !== this.controller.chapter?.manifest ||
+      this.rowRenderKey(row) !== renderKey || this.controller.tile(row.ordinal, row.tileIndex)?.image?.fileUri !== uri) return;
+    this.nativeTransitionImages.add(renderKey);
+    if (row.ordinal === candidate.targetOrdinal && row.tileIndex === candidate.landingTileIndex)
+      this.nativeTransitionImageReady = true;
+    this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {
+      this.flushViewportObservation(); this.confirmBoundaryFrame();
+    }));
+  }
+  private onChapterImageError(row: MangaStripRow, uri: string,
+    owner: MangaSessionController | undefined, manifest: MangaManifest | undefined): void {
+    if (this.pendingChapterTransition !== undefined && owner === this.controller && manifest === this.controller?.chapter?.manifest &&
+      this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri === uri)
+      this.nativeTransitionReject?.(new Error('MANGA_CHAPTER_NATIVE_IMAGE_FAILED'));
+  }
+  private confirmBoundaryFrame(): void {
+    const candidate = this.pendingChapterTransition;
+    if (candidate === undefined || !this.nativeTransitionImageReady || this.restoringAnchor ||
+      this.confirmedPosition?.controller !== candidate.controller || this.confirmedPosition.manifest !== candidate.controller.chapter?.manifest) return;
+    try {
+      // At a chapter tail, native bottom clamping may expose earlier short
+      // pages at the viewport top. Its measured anchor remains authoritative.
+      if (candidate.landing === 'last' ? !this.scroller.isAtEnd() : this.confirmedPosition.anchor.ordinal !== candidate.targetOrdinal) return;
+      for (let index = this.first; index <= this.requestedLast(); index++) {
+        const row = this.data.getData(index);
+        const rect = this.scroller.getItemRect(index);
+        if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || !Number.isFinite(rect.width) || rect.width <= 0 || rect.height <= 0) return;
+        if (rect.y >= this.viewportHeight || rect.y + rect.height <= 0) continue;
+        if (this.rowHasError(row)) { this.nativeTransitionReject?.(new Error('MANGA_CANDIDATE_IMAGE_REQUIRED')); return; }
+        if (candidate.controller.tile(row.ordinal, row.tileIndex)?.image === undefined || !this.nativeTransitionImages.has(this.rowRenderKey(row))) return;
+      }
+    } catch (_error) { return; /* Wait for an actual mounted replacement frame. */ }
+    this.nativeTransitionResolve?.();
+  }
+  private clearBoundaryFrameWait(): void {
+    if (this.nativeTransitionTimer >= 0) clearTimeout(this.nativeTransitionTimer);
+    this.nativeTransitionTimer = -1; this.nativeTransitionResolve = undefined; this.nativeTransitionReject = undefined;
+    this.nativeTransitionImageReady = false; this.nativeTransitionImages.clear();
+  }
+  private async cancelBoundaryChapter(): Promise<void> {
+    this.boundaryGeneration++; this.boundaryReset++;
+    this.nativeTransitionReject?.(new Error('MANGA_SESSION_CANCELLED'));
+    this.clearBoundaryFrameWait();
+    const old = this.previousChapterController, confirmed = this.boundaryOrigin;
+    if (old !== undefined && this.controller === this.pendingChapterTransition?.controller) {
+      this.controller = old; old.onChange = this.mounted ? (): void => this.publish() : undefined;
+      this.pendingChapterTransition = undefined; this.publishedManifestVersion = '';
+      this.boundaryDragging = false; this.visibleAnchor = confirmed?.anchor;
+      if (this.mounted) {
+        this.publish();
+        if (confirmed !== undefined) this.restore(confirmed.anchor.ordinal, confirmed.anchor.y, confirmed.anchor.x ?? 0);
+      }
+    }
+    this.pendingChapterTransition = undefined; this.previousChapterController = undefined;
+    this.previousChapterPixels = []; this.boundaryBusy = false; this.boundaryDragging = false;
+    this.boundaryOrigin = undefined; this.boundaryDirection = ''; this.boundaryDistance = 0; this.boundaryArmed = false;
+    await this.chapterTransitions?.cancel();
+    if (this.mounted) this.boundaryReset++;
   }
   private async selectDirectoryTarget(index: number, proof?: JsonObject, fromCatalog: boolean = false): Promise<void> {
     if (fromCatalog) {
@@ -1077,6 +1335,7 @@ export struct MangaReadingSurface {
     await this.performPanelAction((): void => { this.chapterEnd = false; this.onSelectDirectoryTarget(index, proof); });
   }
   private async openPanel(panel: string): Promise<void> {
+    if (this.boundaryBusy || this.boundaryDragging) await this.cancelBoundaryChapter();
     if (!this.mounted) return;
     this.invalidatePanelMotion();
     const generation = this.panelGeneration;
@@ -1378,8 +1637,10 @@ export struct MangaReadingSurface {
       Row() {
         if (this.persistentDirectory()) { this.tabletDirectory(); }
         Stack({ alignContent: Alignment.Center }) {
-        this.imageViewport();
-        if (this.opened && this.showPageNumbers && !this.controlsVisible && !this.chapterEnd) {
+        this.boundaryViewport();
+        if (this.previousChapterPixels.length > 0) { this.retainedChapterPixels(); }
+        if (this.boundaryBusy || this.boundaryFailure.length > 0) { this.boundaryStatus(); }
+        if (this.opened && this.showPageNumbers && !this.controlsVisible && !this.chapterEnd && !this.boundaryBusy) {
           Stack({ alignContent: Alignment.BottomEnd }) {
             Text(`${this.pageOrdinal() + 1} / ${this.horizontalPageCount}`)
               .fontSize(11).fontColor(this.mutedColor()).padding({ left: 10, right: 10, top: 5, bottom: 5 })
@@ -1388,7 +1649,7 @@ export struct MangaReadingSurface {
           }.width('100%').height('100%').hitTestBehavior(HitTestMode.None)
             .padding(this.interactiveInsets(this.windowMetricsRevision));
         }
-        if (this.controlsPresentedForWindow()) {
+        if (this.controlsPresentedForWindow() && !this.boundaryBusy) {
           // Stack owns child placement. Component align() only aligns its
           // own content and cannot position an intrinsic floating bar.
           Stack({ alignContent: Alignment.Top }) {
@@ -1442,14 +1703,70 @@ export struct MangaReadingSurface {
       .onAppear((): void => { void this.preparePanelFonts(); });
   }
   @Builder
+  private boundaryViewport() {
+    PullToRefresh({
+      scroller: this.scroller,
+      customList: (): void => { this.imageViewport(); },
+      customRefresh: (): void => { this.boundaryHint('previous'); },
+      customLoad: (): void => { this.boundaryHint('next'); },
+      enabled: this.boundaryEnabled(), hasPrevious: this.adjacentChapter(-1) !== undefined,
+      hasNext: this.adjacentChapter(1) !== undefined, resetToken: this.boundaryReset,
+      animationDuration: this.reduceMotion ? 0 : 180,
+      onPull: (direction: PullDirection, distance: number, armed: boolean): void => this.onBoundaryPull(direction, distance, armed),
+      onActivity: (active: boolean): void => this.onBoundaryActivity(active),
+      onRefresh: (): Promise<string> => this.turnBoundaryChapter(-1),
+      onLoadMore: (): Promise<string> => this.turnBoundaryChapter(1),
+    }).width('100%').height('100%');
+  }
+  @Builder
+  private boundaryHint(direction: PullDirection) {
+    MangaBoundaryTurnFeedback({
+      kind: 'hint',
+      caption: this.boundaryBusy ? (direction === 'next' ? '正在准备下一话' : '正在准备上一话') :
+        this.boundaryArmed ? (direction === 'next' ? '松手进入下一话' : '松手返回上一话') :
+          direction === 'next' ? '上拉进入下一话' : '下拉返回上一话',
+      chapterTitle: this.adjacentChapter(direction === 'next' ? 1 : -1)?.title ?? '',
+      progressPercent: this.boundaryDistance / Math.max(120, Math.min(180, this.viewportHeight * 0.2)) * 100,
+      paperColor: this.paperColor(), inkColor: this.inkColor(), mutedColor: this.mutedColor(), accentColor: this.greenColor()
+    });
+  }
+  @Builder
+  private retainedChapterPixels() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      ForEach(this.previousChapterPixels, (pixel: MangaRetainedPixel) => {
+        Image(pixel.uri).width(pixel.width).height(pixel.height).objectFit(ImageFit.Fill)
+          .position({ x: pixel.x, y: pixel.y }).draggable(false);
+      }, (pixel: MangaRetainedPixel): string => pixel.key);
+    }.width('100%').height('100%').backgroundColor(this.paperColor()).clip(true).hitTestBehavior(HitTestMode.None);
+  }
+  @Builder
+  private boundaryStatus() {
+    MangaBoundaryTurnFeedback({
+      kind: 'status', busy: this.boundaryBusy,
+      caption: this.boundaryBusy ? (this.boundaryRetryDirection > 0 ? '正在准备下一话…' : '正在准备上一话…') : this.boundaryFailure,
+      surfaceColor: this.surfaceColor(), inkColor: this.inkColor(),
+      insetLeft: this.interactiveInsets(this.windowMetricsRevision).left, insetTop: this.interactiveInsets(this.windowMetricsRevision).top,
+      insetRight: this.interactiveInsets(this.windowMetricsRevision).right, insetBottom: this.interactiveInsets(this.windowMetricsRevision).bottom,
+      onRetry: (): void => { void this.turnBoundaryChapter(this.boundaryRetryDirection); },
+      onDismiss: (): void => { this.boundaryFailure = ''; void this.cancelBoundaryChapter().catch((): void => {}); }
+    });
+  }
+  @Builder
+  private tileImage(row: MangaStripRow, uri: string, renderKey: string,
+    owner: MangaSessionController | undefined, manifest: MangaManifest | undefined) {
+    Image(uri).width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width)
+      .objectFit(ImageFit.Fill).draggable(false)
+      .onComplete((): void => this.onChapterImageComplete(row, uri, renderKey, owner, manifest))
+      .onError((): void => this.onChapterImageError(row, uri, owner, manifest));
+  }
+  @Builder
   private imageViewport() {
     Scroll(this.horizontalScroller) {
       List({ scroller: this.scroller, space: 0 }) {
         LazyForEach(this.data, (row: MangaStripRow, index: number) => {
           ListItem() {
             if (this.controller?.tile(row.ordinal, row.tileIndex)?.image !== undefined) {
-              Image(this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri)
-                .width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width).objectFit(ImageFit.Fill).draggable(false)
+              this.tileImage(row, this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri ?? '', this.rowRenderKey(row), this.controller, this.controller?.chapter?.manifest);
             } else {
               Column() {
               if (this.rowHasError(row)) {
@@ -1468,6 +1785,7 @@ export struct MangaReadingSurface {
             .onAppear((): void => this.onRowAppear(index))
         }, (row: MangaStripRow): string => this.rowRenderKey(row))
       }.height('100%').width(this.viewportWidth * this.zoom).cachedCount(0).scrollBar(BarState.Off)
+        .edgeEffect(EdgeEffect.None).enableScrollInteraction(!this.boundaryBusy)
         .onScroll((): void => { this.queueViewportObservation(); })
         .onScrollIndex((first: number, last: number): void => {
           if (this.seekingPage !== undefined && first >= 0 && first < this.data.totalCount() &&
@@ -1489,7 +1807,7 @@ export struct MangaReadingSurface {
         })
         .onTouch((event: TouchEvent): void => { if (event.type === TouchType.Down) this.onViewportTouch(); })
         .onScrollStop((): void => { this.flushViewportObservation(); this.saveVisible(); })
-    }.height('100%').width('100%').scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
+    }.height('100%').width('100%').scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off).edgeEffect(EdgeEffect.None)
       .onAreaChange((_old: Area, area: Area): void => { this.resizeViewport(Number(area.width), Number(area.height)); })
       .onScroll((): void => { this.queueViewportObservation(); })
       .onScrollStop((): void => { this.flushViewportObservation(); this.saveVisible(); })
@@ -1504,7 +1822,7 @@ export struct MangaReadingSurface {
             else this.turnPage(Math.abs(event.angle) > 90 ? 1 : -1);
           }
         }),
-        TapGesture({ count: 1, distanceThreshold: 6 }).onAction((): void => this.toggleControls())));
+        TapGesture({ count: 1, distanceThreshold: 6 }).onAction((): void => { if (!this.boundaryDragging) this.toggleControls(); })));
   }
   @Builder
   private topControls() {
@@ -1735,7 +2053,7 @@ export struct MangaReadingSurface {
         });
   }
   private directoryCurrentIndex(): number {
-    const live = this.controller?.chapter?.chapterIndex;
+    const live = (this.pendingChapterTransition !== undefined ? this.previousChapterController : this.controller)?.chapter?.chapterIndex;
     if (live !== undefined && Number.isSafeInteger(live) && live >= 0) return live;
     const confirmed = MangaBookPresentation.get(this.sourceId, this.bookId)?.chapterIndex;
     if (confirmed !== undefined && Number.isSafeInteger(confirmed) && confirmed >= 0) return confirmed;
