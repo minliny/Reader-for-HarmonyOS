@@ -298,6 +298,7 @@
     "test-manga-book-presentation.mjs",
     "test-manga-boundary-pull-upstream-sdk.mjs",
     "test-manga-boundary-surface-sdk.mjs",
+    "test-manga-boundary-feedback-sdk.mjs",
     "test-manga-cancelled-banner.mjs",
     "test-manga-chapter-first-entry.mjs",
     "test-manga-chapter-preparation.mjs",

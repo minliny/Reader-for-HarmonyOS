@@ -182,6 +182,32 @@ check('official SDK emits fixed viewport translation and native single-finger pa
   assert.equal(f.owner.panOption.fingers,1);
   assert.equal(f.owner.panOption.distance,1);
 });
+check('actual SDK pull State exposes the bottom band and short release animates its retained view home', () => {
+  function verify(candidate) {
+    const f = fixture(candidate); let loads = 0;
+    f.owner.customList = () => {};
+    f.owner.onLoadMore = async () => { loads++; return ''; };
+    f.owner.initialRender();
+    const content = [...f.owner.nodes.values()].find(node => node.type === 'Column');
+    const identities = [...f.owner.nodes.values()].map(node => node.id);
+    for (const duration of [180,0]) {
+      f.owner.updateStateVars({ animationDuration: duration });
+      startAtEnd(f); pull(f,40); f.runtime.flush();
+      assert.ok(f.owner.trYBottom < 0,'actual method admits outward drawing State');
+      assert.equal(content.translate.y,f.owner.trYBottom,'SDK translation follows actual nonzero pull State');
+      assert.equal(content.height,'100%','exposing the footer must not resize the image viewport');
+      f.owner.onActionEnd(); f.runtime.flush();
+      assert.equal(f.animations.at(-1).duration,duration,'short release uses the supplied normal or reduced-motion native animation');
+      assert.equal(content.translate.y,0,'actual reset State restores the original drawing position');
+      assert.deepEqual([...f.owner.nodes.values()].map(node => node.id),identities,'pull and return retain the native viewport actors');
+      assert.equal(loads,0,'a short visual pull never requests a chapter');
+    }
+  }
+  verify(source);
+  const staticTranslation = source.replace('.translate({ y: this.trYTop + this.trYBottom })','.translate({ y: 0 })');
+  assert.notEqual(staticTranslation,source);
+  assert.throws(() => verify(staticTranslation), /SDK translation follows actual nonzero pull State/);
+});
 
 {
   const f = fixture(); const settles = [];
@@ -197,6 +223,57 @@ check('unknown Scroller boundary refuses admission', () => {
   const f = fixture(); f.owner.scroller.isAtEnd = () => { throw new Error('edge unavailable'); };
   f.owner.onActionStart(event(0)); now += 101; pull(f,160);
   assert.equal(f.owner.rawDistance,0); assert.deepEqual(f.activity,[]);
+});
+function mutateRelease(change) {
+  const method = component.members.find(member => member.name?.getText(tree) === 'onActionEnd').getText(tree);
+  const replacement = change(method);
+  assert.notEqual(replacement, method, 'counterfactual changes the actual release method');
+  return source.replace(method, replacement);
+}
+check('release revalidates the actual edge after the last pointer movement', () => {
+  function verify(candidate) {
+    for (const direction of ['next', 'previous']) {
+      const f = fixture(candidate); let calls = 0;
+      f.owner.onLoadMore = f.owner.onRefresh = async () => { calls++; return ''; };
+      if (direction === 'next') { startAtEnd(f); pull(f,160); f.owner.scroller.end = false; }
+      else {
+        f.owner.scroller.offset = 0; f.owner.onActionStart(event(0)); now += 101;
+        f.owner.onActionUpdate(event(160)); f.owner.scroller.offset = 50;
+      }
+      assert.equal(f.owner.rawDistance,160);
+      f.owner.onActionEnd(); f.owner.onActionEnd();
+      assert.equal(calls,0,'release away from its actual edge cannot request a chapter');
+      assert.equal(f.owner.state,constants.IS_FREE);
+      assert.equal(f.owner.trYTop,0); assert.equal(f.owner.trYBottom,0);
+      assert.deepEqual(f.activity,[true,false]);
+    }
+  }
+  verify(source);
+  const staleEdge = mutateRelease(text => text.replace('this.updateBoundary(Date.now());',''));
+  assert.throws(() => verify(staleEdge), /release away from its actual edge/);
+});
+check('saturated pull reversed to its original visual position cannot turn on release', () => {
+  function verify(candidate) {
+    for (const direction of ['next', 'previous']) {
+      const f = fixture(candidate); let calls = 0;
+      f.owner.onLoadMore = f.owner.onRefresh = async () => { calls++; return ''; };
+      if (direction === 'next') { startAtEnd(f); for(const distance of [1000,500,350,250]) pull(f,distance); }
+      else {
+        f.owner.scroller.offset = 0; f.owner.onActionStart(event(0)); now += 101;
+        for(const distance of [1000,500,350,250]) f.owner.onActionUpdate(event(distance));
+      }
+      assert.equal(f.owner.rawDistance,250,'raw net travel still exceeds the intentional threshold');
+      assert.equal(direction === 'next' ? f.owner.trYBottom : f.owner.trYTop,0,'actual unchanged damping returned the image to its original position');
+      f.owner.onActionEnd(); f.owner.onActionEnd();
+      assert.equal(calls,0,'a visually restored pull cannot request a chapter');
+      assert.equal(f.owner.requestPending,false);
+      assert.equal(f.owner.rawDistance,0);
+      assert.deepEqual(f.pulls.at(-1),['',0,false]);
+    }
+  }
+  verify(source);
+  const noVisualGate = mutateRelease(text => text.replace(' || !(this.trYTop > 0)','').replace(' || !(this.trYBottom < 0)',''));
+  assert.throws(() => verify(noVisualGate), /visually restored pull/);
 });
 check('real-source counterfactuals reject original short-content, missing stability and resize defects', () => {
   function verifyShort(candidate) {

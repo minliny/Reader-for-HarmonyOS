@@ -109,10 +109,15 @@ async function completeRollback(f) {
   owner.boundaryPaintGeneration = generation;
   owner.tileImage(row, controller.tile(0, 0).image.fileUri, staleKey, controller, controller.chapter.manifest);
   const stale = [...owner.nodes.values()].filter(node => node.type === 'Image' && typeof node.onComplete === 'function').at(-1);
-  stale.onComplete();
+  stale.onComplete({ loadingStatus: 1 });
   assert.equal(owner.rollbackChapterImages.size, 0, 'same owner and URI from before rollback cannot acknowledge its new paint generation');
   assert.equal(frames.length, 0);
-  image.onComplete();
+  image.onComplete({ loadingStatus: 0 });
+  assert.equal(owner.rollbackChapterImages.size, 0, 'file loading completion is not a decoded Image receipt');
+  assert.equal(owner.rollbackPainting, true); assert.equal(owner.previousChapterPixels.length, 1);
+  assert.equal(frames.length, 0);
+  assert.equal(f.list.enableScrollInteraction, false); assert.equal(f.scroll.enableScrollInteraction, false); assert.equal(f.wrapper.params.pullEnabled, false);
+  image.onComplete({ loadingStatus: 1 });
   assert.equal(owner.rollbackChapterImages.has(currentKey), true);
   assert.equal(owner.previousChapterPixels.length, 1); assert.equal(owner.rollbackPainting, true);
   assert.equal(frames.length, 1);

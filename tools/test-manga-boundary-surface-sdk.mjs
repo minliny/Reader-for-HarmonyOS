@@ -38,10 +38,10 @@ const methods = ['boundaryEnabled','onBoundaryActivity','onBoundaryPull','captur
   'rowDisplayLeft','visibleX','displayChapterTitle','updateViewport','configureAdjacentChapter','adjacentChapter',
   'resizeViewport','changeZoom','toggleDirection','onWindowChromeChanged','openPanel'];
 const Surface = productionMotionMethods(surfaceURL, methods, {
-  MangaLayoutFrame, MangaSheetFrame,
+  MangaLayoutFrame, MangaSheetFrame, LengthMetrics: {vp:value=>({value,unit:0})},
   MangaBookPresentation: { revision: 0, admitConfirmedLocation(...args) { activePorts.admissions.push(args); } },
   MangaChapterTransitionCoordinator: class { constructor() { throw new Error('fixture must supply acquisition port'); } },
-  AppStorage: { setOrCreate() {} }, hilog: {warn(){},error(){}},
+  AppStorage: { setOrCreate() {} }, hilog: {warn(){},error(){},info(...args){activePorts.traces.push(args);}},
   ScrollAlign: {START:0},
   setTimeout(callback, delay) { const id=activePorts.nextTimer++; activePorts.timers.set(id,{callback,delay}); return id; },
   clearTimeout(id) { activePorts.timers.delete(id); },
@@ -66,7 +66,7 @@ function controller(index, prefix, sameImages=false) {
   };
 }
 function fixture({sameImages=false,prepareFailure=false,originIndex=0,targetIndex=4}={}) {
-  const ports={nextTimer:1,timers:new Map(),frames:[],admissions:[],vibrations:[],commits:[],cancelCount:0,activateCount:0,presentCount:0,notifications:0};
+  const ports={nextTimer:1,timers:new Map(),frames:[],admissions:[],vibrations:[],commits:[],traces:[],cancelCount:0,activateCount:0,presentCount:0,notifications:0};
   activePorts=ports;
   const origin=controller(originIndex,'origin',sameImages), target=controller(targetIndex,'target',sameImages);
   const owner=new Surface(), data=new DataSource();
@@ -76,7 +76,7 @@ function fixture({sameImages=false,prepareFailure=false,originIndex=0,targetInde
   const maximum=()=>Math.max(0,heights().reduce((sum,height)=>sum+height,0)-owner.viewportHeight);
   const scroller={getItemRect(index){if(native.unmounted||!native.layoutReady)throw new Error('native row not mounted');return {x:0,y:native.invalid?NaN:top(index)-native.offset,width:native.width,height:owner.controller===target&&native.targetHeights!==undefined?heights()[index]:native.height};},
     getItemIndex(_x,y){if(!native.layoutReady)return -1;return heights().findIndex((_height,index)=>top(index)<=y+native.offset&&top(index+1)>y+native.offset);},
-    scrollToIndex(index){if(!native.layoutReady){native.earlyScrollCalls++;return;}native.pendingOffset=Math.min(top(index),maximum());},scrollBy(_x,y){if(!native.layoutReady){native.earlyScrollCalls++;return;}native.pendingOffset=Math.min((native.pendingOffset??native.offset)+y,maximum());},
+    scrollToIndex(index,_smooth,_align,options){if(!native.layoutReady){native.earlyScrollCalls++;return;}native.pendingOffset=Math.min(top(index)+(options?.extraOffset?.value??0),maximum());},scrollBy(_x,y){if(!native.layoutReady){native.earlyScrollCalls++;return;}native.pendingOffset=Math.min((native.pendingOffset??native.offset)+y,maximum());},
     isAtEnd(){return native.offset>=maximum();}};
   const horizontal={offset:30,currentOffset(){return{xOffset:this.offset,yOffset:0};},scrollTo(value){this.offset=value.xOffset;}};
   const candidate={controller:target,landing:'first',targetOrdinal:0,landingTileIndex:0,location:{y:0,x:0},
@@ -119,13 +119,13 @@ function imageBuilder(f,row,uri=f.owner.controller.tile(row.ordinal,row.tileInde
   const properties=createArkUIPropertyRuntimeProbe();
   const built=createReaderBuilderProbe(source,['tileImage'],{...properties.sdk,ImageFit:{Fill:0}},properties.hooks);
   Object.assign(built.owner,{rowDisplayWidth:f.owner.rowDisplayWidth.bind(f.owner),
-    onChapterImageComplete:f.owner.onChapterImageComplete.bind(f.owner),onChapterImageError:f.owner.onChapterImageError.bind(f.owner)});
+    traceBoundary:f.owner.traceBoundary.bind(f.owner),onChapterImageComplete:f.owner.onChapterImageComplete.bind(f.owner),onChapterImageError:f.owner.onChapterImageError.bind(f.owner)});
   built.owner.tileImage(row,uri,renderKey,captured,captured.chapter.manifest);
   const image=[...built.owner.nodes.values()].find(node=>node.type==='Image');
   assert.equal(typeof image.onComplete,'function');assert.equal(typeof image.onError,'function');return image;
 }
 async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFrames();await tick();
-  for(let i=0;i<2;i++) imageBuilder(f,f.owner.data.getData(i)).onComplete();
+  for(let i=0;i<2;i++) imageBuilder(f,f.owner.data.getData(i)).onComplete({loadingStatus:1});
   f.flushFrames();await tick();}
 {
   let calls=0;
@@ -150,14 +150,14 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
   const declaration=tree.statements.find(node=>node.name?.getText(tree)==='MangaReadingSurface');
   const restoreText=declaration.members.find(node=>node.name?.getText(tree)==='restore').getText(tree);
   const oldText=restoreText.replace('this.getUIContext().postFrameCallback(new MangaLayoutFrame((): void => {','setTimeout((): void => {')
-    .replace('this.finishLayout(generation);\n    }));','this.finishLayout(generation);\n    }, 0);');
+    .replace("this.finishLayout(generation);\n    }, (): void => { if (generation === this.layoutGeneration) this.traceBoundary('restore-frame'); }));",'this.finishLayout(generation);\n    }, 0);');
   assert.notEqual(oldText,restoreText);
-  const legacy=new Function('setTimeout','ScrollAlign',`${stripTypeScriptTypes(`class LegacyRestore {${oldText}}`)};return LegacyRestore`)(
-    (callback,delay)=>{const id=activePorts.nextTimer++;activePorts.timers.set(id,{callback,delay});return id;},{START:0});
+  const legacy=new Function('setTimeout','ScrollAlign','LengthMetrics',`${stripTypeScriptTypes(`class LegacyRestore {${oldText}}`)};return LegacyRestore`)(
+    (callback,delay)=>{const id=activePorts.nextTimer++;activePorts.timers.set(id,{callback,delay});return id;},{START:0},{vp:value=>({value,unit:0})});
   const old=fixture({originIndex:4,targetIndex:0});old.owner.controller=old.target;old.owner.publish();
   old.ports.frames.length=0;
   legacy.prototype.restore.call(old.owner,0,1);old.flushTimers();
-  assert.equal(old.native.earlyScrollCalls,2,'timer restoration attempts index/offset before the candidate layout exists');
+  assert.equal(old.native.earlyScrollCalls,1,'timer restoration attempts the atomic index/offset request before the candidate layout exists');
   old.flushFrames();old.flushFrames();await tick();
   assert.equal(old.owner.scroller.isAtEnd(),false,'the old timer leaves native geometry away from the desired tail');
   outcomes.push('chapter replacement restores after native data layout and confirms a later rendered scroll; old timer counterfactual misses the tail');
@@ -176,12 +176,15 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
   assert.ok(f.owner.previousChapterPixels.length>0);assert.equal(f.origin.calls.some(c=>c[0]==='close'),false);
   await f.owner.saveVisible();assert.equal(f.target.calls.some(c=>c[0]==='save'),false);
   f.owner.confirmBoundaryFrame();await tick();assert.equal(f.ports.commits.length,0);
-  const first=imageBuilder(f,f.owner.data.getData(0));first.onComplete();f.flushFrames();await tick();
+  const first=imageBuilder(f,f.owner.data.getData(0));
+  first.onComplete({loadingStatus:0});imageBuilder(f,f.owner.data.getData(1)).onComplete({loadingStatus:0});
+  first.onComplete();assert.equal(f.owner.nativeTransitionImages.size,0,'loaded bytes and missing status are not decoded native paint');
+  first.onComplete({loadingStatus:1});f.flushFrames();await tick();
   assert.equal(f.ports.commits.length,0,'an Image callback before restored native layout cannot commit');
   f.flushTimers();f.flushFrames();await tick();
   assert.equal(f.owner.restoringAnchor,false);assert.equal(f.ports.commits.length,0,'landing image alone cannot admit another visible spinner');
   assert.equal(f.owner.confirmedPosition.controller,f.target);
-  imageBuilder(f,f.owner.data.getData(1)).onComplete();f.flushFrames();await pending;
+  imageBuilder(f,f.owner.data.getData(1)).onComplete({loadingStatus:1});f.flushFrames();await pending;
   assert.equal(f.ports.presentCount,1);assert.deepEqual(f.ports.commits,[[4,'Chapter 4']]);
   assert.equal(f.owner.controller,f.target);assert.equal(f.owner.previousChapterPixels.length,0);
   assert.equal(f.origin.calls.some(c=>c[0]==='close'&&c[1]==='chapter'),true);
@@ -196,11 +199,11 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
   const oldRow=f.owner.data.getData(0), oldURI=f.origin.tile(0,0).image.fileUri, oldKey=f.owner.rowRenderKey(oldRow);
   const stale=imageBuilder(f,oldRow,oldURI,oldKey,f.origin);const {pending}=await begin(f);
   assert.equal(oldURI,f.target.tile(0,0).image.fileUri);assert.notEqual(oldKey,f.owner.rowRenderKey(f.owner.data.getData(0)));
-  stale.onComplete();stale.onError();assert.equal(f.owner.nativeTransitionImages.size,0);
+  stale.onComplete({loadingStatus:1});stale.onError();assert.equal(f.owner.nativeTransitionImages.size,0);
   const row=f.owner.data.getData(0);
-  imageBuilder(f,row,oldURI,f.owner.rowRenderKey(row),f.origin).onComplete();assert.equal(f.owner.nativeTransitionImages.size,0,'owner guard rejects even a reused current key/URI');
-  imageBuilder(f,row,'file://wrong.png').onComplete();assert.equal(f.owner.nativeTransitionImages.size,0);
-  imageBuilder(f,row,f.target.tile(0,0).image.fileUri,'stale-render-key').onComplete();assert.equal(f.owner.nativeTransitionImages.size,0);
+  imageBuilder(f,row,oldURI,f.owner.rowRenderKey(row),f.origin).onComplete({loadingStatus:1});assert.equal(f.owner.nativeTransitionImages.size,0,'owner guard rejects even a reused current key/URI');
+  imageBuilder(f,row,'file://wrong.png').onComplete({loadingStatus:1});assert.equal(f.owner.nativeTransitionImages.size,0);
+  imageBuilder(f,row,f.target.tile(0,0).image.fileUri,'stale-render-key').onComplete({loadingStatus:1});assert.equal(f.owner.nativeTransitionImages.size,0);
   await completeVisible(f);await pending;assert.equal(f.ports.presentCount,1);
   outcomes.push('SDK Image closures reject stale owners even with identical row key/URI, as well as URI/render-key mismatches');
 }
@@ -208,7 +211,7 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
   const f=fixture();const {pending}=await begin(f);f.flushTimers();f.flushFrames();await tick();
   f.flushFrames();await tick();
   assert.equal(f.owner.restoringAnchor,false,'the second rendered frame confirms the restored layout before rectangle fault injection');
-  for(let i=0;i<2;i++) imageBuilder(f,f.owner.data.getData(i)).onComplete();
+  for(let i=0;i<2;i++) imageBuilder(f,f.owner.data.getData(i)).onComplete({loadingStatus:1});
   f.native.invalid=true;f.flushFrames();await tick();assert.equal(f.ports.commits.length,0);
   f.native.invalid=false;f.native.unmounted=true;assert.doesNotThrow(()=>f.owner.confirmBoundaryFrame());assert.equal(f.ports.commits.length,0);
   f.native.unmounted=false;f.owner.confirmBoundaryFrame();await pending;
@@ -219,7 +222,7 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
   f.owner.onBoundaryActivity(true);await f.owner.turnBoundaryChapter(1);
   assert.equal(f.owner.controller,f.origin);assert.deepEqual(f.owner.confirmedPosition.anchor,originPosition.anchor);
   assert.equal(f.origin.calls.some(c=>c[0]==='close'),false);assert.equal(f.ports.cancelCount,1);
-  assert.match(f.owner.boundaryFailure,/当前画面/);assert.equal(f.ports.commits.length,0);
+  assert.match(f.owner.boundaryFailure,/暂时打不开/);assert.equal(f.ports.commits.length,0);
   outcomes.push('preparation failure preserves the old controller, leases and confirmed coordinate');
 }
 {
@@ -236,11 +239,11 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
   f.flushFrames();f.flushFrames();await tick();
   assert.equal(f.owner.restoringAnchor,false);assert.deepEqual(f.owner.confirmedPosition.anchor,original.anchor);
   assert.ok(f.owner.previousChapterPixels.length>0,'rendered restore alone cannot remove the origin overlay');
-  staleOrigin.onComplete();assert.equal(f.owner.rollbackChapterImages.size,0,'the earlier origin mount cannot confirm this rollback');
+  staleOrigin.onComplete({loadingStatus:1});assert.equal(f.owner.rollbackChapterImages.size,0,'the earlier origin mount cannot confirm this rollback');
   const last=f.owner.last;
-  for(let index=f.owner.first;index<last;index++) imageBuilder(f,f.owner.data.getData(index)).onComplete();
+  for(let index=f.owner.first;index<last;index++) imageBuilder(f,f.owner.data.getData(index)).onComplete({loadingStatus:1});
   f.flushFrames();assert.ok(f.owner.previousChapterPixels.length>0,'every visible origin Image must complete');
-  imageBuilder(f,f.owner.data.getData(last)).onComplete();f.flushFrames();
+  imageBuilder(f,f.owner.data.getData(last)).onComplete({loadingStatus:1});f.flushFrames();
   assert.equal(f.owner.previousChapterPixels.length,0);assert.equal(f.owner.rollbackChapterController,undefined);
   assert.equal(f.owner.boundaryEnabled(),true);
   outcomes.push('native Image failure retains origin pixels through two-frame restore and every fresh visible Image before unlocking another pull');
@@ -250,9 +253,9 @@ async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFra
   const staleCandidate=imageBuilder(f,f.owner.data.getData(0));
   await f.owner.cancelBoundaryChapter();await pending;
   assert.equal(f.owner.controller,f.origin);assert.ok(f.owner.previousChapterPixels.length>0);
-  staleCandidate.onComplete();assert.equal(f.owner.rollbackChapterImages.size,0);
+  staleCandidate.onComplete({loadingStatus:1});assert.equal(f.owner.rollbackChapterImages.size,0);
   f.flushFrames();f.flushFrames();assert.ok(f.owner.previousChapterPixels.length>0);
-  for(let index=f.owner.first;index<=f.owner.last;index++) imageBuilder(f,f.owner.data.getData(index)).onComplete();
+  for(let index=f.owner.first;index<=f.owner.last;index++) imageBuilder(f,f.owner.data.getData(index)).onComplete({loadingStatus:1});
   f.flushFrames();assert.equal(f.owner.previousChapterPixels.length,0);assert.equal(f.ports.commits.length,0);
   outcomes.push('explicit cancellation retains origin until its restored native paint and rejects a late candidate callback');
 }
@@ -310,8 +313,8 @@ for(const targetHeights of [[500,50],[200,50]]){
   f.flushFrames();await tick();
   assert.equal(f.owner.restoringAnchor,false);assert.equal(f.owner.confirmedPosition.anchor.ordinal,0,'native bottom clamp may display an earlier page first');
   assert.equal(f.owner.scroller.isAtEnd(),true);
-  imageBuilder(f,f.owner.data.getData(1)).onComplete();f.flushFrames();await tick();assert.equal(f.ports.presentCount,0,'last image alone does not admit the earlier visible image');
-  imageBuilder(f,f.owner.data.getData(0)).onComplete();f.flushFrames();await pending;
+  imageBuilder(f,f.owner.data.getData(1)).onComplete({loadingStatus:1});f.flushFrames();await tick();assert.equal(f.ports.presentCount,0,'last image alone does not admit the earlier visible image');
+  imageBuilder(f,f.owner.data.getData(0)).onComplete({loadingStatus:1});f.flushFrames();await pending;
   assert.equal(f.ports.presentCount,1);assert.deepEqual(f.ports.commits,[[0,'Chapter 0']]);
 }
 outcomes.push('previous-chapter short last image and whole short chapter use the real bottom clamp and admit an earlier top anchor only after every visible image');
@@ -348,10 +351,10 @@ for (const offscreenRect of ['throw', 'zero']) {
   assert.equal(offscreenQueries, 0, 'retained old pixels never request an offscreen native rectangle');
   const { pending } = await begin(f);
   f.flushTimers(); f.flushFrames(); await tick();
-  imageBuilder(f, f.owner.data.getData(0)).onComplete();
+  imageBuilder(f, f.owner.data.getData(0)).onComplete({loadingStatus:1});
   f.flushFrames(); await tick();
   assert.equal(f.ports.presentCount, 0, 'the other visible image is still required');
-  imageBuilder(f, f.owner.data.getData(1)).onComplete();
+  imageBuilder(f, f.owner.data.getData(1)).onComplete({loadingStatus:1});
   f.flushFrames(); await pending;
   assert.equal(f.ports.presentCount, 1);
   assert.equal(offscreenQueries, 0, 'paint admission never queries the unmounted prefetch neighbour');
@@ -362,19 +365,53 @@ outcomes.push('cachedCount(0) offscreen native rectangles may throw or be zero: 
 
 // The official SDK emits the exact production PullToRefresh callback closures.
 {
-  const f=fixture();const properties=createArkUIPropertyRuntimeProbe();
+  const f=fixture({originIndex:4,targetIndex:0});const properties=createArkUIPropertyRuntimeProbe();
   const built=createReaderBuilderProbe(source,['boundaryViewport'],{...properties.sdk,...mangaSurfaceSdkDependencies},properties.hooks);
   Object.assign(built.owner,{scroller:f.owner.scroller,boundaryReset:7,reduceMotion:true,
     boundaryEnabled:f.owner.boundaryEnabled.bind(f.owner),adjacentChapter:f.owner.adjacentChapter.bind(f.owner),
     onBoundaryActivity:f.owner.onBoundaryActivity.bind(f.owner),onBoundaryPull:f.owner.onBoundaryPull.bind(f.owner),
     turnBoundaryChapter:f.owner.turnBoundaryChapter.bind(f.owner),imageViewport(){},boundaryHint(){}});
   built.owner.boundaryViewport();const params=[...built.owner.children.values()].at(-1).params;
-  assert.equal(params.pullEnabled,true);assert.equal(params.hasPrevious,false);assert.equal(params.hasNext,true);
+  assert.equal(params.pullEnabled,true);assert.equal(params.hasPrevious,false);assert.equal(params.hasNext,false);
+  assert.equal(params.customRefresh,undefined,'the upward-only Surface has no previous-chapter pull UI');
   assert.equal(params.animationDuration,0);assert.equal(params.resetToken,7);
   params.onActivity(true);assert.equal(f.owner.boundaryDragging,true);
   params.onPull('next',30,false);assert.equal(f.owner.boundaryDistance,30);
   params.onActivity(false);
   outcomes.push('SDK-generated PullToRefresh receives actual admission, lifecycle epoch, reduced-motion and anchor callbacks');
+}
+{
+  const f=fixture();const properties=createArkUIPropertyRuntimeProbe();
+  const built=createReaderBuilderProbe(source,['boundaryViewport'],{...properties.sdk,...mangaSurfaceSdkDependencies},properties.hooks);
+  Object.assign(built.owner,{scroller:f.owner.scroller,boundaryReset:0,reduceMotion:false,
+    boundaryEnabled:f.owner.boundaryEnabled.bind(f.owner),adjacentChapter:f.owner.adjacentChapter.bind(f.owner),
+    onBoundaryActivity:f.owner.onBoundaryActivity.bind(f.owner),onBoundaryPull:f.owner.onBoundaryPull.bind(f.owner),
+    turnBoundaryChapter:f.owner.turnBoundaryChapter.bind(f.owner),imageViewport(){},boundaryHint(){}});
+  built.owner.boundaryViewport();const params=[...built.owner.children.values()].at(-1).params;
+  assert.equal(params.hasNext,true);
+  params.onActivity(true);params.onPull('next',180,true);
+  const pending=params.onLoadMore();await tick();
+  assert.equal(f.ports.prepare.landing,'first');assert.equal(f.ports.prepare.chapterIndex,4);
+  assert.equal(f.owner.controller,f.target);assert.equal(f.candidate.targetOrdinal,0);
+  await completeVisible(f);await pending;
+  assert.equal(f.ports.presentCount,1);assert.equal(f.ports.commits[0][0],4);
+  outcomes.push('actual SDK onLoadMore closure prepares and presents exactly the next chapter first image');
+}
+{
+  const f=fixture();const {pending}=await begin(f);
+  for(let n=0;n<100;n++)f.owner.traceBoundary('paint-gate');
+  assert.equal(f.ports.traces.filter(args=>args[2].startsWith('Manga edge stage=')).length,48,'native stage evidence has one finite per-turn budget');
+  await completeVisible(f);await pending;
+  assert.equal(f.ports.presentCount,1,'diagnostic exhaustion cannot hold chapter admission');
+  outcomes.push('bounded native stage evidence records geometry and paint without blocking admission after its budget ends');
+}
+{
+  const f=fixture();f.native.unmounted=true;
+  for(let n=0;n<100;n++)f.owner.tracePosition('restore-requested',{ordinal:0,x:0,y:0.25});
+  assert.equal(f.ports.traces.length,48,'normal restore/save evidence has one finite per-Surface budget');
+  assert.equal(f.ports.traces[0][6],'0.25');
+  assert.equal(f.origin.calls.length,0,'numeric evidence cannot write or select reading state');
+  outcomes.push('bounded numeric position evidence retains the requested coordinate even before native rows mount');
 }
 
 // Shell/Index production callbacks: adjacent commit updates requested chapter
@@ -442,51 +479,23 @@ outcomes.push('actual Shell SDK closure updates Index after adjacent commit, ret
 }
 
 
-// Execute the finite feedback actor's actual SDK Text/Button output in both
-// themes; the root thin wrappers forward business callbacks and measured insets.
+// The user-selected footer has no preparation/retry/cancel card. Its finite
+// actor layout/theme proof is in test-manga-boundary-feedback-sdk; this probes
+// the Surface's actual SDK child-property expressions for each pull phase.
 {
-  const feedbackSource=readFileSync(new URL('features/manga/MangaBoundaryTurnFeedback.ets',root),'utf8');
-  const feedbackTree=parse(feedbackSource);assert.equal(feedbackTree.parseDiagnostics.length,0);
-  const declaration=feedbackTree.statements.find(node=>node.name?.getText(feedbackTree)==='MangaBoundaryTurnFeedback');
-  const names=declaration.members.map(member=>member.name?.getText(feedbackTree)).filter(Boolean);
-  for(const scheme of ['day','night']){
-    const palette=scheme==='day'?{paperColor:'#fbf8ef',surfaceColor:'#ffffff',inkColor:'#151515',mutedColor:'#777777',accentColor:'#24936e'}:
-      {paperColor:'#0a0a0a',surfaceColor:'#181818',inkColor:'#ededed',mutedColor:'#999999',accentColor:'#42c596'};
-    const hintRuntime=createArkUIPropertyRuntimeProbe();
-    const hint=createReaderBuilderProbe(feedbackSource,names,hintRuntime.sdk,hintRuntime.hooks).owner;
-    Object.assign(hint,palette,{kind:'hint',caption:'松手进入下一话',chapterTitle:'Chapter 4',progressPercent:120});hint.initialRender();
-    const text=[...hint.nodes.values()].filter(node=>node.type==='Text');
-    assert.equal(text[0].fontColor,palette.inkColor);assert.equal(text[1].fontColor,palette.mutedColor);
-    assert.equal(text[0].fontSize,13);assert.equal(text[0].lineHeight,20);assert.equal(text[1].fontSize,11);
-    const column=[...hint.nodes.values()].find(node=>node.type==='Column');assert.equal(column.height,88);assert.equal(column.backgroundColor,palette.paperColor);
-    const progress=[...hint.nodes.values()].find(node=>node.type==='Progress');assert.equal(progress.color,palette.accentColor);
-    let retry=0,dismiss=0;
-    const statusRuntime=createArkUIPropertyRuntimeProbe();
-    const status=createReaderBuilderProbe(feedbackSource,names,statusRuntime.sdk,statusRuntime.hooks).owner;
-    Object.assign(status,palette,{kind:'status',caption:'章节准备失败，仍停留在当前画面。',busy:false,insetLeft:3,insetTop:7,insetRight:5,insetBottom:24,
-      onRetry:()=>retry++,onDismiss:()=>dismiss++});status.initialRender();
-    const buttons=[...status.nodes.values()].filter(node=>node.type==='Button');assert.equal(buttons.length,2);
-    for(const button of buttons){assert.equal(button.height,36);assert.equal(button.fontSize,13);assert.equal(button.lineHeight,undefined);}
-    buttons[0].onClick();buttons[1].onClick();assert.equal(retry,1);assert.equal(dismiss,1);
-    const stack=[...status.nodes.values()].find(node=>node.type==='Stack');assert.deepEqual(stack.padding,{left:3,top:7,right:5,bottom:24});
-    const panel=[...status.nodes.values()].find(node=>node.type==='Column');assert.equal(panel.backgroundColor,palette.surfaceColor);
-    const busyRuntime=createArkUIPropertyRuntimeProbe();const busy=createReaderBuilderProbe(feedbackSource,names,busyRuntime.sdk,busyRuntime.hooks).owner;
-    Object.assign(busy,palette,{kind:'status',caption:'正在准备下一话…',busy:true});busy.initialRender();
-    assert.equal([...busy.nodes.values()].filter(node=>node.type==='Button').length,1,'busy status has only cancellation');
+  const properties=createArkUIPropertyRuntimeProbe();
+  const wrapper=createReaderBuilderProbe(source,['boundaryHint'],{...properties.sdk,...mangaSurfaceSdkDependencies},properties.hooks).owner;
+  Object.assign(wrapper,{boundaryBusy:false,boundaryArmed:false,
+    paperColor:()=> '#paper',inkColor:()=> '#ink',mutedColor:()=> '#muted'});
+  for(const [busy,armed,caption]of[[false,false,'继续上拉进入下一章节'],[false,true,'松手进入下一章节'],[true,true,'正在进入下一章节…']]){
+    wrapper.boundaryBusy=busy;wrapper.boundaryArmed=armed;wrapper.boundaryHint('next');
+    const params=[...wrapper.children.values()].at(-1).params;
+    assert.equal(params.caption,caption);assert.equal(params.paperColor,'#paper');assert.equal(params.inkColor,'#ink');assert.equal(params.mutedColor,'#muted');
+    assert.equal(params.onRetry,undefined);assert.equal(params.onDismiss,undefined);assert.equal(params.kind,undefined);
   }
-  const f=fixture();const properties=createArkUIPropertyRuntimeProbe();
-  const wrapper=createReaderBuilderProbe(source,['boundaryStatus','boundaryHint'],{...properties.sdk,...mangaSurfaceSdkDependencies},properties.hooks).owner;
-  Object.assign(wrapper,{boundaryBusy:false,boundaryFailure:'原错误',boundaryRetryDirection:1,boundaryArmed:false,boundaryDistance:30,viewportHeight:450,
-    windowMetricsRevision:0,interactiveInsets:()=>({left:1,top:2,right:3,bottom:4}),
-    paperColor:()=> '#paper',surfaceColor:()=> '#surface',inkColor:()=> '#ink',mutedColor:()=> '#muted',greenColor:()=> '#green',
-    adjacentChapter:f.owner.adjacentChapter.bind(f.owner),turnBoundaryChapter:f.owner.turnBoundaryChapter.bind(f.owner),cancelBoundaryChapter:f.owner.cancelBoundaryChapter.bind(f.owner)});
-  wrapper.boundaryStatus();const params=[...wrapper.children.values()].at(-1).params;
-  assert.equal(params.caption,'原错误');assert.equal(params.inkColor,'#ink');assert.equal(params.surfaceColor,'#surface');assert.equal(params.insetBottom,4);
-  wrapper.boundaryHint('next');const hintParams=[...wrapper.children.values()].at(-1).params;
-  assert.equal(hintParams.caption,'上拉进入下一话');assert.equal(hintParams.chapterTitle,'Chapter 4');assert.equal(hintParams.paperColor,'#paper');assert.equal(hintParams.accentColor,'#green');
-  activePorts=f.ports;params.onRetry();await tick();assert.equal(f.owner.controller,f.target);
-  params.onDismiss();await tick();assert.equal(wrapper.boundaryFailure,'');assert.equal(f.owner.controller,f.origin);
-  outcomes.push('actual SDK feedback Text/buttons preserve day/night colours, public typography, safe insets and retry/cancel thin-wrapper callbacks');
+  const surface=tree.statements.find(node=>node.name?.getText(tree)==='MangaReadingSurface');
+  assert.equal(surface.members.some(node=>node.name?.getText(tree)==='boundaryStatus'),false,'rejected status card has no production Builder');
+  outcomes.push('Surface SDK forwards only brief upward pull/release/busy footer copy; preparation/retry/cancel card is absent');
 }
 
 console.log(JSON.stringify({outcomes,boundary:'Actual Surface/Shell/Index methods and SDK Image/PullToRefresh closures; controlled Core/controller and native frame/rectangle ports. No HAP, VM pixels, native pointer arbitration or user acceptance claim.'},null,2));

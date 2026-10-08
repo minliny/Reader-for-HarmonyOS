@@ -40,6 +40,13 @@ edge wait do not contribute. Inward travel reduces that distance, disarms below
 the threshold, and reaching zero cancels the remainder of this pointer gesture.
 The original five-stage visual damping methods are unchanged.
 
+Release also re-reads the actual native edge and requires remaining outward
+translation. Layout changes between the last move and release must not turn
+from a stale edge. After resistance saturates, reversed movement can restore
+the visual translation to zero while raw net travel still exceeds the threshold;
+that restored view cancels on release. These two admission checks preserve the
+same raw-distance threshold and exact upstream resistance algorithms.
+
 The native parallel PanGesture explicitly requires one finger. A second touch,
 native cancellation, disabled admission, missing neighbour, reset-token change,
 geometry change or unmount resets the pull. Loading callbacks are serialized;
@@ -56,16 +63,14 @@ integration independent of upstream HAR resource merging.
 PullToRefresh({
   scroller: existingListScroller,
   customList: () => { /* unchanged List and LazyForEach */ },
-  customRefresh: () => { /* previous chapter caption */ },
   customLoad: () => { /* next chapter caption */ },
   pullEnabled: verticalAndUnzoomedAndReadyAndForegroundAndNoPanel,
-  hasPrevious: previousNavigableChapterExists,
+  hasPrevious: false, // Reader's confirmed interaction is upward release only.
   hasNext: nextNavigableChapterExists,
   resetToken: chapterAndLifecycleResetEpoch,
   animationDuration: reduceMotion ? 0 : 180,
   onActivity: (active: boolean) => { /* freeze/release confirmed anchor */ },
   onPull: (direction: PullDirection, distance: number, armed: boolean) => {},
-  onRefresh: async (): Promise<string> => { /* prepare then publish previous */ return ''; },
   onLoadMore: async (): Promise<string> => { /* prepare then publish next */ return ''; }
 })
 ```
@@ -87,7 +92,9 @@ cancel its candidate chapter preparation.
 methods and installed-SDK emitted layout, with controlled Scroller edge facts
 and pointer callbacks. It checks the short-content defect, stable boundary wait,
 thresholds, cancellation, reverse travel, single request, rejection, stale results,
-unmount, previous direction and unchanged resistance bounds. The SDK emission
+unmount, previous direction, release-edge changes, saturated reverse-to-zero
+translation and unchanged resistance bounds. Real-source release counterfactuals
+fail when either new admission check is removed. The SDK emission
 proves fixed content height and native single-finger Pan callback wiring.
 
 These are code/SDK evidence. Native gesture arbitration with the image Pinch,

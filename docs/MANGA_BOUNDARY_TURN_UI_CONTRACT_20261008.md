@@ -23,23 +23,27 @@ Register the exact pinned Apache-2.0 V1 upstream component as a native gesture
 adapter with zero private font/background budget. Its original five-stage
 resistance methods, source hash lock, patch, copyright and license stay intact.
 
-The new hint and preparation/failure status actors move into the finite
-MangaBoundaryTurnFeedback component, with `hint` and `status` variants.
-MangaReadingSurface retains thin `boundaryHint`/`boundaryStatus` builders and its
-chapter transaction; it passes caption, adjacent chapter title, raw progress,
-current colours, measured safe insets and actual retry/dismiss callbacks.
+The user subsequently corrected the interaction to an upward pull beyond the
+chapter's bottom, followed by release to enter the next chapter. Insufficient
+distance returns to the current image. The preparation/retry/cancel card and
+previous-chapter pull are superseded by this confirmed direction; the failed
+`5b888a27` native evidence remains failed.
 
-The feedback Text and labelled Button actors consume existing public
-`TYPE_SOURCE_SWITCH_NOVEL_ACTION`, `TYPE_SOURCE_SWITCH_NOVEL_METADATA` and
-`TYPE_SOURCE_SWITCH_NOVEL_COLUMN` roles. Public font family/weight/size/line boxes
-remain with ReaderTypography; Button line boxes stay native AUTO. No literal
-font-size slot, native-default label exemption, duplicate role or rewrite of the
-historical manga/selected directory typography fixtures is introduced.
+MangaBoundaryTurnFeedback now renders one flat 48vp footer Row: an upward arrow
+and one brief caption. It has no chapter title, progress track, card, floating
+overlay or action buttons. Its only props are `caption`, `paperColor`,
+`inkColor` and `mutedColor`; the reading owner supplies pull/release/preparation
+copy such as `正在进入下一章节…`. The upstream wrapper reveals and clips this
+footer in the bottom area exposed by the upward pull. Failure toast and chapter
+transaction ownership remain in MangaReadingSurface.
 
-The original paper/ink/muted/accent theme, 88vp pull band, progress track,
-36vp actions, status padding and safe-area placement stay with the same chapter
-feedback presentation. The actor has two real backgrounds and zero private
-font calls. No new global shared-producer exemption is added.
+Both Text actors consume the existing public
+`TYPE_SOURCE_SWITCH_NOVEL_ACTION` role. Public font family, weight, size and
+line boxes remain with ReaderTypography. The footer follows the current
+paper/ink/muted theme and does not receive pointer input. It has one real flat
+background and zero private font calls. No literal font-size slot,
+native-default label exemption, duplicate role or rewrite of the historical
+manga/selected directory typography fixtures is introduced.
 
 MangaReadingSurface retains one additional background for retainedChapterPixels:
 it covers gaps around the old visible images while candidate images are being
@@ -52,7 +56,8 @@ historical exact Text/native-default carriers remain unchanged.
 ## Verification boundary
 
 The targeted architecture/typography tests must pass without changing their
-requirements or rewriting approval fixtures. The boundary Surface test executes
-the actual SDK-generated feedback Text/buttons, current colours, safe-area
-inputs and callback forwarding. The full canonical gate, signed HAP compilation
+requirements or rewriting approval fixtures. The feedback SDK test executes
+the actual generated footer Row/Text actors, day/night colours, one-line public
+typography and retained caption/theme updates. The root boundary Surface test
+checks release-to-next-chapter wiring. The full canonical gate, signed HAP compilation
 and manifest-bound native VM evidence are recorded separately by the root.

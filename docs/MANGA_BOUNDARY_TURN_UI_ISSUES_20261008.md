@@ -32,3 +32,20 @@ architecture-shared-producers, bounded-typography-carriers,
 conventional-typography-coverage, native-default-control-contracts and
 manga-boundary-surface-sdk pass. Native image/gesture layout, signed HAP and
 manifest-bound VM evidence remain separate gates.
+
+## User-confirmed interaction correction
+
+The `5b888a27` native previous-chapter attempt did not establish a successful
+chapter transition. The user then rejected the preparation/retry/cancel card
+style and confirmed upward boundary pull followed by release to enter the next
+chapter. Existing failed native evidence is retained as failed.
+
+MangaBoundaryTurnFeedback now contains only a flat bottom Row with an upward
+arrow and one short caption. The two Text actors use the existing public action
+role; day/night theme and caption updates retain their SDK actor identities.
+The status variant, progress track, chapter subtitle and action buttons were
+removed. The reading owner supplies the release/preparation caption and owns
+the release threshold, rollback and failure toast. The actor SDK test rejects
+any additional card, action or progress node by examining the actual emitted
+node types. Root wiring, canonical packaging and native acceptance are recorded
+separately.

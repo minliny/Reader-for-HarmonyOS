@@ -1260,15 +1260,15 @@
     {
       "file": "entry/src/main/ets/features/manga/MangaBoundaryTurnFeedback.ets",
       "kind": "finite-manga-boundary-feedback",
-      "owner": "MangaReadingSurface chapter transition / hint and status native actors",
-      "reason": "Two exact chapter-turn feedback variants consume existing public action, metadata and caption roles. The reading owner supplies chapter facts and current theme, preserving approved historical Surface typography and native image viewport geometry.",
+      "owner": "MangaReadingSurface upward boundary release / brief bottom hint",
+      "reason": "User-selected upward overscroll and release uses one flat footer with public action typography and current paper/ink/muted theme. No preparation/retry/cancel card is rendered; historical Surface typography and native image viewport geometry remain bounded.",
       "counts": {
         "fontSize": 0,
-        "backgroundColor": 2
+        "backgroundColor": 1
       },
       "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN",
       "proof": "docs/MANGA_BOUNDARY_TURN_UI_CONTRACT_20261008.md",
-      "sdkProof": "tools/test-manga-boundary-surface-sdk.mjs"
+      "sdkProof": "tools/test-manga-boundary-feedback-sdk.mjs"
     }
   ]
 }

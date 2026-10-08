@@ -1,6 +1,6 @@
 --- a/library/src/main/ets/components/PullToRefresh/PullToRefresh.ets
 +++ b/library/src/main/ets/components/PullToRefresh/PullToRefresh.ets
-@@ -12,457 +12,251 @@
+@@ -12,457 +12,253 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
@@ -247,7 +247,9 @@
 +    if (!this.pullEnabled || this.gestureCancelled || this.requestPending || this.state === IS_FREE) return;
 +    if (this.rawDistance < this.triggerDistance()) { this.resetPull(true); return; }
 +    const direction = this.pullDirection();
-+    if ((direction === 'previous' && !this.hasPrevious) || (direction === 'next' && !this.hasNext)) {
++    this.updateBoundary(Date.now());
++    if ((direction === 'previous' && (!this.hasPrevious || !this.atTop || !(this.trYTop > 0))) ||
++      (direction === 'next' && (!this.hasNext || !this.atBottom || !(this.trYBottom < 0)))) {
 +      this.cancelPull(); return;
 +    }
 +    this.requestPending = true;
@@ -677,7 +679,7 @@
    private getTranslateYOfRefresh(newTranslateY: number): number {
      if (this.refreshConfigurator !== undefined) {
        let maxTranslateY = this.refreshConfigurator.getMaxTranslate();
-@@ -523,90 +317,4 @@
+@@ -523,90 +319,4 @@
      return 0;
    }
  

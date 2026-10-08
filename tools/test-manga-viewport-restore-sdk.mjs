@@ -127,13 +127,20 @@ console.log('PASS invalid indices, unavailable rectangles and unmeasured height 
   const f=fixture();f.owner.restore(0,0);
   f.list.onScrollIndex(0,1);assert.equal(f.owner.restoringAnchor,true);
   f.runFrame();await tick();assert.ok(f.scrolls.length,'native layout callback must not cancel its own pending restore');
-  assert.deepEqual([f.owner.first,f.owner.last],[0,1]);assert.equal(f.owner.restoringAnchor,true,'the scroll frame alone is not confirmed native layout');
-  f.runFrame();assert.equal(f.owner.restoringAnchor,false);
+  assert.deepEqual([f.owner.first,f.owner.last],[0,0],'unapplied native range cannot replace the requested restore window');
+  assert.equal(f.owner.restoringAnchor,true,'the scroll frame alone is not confirmed native layout');
+  assert.deepEqual(f.scrolls.find(call=>call[0]==='index'),['index',0,false,'start',{extraOffset:{value:0,unit:'vp'}}]);
+  assert.equal(f.scrolls.some(call=>call[0]==='offset'),false,'index and intra-row offset use one atomic native request');
+  f.runFrame();assert.equal(f.owner.restoringAnchor,false);assert.deepEqual([f.owner.first,f.owner.last],[0,2],'applied frame admits the actual native range');
 }
 {
-  const f=fixture();f.owner.restore(0,0);f.owner.restore(0,0.5);
+  const f=fixture();f.owner.restore(0,0);f.owner.restore(0,0.55);
   f.runFrame();assert.equal(f.scrolls.length,0);assert.equal(f.owner.restoringAnchor,true,'obsolete restore cannot clear the newer restoration flag');
   f.runFrame();assert.equal(f.owner.first,6);assert.equal(f.owner.restoringAnchor,true);
+  const atomic=f.scrolls.find(call=>call[0]==='index');
+  assert.deepEqual(atomic.slice(0,4),['index',6,false,'start']);assert.equal(atomic[4].extraOffset.unit,'vp');
+  assert.ok(Math.abs(atomic[4].extraOffset.value-180)<0.000001,'atomic jump preserves the exact intra-row offset within numeric rounding');
+  assert.equal(f.scrolls.some(call=>call[0]==='offset'),false);
   f.owner.scroller.indexAt=()=>6;f.owner.scroller.rectAt=()=>({x:0,y:0,width:300,height:300});
   f.runFrame();assert.equal(f.owner.first,6);assert.equal(f.owner.restoringAnchor,false);
 }
@@ -143,7 +150,8 @@ console.log('PASS invalid indices, unavailable rectangles and unmeasured height 
   f.owner.scroller.indexAt=(_x,y)=>y<1?4:5;
   f.owner.scroller.rectAt=()=>({x:0,y:0,width:300,height:300});
   f.list.onScrollIndex(4,5);await tick();const queries=f.queries.length;
-  f.runFrame();await tick();assert.deepEqual([f.owner.first,f.owner.last],[4,5]);assert.equal(f.queries.length,queries,'old frame cannot query over later user/native scroll state');
+  assert.deepEqual([f.owner.first,f.owner.last],[0,0],'range delivery remains fenced until the new touch restoration frame applies');
+  f.runFrame();await tick();assert.deepEqual([f.owner.first,f.owner.last],[0,0]);assert.equal(f.queries.length,queries,'old frame cannot query over later user/native scroll state');
   f.runFrame();assert.deepEqual([f.owner.first,f.owner.last],[4,5]);
 }
 {

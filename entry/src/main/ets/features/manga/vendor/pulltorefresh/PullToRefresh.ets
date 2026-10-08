@@ -173,7 +173,9 @@ export struct PullToRefresh {
     if (!this.pullEnabled || this.gestureCancelled || this.requestPending || this.state === IS_FREE) return;
     if (this.rawDistance < this.triggerDistance()) { this.resetPull(true); return; }
     const direction = this.pullDirection();
-    if ((direction === 'previous' && !this.hasPrevious) || (direction === 'next' && !this.hasNext)) {
+    this.updateBoundary(Date.now());
+    if ((direction === 'previous' && (!this.hasPrevious || !this.atTop || !(this.trYTop > 0))) ||
+      (direction === 'next' && (!this.hasNext || !this.atBottom || !(this.trYBottom < 0)))) {
       this.cancelPull(); return;
     }
     this.requestPending = true;
