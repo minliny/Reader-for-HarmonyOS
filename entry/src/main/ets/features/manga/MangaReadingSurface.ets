@@ -183,6 +183,7 @@ export struct MangaReadingSurface {
   private appliedLayoutGeneration: number = -1;
   private publishedManifestVersion: string = '';
   @State private restoringAnchor: boolean = false;
+  private pendingRestoreAnchor: MangaViewportAnchor | undefined;
   private pendingTurnOrdinal: number | undefined;
   private mountedTurnRowKey: string = '';
   private exiting: boolean = false;
@@ -280,6 +281,7 @@ export struct MangaReadingSurface {
     this.layoutGeneration++; this.viewportGeneration++; this.loginGeneration++; this.presentationGeneration++;
     this.viewportObservationGeneration++; this.viewportObservationPending = false;
     this.confirmedPosition = undefined;
+    this.pendingRestoreAnchor = undefined;
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     const retainPreparation = this.retainPreparationOnDisappear();
     if (this.controller !== undefined) {
@@ -446,6 +448,7 @@ export struct MangaReadingSurface {
     if (manifestChanged && this.controller !== undefined) {
       this.publishedManifestVersion = chapter.manifest.manifestVersion;
       this.layoutGeneration++; this.viewportGeneration++;
+      this.pendingRestoreAnchor = undefined; this.restoringAnchor = false;
       this.viewportRangeObserved = false;
       // Manifest layout is separate from newer user presentation intent.
       this.confirmedPosition = undefined;
@@ -458,7 +461,7 @@ export struct MangaReadingSurface {
       this.horizontalPage = ordinal;
       this.visibleAnchor = { ordinal, y: exact ? saved!.y : 0, x: exact ? saved!.x : 0 };
     } else this.rememberVisible();
-    const anchor = this.visibleAnchor;
+    const anchor = this.restoringAnchor ? this.pendingRestoreAnchor ?? this.visibleAnchor : this.visibleAnchor;
     try {
       const changed = this.data.projection.publish(chapter.manifest, (index: number) => this.controller?.pageGeometry(index), this.horizontal ? this.horizontalPage : undefined, this.controller?.totalPages ?? chapter.manifest.pages.length, (ordinal: number) => this.controller?.pageAt(ordinal));
       // Controller facts are plain fields. Publish the admitted chapter count
@@ -468,7 +471,8 @@ export struct MangaReadingSurface {
       this.displayedPage = anchor?.ordinal ?? this.controller?.displayedOrdinal ?? 0;
       this.notifyPublishedRows(changed);
       if (this.mountedTurnRowKey.length > 0 && this.data.totalCount() > 0) this.confirmMountedTurn(this.data.getData(0));
-      if (changed && this.opened && anchor !== undefined && this.data.projection.affectsAnchor(anchor.ordinal))
+      if (changed && this.opened && anchor !== undefined &&
+        (this.restoringAnchor ? this.pendingRestoreAnchor !== undefined : this.data.projection.affectsAnchor(anchor.ordinal)))
         this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
     } catch (error) { this.error = error instanceof Error ? error.message : '漫画布局失败'; }
   }
@@ -537,6 +541,7 @@ export struct MangaReadingSurface {
   }
   private restore(ordinal: number, y: number, x: number = 0): void {
     this.visibleAnchor = { ordinal, y, x };
+    this.pendingRestoreAnchor = this.visibleAnchor;
     this.restoringAnchor = true;
     this.appliedLayoutGeneration = -1;
     const generation = ++this.layoutGeneration;
@@ -579,8 +584,18 @@ export struct MangaReadingSurface {
     if (this.visibleAnchor !== undefined) this.displayedPage = this.visibleAnchor.ordinal;
     if (!this.restoringAnchor) { this.rememberVisible(); if (this.pendingChapterTransition !== undefined || this.rollbackChapterController !== undefined) this.confirmBoundaryFrame(); return; }
     if (this.appliedLayoutGeneration !== this.layoutGeneration || !this.measureVisibleWindow()) return;
+    // An unknown following page can temporarily shorten the native list and
+    // clamp this request to its tail. Its later height must replay the original
+    // logical anchor, rather than commit that temporary clipped coordinate.
+    if (this.pendingRestoreAnchor !== undefined) {
+      if (this.last - this.first > 7) return;
+      for (let index = this.first; index <= this.last; index++) {
+        if (!this.data.getData(index).known) return;
+      }
+    }
     if (this.rememberVisible(true)) {
       this.restoringAnchor = false;
+      this.pendingRestoreAnchor = undefined;
       if (this.visibleAnchor !== undefined) this.tracePosition('restore-confirmed', this.visibleAnchor);
     }
     if (this.pendingChapterTransition !== undefined || this.rollbackChapterController !== undefined) this.confirmBoundaryFrame();
@@ -603,6 +618,7 @@ export struct MangaReadingSurface {
   }
   private onViewportTouch(): void {
     this.seekingPage = undefined;
+    this.pendingRestoreAnchor = undefined;
     this.presentationGeneration++;
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     const generation = ++this.layoutGeneration;
@@ -696,6 +712,18 @@ export struct MangaReadingSurface {
       }
       await controller.setVisible(row.ordinal, retained);
       if (!this.mounted || generation !== this.viewportGeneration) return;
+      const visiblePages: number[] = [];
+      let needsGeometry = false;
+      for (let index = this.first; index <= Math.min(this.last, this.first + 7, this.data.totalCount() - 1); index++) {
+        const item = this.data.getData(index);
+        if (!visiblePages.includes(item.ordinal)) visiblePages.push(item.ordinal);
+        if (!item.known) needsGeometry = true;
+      }
+      if (needsGeometry) {
+        const layout = this.layoutGeneration;
+        await controller.prepareViewportPages(visiblePages);
+        if (!this.mounted || this.controller !== controller || generation !== this.viewportGeneration || layout !== this.layoutGeneration) return;
+      }
       const requested: MangaTileRequest[] = [];
       for (let index = this.first; index <= this.requestedLast(); index++) {
         const item = this.data.getData(index);

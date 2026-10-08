@@ -31,6 +31,7 @@ export class MangaSessionController {
   private readClockSecond: number = -1;
   private generation: number = 0;
   private visibilityRevision: number = 0;
+  private viewportMetadataRevision: number = 0;
   private chapterData: MangaChapterResult | undefined;
   private readonly facts: Map<number, MangaManifestPage> = new Map<number, MangaManifestPage>();
   private readonly requests: Map<string, MangaResourceRequest> = new Map<string, MangaResourceRequest>();
@@ -557,7 +558,10 @@ export class MangaSessionController {
       }
       this.acknowledgeVisible();
       // The first readable region must not wait for optional neighbor traffic.
-      if (!this.candidatePendingPresentation) void Promise.all(Array.from(wanted).filter(index => index !== ordinal)
+      // A candidate viewport can already show the next logical page. Its
+      // bounded header geometry must be published before that placeholder can
+      // request a tile; candidate progress/read-clock admission stays gated.
+      void Promise.all(Array.from(wanted).filter(index => index !== ordinal)
         .map(index => this.loadPage(index, chapter, generation))).catch((): void => {});
       this.scheduleAdjacentPreparation();
       return generation;
@@ -575,6 +579,60 @@ export class MangaSessionController {
     if (existing?.status !== 'failed' || !this.wanted.has(ordinal) || this.chapterData === undefined) return;
     this.pages.delete(ordinal);
     await this.loadPage(ordinal, this.chapterData, this.generation);
+  }
+
+  /** Geometry for the exact visible logical pages, without changing the
+   * reading target. The ordinary +/-1 headers plus at most eight viewport
+   * pages share the existing fact/header owner; no chapter-wide acquisition. */
+  async prepareViewportPages(ordinals: number[]): Promise<void> {
+    const chapter = this.chapterData;
+    if (chapter === undefined) throw new Error('MANGA_SESSION_CANCELLED');
+    this.assertSessionContent();
+    if (ordinals.length > 8) throw new Error('MANGA_TILE_WINDOW_BUDGET');
+    if (ordinals.some(ordinal => !Number.isSafeInteger(ordinal) || ordinal < 0 || ordinal >= this.totalPageCount))
+      throw new Error('MANGA_PAGE_OUT_OF_RANGE');
+    const generation = this.generation, visibility = this.visibilityRevision, metadata = ++this.viewportMetadataRevision;
+    const current = (): boolean => generation === this.generation && chapter === this.chapterData &&
+      visibility === this.visibilityRevision && metadata === this.viewportMetadataRevision && this.sessionContentCurrent() &&
+      (!this.candidatePendingPresentation || this.candidateCurrent());
+    const assertCurrent = (): void => {
+      if (current()) return;
+      if (generation === this.generation && chapter === this.chapterData) this.assertSessionContent();
+      throw new Error('MANGA_SESSION_CANCELLED');
+    };
+    assertCurrent();
+    const requested = Array.from(new Set(ordinals));
+    const wanted = new Set<number>(requested);
+    for (let ordinal = Math.max(0, this.displayOrdinal - 1); ordinal <= Math.min(this.totalPageCount - 1, this.displayOrdinal + 1); ordinal++) wanted.add(ordinal);
+    this.wanted = wanted;
+    for (const [ordinal, page] of this.pages) {
+      if (wanted.has(ordinal)) continue;
+      if (page.image !== undefined) this.resources.release(page.image);
+      this.pages.delete(ordinal);
+    }
+    this.foregroundWindowWork++;
+    try {
+      for (const ordinal of requested) {
+        assertCurrent();
+        if (this.geometry.has(ordinal)) continue;
+        if (!this.facts.has(ordinal)) {
+          // One exact missing fact avoids acquiring unrelated pages even when
+          // the supplied visible ordinals are not adjacent.
+          const window = await this.gateway.window(chapter, ordinal, 1, current);
+          assertCurrent();
+          if (window.totalPages !== this.totalPageCount) throw new Error('MANGA_SESSION_CONTENT_CHANGED');
+          this.admitFacts(window);
+        }
+        await this.loadPage(ordinal, chapter, generation);
+        assertCurrent();
+        const page = this.pages.get(ordinal);
+        if (page?.status === 'failed') throw new Error(page.error ?? 'MANGA_IMAGE_FAILED');
+        if (!this.geometry.has(ordinal)) throw new Error('MANGA_PAGE_GEOMETRY_REQUIRED');
+      }
+    } catch (error) {
+      if (generation === this.generation && chapter === this.chapterData) this.assertSessionContent();
+      throw error instanceof Error ? error : new Error('MANGA_IMAGE_FAILED');
+    } finally { this.foregroundWindowWork--; this.scheduleAdjacentPreparation(); }
   }
 
   async awaitPendingProgress(sourceId: string, bookId: string): Promise<void> {
