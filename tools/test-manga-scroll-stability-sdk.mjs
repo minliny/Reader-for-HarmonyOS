@@ -80,11 +80,16 @@ const tiles = new Map([['0:0', { image: { fileUri: 'file://stable-0.png', revisi
   ['0:1', { image: { fileUri: 'file://stable-1.png', revision: 'r1' } }]]);
 const pages = new Map([[0, { ordinal: 0, status: 'ready' }]]);
 const windows = [];
+const metadataWindows = [];
 owner.controller = {
   chapter: { manifest, chapterTitle: 'Fixture', chapterIndex: 0 }, totalPages: 5, displayedOrdinal: 0,
   recoveryRequired: false, savedLocation: null, tile: (ordinal, index) => tiles.get(`${ordinal}:${index}`),
   visiblePages: () => [...pages.values()], pageGeometry: ordinal => geometry.get(ordinal), pageAt: ordinal => manifest.pages[ordinal],
   async setVisible() {}, async setTileWindow(requested) { windows.push(requested); },
+  // This fixture already publishes terminal failed rows. Their metadata demand
+  // completes without a new decode; the actual Controller failure/retry owner
+  // is exercised independently by candidate-visible-metadata-sdk.
+  async prepareViewportPages(ordinals) { metadataWindows.push([...ordinals]); },
 };
 owner.viewportWidth = 300; owner.viewportHeight = 450;
 owner.first = 0; owner.last = 1; owner.mounted = true; owner.opened = true;
@@ -314,16 +319,19 @@ const realChange = lazy.onDataChange.bind(lazy);
 lazy.onDataChange = index => { notified.push(index); realChange(index); };
 list.onScrollIndex(1, 1); await tick();
 check('failed unknown-geometry viewport transfers retry ownership without a Controller publication', () => {
+  assert.deepEqual(metadataWindows.at(-1), [1], 'only the actual unknown visible logical page is demanded');
+  assert.equal(owner.error, '', 'terminal row failure must retain its retry without a duplicate global error');
   assert.deepEqual(windows.at(-1), [], 'failed unknown pages have no regional tile work');
   assert.ok(notified.includes(1), 'the existing mounted blank row must receive its presentation change');
   assert.notEqual(lazy.rows.get(1).key, placeholderKey);
   assert.ok(lazy.rows.get(1).nodes.some(node => node.type === 'Button'));
 });
-const failedChanges = lazy.changes, failedWindows = windows.length;
+const failedChanges = lazy.changes, failedWindows = windows.length, failedMetadataWindows = metadataWindows.length;
 list.onScrollIndex(1, 1); await tick();
 check('settled failed viewport remains silent on a repeated same-range callback', () => {
   assert.equal(lazy.changes, failedChanges);
   assert.equal(windows.length, failedWindows);
+  assert.equal(metadataWindows.length, failedMetadataWindows, 'same range must not repeat terminal metadata work');
 });
 if (failures.length) {
   console.error(JSON.stringify({ status: 'RED', failures, evidenceBoundary: 'production Surface/Projection + real SDK callbacks; no native Image reconstruction or painted flicker claim' }));

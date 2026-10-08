@@ -5,6 +5,7 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
 import {mangaSurfaceSdkDependencies, mountMangaViewportBuilder} from './lib/manga-surface-sdk-probe.mjs';
 import {createDefaultReaderWindowMetrics, readerInteractiveSafeInsets} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {mangaUserError} from '../entry/src/main/ets/features/manga/MangaUserError.ts';
 
 // Real Controller/Coordinator and SDK-emitted Surface/Image callbacks. Core,
 // decoding, native rectangles, render delivery and imported children are ports;
@@ -23,6 +24,11 @@ const oldSkip = controllerSource.replace('void Promise.all(Array.from(wanted).fi
   'if (!this.candidatePendingPresentation) void Promise.all(Array.from(wanted).filter(index => index !== ordinal)');
 assert.notEqual(oldSkip, controllerSource, 'counterfactual restores the exact omitted candidate-neighbor branch');
 const SkippingController = load('MangaSessionController', dependencies, oldSkip);
+const failureGuard = "this.candidatePendingPresentation || ['MANGA_SESSION_CANCELLED', 'MANGA_RESOURCE_CANCELLED', 'MANGA_SESSION_CONTENT_CHANGED'].includes(failure)";
+assert.ok(controllerSource.includes(failureGuard));
+const GlobalFailureController = load('MangaSessionController', dependencies, controllerSource.replace(failureGuard, 'true'));
+const PermissiveCandidateController = load('MangaSessionController', dependencies,
+  controllerSource.replace(failureGuard, "['MANGA_SESSION_CANCELLED', 'MANGA_RESOURCE_CANCELLED', 'MANGA_SESSION_CONTENT_CHANGED'].includes(failure)"));
 const source = readFileSync(new URL('MangaReadingSurface.ets', root), 'utf8');
 const require = createRequire(import.meta.url), sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`);
@@ -38,13 +44,16 @@ const gesture = new Proxy({}, {get: () => () => {}}), tick = () => new Promise(r
 function deferred() {let resolve; const promise = new Promise(done => {resolve = done;}); return {promise, resolve};}
 async function settle() {for (let i = 0; i < 12; i++) await tick();}
 
-async function fixture(Type = Controller, {short = false, count = 6} = {}) {
+async function fixture(Type = Controller, {short = false, count = 6, ordinary = false,
+  firstHeight = short ? 300 : 1500, nextHeight = short ? 300 : 900, viewportHeight = 1700,
+  holdHeader = true, failOrdinals = []} = {}) {
   const pages = Array.from({length: count}, (_, ordinal) => {const pageId = `mp1:${String(ordinal + 1).padStart(64, '0')}`; return {ordinal, pageId, resourceRef: `manga:${pageId}`};});
   const chapter = {chapterIndex: 7, chapterTitle: 'Candidate', totalPages: count, pageStart: 0, cached: true, resources: [],
     manifest: {chapter: {sourceId: 's', bookId: 'b', chapterId: '/candidate'}, manifestVersion: 'v1', sourceRuleVersion: 'rules', decodeRevision: 'identity-v1', pages: pages.slice(0, 3)}};
   const entry = {chapter, targetOrdinal: 0, recoveryRequired: false, progress: {token: {epoch: 1, revision: 0}, location: null}};
   const header = deferred(), calls = [], images = [], released = [], frames = [];
-  const windowHolds = new Map(); let alive = true, held = true, revision = 0;
+  const windowHolds = new Map(), failures = new Set(failOrdinals), tileWindows = [], rejections = [];
+  let alive = true, held = holdHeader, revision = 0, nativeOffset = 0;
   const runtime = {supportsCoreCapability: () => true, captureReadingContentValidity: () => () => alive,
     isMangaPreparationForeground: () => false, allowOptionalMangaPreparation: () => false,
     requestBook: (...args) => runtime.request(...args),
@@ -62,14 +71,20 @@ async function fixture(Type = Controller, {short = false, count = 6} = {}) {
     async loadReadingImage(...args) {
       const ordinal = pages.find(page => page.resourceRef === args[8]).ordinal;
       const image = {ordinal, position: args[9], fileUri: `file://candidate-${images.length}`, width: 300, height: 300,
-        intrinsicWidth: 300, intrinsicHeight: short ? 300 : ordinal === 0 ? 1500 : 900, revision: 'pixels'};
+        intrinsicWidth: 300, intrinsicHeight: ordinal === 0 ? firstHeight : nextHeight, revision: 'pixels'};
       images.push(image); assert.equal(args[6], false, 'candidate metadata honors cache-only');
       if (ordinal === 1 && args[9] === 0 && held) await header.promise;
+      if (failures.has(ordinal)) throw new Error('READING_IMAGE_HTTP_FAILED');
       return image;
     }, releaseReadingImage(uri) {released.push(uri);},
   };
-  const controller = new Type(runtime); await controller.openCandidate(entry, 'first', true, false, () => alive);
-  if (!short) await controller.setTileWindow(Array.from({length: 5}, (_, tileIndex) => ({ordinal: 0, tileIndex})));
+  const controller = new Type(runtime);
+  const setTiles = controller.setTileWindow.bind(controller);
+  controller.setTileWindow = async requested => {tileWindows.push(structuredClone(requested)); return setTiles(requested);};
+  if (ordinary) await controller.openPrepared(entry, true);
+  else await controller.openCandidate(entry, 'first', true, false, () => alive);
+  if (!short && controller.pageGeometry(0) !== undefined)
+    await controller.setTileWindow(Array.from({length: Math.ceil(firstHeight / 300)}, (_, tileIndex) => ({ordinal: 0, tileIndex})));
   let generatedOwner;
   class ListScroller {
     getItemIndex(_x, y) {
@@ -78,7 +93,7 @@ async function fixture(Type = Controller, {short = false, count = 6} = {}) {
     }
     getItemRect(index) {
       let y = 0; for (let prior = 0; prior < index; prior++) y += generatedOwner.rowDisplayHeight(generatedOwner.data.getData(prior));
-      return {x: 0, y, width: 300, height: generatedOwner.rowDisplayHeight(generatedOwner.data.getData(index))};
+      return {x: 0, y: y - nativeOffset, width: 300, height: generatedOwner.rowDisplayHeight(generatedOwner.data.getData(index))};
     }
     scrollToIndex() {} isAtEnd() {return false;}
   }
@@ -88,7 +103,7 @@ async function fixture(Type = Controller, {short = false, count = 6} = {}) {
   if (Type === SkippingController) assert.notEqual(pairedOldSurface, source, 'the old combination has no explicit visible metadata demand');
   const {owner} = createReaderBuilderProbe(pairedOldSurface, names, {...properties.sdk, ...mangaSurfaceSdkDependencies,
     MangaStripDataSource: DataSource, MangaLayoutFrame: Frame, ListScroller, Scroller, PhotoViewScaleModel: class {},
-    ReaderWindowCoordinator: {metrics: () => createDefaultReaderWindowMetrics()}, readerInteractiveSafeInsets,
+    ReaderWindowCoordinator: {metrics: () => createDefaultReaderWindowMetrics()}, readerInteractiveSafeInsets, mangaUserError,
     hilog: {info() {}, warn() {}, error() {}}, uiContext: {postFrameCallback: frame => frames.push(frame)}, setTimeout: () => 0,
     ScrollAlign: {START: 'start'}, ImageFit: {Fill: 0}, ScrollDirection: {Horizontal: 0}, TouchType: {Down: 0},
     LazyForEach: {create(_id, _owner, data, item) {for (const index of mountedRows) item(data.getData(index), index);}, pop() {}},
@@ -98,15 +113,17 @@ async function fixture(Type = Controller, {short = false, count = 6} = {}) {
   generatedOwner = owner;
   owner.initialRender(); mountMangaViewportBuilder(owner);
   const list = [...owner.nodes.values()].find(node => node.type === 'List'); assert.ok(list.onScrollIndex);
-  Object.assign(owner, {controller, mounted: true, opened: true, chapterCommitted: true, viewportWidth: 300, viewportHeight: 1700,
-    first: 0, last: 0, publishedManifestVersion: 'v1', boundaryBusy: true, boundaryPaintGeneration: 1,
-    previousChapterPixels: [{key: 'origin', uri: 'file://origin', x: 0, y: 0, width: 300, height: 1700}]});
+  Object.assign(owner, {controller, mounted: true, opened: true, chapterCommitted: true, viewportWidth: 300, viewportHeight,
+    first: 0, last: 0, publishedManifestVersion: 'v1', boundaryBusy: !ordinary, boundaryPaintGeneration: 1,
+    previousChapterPixels: ordinary ? [] : [{key: 'origin', uri: 'file://origin', x: 0, y: 0, width: 300, height: viewportHeight}]});
   owner.data.projection.publish(controller.chapter.manifest, index => controller.pageGeometry(index), undefined, controller.totalPages, index => controller.pageAt(index));
   owner.data.registerDataChangeListener({onDataReloaded() {}, onDataChange() {}});
-  owner.pendingChapterTransition = {controller, landing: 'first', targetOrdinal: 0, landingTileIndex: 0};
+  if (!ordinary) owner.pendingChapterTransition = {controller, landing: 'first', targetOrdinal: 0, landingTileIndex: 0};
   let commits = 0; owner.nativeTransitionResolve = () => {commits++;};
+  owner.nativeTransitionReject = error => rejections.push(error);
   controller.onChange = () => owner.publish();
-  list.onScrollIndex(0, owner.scroller.getItemIndex(0.5, owner.viewportHeight - 0.5)); await settle(); assert.equal(owner.rememberVisible(), true);
+  list.onScrollIndex(0, owner.scroller.getItemIndex(0.5, owner.viewportHeight - 0.5)); await settle();
+  assert.equal(owner.rememberVisible(), controller.pageGeometry(0) !== undefined);
   const noAdmission = () => {
     assert.equal(controller.displayedOrdinal, 0, 'metadata never selects the neighbor as the candidate target');
     assert.equal(calls.some(call => ['manga.cache.recordRead', 'reading.progress.update'].includes(call.method)), false);
@@ -119,13 +136,20 @@ async function fixture(Type = Controller, {short = false, count = 6} = {}) {
     image.onComplete({loadingStatus: 1});
   };
   const flush = () => {let count = 0; while (frames.length) {assert.ok(++count <= 24); const frame = frames.shift(); frame.onFrame(0); frame.onIdle(0);}};
-  return {owner, controller, runtime, list, header, calls, images, released, noAdmission, complete, flush,
+  return {owner, controller, runtime, list, header, calls, images, released, tileWindows, rejections, noAdmission, complete, flush,
     reportNativeRange() {list.onScrollIndex(0, owner.scroller.getItemIndex(0.5, owner.viewportHeight - 0.5));},
+    moveToRow(index) {
+      nativeOffset = 0; for (let prior = 0; prior < index; prior++) nativeOffset += owner.rowDisplayHeight(owner.data.getData(prior));
+      const last = owner.scroller.getItemIndex(0.5, owner.viewportHeight - 0.5);
+      list.onScrollIndex(index, last < index ? index : last);
+    },
     mountRow(index) {
       mountedRows = [index]; owner.imageViewport(); mountedRows = [];
       const row = [...owner.nodes.values()].filter(node => node.type === 'ListItem' && typeof node.onAppear === 'function').at(-1);
       assert.ok(row); row.onAppear(); // Real SDK-emitted known/unknown row callback.
+      return [...owner.nodes.values()].filter(node => node.type === 'Button' && typeof node.onClick === 'function').at(-1);
     },
+    allowPage(ordinal) {failures.delete(ordinal);},
     get commits() {return commits;}, releaseHeader() {held = false; header.resolve();}, invalidate() {alive = false;},
     holdWindow(ordinal, promise) {windowHolds.set(ordinal, promise);},
     async reopen() {alive = true; controller.onChange = undefined; await controller.openCandidate(structuredClone(entry), 'first', true, false, () => alive);},
@@ -262,4 +286,71 @@ console.log('PASS cancel/reopen exact metadata separates same-key header owners;
   await f.close();
 }
 console.log('PASS late canceled candidate header has no publication/admission or leaked display lease');
+
+for (const Type of [Controller, GlobalFailureController]) {
+  const f = await fixture(Type, {ordinary: true, count: 2, firstHeight: 600, nextHeight: 300,
+    viewportHeight: 200, holdHeader: false, failOrdinals: [1]});
+  const oldUris = [f.controller.tile(0, 0).image.fileUri, f.controller.tile(0, 1).image.fileUri];
+  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 1).status, 'failed');
+  const attempts = f.images.length, windowRequests = f.calls.filter(call => call.method === 'manga.pages.window').length;
+  f.moveToRow(2); await settle();
+  assert.equal(f.images.length, attempts, 'ordinary failed metadata never retries automatically');
+  assert.equal(f.calls.filter(call => call.method === 'manga.pages.window').length, windowRequests);
+  if (Type === GlobalFailureController) {
+    assert.equal(f.owner.error, 'READING_IMAGE_HTTP_FAILED', 'source-negative duplicates the row error globally');
+    assert.ok(f.tileWindows.at(-1).length > 0, 'source-negative skips the required empty tile window');
+    for (const uri of oldUris) assert.equal(f.released.includes(uri), false, 'departed pixels remain until explicit close in the broken branch');
+  } else {
+    assert.equal(f.owner.error, ''); assert.deepEqual(f.tileWindows.at(-1), []);
+    for (const uri of oldUris) assert.equal(f.released.filter(value => value === uri).length, 1);
+    const button = f.mountRow(2); assert.ok(button?.onClick, 'the actual failed ListItem keeps its reachable retry');
+    const stable = [f.images.length, f.tileWindows.length];
+    f.moveToRow(2); await settle(); assert.deepEqual([f.images.length, f.tileWindows.length], stable);
+    f.allowPage(1); button.onClick(); await settle(); f.flush(); await settle();
+    assert.equal(f.images.length, attempts + 1, 'only the explicit SDK retry starts one fresh decode');
+    assert.ok(f.controller.tile(1, 0)?.image); assert.equal(f.owner.error, '');
+    const before = [...f.owner.nodes.values()].filter(node => node.type === 'Image').length;
+    f.mountRow(2); assert.ok([...f.owner.nodes.values()].filter(node => node.type === 'Image').length > before, 'retry replaces the failed branch with an actual SDK Image');
+    for (const uri of oldUris) assert.equal(f.released.filter(value => value === uri).length, 1, 'retry cannot double-release departed pixels');
+  }
+  assert.equal(f.calls.some(call => call.method === 'reading.progress.update'), false, 'a failed viewport/retry is not a position commit');
+  await f.close(); for (const uri of oldUris) assert.equal(f.released.filter(value => value === uri).length, 1);
+}
+console.log('PASS ordinary already-failed viewport retires old tiles exactly once and retains a silent SDK row retry; restored unconditional-throw source duplicates global error and strands the old leases');
+
+{
+  const f = await fixture(Controller, {ordinary: true, short: true, count: 2, viewportHeight: 600, failOrdinals: [0, 1]});
+  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 0).status, 'failed');
+  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 1).status, 'pending', 'the second failure must settle while actual metadata demand is waiting');
+  f.releaseHeader(); await settle();
+  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 1).status, 'failed');
+  assert.equal(f.owner.error, ''); assert.deepEqual(f.tileWindows.at(-1), []);
+  const attempts = f.images.length; f.reportNativeRange(); await settle();
+  assert.equal(f.images.length, attempts, 'new ordinary failure also remains an explicit row terminal');
+  for (const index of [0, 1]) {
+    const button = f.mountRow(index); assert.ok(button?.onClick);
+    f.allowPage(index); button.onClick(); await settle(); f.flush(); await settle();
+    assert.ok(f.controller.tile(index, 0)?.image);
+    assert.equal(f.images.filter(image => image.ordinal === index).length, 2, 'each failed page has one initial attempt and one explicit retry');
+    assert.equal(f.owner.error, '');
+  }
+  assert.equal(f.calls.some(call => call.method === 'reading.progress.update'), false); await f.close();
+}
+console.log('PASS ordinary metadata failure during decode publishes retry rows and completes an empty tile window without global duplication; only real SDK retry callbacks recover each page');
+
+for (const Type of [Controller, PermissiveCandidateController]) {
+  const f = await fixture(Type, {failOrdinals: [1]}); f.releaseHeader(); await settle();
+  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 1).status, 'failed');
+  if (Type === PermissiveCandidateController) {
+    assert.equal(f.rejections.length, 0, 'removing the candidate guard loses immediate rejection before native Image callbacks');
+    await assert.doesNotReject(f.controller.prepareViewportPages([1]));
+  } else {
+    assert.ok(f.rejections.some(error => error.message === 'READING_IMAGE_HTTP_FAILED'));
+    await assert.rejects(f.controller.prepareViewportPages([1]), /READING_IMAGE_HTTP_FAILED/);
+  }
+  assert.equal(f.commits, 0); assert.equal(f.owner.previousChapterPixels.length, 1);
+  assert.equal(f.owner.error, ''); f.noAdmission();
+  await assert.rejects(f.controller.savePosition(0, 0, 0), /NOT_PRESENTED/); await f.close();
+}
+console.log('PASS the same failed row immediately rejects a candidate without clock/CAS admission or origin removal; candidate-guard deletion counterfactual proves immediate rejection is required');
 console.log('BOUNDARY actual SDK and production owners; controlled Core, decode, rectangles, frames and imported child mounting. Actual sixth native row identity remains a separate evidence question.');

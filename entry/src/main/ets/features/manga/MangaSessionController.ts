@@ -615,18 +615,28 @@ export class MangaSessionController {
       for (const ordinal of requested) {
         assertCurrent();
         if (this.geometry.has(ordinal)) continue;
-        if (!this.facts.has(ordinal)) {
-          // One exact missing fact avoids acquiring unrelated pages even when
-          // the supplied visible ordinals are not adjacent.
-          const window = await this.gateway.window(chapter, ordinal, 1, current);
-          assertCurrent();
-          if (window.totalPages !== this.totalPageCount) throw new Error('MANGA_SESSION_CONTENT_CHANGED');
-          this.admitFacts(window);
+        if (this.pages.get(ordinal)?.status !== 'failed') {
+          if (!this.facts.has(ordinal)) {
+            // One exact missing fact avoids acquiring unrelated pages even when
+            // the supplied visible ordinals are not adjacent.
+            const window = await this.gateway.window(chapter, ordinal, 1, current);
+            assertCurrent();
+            if (window.totalPages !== this.totalPageCount) throw new Error('MANGA_SESSION_CONTENT_CHANGED');
+            this.admitFacts(window);
+          }
+          await this.loadPage(ordinal, chapter, generation);
         }
-        await this.loadPage(ordinal, chapter, generation);
         assertCurrent();
         const page = this.pages.get(ordinal);
-        if (page?.status === 'failed') throw new Error(page.error ?? 'MANGA_IMAGE_FAILED');
+        if (page?.status === 'failed') {
+          const failure = page.error ?? 'MANGA_IMAGE_FAILED';
+          // Ordinary reading keeps the failed row's explicit retry owner and
+          // still retires departed tiles. A candidate cannot admit that row;
+          // invalid ownership/content is never downgraded to a row failure.
+          if (this.candidatePendingPresentation || ['MANGA_SESSION_CANCELLED', 'MANGA_RESOURCE_CANCELLED', 'MANGA_SESSION_CONTENT_CHANGED'].includes(failure))
+            throw new Error(failure);
+          continue;
+        }
         if (!this.geometry.has(ordinal)) throw new Error('MANGA_PAGE_GEOMETRY_REQUIRED');
       }
     } catch (error) {
