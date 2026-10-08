@@ -366,6 +366,7 @@ export class SourceSwitchGateway {
           if (isCurrent?.() === false) return [];
           const params: JsonObject = { identity: { sourceId: query.sourceId, bookId: query.bookId },
             name: query.bookName, author: query.author, limit: 128 };
+          if (query.contentKind === 'manga') params['mode'] = 'mangaCandidates';
           if (cursor !== undefined) params['cursor'] = cursor;
           const response = await this.runtimeOwner.request('search-book.related', params, this.requestOptions(isCurrent));
           if (isCurrent?.() === false) return [];
@@ -1265,9 +1266,12 @@ export class SourceSwitchGateway {
     candidate: SourceSwitchCandidate,
     query: SourceSwitchProbeQuery,
   ): boolean {
-    return this.normalizeBookName(candidate.bookName) === this.normalizeBookName(query.bookName) &&
-      bookAuthorIdentity(candidate.author ?? '', candidate.authorIdentity, candidate.sourceVersion) ===
-        bookAuthorIdentity(query.author, query.authorIdentity, query.sourceVersion);
+    if (this.normalizeBookName(candidate.bookName) !== this.normalizeBookName(query.bookName)) return false;
+    // Comic discovery offers same-title sources for the user's existing
+    // chapter selection; it does not establish a durable author alias.
+    if (query.contentKind === 'manga') return candidate.category === 'comic';
+    return bookAuthorIdentity(candidate.author ?? '', candidate.authorIdentity, candidate.sourceVersion) ===
+      bookAuthorIdentity(query.author, query.authorIdentity, query.sourceVersion);
   }
 
   private decodeCachedCandidate(

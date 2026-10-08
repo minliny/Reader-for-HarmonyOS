@@ -115,6 +115,125 @@ for (const action of ['stop', 'close']) {
   assert.equal(f.host.current(), retired, 'a late Core search publication cannot revive a stopped or closed pane');
   f.retire(); checks.push(`current-only-manga-${action}-rejects-late-search-projection`);
 }
+
+// Real three-source comic metadata differs only in its raw author formatting.
+// The controlled Core boundary supplies complete candidate pages; production
+// Host/Gateway/SDK code owns mode admission, paging, metadata and native rows.
+{
+  const f = fixture({ open: false }), baseRequest = f.runtime.request.bind(f.runtime), calls = [], pageGate = deferred();
+  Object.assign(f.context.query, { contentKind: 'manga', bookName: '斗破苍穹', author: '知音漫客 x 任翔' });
+  const registry = [{ sourceId: 'old', name: '腾讯动漫' }, { sourceId: 'baozimh', name: '包子漫画' },
+    { sourceId: 'qiman', name: '七七漫画' }].map(source => ({ ...source, enabled: true, sourceVersion: 'v1',
+      bookSource: { bookSourceType: 2 } }));
+  const row = (origin, bookUrl, author, durationMs) => ({ ...rawCandidate, origin, bookUrl, name: '斗破苍穹', author,
+    variable: JSON.stringify({ token: `${origin} exact & token` }), acquisition: { sourceVersion: 'v1',
+      searchTiming: { kind: 'search', durationMs, measuredAt: Date.now(), sourceVersion: 'v1' } } });
+  const records = [row('old', 'book', '知音漫客 x 任翔', 120), row('baozimh', '/doupo', '知音漫客 任翔', 180),
+    row('qiman', '/doupo', '任翔', 70)];
+  f.runtime.request = async (method, params, options) => {
+    calls.push({ method, params });
+    if (method === 'source.list') return { data: { sources: registry } };
+    if (method === 'search-book.related') {
+      assert.equal(params.mode, 'mangaCandidates');
+      assert.equal(params.author, '知音漫客 x 任翔', 'candidate mode does not rewrite the current author');
+      assert.deepEqual(params.identity, { sourceId: 'old', bookId: 'book' });
+      if (params.cursor !== undefined) { assert.equal(params.cursor, 'p2'); await pageGate.promise; }
+      return { data: { books: params.cursor === undefined ? records.slice(0, 1) : records.slice(1),
+        snapshotRevision: 'doupo-manga-candidates', complete: params.cursor !== undefined,
+        ...(params.cursor === undefined ? { nextCursor: 'p2' } : {}),
+        sourceVersions: registry.map(({ sourceId, sourceVersion, enabled }) => ({ sourceId, sourceVersion, enabled })) } };
+    }
+    return baseRequest(method, params, options);
+  };
+  assert.equal(f.host.open(f.context, f.lease), true); await settleMangaDiscovery();
+  await new Promise(resolve => setTimeout(resolve, 0)); await settle();
+  assert.ok(calls.some(call => call.method === 'search-book.related' && call.params.cursor === 'p2'));
+  assert.equal(f.host.current().state.kind, 'discovering', 'a partial candidate page cannot publish a false empty or incomplete success');
+  pageGate.resolve(); await settleMangaDiscovery();
+  assert.equal(f.host.current().state.kind, 'candidates');
+  const candidates = f.host.current().state.candidates;
+  assert.deepEqual(candidates.map(candidate => candidate.sourceId), ['qiman', 'old', 'baozimh']);
+  for (const record of records) {
+    const candidate = candidates.find(candidate => candidate.sourceId === record.origin);
+    assert.equal(candidate.author, record.author);
+    assert.equal(candidate.bookUrl, record.bookUrl);
+    assert.equal(candidate.sourceVersion, 'v1');
+    assert.deepEqual(candidate.searchVariables, [{ name: 'token', value: `${record.origin} exact & token` }]);
+  }
+  assert.equal(calls.some(call => call.method === 'book.search'), false, 'complete cached alternatives require no hidden sweep');
+  const source = read('features/source/SourceSwitchWindow.ets'), p = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
+  const metrics = metricsApi.createDefaultReaderWindowMetrics(); metrics.windowRect = new metricsApi.ReaderRectVp(0, 0, 390, 844);
+  const deps = sourceSwitchLiveSdk(p, { ReaderWindowCoordinator: { metrics: () => metrics }, setTimeout() { return 1; }, clearTimeout() {} });
+  const owner = p.consumer(source, boundedMembers(source, 'SourceSwitchWindow'), deps,
+    { state: f.host.current().state, contentKind: 'manga', currentSourceId: 'old', currentSourceName: '腾讯动漫',
+      bookTitle: '斗破苍穹', author: '知音漫客 x 任翔' }, 'SourceSwitchWindow');
+  owner.aboutToAppear(); owner.initialRender(); p.properties.flush();
+  const rows = p.walk(owner).filter(child => child instanceof deps.SourceSwitchNovelRow);
+  assert.deepEqual(rows.map(child => child.candidate.sourceId), ['qiman', 'baozimh']);
+  assert.deepEqual(rows.map(child => child.candidate.author), ['任翔', '知音漫客 任翔']);
+  assert.deepEqual(rows.map(child => child.candidate.latencyMs), [70, 180]);
+  assert.equal(owner.author, '知音漫客 x 任翔');
+  assert.equal(owner.currentSourceName, '腾讯动漫');
+  owner.aboutToDisappear(); f.retire(); checks.push('actual-manga-mode-three-author-variants-complete-pages-latency-sort-and-live-sdk-rows');
+}
+{
+  const query = { contentKind: 'manga', sourceId: 'old', bookId: 'book', bookName: '斗破苍穹',
+    author: '知音漫客 x 任翔', currentChapterIndex: 0, currentChapterTitle: '' };
+  const registry = ['old', 'baozimh', 'qiman', 'disabled', 'novel'].map(sourceId => ({ sourceId, name: sourceId,
+    enabled: sourceId !== 'disabled', sourceVersion: 'v1', bookSource: { bookSourceType: sourceId === 'novel' ? 0 : 2 } }));
+  const current = { ...rawCandidate, origin: 'old', bookUrl: 'book', name: '斗破苍穹', author: query.author };
+  const withdrawn = { ...rawCandidate, origin: 'baozimh', bookUrl: '/retired', name: '斗破苍穹', author: '知音漫客 任翔' };
+  let records = [current, withdrawn];
+  const owner = { request: async (method, params) => {
+    if (method === 'source.list') return { data: { sources: registry } };
+    if (method === 'search-book.related') {
+      assert.equal(params.mode, 'mangaCandidates');
+      return { data: { books: records, snapshotRevision: 'live-comic-candidates', complete: true,
+        sourceVersions: registry.filter(source => source.enabled && source.bookSource.bookSourceType === 2)
+          .map(({ sourceId, sourceVersion, enabled }) => ({ sourceId, sourceVersion, enabled })) } };
+    }
+    assert.equal(method, 'search-book.batch.get');
+    return { data: { complete: true, books: [], missing: params.identities } };
+  } };
+  const candidate = (sourceId, bookUrl, bookName, author = '任翔', category = 'comic') => ({ sourceId, bookUrl, bookName, author,
+    category, sourceVersion: 'v1', searchVariables: [{ name: 'token', value: ' live & token ' }] });
+  const known = [candidate('baozimh', '/live-baozi', '斗破苍穹', '知音漫客 任翔'), candidate('qiman', '/live-qiman', '斗破苍穹'),
+    candidate('baozimh', '/other', '大主宰'), candidate('qiman', '/old-edition', '斗破苍穹（旧版）'),
+    candidate('disabled', '/disabled', '斗破苍穹'), candidate('novel', '/novel', '斗破苍穹', '任翔', 'novel'),
+    candidate('qiman', '/wrong-kind', '斗破苍穹', '任翔', 'novel')];
+  const gateway = new Gateway(owner);
+  const first = await gateway.loadCachedCandidates(query, undefined, known);
+  assert.deepEqual(new Set(first.map(row => row.bookUrl)), new Set(['book', '/retired', '/live-baozi', '/live-qiman']));
+  const previous = first.slice(); records = [current];
+  const next = await gateway.loadCachedCandidates(query, undefined,
+    [...known, ...previous.filter(row => row.bookUrl === '/retired')]);
+  assert.deepEqual(new Set(next.map(row => row.bookUrl)), new Set(['book', '/live-baozi', '/live-qiman']),
+    'live candidate admission never revives a known persisted relation that Core removed');
+  assert.equal(next.find(row => row.bookUrl === '/live-baozi').author, '知音漫客 任翔');
+  assert.deepEqual(next.find(row => row.bookUrl === '/live-qiman').searchVariables, [{ name: 'token', value: ' live & token ' }]);
+  checks.push('comic-live-same-title-author-variants-with-exact-title-media-enabled-and-authoritative-withdrawal-boundaries');
+}
+{
+  const query = { contentKind: 'text', sourceId: 'old', bookId: 'book', bookName: '斗破苍穹', author: '天蚕土豆',
+    currentChapterIndex: 0, currentChapterTitle: '' };
+  const current = { ...rawCandidate, origin: 'old', bookUrl: 'book', name: '斗破苍穹', author: query.author };
+  const owner = { request: async (method, params) => {
+    if (method === 'source.list') return { data: { sources: ['old', 'new'].map(sourceId => ({ sourceId, name: sourceId,
+      enabled: true, sourceVersion: 'v1', bookSource: { bookSourceType: 0 } })) } };
+    if (method === 'search-book.related') {
+      assert.equal(Object.hasOwn(params, 'mode'), false, 'novels keep the default strict Core relation');
+      return { data: { books: [current], complete: true, snapshotRevision: 'strict-novel',
+        sourceVersions: [{ sourceId: 'old', sourceVersion: 'v1', enabled: true }] } };
+    }
+    assert.equal(method, 'search-book.batch.get');
+    return { data: { complete: true, books: [], missing: params.identities } };
+  } };
+  const gateway = new Gateway(owner);
+  const candidates = await gateway.loadCachedCandidates(query, undefined,
+    [{ sourceId: 'new', bookUrl: '/other-author', bookName: '斗破苍穹', author: '任翔', category: 'novel', sourceVersion: 'v1' }]);
+  assert.deepEqual(candidates.map(candidate => candidate.bookUrl), ['book']);
+  assert.equal(candidates[0].author, '天蚕土豆'); checks.push('novel-relation-mode-and-live-author-matching-remain-strict');
+}
 {
   const f=fixture({open:false}),baseRequest=f.runtime.request.bind(f.runtime),rows=[],started=[],progress=[];
   const sources=['first','faster','slow'],gates=new Map(sources.map(id=>[id,deferred()]));
