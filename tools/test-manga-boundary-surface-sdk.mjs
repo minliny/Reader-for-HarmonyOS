@@ -267,7 +267,7 @@ outcomes.push('previous-chapter short last image and whole short chapter use the
     onBoundaryActivity:f.owner.onBoundaryActivity.bind(f.owner),onBoundaryPull:f.owner.onBoundaryPull.bind(f.owner),
     turnBoundaryChapter:f.owner.turnBoundaryChapter.bind(f.owner),imageViewport(){},boundaryHint(){}});
   built.owner.boundaryViewport();const params=[...built.owner.children.values()].at(-1).params;
-  assert.equal(params.enabled,true);assert.equal(params.hasPrevious,false);assert.equal(params.hasNext,true);
+  assert.equal(params.pullEnabled,true);assert.equal(params.hasPrevious,false);assert.equal(params.hasNext,true);
   assert.equal(params.animationDuration,0);assert.equal(params.resetToken,7);
   params.onActivity(true);assert.equal(f.owner.boundaryDragging,true);
   params.onPull('next',30,false);assert.equal(f.owner.boundaryDistance,30);

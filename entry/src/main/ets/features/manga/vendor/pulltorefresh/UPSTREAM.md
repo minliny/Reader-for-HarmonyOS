@@ -58,7 +58,7 @@ PullToRefresh({
   customList: () => { /* unchanged List and LazyForEach */ },
   customRefresh: () => { /* previous chapter caption */ },
   customLoad: () => { /* next chapter caption */ },
-  enabled: verticalAndUnzoomedAndReadyAndForegroundAndNoPanel,
+  pullEnabled: verticalAndUnzoomedAndReadyAndForegroundAndNoPanel,
   hasPrevious: previousNavigableChapterExists,
   hasNext: nextNavigableChapterExists,
   resetToken: chapterAndLifecycleResetEpoch,
@@ -76,7 +76,9 @@ callback. Caller owns user-visible failures and target preparation cancellation.
 Do not publish target progress before its first displayed frame. Set the native
 scroll component's `edgeEffect(EdgeEffect.None)` as required by upstream, retain
 its existing lazy data source, and fence restoration during `onActivity(true)`.
-A reset token/disabled change cancels local pull state; the caller must separately
+The `pullEnabled` property and `handleTouchEvent` helper avoid ArkUI's inherited
+`enabled(value)` and `onTouch(callback)` attribute methods. A reset token/disabled
+change cancels local pull state; the caller must separately
 cancel its candidate chapter preparation.
 
 ## Evidence and remaining native checks

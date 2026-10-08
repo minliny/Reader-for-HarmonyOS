@@ -32,7 +32,7 @@ export struct PullToRefresh {
   @BuilderParam customList: () => void;
   @BuilderParam customRefresh?: () => void;
   @BuilderParam customLoad?: () => void;
-  @Prop @Watch('handleEnabledChange') enabled: boolean = true;
+  @Prop @Watch('handleEnabledChange') pullEnabled: boolean = true;
   @Prop @Watch('handleAdmissionChange') hasPrevious: boolean = true;
   @Prop @Watch('handleAdmissionChange') hasNext: boolean = true;
   @Prop @Watch('handleResetToken') resetToken: number = 0;
@@ -75,7 +75,7 @@ export struct PullToRefresh {
   }
 
   private handleEnabledChange(): void {
-    if (!this.enabled) this.cancelPull();
+    if (!this.pullEnabled) this.cancelPull();
   }
 
   private handleAdmissionChange(): void {
@@ -121,16 +121,16 @@ export struct PullToRefresh {
   }
 
   private onActionStart(event: GestureEvent): void {
-    this.gestureCancelled = !this.enabled || this.requestPending || event.fingerList.length > 1;
+    this.gestureCancelled = !this.pullEnabled || this.requestPending || event.fingerList.length > 1;
     this.touchYOld = event.offsetY;
     this.topSince = 0;
     this.bottomSince = 0;
     this.updateBoundary(Date.now());
   }
 
-  private onTouch(event: TouchEvent): void {
+  private handleTouchEvent(event: TouchEvent): void {
     if (event.type === TouchType.Down && event.touches.length === 1 && !this.requestPending) {
-      this.gestureCancelled = !this.enabled;
+      this.gestureCancelled = !this.pullEnabled;
     }
     if (event.type === TouchType.Cancel || event.touches.length > 1) this.cancelPull();
   }
@@ -138,7 +138,7 @@ export struct PullToRefresh {
   private onActionUpdate(event: GestureEvent): void {
     const delta = event.offsetY - this.touchYOld;
     this.touchYOld = event.offsetY;
-    if (!this.enabled || this.gestureCancelled || this.requestPending) return;
+    if (!this.pullEnabled || this.gestureCancelled || this.requestPending) return;
     if (event.fingerList.length > 1) { this.cancelPull(); return; }
     const now = Date.now();
     this.updateBoundary(now);
@@ -170,7 +170,7 @@ export struct PullToRefresh {
   }
 
   private onActionEnd(): void {
-    if (!this.enabled || this.gestureCancelled || this.requestPending || this.state === IS_FREE) return;
+    if (!this.pullEnabled || this.gestureCancelled || this.requestPending || this.state === IS_FREE) return;
     if (this.rawDistance < this.triggerDistance()) { this.resetPull(true); return; }
     const direction = this.pullDirection();
     if ((direction === 'previous' && !this.hasPrevious) || (direction === 'next' && !this.hasNext)) {
@@ -248,7 +248,7 @@ export struct PullToRefresh {
       if (this.mHeightNumber > 0 && this.mHeightNumber !== height) this.cancelPull();
       this.mHeightNumber = height;
     })
-    .onTouch((event: TouchEvent): void => this.onTouch(event))
+    .onTouch((event: TouchEvent): void => this.handleTouchEvent(event))
     .parallelGesture(
       PanGesture(this.panOption)
         .onActionStart((event: GestureEvent): void => this.onActionStart(event))

@@ -1183,8 +1183,9 @@ export struct MangaReadingSurface {
       // the transfer. A failed CAS never silently advances to another chapter.
       try { await origin.savePosition(confirmed.anchor.ordinal, confirmed.anchor.x ?? 0, confirmed.anchor.y); }
       catch (saveError) {
-        this.onSaveFailure(saveError instanceof Error ? saveError.message : 'MANGA_PROGRESS_SAVE_FAILED');
-        throw saveError;
+        const failure = saveError instanceof Error ? saveError : new Error('MANGA_PROGRESS_SAVE_FAILED');
+        this.onSaveFailure(failure.message);
+        throw failure;
       }
       if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
       const saved = origin.savedLocation;
@@ -1709,7 +1710,7 @@ export struct MangaReadingSurface {
       customList: (): void => { this.imageViewport(); },
       customRefresh: (): void => { this.boundaryHint('previous'); },
       customLoad: (): void => { this.boundaryHint('next'); },
-      enabled: this.boundaryEnabled(), hasPrevious: this.adjacentChapter(-1) !== undefined,
+      pullEnabled: this.boundaryEnabled(), hasPrevious: this.adjacentChapter(-1) !== undefined,
       hasNext: this.adjacentChapter(1) !== undefined, resetToken: this.boundaryReset,
       animationDuration: this.reduceMotion ? 0 : 180,
       onPull: (direction: PullDirection, distance: number, armed: boolean): void => this.onBoundaryPull(direction, distance, armed),

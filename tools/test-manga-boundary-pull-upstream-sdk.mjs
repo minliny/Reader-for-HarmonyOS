@@ -64,6 +64,26 @@ function pull(f, distance) { f.owner.onActionUpdate(event(-distance)); }
 const outcomes = [];
 function check(label, fn) { fn(); outcomes.push(label); }
 
+check('adapter API avoids actual SDK inherited attribute methods', () => {
+  const nativeAttributes = ts.createSourceFile('common.d.ts', readFileSync(`${sdk}/../../component/common.d.ts`, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const reserved = new Set(nativeAttributes.statements.filter(node => ['CommonMethod', 'CommonAttribute'].includes(node.name?.getText(nativeAttributes)))
+    .flatMap(node => node.members.map(member => member.name?.getText(nativeAttributes)).filter(Boolean)));
+  assert.ok(reserved.has('enabled') && reserved.has('onTouch'), 'actual ArkUI CommonAttribute inherited names');
+  function verify(candidate) {
+    const parsed = ts.createSourceFile('/tmp/PullApi.ets', candidate, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS,
+      require(`${sdk}/lib/ets_checker.js`).compilerOptions);
+    assert.equal(parsed.parseDiagnostics.length, 0);
+    const declaration = parsed.statements.find(node => node.name?.getText(parsed) === 'PullToRefresh');
+    for (const member of declaration.members) assert.equal(reserved.has(member.name?.getText(parsed)), false,
+      `adapter member must not shadow CustomComponent attribute ${member.name?.getText(parsed)}`);
+  }
+  verify(source);
+  const oldEnabled = source.replace('pullEnabled: boolean', 'enabled: boolean');
+  assert.notEqual(oldEnabled, source); assert.throws(() => verify(oldEnabled), /CustomComponent attribute enabled/);
+  const oldTouch = source.replace('private handleTouchEvent(event: TouchEvent)', 'private onTouch(event: TouchEvent)');
+  assert.notEqual(oldTouch, source); assert.throws(() => verify(oldTouch), /CustomComponent attribute onTouch/);
+});
+
 check('actual viewport threshold clamps to 120–180vp', () => {
   const { owner } = fixture();
   for (const [height, expected] of [[300,120],[800,160],[1800,180]]) {
@@ -118,13 +138,13 @@ check('unarmed release bounces without preparing a chapter', () => {
 }
 check('double finger and native cancel discard pending pulls', () => {
   const f = fixture(); startAtEnd(f); pull(f, 160);
-  f.owner.onTouch({ type: 0, touches: [{},{}] }); f.owner.onActionEnd();
+  f.owner.handleTouchEvent({ type: 0, touches: [{},{}] }); f.owner.onActionEnd();
   assert.equal(f.owner.rawDistance, 0); assert.equal(f.owner.gestureCancelled, true);
   const single = fixture(); startAtEnd(single); pull(single, 160);
-  single.owner.onTouch({ type: 3, touches: [] }); assert.equal(single.owner.rawDistance, 0);
+  single.owner.handleTouchEvent({ type: 3, touches: [] }); assert.equal(single.owner.rawDistance, 0);
 });
 check('disabled, removed neighbour and resetToken stop a pull', () => {
-  for (const change of [f => { f.owner.enabled = false; f.owner.handleEnabledChange(); },
+  for (const change of [f => { f.owner.pullEnabled = false; f.owner.handleEnabledChange(); },
     f => { f.owner.hasNext = false; f.owner.handleAdmissionChange(); },
     f => f.owner.handleResetToken()]) {
     const f = fixture(); startAtEnd(f); pull(f, 160); change(f);
