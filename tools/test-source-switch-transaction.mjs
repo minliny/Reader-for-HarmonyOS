@@ -135,8 +135,8 @@ assert.match(mangaSwitch, /openCachedCatalogSession\(\{ contentKind: 'manga'/,
   'missing in-memory session restores an exact manga catalog before prepare');
 assert.match(mangaSwitch, /previous\.contentKind !== 'manga'/);
 assert.match(mangaSwitch, /previous\.identity\.bookId !== original\.bookId/);
-assert.match(sourceHost, /force && previous\.length > 0[\s\S]*?candidates: previous, refreshing: true/,
-  'actual captured owner retains prior candidate identities during force refresh');
+assert.match(sourceHost, /force && previous\.some\(sourceSwitchIsAlternative\)[\s\S]*?candidates: previous, refreshing: true/,
+  'actual captured owner retains prior alternative identities during force refresh');
 assert.match(sourceHost, /const cached = force \? \[\] : await this\.gateway\.loadCachedCandidates\(context\.query, current, knownCandidates\(\)\)/,
   'initial discovery uses exact cached candidates through the typed gateway');
 assert.match(sourceHost, /refreshCandidates\(context\.query, current, force \? \[\] : context\.searchedSourceIds,\s*publishProgress, force \? previous : initialKnown\)/,

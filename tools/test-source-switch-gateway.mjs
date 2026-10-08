@@ -582,7 +582,7 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
   let release;const sourceGate=new Promise(r=>release=r);const calls=[];let listener;
   const owner={bookAcquisitions:()=>({sourceRegistryRevision:()=>1,subscribe:fn=>{listener=fn;return()=>{}}}),request:async(method,params)=>{
     calls.push(method);
-    if(method==='source.list'){await sourceGate;return{data:{sources:['a','b'].map(sourceId=>({sourceId,name:sourceId,enabled:true,sourceVersion:'v1'}))}}}
+    if(method==='source.list'){await sourceGate;return{data:{sources:['a','b','c'].map(sourceId=>({sourceId,name:sourceId,enabled:true,sourceVersion:'v1'}))}}}
     if(method==='search-book.related')return{data:relatedData([])};
     if(method==='search-book.batch.get')return{data:{books:[],missing:params.identities,complete:true}};
     throw Error(`entry must not re-search known candidates: ${method}`);
@@ -591,7 +591,7 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
   const query={sourceId:'a',bookId:'/book',bookName:'鸣龙',author:'关关公子',currentChapterIndex:0,currentChapterTitle:''};
   const Index=productionMotionMethods(resolve(repo,'entry/src/main/ets/pages/Index.ets'), ['knownSearchSourceCandidates'], {searchCandidateRank});
   const page=Object.assign(new Index(),{detailReturnRoute:'search',sourceSwitchState:{kind:'discovering'},
-    searchDetailCandidates:['a'].map(sourceId=>({sourceId,sourceName:sourceId,sourceRuleVersion:'v1',
+    searchDetailCandidates:['b'].map(sourceId=>({sourceId,sourceName:sourceId,sourceRuleVersion:'v1',
       bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'}))});
   const f=sourceOwnerFixture({open:false});owner.getUIAbilityContext=f.runtime.getUIAbilityContext;setCurrentRuntime(owner);
   const host=new f.Constructor(owner);host.open({query,inBookshelf:false,toc:[],knownCandidates:page.knownSearchSourceCandidates(query),readKnownCandidates:()=>page.knownSearchSourceCandidates(query),searchedSourceIds:[]},
@@ -600,11 +600,15 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
   for(let i=0;i<4;i++)await new Promise(r=>setImmediate(r));
   assert.equal(page.sourceSwitchState.kind,'candidates');assert.equal(page.sourceSwitchState.candidates.length,1,
     'known Search group paints before registry/cache I/O completes after intent authority admission');
-  page.searchDetailCandidates.push({sourceId:'b',sourceName:'b',sourceRuleVersion:'v1',bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'});
-  listener({reset:false,identities:[{sourceId:'b',bookId:'/book'}]});
+  assert.equal(page.sourceSwitchState.candidates[0].sourceId,'b');
+  assert.equal(page.sourceSwitchState.candidates[0].isCurrent,false,
+    'first paint represents a selectable alternative, not the current binding');
+  page.searchDetailCandidates.push({sourceId:'c',sourceName:'c',sourceRuleVersion:'v1',bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'});
+  listener({reset:false,identities:[{sourceId:'c',bookId:'/book'}]});
   assert.deepEqual(calls,['source.list'],'late candidate waits behind initial cache I/O');
   release();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
   assert.equal(page.sourceSwitchState.candidates.length,2);
+  assert.deepEqual(page.sourceSwitchState.candidates.map(candidate=>candidate.sourceId),['b','c']);
   assert.deepEqual(calls.slice(0,3),['source.list','search-book.related','search-book.batch.get']);
   assert.ok(calls.includes('book.search') || calls.includes('search-book.related'),
     'the seeded candidates continue through the real incremental refresh path');
