@@ -63,7 +63,8 @@
           "entry": "features/shell/ReaderShell.ets#ReaderShell#build",
           "hostMethod": "features/shell/ReaderShell.ets#ReaderShell#build",
           "host": "ReaderPageScaffold",
-          "variant": "reader"
+          "variant": "reader",
+          "inputFacts": { "readingContentKind": "this.contentKind", "pageVisible": "this.visible" }
         }
       ]
     },

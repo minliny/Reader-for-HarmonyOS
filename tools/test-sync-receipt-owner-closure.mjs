@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 const require=createRequire(import.meta.url);
 // Thin Node adaptation of the actual platform AtomicFile API. Production
 // snapshot/Store/owner methods remain unmodified and use real durable files.
@@ -194,7 +195,7 @@ for(const fail of ['none','applyAck','commitAck','host']){
   const shared=foundationControls();
   const full=createReaderBuilderProbe(text,names,{...shared.dependencies,...geometry,DEFAULT_SYNC_SNAPSHOT,readerRecoveryView,ReaderCard:Card,PageBackBar:Child,ReaderRecoveryNotice:Child,
     ...Object.fromEntries(['ObservedPropertySimplePU','ObservedPropertyObjectPU','SynchedPropertySimpleOneWayPU','SynchedPropertyObjectOneWayPU'].map(k=>[k,Property])),
-    registerReaderFonts(){},ReaderWindowCoordinator:{metrics:()=>({windowRect:{width:390}})},readerVisualSafeLeft:()=>0,readerVisualSafeRight:()=>0,readerFloatingBarBottomInset:()=>18,
+    registerReaderFonts(){},ReaderWindowCoordinator:{metrics:()=>{const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=390;return metrics;}},readerVisualSafeLeft:()=>0,readerVisualSafeRight:()=>0,readerFloatingBarBottomInset:()=>18,
     READER_FLOATING_TOP_BAR_HEIGHT:56,InputType:{Password:'Password'},TOK_CONTENT_MAX_W_TABLET:722,TOK_SCREEN_INSET:18,
   },{...shared.hooks,mountChildren:true,initialParams:{snapshot:{...clone(DEFAULT_SYNC_SNAPSHOT),webdavUrl:config.url,webdavUser:config.user,webdavPath:config.directory,facts:{read:facts.projectOperationFacts({phase:'succeeded',value:true}),busy:false,canMutate:true}},isTablet:false},
     childSources:{...shared.hooks.childSources,ReaderCard:source('features/common/ReaderCard.ets'),PageBackBar:source('features/common/PageBackBar.ets')}});

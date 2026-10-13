@@ -70,7 +70,7 @@ for (const [label, candidate] of [
   assert.notEqual(candidate, detail, label);
   assert.throws(() => checkDetailBranches(candidate), assert.AssertionError, `reject ${label}`);
 }
-assert.match(detail, /onAreaChange\([\s\S]*const width = Number\(area\.width\)/,
+assert.match(detail, /onAreaChange\([\s\S]*const width = readerPageAreaLength\(area\.width\)/,
   'book detail must consume the live physical Area width');
 
 console.log('physical phone Figma layout regressions: PASS');

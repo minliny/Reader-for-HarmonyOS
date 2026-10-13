@@ -10,6 +10,8 @@ import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThem
 import * as families from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { loadReaderTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { isReaderMainTabEnabled } from '../entry/src/main/ets/app/ReaderProductScope.ts';
+import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const read = name => readFileSync(file(name),'utf8');
 const roleSource=read('features/common/ReaderTypography.ets');
@@ -71,14 +73,36 @@ console.log('PASS actual centered header SDK Builder: symmetric 44vp slots, 19/2
 const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('MainTabBar');syntax.propCollection.set('MainTabBar',new Set(['current','vertical']));
-class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
-for(const rail of [false,true]) {
-  const shellSource=read('features/shell/MainTabShell.ets');
-  const {owner}=createReaderBuilderProbe(shellSource,['content','build','railLeft','railTop'],{...common,MainTabBar:Child});
-  Object.assign(owner,{appThemeScheme:'day',readerWindowMetricsRevision:1,activeTab:'bookshelf',showBottomNav:true,showTabletRail:rail,content(){},onMainTab(){}});
-  owner.initialRender();
-  const stacks=[...owner.nodes.values()].filter(n=>n.type==='Stack');
+const shellSource=read('features/shell/MainTabShell.ets');
+function checkMainTabShell(candidate=shellSource){
+ const runtime=createArkUIPropertyRuntimeProbe(),hooks={...runtime.hooks,mountChildren:true,childSources:{MainTabBar:tabsSource}};
+ const MAIN_TABS=[{key:'bookshelf',label:'书架'},{key:'settings',label:'设置'}];
+ const Bar=createReaderBuilderProbe(tabsSource,boundedMembers(tabsSource),{...common,...runtime.sdk,MAIN_TABS,registerReaderShelfFonts(){}},hooks).Component;
+ for(const rail of[false,true]){
+  const {owner}=createReaderBuilderProbe(candidate,boundedMembers(candidate),{...common,...runtime.sdk,MainTabBar:Bar},hooks),calls=[];
+  Object.assign(owner,{appThemeScheme:'day',readerWindowMetricsRevision:1,activeTab:'bookshelf',navigationGeneration:7,showBottomNav:true,showTabletRail:rail,content(){},onMainTab:(key,generation)=>calls.push([key,generation])});
+  owner.aboutToAppear();owner.initialRender();
+  const walk=parent=>[parent,...[...parent.children.values()].flatMap(child=>child.nodes?walk(child):[])];
+  const frame=walk(owner).find(child=>child.params?.variant==='mainTab');assert.ok(frame?.nodes,'actual main shell owns its real public Scaffold');
+  const stacks=[...frame.nodes.values()].filter(n=>n.type==='Stack');assert.ok(stacks.length>0);
   assert.ok(stacks.every(n=>n.height==='100%'&&n.width==='100%'),'navigation overlays retain the full content viewport');
-  assert.equal([...owner.children.values()].length,1);
+  assert.equal([...owner.children.values()].filter(child=>child.params?.variant==='mainTab').length,1,'one actual public frame owns the page');
+  assert.equal(walk(owner).filter(child=>child instanceof Bar).length,1,'the initial phone/tablet state has exactly one actual navigation actor');
+  const nav=walk(owner).find(child=>child instanceof Bar);assert.ok(nav);assert.equal(nav.vertical,rail);
+  const setting=bar=>[...bar.nodes.values()].find(node=>node.type==='Column'&&node.accessibilityText==='设置');
+  const old=setting(nav);assert.ok(old?.onClick);old.onClick();assert.deepEqual(calls,[['settings',7]]);
+  owner.navigationGeneration=8;runtime.flush();
+  assert.equal(walk(owner).find(child=>child.params?.variant==='mainTab'),frame,'scalar navigation publication retains the public frame');
+  old.onClick();assert.deepEqual(calls,[['settings',7]],'old physical navigation cannot borrow a new generation');
+  const current=walk(owner).find(child=>child instanceof Bar&&child!==nav);assert.ok(current);setting(current).onClick();
+  assert.deepEqual(calls,[['settings',7],['settings',8]]);
+  owner.aboutToDisappear();setting(current).onClick();
+  assert.deepEqual(calls,[['settings',7],['settings',8]],'retired public navigation rejects its retained physical action');
+ }
 }
+checkMainTabShell();
+for(const [from,to,message]of[
+ ['this.requestMainTab(key, generation)','this.requestMainTab(key, this.navigationGeneration)',/old physical navigation/],
+ ['if (!this.mounted || presentedGeneration !== this.navigationGeneration) return;','if (presentedGeneration !== this.navigationGeneration) return;',/retired public navigation/],
+]){const changed=shellSource.replaceAll(from,to);assert.notEqual(changed,shellSource);assert.throws(()=>checkMainTabShell(changed),message);}
 console.log('PASS actual MainTabShell SDK Builder: navigation overlays full-size content on phone and tablet');

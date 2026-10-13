@@ -144,8 +144,13 @@ assert.match(index, /readerContentSafeTop\(ReaderWindowCoordinator\.metrics\(\)\
   'non-reader content must use the same live safe-top source');
 assert.doesNotMatch(shell, /\.padding\(\{ top:/,
   'ReaderShell must not add a second status-bar offset');
-assert.match(shell,
-  /expandSafeArea\(this\.contentKind === 'manga' \? \[SafeAreaType\.SYSTEM, SafeAreaType\.CUTOUT\] : \[SafeAreaType\.SYSTEM\],\s*this\.contentKind === 'manga' \? \[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM, SafeAreaEdge\.START, SafeAreaEdge\.END\] :\s*\[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM\]\)/,
+assert.match(shell, /ReaderPageScaffold\(\{ variant: 'reader',[\s\S]*readingContentKind: this\.contentKind/,
+  'the reader adapter forwards its actual text/manga fact to the common native frame');
+assert.doesNotMatch(shell,/\.(?:expandSafeArea|ignoreLayoutSafeArea)\(/,
+  'native-only safe-area properties are owned by the actual common Stack rather than the custom component adapter');
+const scaffold = read('entry/src/main/ets/features/common/ReaderPageScaffold.ets');
+assert.match(scaffold,
+  /expandSafeArea\(this\.variant === 'reader' \? \(this\.readingContentKind === 'manga' \? \[SafeAreaType\.SYSTEM, SafeAreaType\.CUTOUT\] : \[SafeAreaType\.SYSTEM\]\) : \[\],\s*this\.variant === 'reader' \? \(this\.readingContentKind === 'manga' \? \[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM, SafeAreaEdge\.START, SafeAreaEdge\.END\] : \[SafeAreaEdge\.TOP, SafeAreaEdge\.BOTTOM\]\) : \[\]\)/,
   'manga draws through all physical edges while the themed novel background preserves system top/bottom expansion');
 assert.match(shell, /windowChromeOverlayActive:[\s\S]*this\.route === 'directory'[\s\S]*this\.sourceSwitchVisible/,
   'fixed-light reader overlays must explicitly own a dark system-content tone');

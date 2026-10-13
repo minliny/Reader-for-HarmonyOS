@@ -57,3 +57,26 @@ Area 补测结果均通过：
 VM 只读预检已确认既有 Mate 80 Pro 实例路径与当前进程一致、guest boot completed 为 true、Emulator 同实例已记录 Guest OS Boot Completed、SceneBoard PID 稳定，近期日志无连续超时循环；当前 /data 可用约 2.6GiB。尚未安装候选包，预检不能记为应用行为或视觉验收。
 
 最终登记只更新漫画 footer 当前 implementation 的一个 import 和两次公共 parser 调用，types/declarations/styles 及整表其它字段逐项不变；其它私有预算和历史字体/Card witness 未刷新。两个架构门禁与 Typography coverage/registry/SDK 共五项再次通过。第三轮规范构建及后续部署回执另存私有 `.reader-local/ui-framework/`，以冻结提交、manifest 和实际回执为准；本记录本身不预报其通过。
+
+## 第三轮完整结果
+
+提交 `68c07539` 在第三轮完整执行 675 项，655 PASS、20 FAIL、unrun 为空，约 576 秒。报告为 `/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-contract-run-ax7sOT/results.json`，流水线日志为私有 `.reader-local/ui-framework/hap-build-r3.log`。没有构建或发布 HAP。
+
+第二轮停止后未完整梳理其失败清单，遗漏的项目在第三轮再次命中；本轮所有失败都保留，不作完整通过声明。当前正在按完整清单修复：
+
+- 真实生产 SDK 缺陷：`ignoreLayoutSafeArea` 不属于自定义组件允许的 COMMON_ATTRS，ReaderShell 将原 native Stack 的属性外链到 Scaffold 调用后被 SDK 拒绝。原安全区逻辑必须移到公共 Scaffold 的 native 根 Stack，ReaderShell 只提供文本/漫画事实；不能删除该属性或改用假宿主绕过。
+- 隔离 UI 依赖缺失：按原 package-lock 离线 `npm ci --ignore-scripts --no-audit --no-fund` 恢复五个 ignored 包，PostCSS 8.5.29/TypeScript 5.9.3 锁定及包/锁文件字节保持。
+- 旧消费者 fixture：导航生命周期、Header/Scaffold 注册、真实完整 metrics、RssPage 固定头初值、共享宿主 descendants 查找与原生控件 carrier owner 需按实际生产接线更新。
+- 旧私有布局断言：固定 74vp、逐页 StorageLink/Scroll、详情 Number(Area)、ReaderShell 私有 opacity 及 RSS 字体 build owner 已迁到明确公共 owner，需要保留原行为并证明真实委托，不得刷新历史 witness 或降低计数。
+
+完整修复冻结后必须重新执行 675 项全量门禁及 ArkTS/HAP 编译。第三轮 PASS 项只属于上述冻结提交。
+
+## 第四轮冻结前复测
+
+第三轮 20 个失败项全部针对性复测通过；新增 reader-layout-architecture 与精确两个架构门禁、公共头框架合同也通过。原 13 类/14 个原生控件、历史 witness、字体 tuple、业务/身份/旧物理回调及原负控保留。
+
+安全区由 Scaffold 的 actual native Stack 执行，唯一 ReaderShell caller 传入 `this.contentKind` 和 `this.visible`；text/manga、reader/ordinary 切换清理旧 native 属性并保持阅读 actor。原书架 74vp 初值及实测 96vp HeaderHost 经 8vp top gap 后传播 118vp List 避让，原 List/Scroller/items 保持。
+
+响应式门禁保留原八种宽度、720vp 上限、19vp 边距及全宽分支；新增十个实际 standard variant caller→StandardPage→Scaffold 的数值/vp、对称/非对称安全区回放，保留各页原 Scroller。搜索进度和失败控制沿实际 compound header 查找，停止/重试/出版 fence 及 1000 条引用复用断言保留。
+
+这些针对性结果仍不替代第四轮全量与 HAP。后续结果绑定本次冻结提交及私有 `.reader-local/ui-framework/hap-build-r4.log`、不可变 manifest、部署回执和 VM 原始取证。

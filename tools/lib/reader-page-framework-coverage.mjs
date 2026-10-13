@@ -78,7 +78,8 @@ export function verifyReaderPageFrameworkCoverage(root, contract,
       const variant = props.properties.find(prop => prop.name?.getText(declaration.tree) === 'variant');
       const raw = variant?.initializer;
       hostCalls.push({ component: name, variant: ts.isStringLiteral(raw) ? raw.text : raw?.getText(declaration.tree),
-        target, fields: props.properties.map(prop => prop.name?.getText(declaration.tree)) });
+        target, fields: props.properties.map(prop => prop.name?.getText(declaration.tree)),
+        inputFacts: Object.fromEntries(props.properties.map(prop=>[prop.name?.getText(declaration.tree),prop.initializer?.getText(declaration.tree)])) });
     });
   }
   const reachable = start => {
@@ -103,6 +104,8 @@ export function verifyReaderPageFrameworkCoverage(root, contract,
       assert.ok(call, 'actual page category/common-host binding removed or changed: ' + binding.hostMethod);
       assert.equal(call.target, `features/common/${binding.host}.ets#${binding.host}#build`, 'actual page delegates the imported public host');
       assert.ok(call.fields.includes('content'), 'page body is an actual delegated BuilderParam slot');
+      for(const[key,expression]of Object.entries(binding.inputFacts??{}))assert.equal(call.inputFacts[key],expression,
+        'exact page/runtime fact reaches the public native host: '+binding.hostMethod+':'+key);
       const scaffold = reachable(call.target);
       assert.ok([...scaffold].some(method => method === 'features/common/ReaderPageScaffold.ets#ReaderPageScaffold#build'),
         'all finite page hosts terminate at the one actual scaffold');

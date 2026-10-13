@@ -14,7 +14,7 @@ for(const [phase,canCancel,canRetry] of [['loading',true,false],['partial',true,
 }
 owner.presentation={kind:'empty',operation:projectOperationFacts({phase:'cancelled',canRetry:true}),stopped:false};assert.ok(owner.isStoppedEmpty(),'cancelled operation cannot masquerade as completed empty');
 owner.presentation={kind:'initial'};assert.equal(owner.operation(),undefined);assert.equal(owner.isSweeping(),false);owner.retryOperation();
-for(const [kind,spec,builder] of [['error','search-error-retry',p=>p.errorContent(7)],['results','search-retry-status',p=>p.resultsContent()],['empty','search-secondary',p=>p.emptyContent('原关键词',7)]]){
+for(const [kind,spec,builder] of [['error','search-error-retry',p=>p.errorContent(7)],['results','search-retry-status',p=>{p.searchHeader();p.resultsContent();}],['empty','search-secondary',p=>p.emptyContent('原关键词',7)]]){
  for(const canRetry of[false,true]){
   const operation=projectOperationFacts({phase:kind==='error'?'failed':kind==='empty'?'cancelled':'partial',value,canRetry,generation:3});
   const f=searchSharedActionFixture({kind,operation});builder(f.page);const action=f.action(spec,kind==='empty'?'重新搜索':undefined);
@@ -25,7 +25,7 @@ for(const [kind,spec,builder] of [['error','search-error-retry',p=>p.errorConten
  }
 }
 {
- const f=searchSharedActionFixture({kind:'results',operation:projectOperationFacts({phase:'cancelled',canRetry:true}),stopped:false});f.page.resultsContent();
+ const f=searchSharedActionFixture({kind:'results',operation:projectOperationFacts({phase:'cancelled',canRetry:true}),stopped:false});f.page.searchHeader();f.page.resultsContent();
  assert.ok(f.controls.nodes(f.page).some(n=>n.type==='Text'&&String(n.create).includes('已停止,已搜索 3/7 个书源')),'actual native result label preserves interrupted progress');
 }
 {

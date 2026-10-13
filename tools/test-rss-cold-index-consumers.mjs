@@ -7,6 +7,7 @@ import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.
 import {projectOperationFacts} from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import {RssPresentationProjection} from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
+import {actualReaderPageShell} from './lib/reader-page-shell-runtime-probe.mjs';
 const syntax=createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));syntax.builderParamObjectCollection.set('MainTabShell',new Set(['content']));
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const routes={main:'rss',management:'rssSubscriptionManagement',editor:'rssSubscriptionEditor',feed:'rssSourceFeed',entry:'rssEntryDetail'};
@@ -42,7 +43,11 @@ function page(f,x,kind){
  const Surface=createReaderBuilderProbe(shared,boundedMembers(shared),sdk.deps,sdk.hooks).Component;sdk.deps.RssOriginalRecoverySurface=Surface;
  for(const n of ['ReaderButton','ReaderLabeledIconAction','ReaderToggle','ReaderFormField','PageBackBar','ReaderSearchField','StatusBadge'])sdk.childSources[n]=read('features/common/'+n+'.ets');
  sdk.childSources.MainTabShell=read('features/shell/MainTabShell.ets');
- const child=sdk.consumer(source,boundedMembers(source),{projectOperationFacts,readerRecoveryView,EMPTY_RSS_EDITOR_SNAPSHOT:f.emptyEditor,
+ const constants={};if(kind==='main'){
+  const declaration=source.match(/^const RSS_FLOATING_HEADER_HEIGHT = ([^;]+);/m);assert.ok(declaration,'actual RSS header fallback declaration');
+  constants.RSS_FLOATING_HEADER_HEIGHT=new Function('readerPageContentStartInset','TOK_SPACE_XS','return ('+declaration[1]+');')(actualReaderPageShell().readerPageContentStartInset,sdk.deps.TOK_SPACE_XS);
+ }
+ const child=sdk.consumer(source,boundedMembers(source),{...constants,projectOperationFacts,readerRecoveryView,EMPTY_RSS_EDITOR_SNAPSHOT:f.emptyEditor,
   RSS_DETAIL_ACTION_AREA_HEIGHT:62,Scroller:class{},registerReaderFonts(){}},x.params());child.getUIContext=()=>({getFont:()=>({})});child.aboutToAppear();
  const feedback=()=>child[kind==='main'?'readFeedback':kind==='editor'?'operationRecovery':'operationFeedback']();feedback();
  const action=label=>{const a=sdk.walk(child).filter(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label===label).at(-1);assert.ok(a,label);

@@ -165,15 +165,10 @@ export struct ReaderShell {
   onRollbackSourceSwitch: (scopeId?: number) => void = (): void => {};
 
   build() {
-    ReaderPageScaffold({ variant: 'reader', headerKind: 'reader', pageVisible: this.visible,
+    ReaderPageScaffold({ variant: 'reader', headerKind: 'reader', pageVisible: this.visible, readingContentKind: this.contentKind,
       content: (): void => { this.readingContent(); },
       overlay: (): void => { this.readingOverlay(); },
-    })
-    .expandSafeArea(this.contentKind === 'manga' ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
-      this.contentKind === 'manga' ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
-        [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-    .ignoreLayoutSafeArea(this.contentKind === 'manga' ? [LayoutSafeAreaType.SYSTEM] : [],
-      this.contentKind === 'manga' ? [LayoutSafeAreaEdge.ALL] : []);
+    });
   }
 
   @Builder

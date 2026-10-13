@@ -122,6 +122,22 @@ for (const variant of ['standard', 'mainTab', 'settings', 'detail', 'mangaDetail
 }
 
 const variants = ['management', 'settings', 'rssManagement', 'rssEditor', 'rssFeed', 'rssDetail', 'tools', 'sync', 'sourceManagement', 'settingsHome', 'settingsGeneral'];
+// Native reading geometry belongs to the same actual frame as the body.
+// These finite runtime facts are not a caller-owned style/attribute bag.
+{
+ const probe=actual('ReaderPageScaffold');let mounts=0;
+ Object.assign(probe.owner,{variant:'reader',readingContentKind:'text',content:()=>mounts++});probe.owner.initialRender();
+ const root=[...probe.owner.nodes.values()].find(node=>node.type==='Stack'&&node.padding);
+ assert.deepEqual(root.expandSafeArea,[['SafeAreaType.SYSTEM'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM']]);
+ assert.deepEqual(root.ignoreLayoutSafeArea,[[],[]]);
+ probe.owner.readingContentKind='manga';probe.properties.flush();
+ assert.deepEqual(root.expandSafeArea,[['SafeAreaType.SYSTEM','SafeAreaType.CUTOUT'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM','SafeAreaEdge.START','SafeAreaEdge.END']]);
+ assert.deepEqual(root.ignoreLayoutSafeArea,[['LayoutSafeAreaType.SYSTEM'],['LayoutSafeAreaEdge.ALL']]);
+ probe.owner.variant='standard';probe.properties.flush();
+ assert.deepEqual(root.expandSafeArea,[[],[]],'reader-to-ordinary reuse clears native expansion');
+ assert.deepEqual(root.ignoreLayoutSafeArea,[[],[]],'reader-to-ordinary reuse clears native ignore policy');
+ assert.equal(mounts,1,'native geometry fact changes retain the same body actor');
+}
 for (const variant of variants) {
   const metrics = createDefaultReaderWindowMetrics();
   metrics.windowRect.width = 393; metrics.windowRect.height = 852;
@@ -156,6 +172,9 @@ const coverageContract = JSON.parse(readFileSync('tools/fixtures/reader-page-fra
 const coverage = verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract);
 assert.equal(coverage.routes, 20, 'all current production route members, including hidden product branches');
 const source = file => readFileSync(`entry/src/main/ets/${file}`, 'utf8');
+const readerSource=source('features/shell/ReaderShell.ets');
+const detachedKind=readerSource.replace('readingContentKind: this.contentKind',"readingContentKind: 'text'");assert.notEqual(detachedKind,readerSource);
+assert.throws(()=>verifyReaderPageFrameworkCoverage(process.cwd(),coverageContract,file=>file==='features/shell/ReaderShell.ets'?detachedKind:source(file)),/exact page\/runtime fact/);
 const missingHostFile = 'features/bookshelf/BookshelfManagementPage.ets';
 const original = source(missingHostFile);
 const missingHost = original.replace('ReaderStandardPage({', 'PrivatePageHost({');

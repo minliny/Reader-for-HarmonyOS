@@ -49,7 +49,7 @@ for (const file of files) {
 }
 assert.deepEqual(parseFailures, [], 'all production ETS and TS parse with installed SDK');
 console.log(`PASS installed SDK parses ${files.length} production ETS/TS files, ${components.size} custom components registered`);
-const selected = ['pages/Index.ets', 'features/shell/ReaderShell.ets', 'features/manga/MangaReadingSurface.ets', 'features/bookshelf/BookshelfPage.ets', 'features/bookshelf/LocalBookDetail.ets', 'features/bookshelf/BookDirectoryPage.ets', 'features/reading/SourceSwitchPanel.ets', 'features/source/SourceSwitchWindow.ets', 'features/reading/ReaderDirectoryNavigationSurface.ets', 'features/reading/ReaderDirectoryNavigationList.ets', 'features/reading/ReaderDirectoryList.ets'];
+const selected = ['features/common/ReaderPageScaffold.ets', 'pages/Index.ets', 'features/shell/ReaderShell.ets', 'features/manga/MangaReadingSurface.ets', 'features/bookshelf/BookshelfPage.ets', 'features/bookshelf/LocalBookDetail.ets', 'features/bookshelf/BookDirectoryPage.ets', 'features/reading/SourceSwitchPanel.ets', 'features/source/SourceSwitchWindow.ets', 'features/reading/ReaderDirectoryNavigationSurface.ets', 'features/reading/ReaderDirectoryNavigationList.ets', 'features/reading/ReaderDirectoryList.ets'];
 let bindings = 0;
 const bindingFailures = [];
 for (const relative of selected) {

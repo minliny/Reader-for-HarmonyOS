@@ -156,7 +156,10 @@ function verifyShell(){
  const native=new Set(['Stack','ForEach','If']);
  const dependencies={};
  const visit=node=>{if(ts.isCallExpression(node)&&ts.isIdentifier(node.expression)&&/^[A-Z]/.test(node.expression.text)&&!native.has(node.expression.text)){
-  const name=node.expression.text;syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set());dependencies[name]=Child;
+  const name=node.expression.text;
+  if(!['ReaderPageScaffold','ReaderFixedHeaderHost','ReaderStandardPage'].includes(name)){
+   syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set());dependencies[name]=Child;
+  }
  }ts.forEachChild(node,visit);};visit(type);
  const properties=createArkUIPropertyRuntimeProbe();
  const {owner,output}=createReaderBuilderProbe(shellSource,names,{
@@ -164,13 +167,27 @@ function verifyShell(){
   ReaderSettingsGateway:class{},ReaderRuntimeOwner:{current:()=>({mangaOfflineProbeFor:()=>false})},
   ReaderWindowCoordinator:{metrics:()=>createDefaultReaderWindowMetrics()},readerWidthClass:()=> 'compact',
  },{...properties.hooks,initialParams:{contentKind:'manga',visible:true,route:'reading'}});
- owner.initialRender();const root=owner.nodes.get(0),id=root.id;assertFullWindow(root,'Shell manga root');
+ owner.initialRender();
+ const actors=current=>[current,...[...(current.children?.values()??[])].filter(child=>child.nodes).flatMap(actors)];
+ const scaffold=actors(owner).find(actor=>actor.params?.variant==='reader');
+ assert.ok(scaffold?.nodes,'Shell mounts the actual SDK Scaffold instead of a child seam');
+ const root=scaffold.nodes.get(0),id=root.id;assert.equal(root.type,'Stack');assertFullWindow(root,'Shell manga root');
+ assert.equal(scaffold.readingContentKind,'manga');assert.equal(root.opacity,1);assert.equal(root.hitTestBehavior,'HitTestMode.Default');
  assert.ok([...owner.children.values()].some(child=>child.params.windowChromeActive===true),'actual Shell Builder admits manga child Props');
  assert.ok(![...owner.nodes.values()].some(node=>node.id==='reader-overlay-status-bar-underlay'),'manga has no second status-paper overlay');
  owner.updateStateVars({contentKind:'text',visible:true,route:'reading'});properties.flush();
- assert.equal(root.id,id);assert.deepEqual(root.ignoreLayoutSafeArea,[[],[]]);
+ assert.equal(actors(owner).find(actor=>actor.params?.variant==='reader'),scaffold,'kind changes retain the actual native Scaffold owner');
+ assert.equal(scaffold.nodes.get(0),root);assert.equal(root.id,id);assert.deepEqual(root.ignoreLayoutSafeArea,[[],[]]);
  assert.deepEqual(root.expandSafeArea,[['SafeAreaType.SYSTEM'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM']],'novel Shell preserves its previous system-only expansion');
  owner.updateStateVars({contentKind:'manga',visible:true,route:'reading'});properties.flush();assertFullWindow(root,'retained Shell manga root');
+ const reader=[...owner.children.values()].find(child=>child.params.windowChromeActive===true);
+ owner.updateStateVars({contentKind:'manga',visible:false,route:'reading'});properties.flush();
+ assert.equal(scaffold.nodes.get(0),root);assert.equal(root.opacity,0);assert.equal(root.hitTestBehavior,'HitTestMode.Transparent');
+ assertFullWindow(root,'hidden retained Shell manga root');
+ assert.ok([...owner.children.values()].includes(reader),'hiding cannot remount the reader actor');
+ owner.updateStateVars({contentKind:'manga',visible:true,route:'reading'});properties.flush();
+ assert.equal(root.opacity,1);assert.equal(root.hitTestBehavior,'HitTestMode.Default');
+ assert.equal(scaffold.nodes.get(0),root);assert.ok([...owner.children.values()].includes(reader));
  return{shellEmittedSHA:sha(output)};
 }
 const mangaEvidence=verifyManga(),indexEvidence=verifyIndex(),shellEvidence=verifyShell();
