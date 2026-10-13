@@ -163,6 +163,37 @@ function checkHeaderFrame(candidate = localBookDetailSource) {
   }
 }
 checkHeaderFrame();
+function checkAreaMeasurements(candidate = localBookDetailSource) {
+  const sdk = localBookDetailSdk({ReaderWindowCoordinator: {metrics: () => metrics}}, {source: candidate});
+  for (const contentKind of ['text', 'manga']) for (const unit of [false, true]) {
+    metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 800, 900));
+    const owner = new sdk.Component(undefined, {});
+    admitDetail(owner, {book: {...mangaBook, contentKind}, toc: []});
+    owner.mangaFontsReady = true; owner.initialRender();
+    const scroll = [...owner.nodes.values()].find(node => node.type === 'Scroll');
+    const callbacks = [...owner.nodes.values()].filter(node => typeof node.onAreaChange === 'function');
+    assert.equal(callbacks.length, 2, 'detail exposes only its actual host-width and dock-height measurements');
+    const dock = callbacks.find(node => node.type === 'Stack' && node.constraintSize?.minHeight === (contentKind === 'manga' ? visual.detailDockHeight : 68));
+    assert.ok(dock); const host = callbacks.find(node => node !== dock);
+    host.onAreaChange({}, {width: unit ? '320vp' : 320});
+    assert.equal(owner.viewportWidth, 320, 'actual narrow host width receipt overrides the 800vp window');
+    assert.equal(owner.contentFrame().width, 280);
+    dock.onAreaChange({}, {height: unit ? '112vp' : 112});
+    if (contentKind === 'manga') {
+      assert.equal(owner.mangaDockMeasuredHeight, 112, 'actual manga dock accepts both native Area length forms');
+      assert.equal(owner.mangaContentBottomInset(), visual.detailDockBottom + 112 + visual.detailDockClearance);
+    } else assert.equal(owner.mangaDockMeasuredHeight, 68, 'ordinary novel dock keeps its authored fixed height');
+    owner.replay(); sdk.properties.flush();
+    assert.equal(owner.nodes.get(scroll.id), scroll, 'native detail Scroll survives host/dock measurement updates');
+    assert.equal(scroll.width, '100%'); assert.equal(scroll.height, '100%');
+  }
+}
+checkAreaMeasurements();
+for (const expression of ['readerPageAreaLength(area.width)', 'readerPageAreaLength(area.height)']) {
+  const candidate = localBookDetailSource.replace(expression, expression.replace('readerPageAreaLength', 'Number'));
+  assert.notEqual(candidate, localBookDetailSource);
+  assert.throws(() => checkAreaMeasurements(candidate), /narrow host width receipt|manga dock accepts/, 'restoring Number(Area) rejects real vp host/dock receipts');
+}
 const uncappedHeader = localBookDetailSource
   .replace("this.book.contentKind === 'manga' ? this.headerFrame().left : 16 + this.safeLeft()", '16 + this.safeLeft()')
   .replace("this.book.contentKind === 'manga' ? this.headerFrame().right : 16 + this.safeRight()", '16 + this.safeRight()');

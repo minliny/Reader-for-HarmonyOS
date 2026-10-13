@@ -6,6 +6,7 @@ import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYP
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
+import { readerPageAreaLength } from '../common/ReaderPageShell';
 // Settings General — rebuilt 2026-08-05 against live Figma nodes
 // 943:2897 (Phone 390×844) / 943:3369 (Tablet 760×960).
 // Batch 3: 设置/偏好/行为/权限四个区块收敛到 CategorySection(Card+Heading+rows)，
@@ -397,8 +398,8 @@ export struct SettingsPage {
         .onAreaChange((_oldValue: Area, newValue: Area): void => {
           // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
           this.selectAnchors[key] = {
-            right: Number(newValue.globalPosition.x) + Number(newValue.width),
-            bottom: Number(newValue.globalPosition.y) + Number(newValue.height),
+            right: readerPageAreaLength(newValue.globalPosition.x) + readerPageAreaLength(newValue.width),
+            bottom: readerPageAreaLength(newValue.globalPosition.y) + readerPageAreaLength(newValue.height),
           };
         });
     }

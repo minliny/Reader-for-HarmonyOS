@@ -9,7 +9,7 @@ import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../common/ReaderWindowMetrics';
-import { readerPageInitialHeaderHeight } from '../common/ReaderPageShell';
+import { readerPageInitialHeaderHeight, readerPageAreaLength } from '../common/ReaderPageShell';
 
 export const BOOKSHELF_WIDE_BREAKPOINT = 600;
 let bookshelfTemporaryGeneration: number = 0;
@@ -140,8 +140,8 @@ export struct BookshelfShell {
         if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
           this.viewportWidth = width;
         }
-        this.overlayOriginX = Number(newValue.globalPosition.x);
-        this.overlayOriginY = Number(newValue.globalPosition.y);
+        this.overlayOriginX = readerPageAreaLength(newValue.globalPosition.x);
+        this.overlayOriginY = readerPageAreaLength(newValue.globalPosition.y);
       });
   }
 
@@ -225,8 +225,8 @@ export struct BookshelfShell {
           onTap: this.moreOpenAction(this.temporaryBackIdentity),
         })
           .onAreaChange((_oldValue: Area, newValue: Area): void => {
-            this.moreAnchorRight = Number(newValue.globalPosition.x) + Number(newValue.width);
-            this.moreAnchorBottom = Number(newValue.globalPosition.y) + Number(newValue.height);
+            this.moreAnchorRight = readerPageAreaLength(newValue.globalPosition.x) + readerPageAreaLength(newValue.width);
+            this.moreAnchorBottom = readerPageAreaLength(newValue.globalPosition.y) + readerPageAreaLength(newValue.height);
           });
       }
     }, (generation: number): string => generation.toString());

@@ -1,4 +1,5 @@
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import { readerPageAreaLength } from '../common/ReaderPageShell';
 import { prepareSharedDownloadFonts } from '../common/ReaderFonts';
 import { DOWNLOAD_VISUAL, downloadVisualColor, downloadOverlayChromeStyle, sharedDownloadSheetMaxHeight, sharedDownloadContentInsets } from '../common/SharedDownloadVisualSpec';
 import {
@@ -149,7 +150,7 @@ export struct SharedDownloadPage {
       footer: (): void => { this.fixedDock(); },
       overlay: (): void => { this.pageOverlays(); },
     }).onAreaChange((_old: Area, area: Area): void => {
-      const height = Number(area.height);
+      const height = readerPageAreaLength(area.height);
       if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageHeight) > 0.5) this.pageHeight = height;
     });
   }
@@ -218,7 +219,7 @@ export struct SharedDownloadPage {
       .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) }).borderRadius(DOWNLOAD_VISUAL.headerRadius)
       .shadow({ radius: DOWNLOAD_VISUAL.headerShadowRadius, color: downloadVisualColor('shadow', this.appThemeScheme), offsetX: DOWNLOAD_VISUAL.headerShadowX, offsetY: DOWNLOAD_VISUAL.headerShadowY })
       .onAreaChange((_old: Area, area: Area): void => {
-        const height = Number(area.height);
+        const height = readerPageAreaLength(area.height);
         if (Number.isFinite(height) && height > 0 && Math.abs(height - this.headerMeasuredHeight) > 0.5) this.headerMeasuredHeight = height;
       });
   }
@@ -450,7 +451,7 @@ export struct SharedDownloadPage {
         }.width('100%').alignItems(HorizontalAlign.Start)
           .onAreaChange((_old: Area, area: Area): void => {
             const current = this.eventBook(book, ownerGeneration);
-            if (current !== undefined) this.recordBookContentHeight(current.key, Number(area.height));
+            if (current !== undefined) this.recordBookContentHeight(current.key, readerPageAreaLength(area.height));
           });
         Blank().height(this.bookProgressSpacer(book().key));
         Progress({ value: book().progressPercent ?? 0, total: 100, type: ProgressType.Linear })
@@ -460,7 +461,7 @@ export struct SharedDownloadPage {
       }.layoutWeight(1).constraintSize({ minHeight: DOWNLOAD_VISUAL.bookMinHeight }).alignItems(HorizontalAlign.Start)
         .onAreaChange((_old: Area, area: Area): void => {
           const current = this.eventBook(book, ownerGeneration);
-          if (current !== undefined) this.recordBookHeight(current.key, Number(area.height));
+          if (current !== undefined) this.recordBookHeight(current.key, readerPageAreaLength(area.height));
         });
     }.width('100%').alignItems(VerticalAlign.Top).padding({ top: DOWNLOAD_VISUAL.bookPaddingY, bottom: DOWNLOAD_VISUAL.bookPaddingY })
       .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
@@ -682,7 +683,7 @@ export struct SharedDownloadPage {
       .backgroundColor(downloadVisualColor('surface', this.appThemeScheme))
       .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) }).borderRadius(DOWNLOAD_VISUAL.dockRadius)
       .shadow({ radius: DOWNLOAD_VISUAL.headerShadowRadius, color: downloadVisualColor('shadow', this.appThemeScheme), offsetX: DOWNLOAD_VISUAL.headerShadowX, offsetY: DOWNLOAD_VISUAL.headerShadowY })
-      .onAreaChange((_old: Area, area: Area): void => this.recordDockHeight(Number(area.height)));
+      .onAreaChange((_old: Area, area: Area): void => this.recordDockHeight(readerPageAreaLength(area.height)));
   }
 
   @Builder
@@ -727,7 +728,7 @@ export struct SharedDownloadPage {
     }.width('100%').padding(DOWNLOAD_VISUAL.selectionPadding).backgroundColor(downloadVisualColor('surface', this.appThemeScheme))
       .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) }).borderRadius(DOWNLOAD_VISUAL.dockRadius)
       .shadow({ radius: DOWNLOAD_VISUAL.headerShadowRadius, color: downloadVisualColor('shadow', this.appThemeScheme), offsetX: DOWNLOAD_VISUAL.headerShadowX, offsetY: DOWNLOAD_VISUAL.headerShadowY })
-      .onAreaChange((_old: Area, area: Area): void => this.recordDockHeight(Number(area.height)));
+      .onAreaChange((_old: Area, area: Area): void => this.recordDockHeight(readerPageAreaLength(area.height)));
   }
 
   @Builder
@@ -778,7 +779,7 @@ export struct SharedDownloadPage {
         .onClick((): void => { this.sheet = ''; });
     }.constraintSize({ minHeight: DOWNLOAD_VISUAL.sheetTitleHeight }).width('100%')
       .padding({ left: DOWNLOAD_VISUAL.sheetTitleLeft, right: DOWNLOAD_VISUAL.sheetTitleRight })
-      .onAreaChange((_old: Area, area: Area): void => this.recordSheetTitleHeight(Number(area.height)));
+      .onAreaChange((_old: Area, area: Area): void => this.recordSheetTitleHeight(readerPageAreaLength(area.height)));
     if (wholeDocument) {
       this.sheetBody();
     } else {
@@ -789,7 +790,7 @@ export struct SharedDownloadPage {
         Row() { this.clearStorageButton(); }
           .width('100%').padding({ left: DOWNLOAD_VISUAL.storageFooterSide, right: DOWNLOAD_VISUAL.storageFooterSide,
             top: DOWNLOAD_VISUAL.storageFooterTop, bottom: this.sheetFooterBottomInset() })
-          .onAreaChange((_old: Area, area: Area): void => this.recordSheetFooterHeight(Number(area.height)));
+          .onAreaChange((_old: Area, area: Area): void => this.recordSheetFooterHeight(readerPageAreaLength(area.height)));
       } else {
         Row() {
         this.actionButton((): string => this.sheet === 'range' ? '开始下载' : this.sheet === 'read' ? '返回章节下载' : '完成', true,
@@ -799,7 +800,7 @@ export struct SharedDownloadPage {
       }.width('100%').padding({ left: DOWNLOAD_VISUAL.sheetFooterSide, right: DOWNLOAD_VISUAL.sheetFooterSide,
         top: DOWNLOAD_VISUAL.sheetFooterTop, bottom: this.sheetFooterBottomInset() })
         .border({ width: { top: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) })
-        .onAreaChange((_old: Area, area: Area): void => this.recordSheetFooterHeight(Number(area.height)));
+        .onAreaChange((_old: Area, area: Area): void => this.recordSheetFooterHeight(readerPageAreaLength(area.height)));
       }
     }
   }
@@ -1103,7 +1104,7 @@ export struct SharedDownloadPage {
           this.confirmation = ''; this.sendAction(action);
         }, (): boolean => this.confirmation !== 'cleanup' || canCleanDownloadStorage(this.storageSummary));
       }.width('100%').onAreaChange((_old: Area, area: Area): void => {
-        const height = Number(area.height);
+        const height = readerPageAreaLength(area.height);
         if (Number.isFinite(height) && height > 0 && Math.abs(height - this.dialogActionsMeasuredHeight) > 0.5)
           this.dialogActionsMeasuredHeight = height;
       });

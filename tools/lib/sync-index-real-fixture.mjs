@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
+import {createDefaultReaderWindowMetrics} from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 // Reuse the existing actual AssetStore/Gateway/owner fixture, without running
 // that test's scenarios or replacing production methods. Index supplies the
@@ -32,7 +33,7 @@ export function fullSyncIndexPage(props,sharedChildren={},probeHooks={}){
   const result=createReaderBuilderProbe(text,names,{...foundation.dependencies,...geometry,DEFAULT_SYNC_SNAPSHOT:f.DEFAULT_SYNC_SNAPSHOT,readerRecoveryView:f.readerRecoveryView,
     ReaderCard:Card,PageBackBar:Child,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,...sharedChildren,
     ...Object.fromEntries(['ObservedPropertySimplePU','ObservedPropertyObjectPU','SynchedPropertySimpleOneWayPU','SynchedPropertyObjectOneWayPU'].map(k=>[k,Property])),
-    registerReaderFonts(){},ReaderWindowCoordinator:{metrics:()=>({windowRect:{width:390}})},readerVisualSafeLeft:()=>0,readerVisualSafeRight:()=>0,readerFloatingBarBottomInset:()=>18,
+    registerReaderFonts(){},ReaderWindowCoordinator:{metrics:()=>{const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=390;return metrics;}},readerVisualSafeLeft:()=>0,readerVisualSafeRight:()=>0,readerFloatingBarBottomInset:()=>18,
     READER_FLOATING_TOP_BAR_HEIGHT:56,InputType:{Password:'Password'},TOK_CONTENT_MAX_W_TABLET:722,TOK_SCREEN_INSET:18,
   },{...foundation.hooks,...probeHooks,mountChildren:true,initialParams:props,childSources:{...foundation.hooks.childSources,...probeHooks.childSources,ReaderCard:f.source('features/common/ReaderCard.ets'),PageBackBar:f.source('features/common/PageBackBar.ets')}});
   const replay=result.owner.replay.bind(result.owner);result.owner.replay=()=>{replay();foundation.properties.flush();};

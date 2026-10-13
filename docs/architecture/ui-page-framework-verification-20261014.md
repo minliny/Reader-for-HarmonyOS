@@ -38,3 +38,22 @@ Native 与当前 Core 的 1140 文件输入指纹匹配；隔离配套 Core/UI�
 - 搜索/发现/同步 30 项实际 SDK 布局及交互对比、两个复合头负控通过；正文列表、Scroller、原回调和几何保持。
 
 当前尚无本次修改的成功 HAP、安装、VM 或视觉验收证据。
+
+## 第二轮门禁及最后测量复查
+
+冻结提交 `92c21831` 的第二轮规范构建采用合同 runner 已支持的四个 worker。先前失败的 Core CLI、书架导航、字体及公共壳相关用例均通过；运行约 230 秒后因只读末审发现的 Area 单位缺口主动停止，未生成可交付 HAP。日志为私有 `.reader-local/ui-framework/hap-build-r2.log`，不能将部分执行记录当作完整合同通过。
+
+末审限定到 22 个实际页绑定及直接相连的目录 dock/书架菜单叶组件：残留 `Number(area.width/height)` 无法接受合法 `vp` 字符串，导致窄宿主尺寸、底栏高度或菜单锚点失效。明确调用点改为已有公共 `readerPageAreaLength`，保留原数值几何、状态、布局角色和 actor，实际 SDK 正常值/单位值对照及 Number mutation 复现另行记录。阅读器内部业务面板的测量不在本次页框架迁移范围内。
+
+该轮还发现 `test-reader-card-finite-specs` 将 SyncPage 的原整页 body 作为不可变 Card witness，公共框架迁移后产生结构差异。绑定原 SHA 的有限 layout successor 已证明 build、正文槽位、内容 frame 与底部预算迁移；原 48 组 Card/body/state/callback 比较及原 fixture 字节继续保留，三组真实 SDK 场景与丢 slot/section/variant/业务变更负控通过。完整 metrics 平台 seam 修正后四项直接 Sync 集成测试通过。下一轮完整门禁将核验最终冻结输入。
+
+Area 补测结果均通过：
+
+- 标准目录实际 132vp 头部传播到原导航避让 137vp；1280vp 窗口中测得 365vp 宿主，左右安全区 32/24vp 后正文为 309vp，导航/Scroller/规范条目身份保持。
+- 漫画目录实际 320vp×480vp 宿主触发原 short-flow 模式，453vp 工具栏、201vp dock 高度均传递；真实 footer 叶组件复用公共解析器。旧 Number 恢复负控拒绝。
+- 详情、搜索、下载三页共十四处 native Area 回调逐点正常值/单位值对照通过，十四个 Number 恢复负控拒绝；详情 Scroll、搜索 List/scroller/chip、下载 List/scroller 和 sheet Scroll 保持原实例。
+- 书架 More 原点/触发尺寸及实际菜单 overlay viewport、设置页实际 ReaderSelect 触发框和 SettingsShell 原点转换通过；原几何、选择身份、回调及两组旧策略负控保留。
+
+VM 只读预检已确认既有 Mate 80 Pro 实例路径与当前进程一致、guest boot completed 为 true、Emulator 同实例已记录 Guest OS Boot Completed、SceneBoard PID 稳定，近期日志无连续超时循环；当前 /data 可用约 2.6GiB。尚未安装候选包，预检不能记为应用行为或视觉验收。
+
+最终登记只更新漫画 footer 当前 implementation 的一个 import 和两次公共 parser 调用，types/declarations/styles 及整表其它字段逐项不变；其它私有预算和历史字体/Card witness 未刷新。两个架构门禁与 Typography coverage/registry/SDK 共五项再次通过。第三轮规范构建及后续部署回执另存私有 `.reader-local/ui-framework/`，以冻结提交、manifest 和实际回执为准；本记录本身不预报其通过。
