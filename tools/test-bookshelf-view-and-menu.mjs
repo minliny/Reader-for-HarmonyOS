@@ -4,6 +4,9 @@ import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
 import { loadReaderTypographyRoles } from './lib/reader-typography-probe.mjs';
+import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { readerFloatingTabContentInset } from './lib/reader-floating-bar-metrics-probe.mjs';
 import './test-surface-repair.mjs';
 const read=f=>readFileSync(new URL(`../entry/src/main/ets/${f}`,import.meta.url),'utf8');
 const shelf=read('features/bookshelf/BookshelfPage.ets');
@@ -65,8 +68,37 @@ details.book={...details.book,author:'Reader test'};details.replay();verifyAutho
 details.book={...details.book,author:''};details.replay();verifyAuthor('');
 assert.match(shelf,/PHONE_LIST_COVER_WIDTH = 48/);assert.match(shelf,/PHONE_LIST_COVER_HEIGHT = 72/);
 assert.match(shelf,/TABLET_LIST_COVER_WIDTH = 64/);assert.match(shelf,/TABLET_LIST_COVER_HEIGHT = 104/);
-assert.match(shelf,/\.contentStartOffset\(74\)/,
-  'bookshelf header clearance belongs to native List content, preserving the viewport for the floating tab bar');
+assert.match(shelf,/\.contentStartOffset\(this\.headerClearance\)/,
+  'bookshelf measured header clearance belongs to native List content, preserving the viewport for the floating tab bar');
+assert.match(index,/headerClearance: this\.shelfHeaderHeight \+ 14/);
+{
+ const sdk=boundedSurfaceSdk(),main=read('features/shell/MainTabShell.ets');
+ const deps={...sdk.deps,...metricsApi,readerFloatingTabContentInset,
+  ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics},
+  LazyForEach:{create(){},pop(){}},ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}}};
+ const bar=read('features/shell/MainTabBar.ets');sdk.childSources.MainTabBar=bar;
+ deps.MainTabBar=createReaderBuilderProbe(bar,boundedMembers(bar),deps,sdk.hooks).Component;
+ const page=createReaderBuilderProbe(shelf,['headerClearance','bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent'],deps,sdk.hooks).owner;
+ const scroller={};
+ Object.assign(page,{appThemeScheme:'day',readerWindowMetricsRevision:0,mounted:true,navigationGeneration:1,
+  shelfScroller:scroller,continueReading:undefined,filterRowVisible:false,viewModeError:'',visibleBookCount:1,
+  shelfContentWidth:()=>352,rowDataSource:{totalCount:()=>0},isWideViewport:()=>false,sectionAction(){},saveShelfViewport(){},restoreShelfViewport(){}});
+ assert.equal(page.headerClearance,74,'actual shared 60vp header fallback retains the approved 14vp list gap');
+ const frame=createReaderBuilderProbe(main,boundedMembers(main),deps,sdk.hooks).owner;
+ Object.assign(frame,{showBottomNav:false,showTabletRail:false,headerKind:'floating',headerTop:8,
+  content:()=>page.bookshelfList(false),onHeaderHeightChange:height=>{page.headerClearance=height+14;sdk.properties.flush();}});
+ frame.initialRender();
+ const nativeList=sdk.nodes(page).find(node=>node.type==='List'),items=sdk.nodes(page).filter(node=>node.type==='ListItem');
+ assert.equal(nativeList.contentStartOffset,74);assert.equal(nativeList.create.scroller,scroller);
+ assert.equal(nativeList.height,'100%');assert.equal(nativeList.padding,undefined);assert.equal(nativeList.maintainVisibleContentPosition,true);
+ assert.equal(items.length,1,'fixed header adds no spacer item that would change stored row indices');
+ const header=sdk.walk(frame).find(actor=>actor.kind==='floating'&&typeof actor.onHeightChange==='function');
+ const measured=[...header.nodes.values()].find(node=>node.type==='Column'&&node.onAreaChange);
+ measured.onAreaChange({}, {height:'96vp'});sdk.properties.flush();
+ assert.equal(nativeList.contentStartOffset,118,'actual public header height, top offset and list gap propagate exactly once');
+ assert.equal(sdk.nodes(page).find(node=>node.type==='List'),nativeList);assert.equal(nativeList.create.scroller,scroller);
+ assert.deepEqual(sdk.nodes(page).filter(node=>node.type==='ListItem'),items,'measurement retains List, Scroller and item actors');
+}
 assert.match(shelf,/\.contentEndOffset\(this\.isWideViewport\(\) \? 24 : readerFloatingTabContentInset\(ReaderWindowCoordinator\.metrics\(\)\)\)/,
   'bookshelf bottom clearance includes floating tab geometry without shrinking the List frame');
 assert.match(shelf,/\.bindSheet\(this.actionBook !== undefined[\s\S]*?width: this.bookActionWidth\(\)/);

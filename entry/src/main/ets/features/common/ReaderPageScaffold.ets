@@ -12,6 +12,7 @@ export struct ReaderPageScaffold {
   @Prop variant: ReaderPageShellKind = 'standard';
   // Hidden reading sessions still receive real layout and retain their actors.
   @Prop pageVisible: boolean = true;
+  @Prop readingContentKind: 'text' | 'manga' = 'text';
   @Prop headerKind: ReaderHeaderKind = 'standard';
   @Prop headerTop: number = 0;
   @Prop headerInsetLeft: number = 0;
@@ -52,6 +53,10 @@ export struct ReaderPageScaffold {
     }.width('100%').height('100%')
       .padding({ left: this.frameInsetLeft, right: this.frameInsetRight })
       .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme, this.variant, this.readingUnderlayColor))
+      .expandSafeArea(this.variant === 'reader' ? (this.readingContentKind === 'manga' ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM]) : [],
+        this.variant === 'reader' ? (this.readingContentKind === 'manga' ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] : [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM]) : [])
+      .ignoreLayoutSafeArea(this.variant === 'reader' && this.readingContentKind === 'manga' ? [LayoutSafeAreaType.SYSTEM] : [],
+        this.variant === 'reader' && this.readingContentKind === 'manga' ? [LayoutSafeAreaEdge.ALL] : [])
       .opacity(this.pageVisible ? 1 : 0)
       .hitTestBehavior(this.pageVisible ? HitTestMode.Default : HitTestMode.Transparent);
   }

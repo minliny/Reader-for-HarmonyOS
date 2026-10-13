@@ -5,8 +5,10 @@ import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/source/SourceToolsPage.ets', import.meta.url), 'utf8');
+const headerSource = readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets', import.meta.url), 'utf8');
 const baseline = JSON.parse(readFileSync(new URL('./fixtures/design/source-tools-typography-baseline.json', import.meta.url)));
 const methods = [...source.matchAll(/@Builder\s+private\s+(\w+)\s*\(/g)].map(match => match[1]);
 methods.push('recovery', 'batchCheckPercent', 'batchCheckPhaseLabel', 'batchResultLabel', 'confirmExportThen', 'canWriteSources');
@@ -20,10 +22,12 @@ const seen = new Set();
 const nodes=owner=>[...owner.nodes.values(),...[...owner.children.values()].flatMap(child=>nodes(child))];
 const make = (overrides = {}) => {
   const controls=foundationControls({specs:foundationSpecs({...readerTypographyRoles,...overrides})});
+  controls.hooks.childSources = {...controls.hooks.childSources, PageBackBar: headerSource};
+  const PageBackBar = createReaderBuilderProbe(headerSource, boundedMembers(headerSource), controls.dependencies, controls.hooks).Component;
   const { owner } = createReaderBuilderProbe(source, methods, {
     // Virtual list painting is outside this typography probe. The actual row
     // Builders run separately below, with their real SDK observer closures.
-    LazyForEach: { create() {}, pop() {} }, readerRecoveryView, ...controls.dependencies, ...overrides,
+    LazyForEach: { create() {}, pop() {} }, readerRecoveryView, ...controls.dependencies, PageBackBar, ...overrides,
   },controls.hooks);
   const replay=owner.replay.bind(owner);owner.replay=()=>{replay();controls.properties.flush();};
   const calls = [];

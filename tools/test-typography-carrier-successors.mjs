@@ -13,7 +13,8 @@ assert.throws(()=>sharedTypographyReplacement(rss.path,save,page.replace('this.s
 assert.throws(()=>sharedTypographyReplacement(rss.path,save,page.replace("specId: 'form-busy-action'","specId: 'rules-action'")),/real finite binding/);
 const button=read('entry/src/main/ets/features/common/ReaderButton.ets');
 assert.throws(()=>sharedTypographyReplacement(rss.path,save,page,button.replace('instance.fontSize(text.fontSizeFp)','instance.fontSize(19)')),/exact immutable original native tuple/);
-assert.equal(typographyCarrierMethod(rss.path,rss.nodes[0],page),'build','existing RSS status stays on its actual original carrier');
+assert.equal(typographyCarrierMethod(rss.path,rss.nodes[0],page),'pageContent','existing RSS status keeps its exact original tuple in the proved public content slot');
+assert.throws(()=>typographyCarrierMethod(rss.path,rss.nodes[0],page.replace('content: (): void => { this.pageContent(); }','content: (): void => {}')),/actual public slot calls/,'an unchanged status tuple cannot bypass its actual shared content slot');
 const settings=file('/SettingsPage.ets'),reset=settings.nodes.find(node=>node.method==='buildGeneral'&&node.text==='this.resetMessage'),settingsPage=read(settings.path);
 assert.equal(typographyCarrierMethod(settings.path,reset,settingsPage),'operationFeedback');
 assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replaceAll('this.operationFeedback();','// this.operationFeedback();')),/actual AST call/);

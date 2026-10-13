@@ -6,6 +6,7 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
 import {readerFoundationTokens} from './lib/reader-foundation-control-probe.mjs';
 import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import {createDefaultReaderWindowMetrics} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const oldToggle=read('tools/fixtures/switch-family/ReaderToggle.before.ets'),oldSegment=read('tools/fixtures/switch-family/ReaderSegmentedControl.before.ets');
 const specSource=read('entry/src/main/ets/features/common/ReaderSwitchSpecs.ets');
@@ -130,7 +131,7 @@ console.log('PASS '+cases+' F04 actual SDK baseline/native AUTO, controlled proj
  const shared=read('entry/src/main/ets/features/rss/RssOriginalRecoverySurface.ets');p.hooks.childSources.RssOriginalRecoverySurface=shared;
  p.dependencies.RssOriginalRecoverySurface=createReaderBuilderProbe(shared,boundedMembers(shared),p.dependencies,p.hooks).Component;
  const back=read('entry/src/main/ets/features/common/PageBackBar.ets');p.hooks.childSources.PageBackBar=back;req(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
- Object.assign(p.dependencies,{ReaderWindowCoordinator:{metrics:()=>({})},readerInteractiveSafeLeft:()=>0,readerInteractiveSafeRight:()=>0});
+ Object.assign(p.dependencies,{ReaderWindowCoordinator:{metrics:createDefaultReaderWindowMetrics},readerInteractiveSafeLeft:()=>0,readerInteractiveSafeRight:()=>0});
  p.dependencies.PageBackBar=createReaderBuilderProbe(back,boundedMembers(back),p.dependencies,p.hooks).Component;
  const o=p.consumer(editor,['snapshot','presentationIdentity','build','editorField','sectionTitle','saveAction','operationRecovery','recoveryActionIdentities','recoveryGeneration','dispatchRecovery'],{EMPTY_RSS_EDITOR_SNAPSHOT:empty,READER_FLOATING_TOP_BAR_HEIGHT:58}, {snapshot:empty,presentationIdentity:'editor-A'});
  const calls=[];Object.assign(o,{readerWindowMetricsRevision:0,contentFrame:()=>({left:16,right:16}),bottomContentInset:()=>24,onEnabledChanged:next=>calls.push(['enabled',next]),onEnabledCookieJarChanged:next=>calls.push(['cookie',next])});o.initialRender();

@@ -1,7 +1,31 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import { actualReaderPageShell } from './lib/reader-page-shell-runtime-probe.mjs';
+import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
+const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require = createRequire(import.meta.url), ts = require(sdk + '/node_modules/typescript'), options = require(sdk + '/lib/ets_checker.js').compilerOptions;
+const parse = source => ts.createSourceFile('ResponsivePage.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+function proveStandardBinding(name, source, variant, builder) {
+  const tree = parse(source); assert.deepEqual(tree.parseDiagnostics, []);
+  assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier.text === '../common/ReaderStandardPage'), name + ': actual public owner import');
+  const bindings = [];
+  function visit(node) {
+    if ((ts.isCallExpression(node) || ts.isEtsComponentExpression?.(node)) && node.expression.getText(tree) === 'ReaderStandardPage') {
+      const props = node.arguments[0].properties, selected = props.find(property => property.name?.text === 'variant');
+      if (selected?.initializer.text === variant) bindings.push(props.find(property => property.name?.text === 'content').initializer);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(tree); assert.equal(bindings.length, 1, name + ': one finite public Scroll owner');
+  assert.equal(bindings[0].body.statements.length, 1);
+  assert.equal(bindings[0].body.statements[0].expression.getText(tree), `this.${builder}()`, name + ': actual public content slot retains its business builder');
+}
 
 const shelf = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
 const emptyPage = read('entry/src/main/ets/features/bookshelf/BookshelfEmptyPage.ets');
@@ -61,38 +85,30 @@ assert.match(shelfManagement,
   /private assignmentCard\(\)[\s\S]*Scroll\(\) \{[\s\S]*this\.smallAction\(group\.groupName[\s\S]*scrollable\(ScrollDirection\.Horizontal\)/,
   'unbounded user group chips must scroll horizontally instead of widening the page');
 
-for (const [name, source] of [
-  ['bookshelf management', shelfManagement],
-  ['RSS subscription editor', rssEditor],
-  ['rules management', rulesManagement],
-  ['source tools', sourceTools],
-]) {
-  assert.match(source, /@StorageLink\('readerWindowMetricsRevision'\)/,
-    `${name} must react to the shared window snapshot`);
-  assert.match(source,
-    /new SurfaceWidthSpec\(metrics\.windowRect\.width, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
-    `${name} must resolve its full-width role through shared horizontal geometry`);
-  assert.match(source, /readerVisualSafeLeft\(metrics\)/);
-  assert.match(source, /readerVisualSafeRight\(metrics\)/);
-  assert.match(source, /left: this\.contentFrame\(\)\.left/);
-  assert.match(source, /right: this\.contentFrame\(\)\.right/);
-  assert.doesNotMatch(source, /padding\(\{ left: TOK_SCREEN_INSET, right: TOK_SCREEN_INSET/,
-    `${name} must apply the resolved asymmetric edges`);
-}
-
-assert.match(settingsShell, /@StorageLink\('readerWindowMetricsRevision'\)/);
-assert.match(settingsShell,
-  /new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
-  'settings shell must own the single shared 720vp content frame');
-assert.equal((settingsShell.match(/left: this\.contentFrame\(\)\.left/g) ?? []).length, 2);
-assert.equal((settingsShell.match(/right: this\.contentFrame\(\)\.right/g) ?? []).length, 2);
+const standardSource = read('entry/src/main/ets/features/common/ReaderStandardPage.ets');
+const policySource = read('entry/src/main/ets/features/common/ReaderPageShell.ts');
+assert.match(standardSource, /@StorageLink\('readerWindowMetricsRevision'\)/, 'actual shared Scroll owner consumes live window revisions');
+assert.match(standardSource, /readerPageAreaLength\(next\.width\)/, 'actual shared owner measures numeric and vp host widths');
+const standardBindings = [
+  ['bookshelf management', shelfManagement, 'management', 'pageContent', Number.MAX_SAFE_INTEGER],
+  ['RSS subscription editor', rssEditor, 'rssEditor', 'pageContent', Number.MAX_SAFE_INTEGER],
+  ['rules management', rulesManagement, 'management', 'pageContent', Number.MAX_SAFE_INTEGER],
+  ['source tools', sourceTools, 'tools', 'pageContent', Number.MAX_SAFE_INTEGER],
+  ['settings home', settingsShell, 'settingsHome', 'homeContent', 720],
+  ['settings general', settingsShell, 'settingsGeneral', 'generalContent', 720],
+  ['RSS subscription management', rssManagement, 'rssManagement', 'pageContent', 720],
+  ['RSS source feed', rssFeed, 'rssFeed', 'pageContent', 720],
+  ['RSS entry detail', rssEntry, 'rssDetail', 'pageContent', 720],
+  ['sync', sync, 'sync', 'pageContent', 720],
+];
+for (const [name, source, variant, builder] of standardBindings) proveStandardBinding(name, source, variant, builder);
 assert.doesNotMatch(settingsPage, /maxWidth: TOK_CONTENT_MAX_W_TABLET/,
   'settings rows must not independently clamp inside the shell-owned content frame');
 
 assert.match(sourceManagement, /@State private viewportWidth: number = 0/);
 assert.match(sourceManagement,
-  /new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
-  'source management must treat 720vp as one continuous shared cap');
+  /readerStandardPageContentFrame\('sourceManagement', metrics, containerWidth\)/,
+  'source management delegates its unchanged 720vp/19vp cap to the actual shared policy');
 assert.match(sourceManagement,
   /return Math\.max\(0, \(this\.contentFrame\(\)\.width - 20\) \/ 2\)/,
   'tablet source filters must share the remaining row width');
@@ -100,11 +116,7 @@ assert.match(sourceManagement, /availableWidth: this\.filterControlWidth\(\)/, '
 assert.doesNotMatch(sourceManagement, /private statusChipWidth\(/, 'responsive button formula has one shared producer');
 
 assert.match(sync, /@State private viewportWidth: number = 0/);
-assert.match(sync,
-  /new SurfaceWidthSpec\(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET\)/,
-  'sync cards must use the shared continuous 720vp cap');
-assert.match(sync, /left: this\.contentFrame\(\)\.left/);
-assert.match(sync, /right: this\.contentFrame\(\)\.right/);
+assert.match(sync, /readerStandardPageContentFrame\('sync', metrics, containerWidth\)/, 'sync thin frame adapter keeps the actual shared 720vp/19vp policy');
 
 assert.match(localImport, /@State private viewportWidth: number = 0/);
 assert.match(localImport,
@@ -123,9 +135,6 @@ assert.match(localImport,
 for (const [name, source, maxToken] of [
   ['search', search, 'TOK_CONTENT_RAIL_W_TABLET'],
   ['discover', discover, 'TOK_CONTENT_RAIL_W_TABLET'],
-  ['RSS subscription management', rssManagement, 'TOK_CONTENT_MAX_W_TABLET'],
-  ['RSS source feed', rssFeed, 'TOK_CONTENT_MAX_W_TABLET'],
-  ['RSS entry detail', rssEntry, 'TOK_CONTENT_MAX_W_TABLET'],
 ]) {
   assert.match(source, /@StorageLink\('readerWindowMetricsRevision'\)/,
     `${name} must react to the shared window snapshot`);
@@ -135,8 +144,7 @@ for (const [name, source, maxToken] of [
   assert.match(source, /readerVisualSafeRight\(metrics\)/);
 }
 
-assert.match(search,
-  /padding\(\{ left: this\.contentFrame\(\)\.left, right: this\.contentFrame\(\)\.right \}\)/);
+assert.match(search, /frameInsetLeft: this\.contentFrame\(\)\.left, frameInsetRight: this\.contentFrame\(\)\.right/, 'search keeps its asymmetric geometry in the actual public Scaffold frame');
 assert.doesNotMatch(search, /return this\.isTablet \? TOK_CONTENT_RAIL_W_TABLET : '100%'/);
 assert.match(discover,
   /padding\(\{ left: this\.contentFrame\(\)\.left, right: this\.contentFrame\(\)\.right \}\)/);
@@ -253,6 +261,80 @@ assert.match(appearance,
   'motion scroll viewport must remain reachable inside the live shell');
 
 // Geometry sanity for the explicit regression matrix used by this audit.
+function checkSharedWidths(sharedSource = standardSource, sharedPolicy = policySource) {
+  const runtime = createArkUIPropertyRuntimeProbe(), policy = actualReaderPageShell(sharedPolicy);
+  let metrics;
+  class HeaderLeaf { constructor(owner, params, _storage, id) { Object.assign(this, {owner, params, id}); } }
+  const headers = Object.fromEntries([['PageBackBar', 'common/PageBackBar'], ['AppTopBar', 'common/AppTopBar'], ['MainTabBar', 'shell/MainTabBar']]
+    .map(([name, path]) => [name, read('entry/src/main/ets/features/' + path + '.ets')]));
+  for (const [name, source] of Object.entries(headers)) {
+    const tree = parse(source), owner = tree.statements.find(node => node.name?.text === name);
+    const fields = owner.members.filter(member => ts.getAllDecorators(member).some(decorator => decorator.getText(tree) === '@BuilderParam')).map(member => member.name.text);
+    require(sdk + '/lib/validate_ui_syntax.js').builderParamObjectCollection.set(name, new Set(fields));
+  }
+  let dependencies = {...runtime.sdk, ...policy, ReaderWindowCoordinator: {metrics: () => metrics}, PageBackBar: HeaderLeaf, AppTopBar: HeaderLeaf, MainTabBar: HeaderLeaf};
+  const hooks = {...runtime.hooks, mountChildren: true, childSources: {...headers, ReaderStandardPage: sharedSource}};
+  const Standard = createReaderBuilderProbe(sharedSource, boundedMembers(sharedSource), dependencies, hooks).Component;
+  dependencies = {...dependencies, ReaderStandardPage: class extends Standard {
+    constructor(owner, params, storage, id, ...rest) { super(owner, params, storage, id, ...rest); this.params = {...params}; }
+  }};
+  // Each real production page build creates its actual standard owner. Only
+  // business/header leaf painting is opaque to this horizontal-frame proof;
+  // no public frame, Scroll, policy or Area callback is substituted.
+  for (const [name, source, variant, _builder, cap] of standardBindings) {
+    const tree = parse(source), declaration = tree.statements.find(node => node.members?.some(member => member.name?.text === 'build') && node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword));
+    const builders = declaration.members.filter(member => ts.getAllDecorators(member).some(decorator => decorator.getText(tree) === '@Builder')).map(member => member.name.text);
+    const parameters = declaration.members.filter(member => ts.getAllDecorators(member).some(decorator => decorator.getText(tree) === '@BuilderParam')).map(member => member.name.text);
+    const scrollerOwners = declaration.members.filter(member => ts.isPropertyDeclaration(member) && member.name?.text.endsWith('Scroller')).map(member => member.name.text);
+    const {Component} = createReaderBuilderProbe(source, ['build', ...parameters, ...scrollerOwners], dependencies, hooks);
+    for (const width of [320, 360, 365.71, 390, 600, 720, 760, 840]) for (const [left, right] of [[0, 0], [48, 14]]) for (const unit of [false, true]) {
+      metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, 900), undefined, new ReaderInsetsVp(left, 0, right, 0));
+      const page = new Component(undefined, {});
+      Object.assign(page, {activeSection: variant === 'settingsHome' ? 'home' : 'general', showOverlay: false});
+      for (const builder of [...builders, ...parameters]) page[builder] = () => {};
+      page.initialRender();
+      const standard = [...page.children.values()].find(child => child.params?.variant === variant);
+      assert.ok(standard?.nodes, name + ': actual page build mounts its finite shared Scroll owner');
+      const host = [...standard.nodes.values()].find(node => typeof node.onAreaChange === 'function'); assert.ok(host);
+      const scroll = [...standard.nodes.values()].find(node => node.type === 'Scroll'), scroller = standard.scroller; assert.ok(scroll);
+      if (scrollerOwners.length) assert.ok(scrollerOwners.some(key => page[key] === scroller), name + ': the shared Scroll retains its existing page-owned Scroller');
+      const hostWidth = Math.min(304, width);
+      host.onAreaChange({}, {width: unit ? `${hostWidth}vp` : hostWidth}); runtime.flush();
+      assert.equal(standard.viewportWidth, hostWidth, 'actual public Area receipt uses the narrow host rather than the larger window');
+      assert.equal(policy.readerStandardPageSpec(variant).maxWidth, cap, name + ': original finite maximum remains exact');
+      for (const measuredWidth of [hostWidth, width]) {
+        host.onAreaChange({}, {width: unit ? `${measuredWidth}vp` : measuredWidth}); runtime.flush();
+        const frame = policy.readerStandardPageContentFrame(variant, metrics, measuredWidth);
+        const available = Math.max(0, measuredWidth - Math.max(19, left) - Math.max(19, right));
+        assert.equal(frame.width, Math.min(cap, available), name + ': original 19vp sides and cap remain exact');
+        assert.equal(frame.left, Math.max(19, left) + (available - frame.width) / 2);
+        assert.equal(frame.right, measuredWidth - frame.left - frame.width);
+        const column = [...standard.nodes.values()].find(node => node.type === 'Column' && node.padding?.top !== undefined); assert.ok(column);
+        assert.deepEqual([column.padding.left, column.padding.right], [frame.left, frame.right], name + ': emitted Scroll content consumes actual asymmetric shared geometry');
+        assert.equal(standard.nodes.get(scroll.id), scroll); assert.equal(standard.scroller, scroller);
+        assert.equal(scroll.create, scroller, 'width publication retains the original native Scroll/scroller');
+      }
+    }
+  }
+  for (const width of [320, 360, 365.71, 390, 600, 720, 760, 840]) {
+    metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, 900));
+    const frame = policy.readerStandardPageContentFrame('sourceManagement', metrics, width);
+    assert.equal(frame.width, Math.min(720, width - 38), 'source management keeps its original 720 maximum and 19vp sides');
+  }
+}
+checkSharedWidths();
+const legacyArea = standardSource.replace('readerPageAreaLength(next.width)', 'Number(next.width)'); assert.notEqual(legacyArea, standardSource);
+assert.throws(() => checkSharedWidths(legacyArea), /actual public Area receipt/, 'restoring Number(Area) fails the same actual SDK narrow vp host contract');
+// The producer source mutation must reach the real SDK host, not a different
+// copied geometry implementation. Its policy mutation independently proves cap.
+const changedCap = policySource.replace("case 'settings': return new ReaderStandardPageSpec(0, 720, 16);", "case 'settings': return new ReaderStandardPageSpec(0, 721, 16);")
+  .replace('return new ReaderStandardPageSpec(12, 720, 12);', 'return new ReaderStandardPageSpec(12, 721, 12);');
+assert.notEqual(changedCap, policySource);
+assert.throws(() => checkSharedWidths(standardSource, changedCap), /original finite maximum/, 'a public 721vp cap cannot silently replace the original 720vp witness');
+for (const [name, source, variant, builder] of standardBindings) {
+  const changed = source.replace(`content: (): void => { this.${builder}(); }`, 'content: (): void => {}'); assert.notEqual(changed, source);
+  assert.throws(() => proveStandardBinding(name, changed, variant, builder), /AssertionError/, 'each page must retain its actual business content slot');
+}
 for (const viewport of [320, 360, 365.71, 390, 600, 720, 760, 840]) {
   const phoneSheet = Math.min(364, viewport);
   const centeredDirectory = Math.min(364, Math.max(0, viewport - 24));

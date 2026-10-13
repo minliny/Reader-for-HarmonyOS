@@ -33,7 +33,7 @@ const shelfTypography = Object.fromEntries([
 ].map(name => [`TYPE_SHELF_MANAGEMENT_${name}`, {
   fontFamily: 'ReaderNotoSansSC', fontWeight: 400, fontSizeFp: 12, lineHeightFp: 16,
 }]));
-for (const [name, file] of [['CategoryRow', 'features/settings/CategoryRow.ets'], ['PageBackBar', 'features/common/PageBackBar.ets'], ['MainTabBar', 'features/shell/MainTabBar.ets'], ['ReaderToggle', 'features/common/ReaderToggle.ets']]) {
+for (const [name, file] of [['CategoryRow', 'features/settings/CategoryRow.ets'], ['AppTopBar', 'features/common/AppTopBar.ets'], ['PageBackBar', 'features/common/PageBackBar.ets'], ['MainTabBar', 'features/shell/MainTabBar.ets'], ['ReaderToggle', 'features/common/ReaderToggle.ets']]) {
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set([...read(file).matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
   if (name === 'CategoryRow') syntax.builderParamObjectCollection.set(name, new Set(['content']));
@@ -140,7 +140,7 @@ await check('PH34 actual General and Rules Scrolls align short contents at the t
     const source = read(file); registerBuilders(source);
     for (const m of source.matchAll(/@BuilderParam\s+(\w+)\s*:/g)) builders.add(m[1]);
     const { owner } = createReaderBuilderProbe(source, ['build'], {
-      PageBackBar: NativeChild, ReaderToggle: NativeChild, READER_FLOATING_TOP_BAR_HEIGHT: 58,
+      AppTopBar: NativeChild, MainTabBar: NativeChild, PageBackBar: NativeChild, ReaderToggle: NativeChild, READER_FLOATING_TOP_BAR_HEIGHT: 58,
       ...shelfTypography,
     });
     Object.assign(owner, { activeSection: 'general', showOverlay: false, appThemeScheme: 'day',
@@ -153,7 +153,10 @@ await check('PH34 actual General and Rules Scrolls align short contents at the t
       backBar() {}, webdavSection() {}, manualActionsSection() {}, autoBackupSection() {}, historySection() {},
       editorField() {}, sectionTitle() {}, saveAction() {} });
     owner.initialRender();
-    const scroll = [...owner.nodes.values()].find(n => n.type === 'Scroll');
+    const walk = parent => [parent, ...[...(parent.children?.values() ?? [])].flatMap(child => child.nodes ? walk(child) : [])];
+    const actualStandard = walk(owner).find(child => child.params?.variant === (file.includes('SettingsShell') ? 'settingsGeneral' : file.includes('RulesManagement') || file.includes('BookshelfManagement') ? 'management' : file.includes('SourceTools') ? 'tools' : file.includes('SyncPage') ? 'sync' : 'rssEditor'));
+    assert.ok(actualStandard?.nodes, 'the production page delegates to its actual shared standard Scroll owner');
+    const scroll = [...actualStandard.nodes.values()].find(n => n.type === 'Scroll');
     assert.ok(scroll); assert.equal(scroll.align, 'Alignment.TopStart');
   }
 });

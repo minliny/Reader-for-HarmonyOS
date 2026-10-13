@@ -106,14 +106,17 @@ const childMembers = ['publicationRevision', 'publication', 'presentation', 'she
   'resultProjection', 'projectedGroups', 'projectedGroupKeys', 'projectedGroupIndexes', 'changedGroupKeys',
   'warmupGroups', 'visibleStart', 'visibleEnd', 'viewStateRevision', 'listEpoch', 'restoreEpoch',
   'groupResults', 'acceptPublication', 'refreshVisibleResults', 'publishVisibleGroups', 'resultsContent',
-  'operation', 'retryOperation', 'isSweeping', 'searchHeaderHeight', 'searchBottomInset', 'resultStatsHeight'];
+  'operation', 'retryOperation', 'isSweeping', 'searchHeaderHeight', 'searchBottomInset', 'resultStatsHeight',
+  'build', 'stateContent', 'searchHeader', 'searchActivity', 'resultStats'];
+const spinnerSource = read('features/search/SearchSpinner.ets');
+class SpinnerBoundary { constructor(owner, params, _storage, id) { Object.assign(this, {owner, params, id}); } }
 const childProbe = createReaderBuilderProbe(pageSource, childMembers, {
   ...runtime.sdk, SearchPublication, SearchViewState, SearchResultProjection,
   SearchBookGroup: CountedGroup, SearchResultDataSource, List: nativeStub('List'), LazyForEach: nativeStub('LazyForEach'),
-  SearchResultCard: class {},
+  SearchResultCard: class {}, SearchSpinner: SpinnerBoundary,
   readerFloatingBarBottomInset: (_metrics, minimum) => minimum,
   ReaderWindowCoordinator: { metrics: () => ({}) },
-}, runtime.hooks);
+}, {...runtime.hooks, childSources: {SearchSpinner: spinnerSource}});
 // The parent call is extracted as an actual ArkUI AST expression; argument names
 // and lambdas are never reconstructed in the fixture.
 let searchEntry;
@@ -174,8 +177,11 @@ host.bookshelfHost = new projectionTypes.Host(() => {}, () => true, () => native
 host.initialRender();
 const page = [...host.children.values()][0];
 assert.ok(page instanceof childProbe.Component, 'actual compiled child constructor ran');
-Object.assign(page, { appThemeScheme: 'day', contentFrame: () => ({ width: 390 }), isTablet: false,
+Object.assign(page, { appThemeScheme: 'day', contentFrame: () => ({ width: 390, left: 0, right: 0 }), isTablet: false,
   groupNames: () => ['本地', '在线'],
+  // Input/filter/activity leaf visuals are outside this publication proof.
+  // The public frame, actual results header/statistics and body remain real.
+  searchBar() {}, groupScopeRow() {}, contentTypeRow() {}, searchActivity() {},
   onVisibleGroups() {}, listMounted: false, pageMounted: true, scrollRestored: true,
   resultScroller: {}, userInteracting: false, userScrolling: false });
 page.acceptPublication();
@@ -201,11 +207,13 @@ const first = startRun('当前查询', 1000, 'first');
 assert.equal(page.visibleGroups.length, 1000);
 assert.equal(runtime.sdk.ObservedObject.GetRawObject(page.presentation), orchestrator.presentation);
 assert.equal(page.presentation.results, orchestrator.presentation.results);
-page.resultsContent();
-const texts = () => [...page.nodes.values()].filter(node => node.type === 'Text');
-const status = texts().find(node => String(node.create).includes('正在搜索 1/3'));
+page.initialRender();
+const descendants = owner => [owner, ...[...owner.children.values()].flatMap(child => child.nodes ? descendants(child) : [])];
+assert.ok(descendants(page).some(child => child.params?.variant === 'search'), 'actual production SearchPage mounts its public Scaffold header/body owners');
+const statusOwner = descendants(page).find(owner => [...owner.nodes.values()].some(node => node.type === 'Text' && String(node.create).includes('正在搜索 1/3')));
+const status = statusOwner && [...statusOwner.nodes.values()].find(node => node.type === 'Text' && String(node.create).includes('正在搜索 1/3'));
 assert.ok(status, 'production progress Text was actually emitted');
-const statusDependencies = runtime.dependencies.get(page).get('presentation');
+const statusDependencies = runtime.dependencies.get(statusOwner).get('presentation');
 assert.ok(statusDependencies.has(status.id), 'actual accepted State.get registers the status observer dependency');
 const retained = page.presentation.results, retainedGroups = page.visibleGroups;
 let listReplacements = 0, listOperations = 0;

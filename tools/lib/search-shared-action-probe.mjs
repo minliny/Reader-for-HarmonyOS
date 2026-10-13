@@ -13,7 +13,8 @@ export function searchSharedActionFixture(presentation = {}, options = {}) {
     failedSourceCount: 2, searchedSourceCount: 7, localSearchFailed: true,
     sourceListFailed: false, localSearchError: '原本地失败', ...presentation };
   function action(specId, label) {
-    const actor = [...page.children.values()].findLast(child => child.specId === specId && (label === undefined || child.label === label));
+    const walk=owner=>[owner,...[...(owner.children?.values()??[])].flatMap(walk)];
+    const actor = walk(page).findLast(child => child.specId === specId && (label === undefined || child.label === label));
     assert.ok(actor instanceof fixture.controls.dependencies.ReaderButton, specId + ' is the actual shared ReaderButton');
     const native = fixture.controls.nodes(actor).find(node => typeof node.onClick === 'function');
     assert.ok(native, specId + ' has an actual native physical action');

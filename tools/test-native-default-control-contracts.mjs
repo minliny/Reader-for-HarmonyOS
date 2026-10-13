@@ -9,6 +9,10 @@ import { auditNativeTextElements } from './lib/reader-typography-consumer-audit.
 import { verifyNativeDefaultBranches } from './lib/native-default-control-probe.mjs';
 import { boundedSurfaceSdk,boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { DirectoryRuleDraft } from './lib/reader-reading-field-probe.mjs';
+import {nativeDefaultHistoricalMethod,proveNativeDefaultLayout} from './lib/native-default-layout-successor.mjs';
+import {createDefaultReaderWindowMetrics,readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeBottom} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {snapshotReaderDirectoryData,sameReaderDirectoryData} from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
+import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/design/native-default-control-contracts.json',import.meta.url)));
 const producers=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json',import.meta.url)));
 const featureRoot=new URL('../entry/src/main/ets/features/',import.meta.url),normalise=text=>(text??'').replace(/\s+/g,'');
@@ -65,7 +69,7 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
     assert.ok(node.attributes[['TextInput','TextArea'].includes(node.kind)?'onChange':'onClick']||node.kind==='Text'&&normalise(node.attributes.attributeModifier)==='newReaderButtonLabelModifier(this.specId,this.primary,this.scheme)', 'real event host or finite stacked label');
     delegated++;continue;
   }
-  const contract=contracts.get(JSON.stringify([rel,node.method,node.kind,normalise(node.text)]));
+  const contract=contracts.get(JSON.stringify([rel,nativeDefaultHistoricalMethod(source,rel,node),node.kind,normalise(node.text)]));
   if(!contract&&approved.hasNative?.(node)){approvedNative++;continue;}
   assert.ok(contract,`${rel}:${node.line}: a visible native-default element needs a bounded platform-default contract, not a fake TYPE modifier`);
   assert.equal(node.attributes.attributeModifier, undefined, `${contract.id}: do not add an empty modifier to fake a public migration`);
@@ -107,6 +111,60 @@ for(const row of contracts.values()){
   assert.throws(()=>verifyNativeDefaultBranches(source.replace('this.onRetryFailedSourceSwitch(scopeId)','this.onRetryFailedSourceSwitch(this.sourceSwitchScopeId)'),row.file,row),/exact actual branch callback/);
   assert.throws(()=>verifyNativeDefaultBranches(source.replace('if (this.sourceSwitchFailureMessage.length > 0) {\n          ForEach','if (true) {\n          ForEach'),row.file,row),/exact finite branch guard/);
  }
+}
+// The one relocated native family is still mounted by the shipping directory
+// layout. Compile the actual public frame, header, fallback, and native List;
+// unrelated toolbar/rules payloads are explicit child seams. Native lazy-row
+// scheduling and the compositor remain outside this SDK closure proof.
+{
+ const read=file=>readFileSync(new URL('../entry/src/main/ets/features/'+file,import.meta.url),'utf8');
+ const source=read('bookshelf/BookDirectoryPage.ets');proveNativeDefaultLayout(source);
+ for(const[before,after]of[
+  ['header: (): void => { this.standardHeader(); }','header: (): void => {}'],
+  ['this.standardToolbar();','this.standardToolbar(); this.standardToolbar();'],
+  ['this.rulesExpanded = !this.rulesExpanded;','this.rulesExpanded = true;'],
+ ]){const bad=source.replace(before,after);assert.notEqual(bad,source);assert.throws(()=>proveNativeDefaultLayout(bad),/actual native family|actual shared header|one actual retained|same original/);}
+ const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+ const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=390;metrics.windowRect.height=844;metrics.systemInsets.bottom=34;
+ Object.assign(sdk.deps,{...fontFamilies,ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeBottom,
+  TOK_CONTENT_MAX_W_TABLET:720,ReaderRuntimeOwner:{current:()=>({supportsCoreCapability:()=>true})},
+  EMPTY_READING_DIRECTORY_RECOVERY:{bookmarks:{visible:false},offline:{visible:false}},Edge:{Top:'top',Bottom:'bottom'}});
+ class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});this.children=new Map();this.nodes=new Map();}}
+ for(const[name,file]of Object.entries({ReaderDirectoryToolbar:'reading/ReaderDirectoryToolbar.ets',ReaderDirectoryRules:'reading/ReaderDirectoryRules.ets',ReaderDirectoryRecoverySurface:'reading/ReaderDirectoryRecoverySurface.ets',ReaderDirectoryNavigationList:'reading/ReaderDirectoryNavigationList.ets'})){
+  sdk.childSources[name]=read(file);sdk.deps[name]=Child;
+ }
+ for(const[name,file]of Object.entries({PageBackBar:'common/PageBackBar.ets',ReaderDirectoryNavigationSurface:'reading/ReaderDirectoryNavigationSurface.ets',ReaderDirectoryList:'reading/ReaderDirectoryList.ets'}))sdk.childSources[name]=read(file);
+ const syntax=req(sdkRoot()+'/lib/validate_ui_syntax.js');
+ syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
+ syntax.builderParamObjectCollection.set('ReaderDirectoryNavigationSurface',new Set(['fallbackBuilder']));
+ syntax.builderParamObjectCollection.set('ReaderDirectoryList',new Set(['rowBuilder','emptyBuilder']));
+ const listTree=ts.createSourceFile('ReaderDirectoryList.ets',sdk.childSources.ReaderDirectoryList,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ const data=listTree.statements.find(n=>ts.isClassDeclaration(n)&&n.name.text==='DirectoryListDataSource');assert.ok(data);
+ const DirectoryListDataSource=new Function('sameReaderDirectoryData','snapshotReaderDirectoryData',ts.transpileModule(data.getText(listTree),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText+';return DirectoryListDataSource;')(sameReaderDirectoryData,snapshotReaderDirectoryData);
+ // Native extent/Scroller constructor identity is the platform seam, not a
+ // reconstructed layout or row-virtualization algorithm.
+ Object.assign(sdk.deps,{DirectoryListDataSource,ChildrenMainSize:class{constructor(size){this.childDefaultSize=size;}}});
+ for(const name of['ReaderDirectoryList','ReaderDirectoryNavigationSurface','PageBackBar'])sdk.deps[name]=createReaderBuilderProbe(sdk.childSources[name],boundedMembers(sdk.childSources[name]),sdk.deps,sdk.hooks).Component;
+ const selected=[];
+ const page=sdk.consumer(source,['standardPage','standardContent','standardHeader','standardToolbar','flatList','recoveryContent','supportsDirectoryRules','supportsCurrentDirectoryView','contentFrame','bottomInset','identity','rulesExpanded','rulesRevision'],sdk.deps);
+ const scroller={};const entry={index:17,title:'实际章节',navigable:true,bookmarks:[]};
+ Object.assign(page,{sourceId:'local',bookId:'native-layout-book',bookKind:'txt',contentKind:'text',viewportWidth:390,readerWindowMetricsRevision:0,appThemeScheme:'day',
+  admittedIdentity:'local\u0000native-layout-book',admittedEntries:[entry],projectedEntries:[entry],searchDraft:'',searchQuery:'',ascending:true,currentChapterIndex:17,
+  navigationActive:false,navigationInteracted:false,mounted:true,chapterStartBookmarkCreationEnabled:false,listScroller:scroller,
+  directoryRecovery:{bookmarks:{visible:false},offline:{visible:false}},onBack(){},onSelectNavigationTarget:index=>selected.push(index)});
+ page.standardPage();
+ const nodes=()=>sdk.nodes(page),button=nodes().find(n=>n.type==='Button'&&n.createWithLabel==='本书目录层级规则');assert.ok(button,'actual original native label is mounted through the public header slot');
+ for(const omission of fixture.consumers.find(row=>row.id==='NATIVE-DEFAULT-01').typographyOmissions)assert.equal(Object.hasOwn(button,omission),false,'original native typography AUTO '+omission);
+ const list=nodes().find(n=>n.type==='List');assert.ok(list,'actual navigation fallback mounts the shared native List');assert.equal(list.create.scroller,scroller);assert.equal(list.contentStartOffset,114);
+ const count=nodes().filter(n=>n.type==='List').length;
+ const header=nodes().find(n=>n.type==='Column'&&n.zIndex===10&&n.onAreaChange);assert.ok(header);assert.match(header.backgroundColor,/^#FF/,'actual fixed header paints the opaque scrolling mask');
+ button.onClick();assert.equal(page.rulesExpanded,true,'the original physical native rules callback toggles the page state');
+ header.onAreaChange({}, {height:'157vp'});sdk.properties.flush();
+ assert.equal(list.contentStartOffset,162,'real public header measurement reaches the retained native List');
+ assert.equal(nodes().filter(n=>n.type==='List').length,count,'header measurement preserves the original physical List actor');
+ const navigation=sdk.walk(page).find(owner=>owner!==page&&owner.fallbackBuilder&&owner.chapterEntries);assert.ok(navigation);
+ navigation.onSelectTarget(17,0);assert.deepEqual(selected,[17]);page.bookId='successor-book';navigation.onSelectTarget(17,0);assert.deepEqual(selected,[17],'retained old directory actor cannot target a successor book');
+ function sdkRoot(){return process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';}
 }
 // Execute the real directory Builder→shared native level callback as well as
 // its exact AST mapping. Neither the opening guard nor canEdit is a test stub.

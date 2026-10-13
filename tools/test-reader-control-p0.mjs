@@ -278,7 +278,31 @@ for (const owner of assertShellReduceMotionWiring(shell)) {
   assert.throws(() => assertShellReduceMotionWiring(disconnected),
     new RegExp(`${owner.name} receives the live ReaderShell reduceMotion setting`));
 }
-assert.match(shell, /\.opacity\(this\.visible \? 1 : 0\)/);
+function assertReadingVisibilityDelegation(candidate, scaffold) {
+  const tree = ts.createSourceFile('/tmp/ReaderShellVisibility.ets', candidate,
+    ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, etsOptions);
+  assert.deepEqual(tree.parseDiagnostics, []);
+  const calls=[];
+  const visit=node=>{
+    if ((ts.isCallExpression(node) || ts.isEtsComponentExpression?.(node)) &&
+      ts.isIdentifier(node.expression) && node.expression.text==='ReaderPageScaffold') calls.push(node);
+    ts.forEachChild(node,visit);
+  };
+  visit(tree); assert.equal(calls.length,1,'reading has exactly one actual shared page frame');
+  const properties=calls[0].arguments[0].properties;
+  const visible=properties.filter(property=>ts.isPropertyAssignment(property)&&property.name.text==='pageVisible');
+  assert.equal(visible.length,1,'the page frame receives one visibility fact');
+  assert.equal(visible[0].initializer.getText(tree),'this.visible','the actual reading owner supplies its current visible fact');
+  assert.match(scaffold,/\.opacity\(this\.pageVisible \? 1 : 0\)/,'native shared root applies original visible/hidden opacity');
+}
+const scaffold=read('entry/src/main/ets/features/common/ReaderPageScaffold.ets');
+assertReadingVisibilityDelegation(shell,scaffold);
+const disconnectedVisibility=shell.replace('pageVisible: this.visible','pageVisible: false');
+assert.notEqual(disconnectedVisibility,shell);
+assert.throws(()=>assertReadingVisibilityDelegation(disconnectedVisibility,scaffold),assert.AssertionError,
+  'a disconnected shared-frame fact cannot pass the old hidden-reading contract');
+assert.throws(()=>assertReadingVisibilityDelegation(shell,scaffold.replace('.opacity(this.pageVisible ? 1 : 0)','.opacity(1)')),
+  assert.AssertionError,'shared root cannot lose the hidden-reading opacity');
 
 const index = read('entry/src/main/ets/pages/Index.ets');
 assert.match(index, /if \(this\.route === 'directory'\) \{\s*this\.closeDirectory\(\)/);
