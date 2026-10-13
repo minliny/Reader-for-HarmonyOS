@@ -23,6 +23,9 @@ const builders = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 const dependencies = {};
 function register(name, source = '', slot) {
+  // This public frame is compiled and mounted by the actual common probe.
+  // Index imports must not replace it with an unrelated business port.
+  if (name === 'ReaderPageScaffold') return;
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set([...source.matchAll(/@Prop\s+(?:@Watch\([^)]*\)\s+)?(\w+)\s*:/g)].map(m => m[1])));
   if (slot) syntax.builderParamObjectCollection.set(name, new Set([slot]));
@@ -283,6 +286,19 @@ for (const failed of [false,true]) check(`status ${failed ? 'failure' : 'loading
   const before = nodesOf(owner,'Text').map(node=>node.fontColor);
   owner.appThemeScheme='night'; owner.replay();
   assert.ok(nodesOf(owner,'Text').some((node,i)=>node.fontColor!==before[i]), 'mounted content recolors with theme');
+});
+check('opaque Index Scaffold registration reproduces the missing shared content slot', () => {
+  const broken = createReaderBuilderProbe(actualMainSource, boundedMembers(actualMainSource), {
+    ...dependencies, ...actualIcons.dependencies, ...metricsApi,
+    ReaderWindowCoordinator: { metrics: shellMetrics },
+    ReaderPageScaffold: class extends Child {},
+  }, { ...actualIcons.hooks, childSources: { ...actualIcons.hooks.childSources, AppTopBar: actualHeaderSource } });
+  let contentCalls = 0;
+  broken.owner.content = () => { contentCalls++; };
+  broken.owner.initialRender();
+  assert.throws(() => assert.equal(contentCalls, 1),
+    error => error.code === 'ERR_ASSERTION' && error.actual === 0 && error.expected === 1,
+    'restoring the old opaque import must fail the unchanged shared-content admission');
 });
 // This executes SDK-emitted observers, not Harmony native layout/removal or dependency scheduling.
 // Each readiness slot is checked independently; persistence is asserted on the actual parent child-update path.

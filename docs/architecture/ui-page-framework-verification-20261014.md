@@ -114,3 +114,7 @@ ReaderFullDirectory 使用明确 `catalogContext:detail/reader`：详情保留�
 最终冻结前 15 项定向门禁全部 PASS，包含真实 Index 详情/阅读分支 → FullDirectory → Scaffold/Header → Panel/native List；320/390/800 宽度、两主题、无锚点浏览/embedded 等待/已知稀疏章节定位、旧 Area 拒绝/新 vp 测量、同 actor、54vp 卡与 16vp gap。真实 Index StorageLink revision 更新后 detail 父 canvas padding 更新、reader 父保持零，body/list 未重建。主链及侧挂裸/未知分支、失去实际 Source/Context/Key/字体物理承载等负控均拒绝；三架构门禁及字体门禁通过，旧预算与历史 witness 不变。当前覆盖为 20 路由、25 项明确绑定（包含标明的 component fallback 与侧挂入口），全量库存 676、integration 471。
 
 第六轮结果绑定本次冻结提交、私有 `.reader-local/ui-framework/hap-build-r6.log`、不可变 manifest 与新 VM 回执。上述定向 PASS 不代替完整编译、安装或本轮目录滚动像素结论。
+
+第六轮 `49f300b6` 完整执行 676 项，674 PASS、2 FAIL、unrun 为空，约 503 秒；两项均由 test-bookshelf-shell-states 的同一旧 import port 造成（More 测试最后导入它）。Index 新的 Scaffold import 被旧 fixture 注册成空 Child，覆盖了原真实 SDK 公共宿主，三个既有 contentCalls===1 断言得到零。该轮未编译/发布新 HAP，完整报告已复制到私有 `.reader-local/ui-framework/contracts-r6-results.json`。
+
+修复仅排除该精确公共类的空 Child 注册，让已有实际 SDK 宿主执行；14 条既有正向检查不变。重新注入同一个 opaque Child 的实际 SDK 负控仍在原 contentCalls===1 处失败，实际值零；shell-states 和 More 各复测一次 PASS。运行时源码保持第六轮版本，Generic 和 More 未改。第七轮重新执行完整合同及 HAP 编译，结果绑定私有 `.reader-local/ui-framework/hap-build-r7.log` 与不可变清单。
