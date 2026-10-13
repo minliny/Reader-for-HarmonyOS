@@ -670,6 +670,7 @@
     "test-temporary-back-index-sdk.mjs",
     "test-temporary-back-leaf-sdk.mjs",
     "test-tencent-picture-source-correction.mjs",
+    "test-text-detail-directory-sdk.mjs",
     "test-theme-appearance-controls.mjs",
     "test-theme-dynamic-icons.mjs",
     "test-theme-local-consumers.mjs",

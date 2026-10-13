@@ -69,6 +69,7 @@ function checkEntry(kind, candidate = sources.shell) {
     page.onBack(); assert.deepEqual(calls.at(-1), ['back']);
   } else {
     assert.equal(page.contentKind, undefined, 'novels retain ReaderFullDirectory and its original header/bookmarks');
+    assert.equal(page.catalogContext, undefined, 'retained reader delegates to the actual Full reader default, without standalone browse admission');
     assert.equal(page.currentChapterIndex, 691); assert.equal(page.currentPageOrdinal, undefined);
     assert.equal(page.chapterStartBookmarkCreationEnabled, true);
   }

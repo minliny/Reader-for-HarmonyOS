@@ -28,11 +28,23 @@ transparency does not permit a conventional page header to omit its mask.
 ## Coverage and regression gates
 
 The page coverage contract inventories all twenty `ReaderRoute` members, including
-product-disabled RSS/Discover/Sync routes. An added route, missing common host,
-unknown variant or caller-owned common-host appearance override must fail the
-gate. Both detail-directory content kinds, both bookshelf entry implementations,
-and settings home/general are separate implementation bindings within that route
-inventory.
+product-disabled RSS/Discover/Sync routes. It traces every actual Index dispatcher
+branch and the separate retained-reading/catalog mount branches through SDK AST,
+ending at an imported common frame. A sibling manga branch cannot prove the text
+branch. Novel detail uses ReaderFullDirectory; manga detail uses BookDirectoryPage.
+The latter's standard component fallback has a separate fallback contract and is
+not reported as the production novel detail route. Added bare/unknown branches,
+missing common hosts, unknown variants and caller appearance overrides fail.
+
+ReaderFullDirectory has explicit detail/reader context. Detail inherits the
+parent-consumed system top and adds its original 18vp design gap; reader context
+owns its window edge. Its finite readerDirectory frame keeps the window owner's
+reading paper and native clip. A stable HeaderHost reports each native Area with
+its captured measurement key, rejects stale events and preserves the same header,
+panel and list actors. The independent detail catalog may browse without a saved
+anchor; embedded reading continues to wait for the admitted anchor and does not
+invent a reading position. Sync's initial configuration-loading branch uses the
+same common frame as other ordinary page states.
 
 SDK probes compile and replay the actual shared components and their actual
 BuilderParam slots. Header and content checks record native attribute calls and

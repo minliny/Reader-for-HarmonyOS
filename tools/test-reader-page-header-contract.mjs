@@ -9,8 +9,11 @@ import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { actualReaderPageShell, readerPageShellSourceUrl } from './lib/reader-page-shell-runtime-probe.mjs';
 import { verifyReaderPageFrameworkCoverage } from './lib/reader-page-framework-coverage.mjs';
 import { readerPageBuilderSlots } from './lib/reader-page-builder-slots.mjs';
+import { verifyFullDirectoryLayoutSuccession } from './lib/reader-full-directory-layout-successor.mjs';
+import { verifyIndexSyncColdLayoutSuccession } from './lib/index-sync-cold-layout-successor.mjs';
+import { sharedProducerShape } from './lib/architecture-shared-producer-contract.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { createDefaultReaderWindowMetrics, readerContentSafeTop } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
 const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
@@ -88,7 +91,7 @@ assert.notEqual(omittedPaint, policySource);
 assert.throws(() => headerProof('rss', 'day', actualReaderPageShell(omittedPaint)), /actual opaque mask/,
   'the historical solid-declaration/no-paint defect cannot pass runtime evidence');
 
-for (const variant of ['standard', 'mainTab', 'settings', 'detail', 'mangaDetail', 'directory', 'mangaDirectory', 'search', 'selection', 'download', 'reader']) {
+for (const variant of ['standard', 'mainTab', 'settings', 'detail', 'mangaDetail', 'directory', 'mangaDirectory', 'search', 'selection', 'download', 'reader', 'readerDirectory']) {
   const probe = actual('ReaderPageScaffold');
   const slots = [], headerHeights = [], footerHeights = [];
   Object.assign(probe.owner, { variant, headerKind: variant === 'reader' ? 'reader' : 'standard',
@@ -184,7 +187,79 @@ for (const variant of variants) {
 const coverageContract = JSON.parse(readFileSync('tools/fixtures/reader-page-framework-coverage.json', 'utf8'));
 const coverage = verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract);
 assert.equal(coverage.routes, 20, 'all current production route members, including hidden product branches');
+assert.deepEqual([coverage.routeBindings, coverage.fallbackBindings, coverage.sideBindings], [23, 1, 1],
+  'actual novel/manga, cold/ready sync and side manga pages are separate from the one finite text fallback');
+assert.deepEqual([coverage.dispatchBranches, coverage.sideSurfaces], [18, 6], 'every actual primary and retained/side condition is audited');
 const source = file => readFileSync(`entry/src/main/ets/${file}`, 'utf8');
+const indexSource = source('pages/Index.ets');
+for (const [name, before, after] of [
+  ['extra naked text catalog sibling', 'ReaderFullDirectory({', "Column() { Text('unregistered text catalog'); }\n        ReaderFullDirectory({"],
+  ['extra unknown text catalog actor', 'ReaderFullDirectory({', 'UnregisteredCatalogPage({});\n        ReaderFullDirectory({'],
+  ['retained reading naked sibling', 'if (this.readingSessionActive && this.detailBook !== undefined) {', "if (this.readingSessionActive && this.detailBook !== undefined) {\n        Text('unregistered retained reader');"],
+  ['new side page outside primary chain', 'if (this.readingSessionActive && this.detailBook !== undefined) {', "if (this.privateCatalogVisible) { Text('unregistered side page'); }\n      if (this.readingSessionActive && this.detailBook !== undefined) {"],
+  ['manga preview naked sibling', 'if (this.mangaSourceSwitchSelection !== undefined) {\n      BookDirectoryPage({', "if (this.mangaSourceSwitchSelection !== undefined) {\n      Text('unregistered manga preview');\n      BookDirectoryPage({"],
+  ['cold sync returns to private body', "ReaderPageScaffold({ variant: 'standard', content: (): void => { this.syncPreparingContent(); } });", 'this.syncPreparingContent();'],
+]) {
+  const changed = indexSource.replace(before, after); assert.notEqual(changed, indexSource, name + ': actual mutation target');
+  assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract, file => file === 'pages/Index.ets' ? changed : source(file)),
+    /category\/common-host|actual registration|registered page\/window actor/, name + ': retaining a sibling common frame cannot hide this bare branch');
+}
+const readWorkspace = file => readFileSync(file, 'utf8');
+const architectureBaseline = JSON.parse(readWorkspace('tools/architecture-consumer-baseline.json'));
+const fullFile = 'entry/src/main/ets/features/reading/ReaderFullDirectory.ets', fullSource = readWorkspace(fullFile);
+verifyFullDirectoryLayoutSuccession(architectureBaseline, readWorkspace, sharedProducerShape);
+for (const [before, after] of [
+  ['header: (): void => { this.topBar(); }', 'header: (): void => {}'],
+  ['content: (): void => { this.directoryContent(); }', 'content: (): void => {}'],
+  ["allowUnanchoredBrowse: this.catalogContext === 'detail'", 'allowUnanchoredBrowse: false'],
+  ['.opacity(this.shouldAnimatePanel() ? this.panelProgress : 1)\n      .clip(true)', '.opacity(this.shouldAnimatePanel() ? this.panelProgress : 1)\n      .clip(false)'],
+  ['.fontSize(TYPE_READER_DIRECTORY_BOOK_TITLE.fontSizeFp)', '.fontSize(99)'],
+  ["if (this.catalogContext === 'detail') return 18;", "if (this.catalogContext === 'detail') return Math.max(18, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));"],
+  ['return Math.max(18, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));', 'return 18;'],
+  ['if (this.readerWindowMetricsRevision < 0) return 18;', 'if (false) return 18;'],
+]) {
+  const changed = fullSource.replace(before, after); assert.notEqual(changed, fullSource);
+  assert.throws(() => verifyFullDirectoryLayoutSuccession(architectureBaseline, file => file === fullFile ? changed : readWorkspace(file), sharedProducerShape));
+}
+verifyIndexSyncColdLayoutSuccession(architectureBaseline, readWorkspace);
+for (const [before, after] of [
+  ['content: (): void => { this.syncPreparingContent(); }', 'content: (): void => {}'],
+  ["Text('正在读取安全配置…');", "Text('正在读取安全配置…').fontSize(99);"],
+  ["}.width('100%').height('100%').justifyContent(FlexAlign.Center);", "}.width('100%').height('100%').justifyContent(FlexAlign.Center).backgroundColor('#FF010203');"],
+]) {
+  const changed = indexSource.replace(before, after); assert.notEqual(changed, indexSource);
+  assert.throws(() => verifyIndexSyncColdLayoutSuccession(architectureBaseline, file => file === 'entry/src/main/ets/pages/Index.ets' ? changed : readWorkspace(file)));
+}
+for (const ready of [false, true]) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  class OtherActor { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); this.nodes = new Map(); this.children = new Map(); } }
+  const components = { BookshelfMultiSelectPage: 'features/bookshelf/BookshelfMultiSelectPage.ets', ReaderShell: 'features/shell/ReaderShell.ets',
+    SyncPage: 'features/sync/SyncPage.ets', ReaderLayoutDebugOverlay: 'features/common/ReaderLayoutDebugOverlay.ets', ArkWebExecutionHost: 'app/ArkWebExecutionHost.ets' };
+  const metrics = createDefaultReaderWindowMetrics();
+  const { owner } = createReaderBuilderProbe(indexSource, ['build', 'syncContent', 'syncSurface', 'syncPreparingContent', 'readerOwnsWindowEdges', 'mangaOwnsWindowEdges', 'appContentTopInset'],
+    { ...properties.sdk, ...Object.fromEntries(Object.keys(components).map(name => [name, OtherActor])),
+      ReaderWindowCoordinator: { metrics: () => metrics }, readerContentSafeTop, isReaderProductSurfaceEnabled: () => true, deviceInfo: { deviceType: 'phone' } },
+    { ...properties.hooks, mountChildren: true, childSources: Object.fromEntries(Object.entries(components).map(([name, file]) => [name, source(file)])) });
+  Object.assign(owner, { route: 'sync', syncSnapshotReady: ready, syncSnapshot: {}, navigationGeneration: 7,
+    detailShelfAdmissionMount: 3, syncPresentationIdentity: 'sync-window', getSyncOrchestrator: () => ({}),
+    readingSessionActive: false, jsonImportVisible: false, appThemeScheme: 'day', readerWindowMetricsRevision: 0 });
+  owner.initialRender();
+  const descendants = actor => [actor, ...[...(actor.children?.values() ?? [])].flatMap(descendants)];
+  const actors = descendants(owner);
+  if (ready) {
+    const sync = actors.find(actor => actor.params?.snapshot === owner.syncSnapshot);
+    assert.ok(sync, 'actual ready branch still mounts the original SyncPage with its current snapshot');
+    assert.equal(actors.filter(actor => actor.variant === 'standard').length, 0, 'cold frame cannot cover the ready branch');
+  } else {
+    const frame = actors.find(actor => actor.variant === 'standard'); assert.ok(frame, 'actual cold branch owns its own common frame');
+    const label = flatten(owner).find(node => node.type === 'Text' && node.create === '正在读取安全配置…'); assert.ok(label);
+    const column = [...owner.nodes.values()].find(node => node.type === 'Column' && node.justifyContent === 'FlexAlign.Center');
+    assert.deepEqual([column.width, column.height], ['100%', '100%']);
+    assert.equal(column.backgroundColor, undefined); assert.equal(label.fontSize, undefined, 'original native AUTO survives the real cold slot');
+    const root = [...frame.nodes.values()].find(node => node.type === 'Stack' && node.padding);
+    for (const scheme of ['day', 'night']) { frame.appThemeScheme = scheme; properties.flush(); assert.equal(root.backgroundColor, readerAppColor('TOK_PAPER', scheme)); }
+  }
+}
 const readerSource=source('features/shell/ReaderShell.ets');
 const detachedKind=readerSource.replace('readingContentKind: this.contentKind',"readingContentKind: 'text'");assert.notEqual(detachedKind,readerSource);
 assert.throws(()=>verifyReaderPageFrameworkCoverage(process.cwd(),coverageContract,file=>file==='features/shell/ReaderShell.ets'?detachedKind:source(file)),/exact page\/runtime fact/);

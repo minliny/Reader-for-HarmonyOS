@@ -14,6 +14,7 @@ export struct ReaderPageScaffold {
   @Prop pageVisible: boolean = true;
   @Prop readingContentKind: 'text' | 'manga' = 'text';
   @Prop headerKind: ReaderHeaderKind = 'standard';
+  @Prop headerMeasurementKey: number = 0;
   @Prop headerTop: number = 0;
   @Prop headerInsetLeft: number = 0;
   @Prop headerInsetRight: number = 0;
@@ -22,7 +23,7 @@ export struct ReaderPageScaffold {
   @Prop footerBottom: number = 0;
   @Prop frameInsetLeft: number = 0;
   @Prop frameInsetRight: number = 0;
-  onHeaderHeightChange: (height: number) => void = (_height: number): void => {};
+  onHeaderHeightChange: (height: number, presentedKey: number) => void = (_height: number, _presentedKey: number): void => {};
   onFooterHeightChange: (height: number) => void = (_height: number): void => {};
   @BuilderParam content: () => void = this.emptySlot;
   @BuilderParam header: () => void = this.emptySlot;
@@ -35,8 +36,9 @@ export struct ReaderPageScaffold {
       Stack({ alignContent: Alignment.TopStart }) { this.content(); }
         .width('100%').height('100%').zIndex(0);
       Column() {
-        ReaderFixedHeaderHost({ kind: this.headerKind, content: (): void => { this.header(); },
-          onHeightChange: (height: number): void => this.onHeaderHeightChange(height) });
+        ReaderFixedHeaderHost({ kind: this.headerKind, measurementKey: this.headerMeasurementKey,
+          content: (): void => { this.header(); },
+          onHeightChange: (height: number, presentedKey: number): void => this.onHeaderHeightChange(height, presentedKey) });
       }.width('100%').padding({ left: this.headerInsetLeft, right: this.headerInsetRight })
         .margin({ top: this.headerTop }).zIndex(10).hitTestBehavior(HitTestMode.Transparent);
       Stack({ alignContent: Alignment.Bottom }) {

@@ -113,7 +113,7 @@ for(const mutate of [h=>{h.requestedBookmarkAnchor.positionScope=undefined;},h=>
 const require=createRequire(import.meta.url);const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('BookDirectoryPage');syntax.propCollection.set('BookDirectoryPage',new Set(['sourceId','bookId','bookKind','contentKind','entries','catalogMessage','chapterStartBookmarkCreationEnabled']));
-syntax.componentCollection.customComponents.add('ReaderFullDirectory');syntax.propCollection.set('ReaderFullDirectory',new Set(['bookTitle','chapterTitle','entries','catalogMessage','directoryRecovery','currentChapterIndex','sourceId','mangaSearch','reduceMotion','offlineBookOperationActive','onSelectChapter','onSelectNavigationTarget','onSelectBookmark','bookmarkIdentity','onDownloadChapter','onDownloadBook','onClearBookOffline','onDeleteBookmarks','chapterStartBookmarkCreationEnabled','onCreateChapterStartBookmark','onSwitchSource','onExit','onReconcileBookmarks','onContinueBookmarks','onReconcileOffline','onContinueOffline']));
+syntax.componentCollection.customComponents.add('ReaderFullDirectory');syntax.propCollection.set('ReaderFullDirectory',new Set(['catalogContext','bookTitle','chapterTitle','entries','catalogMessage','directoryRecovery','currentChapterIndex','sourceId','mangaSearch','reduceMotion','offlineBookOperationActive','onSelectChapter','onSelectNavigationTarget','onSelectBookmark','bookmarkIdentity','onDownloadChapter','onDownloadBook','onClearBookOffline','onDeleteBookmarks','chapterStartBookmarkCreationEnabled','onCreateChapterStartBookmark','onSwitchSource','onExit','onReconcileBookmarks','onContinueBookmarks','onReconcileOffline','onContinueOffline']));
 syntax.componentCollection.customComponents.add('LocalBookDetail');syntax.propCollection.set('LocalBookDetail',new Set(['book','toc','sourceSwitchEnabled','readingEnabled','readingBlockedReason','inBookshelf','loadingMessage','removalEnabled','removing']));
 class DirectoryChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 const enums=Object.fromEntries(['SafeAreaType','SafeAreaEdge'].map(name=>[name,new Proxy({},{get:(_,key)=>`${name}.${String(key)}`})]));
@@ -130,7 +130,7 @@ for(const sourceId of ['local','remote']){
  }
  assert.equal(props.entries,host.detailToc);assert.equal(props.sourceId,sourceId);
  if(sourceId==='remote') assert.equal(props.contentKind,'manga','detail directory preserves the admitted manga content kind');
- else { assert.equal(props.onSwitchSource instanceof Function,true); assert.equal(props.onDownloadBook instanceof Function,true); }
+ else { assert.equal(props.catalogContext,'detail','actual novel detail caller owns standalone browse without a second safe-top'); assert.equal(props.onSwitchSource instanceof Function,true); assert.equal(props.onDownloadBook instanceof Function,true); }
  assert.doesNotMatch(output,/new ReaderShell|new ReadingExperience/);
  assert.match(source,/if \(this\.route === 'directory' && this\.directoryReturnTarget === 'detail'\) (?:\{\s*)?this\.externalDirectory\(\)/,'detail content mounts the independent page');
  assert.match(source,/visible: this\.route === 'reading' \|\|\s*\(this\.route === 'directory' && this\.directoryReturnTarget === 'readerControl'\)/,'a preparing external selection cannot expose the reading control directory');

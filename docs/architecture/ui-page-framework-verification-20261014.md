@@ -88,3 +88,29 @@ VM 只读预检已确认既有 Mate 80 Pro 实例路径与当前进程一致、g
 完整编译明确定位两类生产接口缺陷：Scaffold、StandardPage、MainTabShell 的 `@BuilderParam overlay` 与 ArkUI `CustomComponent.overlay` 基类方法同名；Discover/RSS 调用 MainTabShell 时仍使用只允许单 Builder 槽的尾随 lambda。修复限定到三个公共声明及精确实际调用点：业务叠层槽更名为 `overlayContent`，两页显式传入原内容 Builder。业务状态、native overlay API、Scroller、安全区和路由对象不变。
 
 测试登记随实际公共接口精确迁移，历史 witness、预算及业务负控保留。公共槽位检查从已安装 SDK 的 COMMON_ATTRS 读取基类方法名，三组恢复旧 `overlay` 槽的负控必须拒绝。第五轮仍须完整执行规范合同、ArkTS、签名、发布与产物核验；其结果存入私有 `.reader-local/ui-framework/hap-build-r5.log` 及后续绑定证据。
+
+## 第五轮产物与 VM 暴露的实际分支遗漏
+
+冻结提交 `83807832` 完整 675 项 PASS、ArkTS/HAP 编译及指定签名通过。不可变 run `20261013T184443Z-83807832-bf6b8fb3` 的 signed SHA-256 为 `f00bf5d2d7d2676d8b53fb2fed880e5c5f569ac1894228a495981ed8deb657d8`。VM 的 inspect、保留数据安装及启动 PASS；该产物为 iteration，配套 Core 仍包含继承 dirty 状态，`acceptanceEligible:false`。
+
+真实 VM 搜索返回 591 项，停止搜索后滑动结果：筛选/统计固定头部遮住了下方列表，未见列表透出。长搜索进度/失败文案在右侧截断，单独记录为未处理页面文本布局现象；不计为顶栏透明问题通过，也不据此声称全部视觉验收。
+
+详情 `诡秘之主` →「完整目录」实际走 `Index.externalDirectory` 的 text 分支 → `ReaderFullDirectory` → `FullDirectoryPanel`，与漫画 `BookDirectoryPage` 分支不同。先前 22 项覆盖只登记了 BookDirectoryPage 的标准/漫画 Builder，漏审了真实 text 分支；因此第五轮全绿不能证明这条路径统一。ReaderFullDirectory 相对继承基线仍为私有根 Stack，无 Scaffold 接线。该覆盖结论过早，须按实际条件分支补逆向覆盖门禁。
+
+该目录在 VM 三次取证及两次滑动后保持章节 1..10。原始 dump 显示 native List 为 enabled/scrollable，但共同祖先 Stack 为 `enabled=false`、`HitTestMode.None`。代码定位：详情 currentChapterIndex=-1，FullDirectoryPanel 在 canonicalOrdinal<0 时结束定位命令但永久保留 initialListPositionReady=false；不是公共 Scaffold 遮罩或截图时机。此路径和锁均继承自 `4764886e`。修复应允许独立详情目录无锚点浏览，保留未知位置且不写阅读进度；阅读内嵌模式继续遵守有效锚点准入。
+
+下一冻结轮需将真实 ReaderFullDirectory 迁入公共 frame，保留原卡片、目录 sheet、motion 和 actor，明确 detail/reader 上下文以保留各自纸底；补精确分支、上下文与初始化负控。随后重新执行完整规范构建及 VM 目录滚动取证。第五轮候选当前不作为框架完整交付。
+
+## 实际条件分支补全与第六轮前提
+
+逐分支复查还发现同步路由在 `syncSnapshotReady=false` 时使用裸 Column，虽产品入口当前关闭，也应遵守统一页框架。该初载状态接入 Scaffold 的 standard 类别，原居中消息进入具名 syncPreparingContent Builder；初始日间纸底保持，夜间从原私有 `#FF24211E` 改为公共 window paper `#FF1C1E1A`，属于统一框架策略，不宣称两主题像素完全不变。
+
+ReaderFullDirectory 使用明确 `catalogContext:detail/reader`：详情保留窗口纸底，阅读来源使用有限 readerDirectory 类别、窗口阅读纸色及 clip，不新增系统安全区避让。原 54vp 标题卡、16vp sheet 间距、恢复栏、motion 和离线菜单分别进入真实公共槽；目录页不改路由、样式选择或业务对象。详情来源将 allowUnanchoredBrowse 传入 FullDirectoryPanel，无锚点时解除原 native 列表祖先禁用；reader/embedded 默认继续等待锚点。
+
+公共 HeaderHost 使用 @Prop measurementKey 创建实际 native Area 闭包，捕获该帧 key 并拒绝旧 key；普通 callback 成员保持稳定，但以第二参数传递实际测量 key，FullDirectory 校验对应 safeTop 后更新避让。避免仅更换父 callback、ArkUI 普通成员仍保留旧 callback 导致后续测量失效，也不轮换 header/body/list actor。第六轮前需验证真实 SDK Prop 更新、过期测量拒绝、有效测量、目录初始化及每个路由条件分支；之后完整 HAP 与 VM 分别记录。
+
+安全区末审补充：Index 对 text 详情目录已消费系统 top，原 FullDirectory 的 topBarTop 又取 visualSafeTop。第五轮 VM 标题顶端约 273px，等于 39vp 状态栏的两次 136.5px 避让。新 detail 上下文只保留设计 18vp 间距；reader 上下文的父 inset 为零，继续处理 max(18, visualSafeTop)。原卡片 54vp 和 sheet 间距 16vp 保持，此处明确纠正历史重复避让，不把旧 VM 几何当正确基线。
+
+最终冻结前 15 项定向门禁全部 PASS，包含真实 Index 详情/阅读分支 → FullDirectory → Scaffold/Header → Panel/native List；320/390/800 宽度、两主题、无锚点浏览/embedded 等待/已知稀疏章节定位、旧 Area 拒绝/新 vp 测量、同 actor、54vp 卡与 16vp gap。真实 Index StorageLink revision 更新后 detail 父 canvas padding 更新、reader 父保持零，body/list 未重建。主链及侧挂裸/未知分支、失去实际 Source/Context/Key/字体物理承载等负控均拒绝；三架构门禁及字体门禁通过，旧预算与历史 witness 不变。当前覆盖为 20 路由、25 项明确绑定（包含标明的 component fallback 与侧挂入口），全量库存 676、integration 471。
+
+第六轮结果绑定本次冻结提交、私有 `.reader-local/ui-framework/hap-build-r6.log`、不可变 manifest 与新 VM 回执。上述定向 PASS 不代替完整编译、安装或本轮目录滚动像素结论。

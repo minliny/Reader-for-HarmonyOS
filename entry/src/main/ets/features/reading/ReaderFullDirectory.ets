@@ -4,6 +4,8 @@ import { TYPE_READER_DIRECTORY_BOOK_TITLE, TYPE_READER_DIRECTORY_CHAPTER, TYPE_R
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import { readerPageAreaLength } from '../common/ReaderPageShell';
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { ReaderBookIdentity } from './ReaderBookmarkProjection';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from './ReaderDirectoryMarkerState';
@@ -59,6 +61,7 @@ export struct ReaderFullDirectory {
   onContinueOffline: (generation: number, identity: string) => void = (): void => {};
 
   @Prop currentChapterIndex: number = -1;
+  @Prop catalogContext: 'detail' | 'reader' = 'reader';
   // Source switch is only reachable for remote books (sourceId !== 'local');
   // local books render the top-bar 换源 affordance disabled. This is the
   // third copy of the LOCAL_SOURCE_ID sentinel (also Index.ets:70 and
@@ -100,6 +103,8 @@ export struct ReaderFullDirectory {
   @State private panelProgress: number = 1;
   @State private containerWidth: number = 0;
   @State private containerHeight: number = 0;
+  @State private catalogHeaderHeight: number = 0;
+  @State private catalogHeaderTop: number = -1;
   @State private offlineMenuVisible: boolean = false;
   private animationGeneration: number = 0;
   private collapseStarted: boolean = false;
@@ -164,13 +169,42 @@ export struct ReaderFullDirectory {
   }
 
   build() {
+    ReaderPageScaffold({
+      variant: this.catalogContext === 'detail' ? 'directory' : 'readerDirectory', headerKind: 'floating',
+      headerMeasurementKey: this.topBarTop(),
+      header: (): void => { this.topBar(); },
+      content: (): void => { this.directoryContent(); },
+      overlayContent: (): void => { this.offlineBookMenu(); },
+      onHeaderHeightChange: (height: number, presentedTop: number): void => {
+        if (this.mounted && presentedTop === this.topBarTop() && Number.isFinite(height) && height > 0) {
+          this.catalogHeaderTop = presentedTop;
+          if (Math.abs(height - this.catalogHeaderHeight) > .1) this.catalogHeaderHeight = height;
+        }
+      },
+    }).onAreaChange((_oldValue: Area, newValue: Area): void => {
+      const width = readerPageAreaLength(newValue.width);
+      const height = readerPageAreaLength(newValue.height);
+      if (Number.isFinite(width) && width > 0 && Math.abs(width - this.containerWidth) >= 0.01) {
+        this.containerWidth = width;
+      }
+      if (Number.isFinite(height) && height > 0 && Math.abs(height - this.containerHeight) >= 0.01) {
+        this.containerHeight = height;
+      }
+    });
+  }
+
+  @Builder
+  private directoryContent() {
     Stack({ alignContent: Alignment.TopStart }) {
-      this.topBar();
       if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
         Column() {
           this.recoveryContent();
         }.width(this.panelWidth()).position({ x: this.panelLeft(), y: this.panelTop() })
-          .onAreaChange((_old: Area, area: Area): void => { this.recoveryHeight = this.numericAreaLength(area.height); });
+          .onAreaChange((_old: Area, area: Area): void => {
+            const height = readerPageAreaLength(area.height);
+            if (Number.isFinite(height) && height >= 0 && Math.abs(height - this.recoveryHeight) > .1)
+              this.recoveryHeight = height;
+          });
       }
       Stack({ alignContent: Alignment.BottomStart }) {
         FullDirectoryPanel({
@@ -178,6 +212,7 @@ export struct ReaderFullDirectory {
           catalogMessage: this.catalogMessage,
           onRetryCatalog: (): void => this.onRetryCatalog(),
           currentChapterIndex: this.currentChapterIndex,
+          allowUnanchoredBrowse: this.catalogContext === 'detail',
           chapterDownloadEnabled: this.sourceId !== 'local',
           mangaSearch: this.mangaSearch,
           isTablet: this.usesExpandedLayout(),
@@ -201,21 +236,9 @@ export struct ReaderFullDirectory {
       .position({ x: this.panelLeft(), y: this.panelTop() + this.activeRecoveryHeight() })
       .opacity(this.shouldAnimatePanel() ? this.panelProgress : 1)
       .clip(true);
-      this.offlineBookMenu();
     }
     .width('100%')
-    .height('100%')
-    .clip(true)
-    .onAreaChange((_oldValue: Area, newValue: Area): void => {
-      const width = this.numericAreaLength(newValue.width);
-      const height = this.numericAreaLength(newValue.height);
-      if (width > 0 && Math.abs(width - this.containerWidth) >= 0.01) {
-        this.containerWidth = width;
-      }
-      if (height > 0 && Math.abs(height - this.containerHeight) >= 0.01) {
-        this.containerHeight = height;
-      }
-    });
+    .height('100%');
   }
 
   private activeRecoveryHeight(): number {
@@ -379,6 +402,8 @@ export struct ReaderFullDirectory {
   }
 
   private topBarTop(): number {
+    if (this.readerWindowMetricsRevision < 0) return 18;
+    if (this.catalogContext === 'detail') return 18;
     return Math.max(18, readerVisualSafeTop(ReaderWindowCoordinator.metrics()));
   }
 
@@ -461,7 +486,9 @@ export struct ReaderFullDirectory {
   private fullPanelTop(): number {
     // Figma keeps 16vp between the 54vp top bar and the full directory sheet:
     // 18 + 54 + 16 = 88. Preserve that relationship when safeTop moves.
-    return this.topBarTop() + 70;
+    const top = this.topBarTop();
+    return this.catalogHeaderHeight > 0 && Math.abs(this.catalogHeaderTop - top) < .1 ?
+      this.catalogHeaderHeight + 16 : top + 70;
   }
 
   private panelHeightDelta(): number {
@@ -496,17 +523,6 @@ export struct ReaderFullDirectory {
 
   private usesExpandedLayout(): boolean {
     return this.liveContainerWidth() >= 600;
-  }
-
-  private numericAreaLength(value: Length): number {
-    if (typeof value === 'number') {
-      return Number.isFinite(value) ? value : 0;
-    }
-    if (typeof value === 'string') {
-      const parsed = Number.parseFloat(value);
-      return Number.isFinite(parsed) ? parsed : 0;
-    }
-    return 0;
   }
 
   private isLocalBook(): boolean {

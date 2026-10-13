@@ -81,6 +81,7 @@ import {
 import { ReaderShell } from '../features/shell/ReaderShell';
 import { ReaderFullDirectory } from '../features/reading/ReaderFullDirectory';
 import { BookDirectoryPage } from '../features/bookshelf/BookDirectoryPage';
+import { ReaderPageScaffold } from '../features/common/ReaderPageScaffold';
 import { backfillRetainedReaderDirectoryNavigation, readerDirectoryObserveMissingNavigation,
   readerDirectoryTakeMissingNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import {
@@ -1149,13 +1150,7 @@ struct Index {
         if (this.syncSnapshotReady) {
           this.syncContent();
         } else {
-          Column() {
-            Text('正在读取安全配置…');
-          }
-          .width('100%')
-          .height('100%')
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(readerAppColor('app.Index.build.backgroundColor.FFF8F4EC', this.appThemeScheme));
+          ReaderPageScaffold({ variant: 'standard', content: (): void => { this.syncPreparingContent(); } });
         }
       } else if (this.detailBook !== undefined && (this.route === 'detail' ||
         (this.route === 'directory' && this.directoryReturnTarget === 'detail') ||
@@ -1312,6 +1307,13 @@ struct Index {
           this.readerOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
       .ignoreLayoutSafeArea(this.mangaOwnsWindowEdges() ? [LayoutSafeAreaType.SYSTEM] : [],
         this.mangaOwnsWindowEdges() ? [LayoutSafeAreaEdge.ALL] : [])
+  }
+
+  @Builder
+  private syncPreparingContent() {
+    Column() {
+      Text('正在读取安全配置…');
+    }.width('100%').height('100%').justifyContent(FlexAlign.Center);
   }
 
   @Builder
@@ -1627,6 +1629,7 @@ struct Index {
         // remains its dedicated image directory with manga-only controls.
         ReaderFullDirectory({
           bookTitle: this.detailBook.title,
+          catalogContext: 'detail',
           chapterTitle: this.directoryChapterTitle,
           entries: this.detailToc,
           catalogMessage: this.detailLoadingMessage,
