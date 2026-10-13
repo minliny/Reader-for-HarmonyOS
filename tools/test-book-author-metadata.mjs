@@ -10,7 +10,7 @@ const {SearchViewState}=await import('../entry/src/main/ets/features/search/Sear
 const {searchResultRelevance}=await import('../entry/src/main/ets/features/search/SearchResultRelevance.ts');
 const read=name=>readFileSync(new URL(`../entry/src/main/ets/${name}`,import.meta.url),'utf8');
 const clean=source=>source.replace(/^import[\s\S]*?;\n/gm,'');
-const combined=['features/common/BookAuthorMetadata.ts','features/source/ReaderSourceCategory.ts','app/ErrorMessage.ts',
+const combined=['features/common/BookAuthorMetadata.ts','features/common/BookSearchTiming.ts','features/source/ReaderSourceCategory.ts','features/source/SourceSwitchProviderFamily.ts','app/ErrorMessage.ts',
   'features/search/SearchBookProjection.ts','features/search/SearchGateway.ts','app/BookRequestScheduler.ts',
   'features/common/BookAcquisitionPresentation.ts','features/source/SourceSwitchGateway.ts'].map(n=>clean(read(n))).join('\n');
 const {SearchGateway,SourceSwitchGateway}=await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(combined)).toString('base64')}`);

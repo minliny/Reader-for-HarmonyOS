@@ -23,6 +23,9 @@ class ReaderButtonLabelModifier implements AttributeModifier<TextAttribute> {
     if (weight !== undefined) instance.fontWeight(weight);
     instance.fontSize(text.fontSizeFp);
     if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
+    // Only search-field variants have a leading slot. Split the line leading
+    // above/below CJK glyphs so the label centers with the native indicator.
+    if (spec.leadingSlot) instance.halfLeading(true);
     if (text.letterSpacingFp !== undefined) instance.letterSpacing(text.letterSpacingFp);
     instance.fontColor(readerAppColor(this.primary ? spec.primaryText : spec.secondaryText, this.scheme));
     if (spec.centerText) instance.textAlign(TextAlign.Center);

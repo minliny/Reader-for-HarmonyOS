@@ -52,7 +52,9 @@ async function fixture(){
  let Reset=compile('features/settings/LocalConfigurationReset.ts',modules).LocalConfigurationReset;
  ReaderThemeHost.setRecoveryBarrier(async()=>{barrierCalls++;trace.push('sync-recovery');await Reset.recover(owner);});
  const appGateway=new settingModule.SettingsGateway(context);
- await appGateway.update({autoCheckUpdate:false,tapBottomScrollTop:false,reduceMotion:true,crashLog:false},true);
+ await appGateway.update({autoCheckUpdate:false,tapBottomScrollTop:false,reduceMotion:true,crashLog:false,developerMode:true},true);
+ assert.equal((await appGateway.load()).developerMode,true,'fixture starts with developer mode durably enabled');
+ assert.equal(stores.get('reader_settings_v1').disk.get('developerMode'),true);
  await new readingModule.ReaderSettingsGateway(owner).update({...settings.createDefaultReaderSettingsSnapshot(),pageTransition:'none'},true);
  await new ttsModule.ReaderTtsPreferencesGateway(owner).update({...tts.createDefaultReaderTtsPreferencesSnapshot(),keepScreenOn:true},true);trace.length=0;
  return{owner,context,trace,stores,app,ReaderThemeHost,appGateway,settingModule,readingModule,ttsModule,
@@ -61,6 +63,7 @@ async function fixture(){
  mode:()=>mode,appearance:()=>appearanceDisk,barriers:()=>barrierCalls,
  pending:()=>stores.get('reader_configuration_reset_v1')?.memory.get('pending')??'',
  assertDefaults:async()=>{assert.equal(mode,'cover');assert.deepEqual(await appGateway.load(),settingModule.createDefaultSettingsSnapshot());
+ assert.equal(stores.get('reader_settings_v1').disk.get('developerMode'),false,'reset durably disables developer boundaries');
  const snap=appearanceStore.current();assert.equal(snap.appThemeMode,'system');assert.equal(snap.activeTheme,'night');assert.equal(snap.dayTheme,'day');assert.equal(snap.nightTheme,'night');assert.equal(snap.fontSize,18);
  assert.equal((await new readingModule.ReaderSettingsGateway(owner).load()).pageTransition,'slide');assert.equal((await new ttsModule.ReaderTtsPreferencesGateway(owner).load()).keepScreenOn,false);},
  };
@@ -83,8 +86,8 @@ for(const failure of ['reader_configuration_reset_v1','reader_settings_v1','read
 }
 {
  const f=await fixture();const other=new f.settingModule.SettingsGateway(f.context);const gate=f.gate('reader_settings_v1');
- const a=f.appGateway.update({autoCheckUpdate:true,tapBottomScrollTop:false,reduceMotion:false,crashLog:false},true);await new Promise(r=>setImmediate(r));
- let done=false;const b=other.update({autoCheckUpdate:false,tapBottomScrollTop:true,reduceMotion:true,crashLog:true},true).then(()=>done=true);
+ const a=f.appGateway.update({autoCheckUpdate:true,tapBottomScrollTop:false,reduceMotion:false,crashLog:false,developerMode:false},true);await new Promise(r=>setImmediate(r));
+ let done=false;const b=other.update({autoCheckUpdate:false,tapBottomScrollTop:true,reduceMotion:true,crashLog:true,developerMode:true},true).then(()=>done=true);
  await new Promise(r=>setImmediate(r));assert.equal(done,false,'separate settings instances serialize whole flush');gate.resolve();await Promise.all([a,b]);
  f.fail('reader_settings_v1');await assert.rejects(other.update(f.settingModule.createDefaultSettingsSnapshot(),true),/flush/);
  assert.equal((await f.appGateway.load()).reduceMotion,false,'failed preferences write retains accepted choice without old compensation');
@@ -99,8 +102,8 @@ for(const failure of ['reader_configuration_reset_v1','reader_settings_v1','read
 }
 {
  const f=await fixture();f.fail('mode');await assert.rejects(f.reset(),/flush/);
- await f.appGateway.update({autoCheckUpdate:false,tapBottomScrollTop:false,reduceMotion:true,crashLog:false},false,'autoCheckUpdate');
- const current=await f.appGateway.load();assert.equal(current.autoCheckUpdate,false);assert.equal(current.tapBottomScrollTop,true);assert.equal(current.reduceMotion,false);assert.equal(current.crashLog,true);
+ await f.appGateway.update({autoCheckUpdate:false,tapBottomScrollTop:false,reduceMotion:true,crashLog:false,developerMode:true},false,'autoCheckUpdate');
+ const current=await f.appGateway.load();assert.equal(current.autoCheckUpdate,false);assert.equal(current.tapBottomScrollTop,true);assert.equal(current.reduceMotion,false);assert.equal(current.crashLog,true);assert.equal(current.developerMode,false,'post-reset unrelated change cannot revive stale developer mode');
 }
 // Application consumers observe coherent, confirmed settings across instances.
 {

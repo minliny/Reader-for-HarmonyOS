@@ -31,7 +31,7 @@ assert.doesNotMatch(source,/BookshelfEntryCoordinator|ReaderEntryPage|entryPrepa
 const shelf = readFileSync(new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url),'utf8');
 assert.doesNotMatch(shelf,/bookEntryReady|正文准备中|entryReadyKeys/);
 
-const Back = productionMotionMethods(file, ['consumeTemporaryBackBridge','isCurrentRuntime','onBackPress', 'currentSourceSwitchTransactionId','canRemoveDetailBook','isSameDetailBook']);
+const Back = productionMotionMethods(file, ['consumeTemporaryBackBridge','isCurrentRuntime','onBackPress', 'currentSourceSwitchTransactionId','canRemoveDetailBook','isSameDetailBook'],{LOCAL_SOURCE_ID:'local'});
 const f=switchFixture({shared:true,open:false}),x=switchIndex(f);x.index.openDetailSourceSwitch();await settleSwitch();x.mount().onSelectCandidate(f.candidate());await settleSwitch();
 assert.equal(f.host.current().write.confirmation,'confirmed');assert.ok(f.host.current().pending.transactionId);
 const switching = Object.assign(new Back(),x.index,{hasVisibleImportDialog:()=>false,jsonImportVisible:false,sourceSwitchVisible:false,

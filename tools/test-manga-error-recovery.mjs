@@ -3,11 +3,12 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { mangaUserError } from '../entry/src/main/ets/features/manga/MangaUserError.ts';
 
 const file = new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const Surface = productionMotionMethods(file,
-  ['requestedLast', 'imageError', 'rowHasError', 'primaryErrorRowKey', 'isPrimaryErrorRow', 'rowRenderKey', 'retry', 'retryOpen', 'confirmRecovery']);
+  ['requestedLast', 'imageError', 'rowHasError', 'primaryErrorRowKey', 'isPrimaryErrorRow', 'rowRenderKey', 'retry', 'retryLabel', 'retryOpen', 'confirmRecovery']);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() {
   let resolve, reject;
@@ -154,6 +155,29 @@ console.log('PASS actual recovery confirmation follows refreshed controller fact
   assert.match(source, /@State(?:\s+@Watch\([^)]*\))?\s+private openingRetry:/, 'opening status participates in ArkUI state publication');
 }
 console.log('PASS actual opening retry has one session owner and SDK-emitted disabled in-progress control');
+
+// Changed content requires a new entry admission. Repeating an image retry
+// against the invalid manifest must not create another pending marker.
+{
+  const { surface, controller, tiles } = fixture();
+  const pending = deferred(), events = [];
+  tiles.set(0, { error: 'MANGA_SESSION_CONTENT_CHANGED' });
+  Object.assign(surface, { openingRetry: false, viewportGeneration: 3, publishedRowKeys: new Map([[0, 'old']]),
+    visibleAnchor: { ordinal: 0, y: 0.5 }, confirmedPosition: { old: true }, publishedManifestVersion: 'old',
+    detachOfflineProbe: () => events.push('probe.detach'),
+    open: async selected => { assert.equal(selected, controller); events.push('entry.open'); await pending.promise; surface.opened = true; } });
+  controller.close = intent => { assert.equal(intent, 'chapter'); events.push('images.close'); };
+  controller.retryTile = () => assert.fail('invalid content must reopen entry instead of retrying old pixels');
+  assert.equal(surface.retryLabel(rows[0]), '重新打开本章');
+  assert.equal(surface.retryLabel(rows[1]), '重试');
+  assert.equal(mangaUserError('MANGA_SESSION_CONTENT_CHANGED'), '章节内容或书源已更新，请重新打开本章。');
+  surface.retry(rows[0]); surface.retry(rows[0]);
+  assert.deepEqual(events, ['probe.detach', 'images.close', 'entry.open'], 'one reopen owns entry admission and old subscriber disposal');
+  assert.equal(surface.confirmedPosition, undefined); assert.equal(surface.visibleAnchor, undefined);
+  assert.equal(surface.publishedRowKeys.size, 0); assert.equal(surface.openingRetry, true);
+  pending.resolve(); await tick(); assert.equal(surface.openingRetry, false); assert.equal(surface.opened, true);
+}
+console.log('PASS changed-content recovery offers readable copy and one fresh entry admission instead of retrying an invalid image');
 
 // Index registers one exit owner and sends a navigation intent for book-info,
 // shelf mutation and external file opening. The actual registered callback

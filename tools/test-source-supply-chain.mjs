@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertSourceLoginDefault } from './source-login-default-policy.mjs';
 import {
   BUILTIN_VERSION,
   SUITE_VERSION,
@@ -126,6 +127,7 @@ assert.equal(collectPaywallFindings({ ruleContent: { content: '.body@text' } }).
 const bundled = JSON.parse(read(
   'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json'));
 for (const source of bundled) {
+  assertSourceLoginDefault(source);
   assert.deepEqual(validateBundledMetadata(source), [],
     `${source.bookSourceName} metadata must satisfy the manifest contract`);
   assert.equal(collectSecretFindings(source).length, 0,

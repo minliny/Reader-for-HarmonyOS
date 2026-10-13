@@ -101,7 +101,11 @@ assert.match(window, /candidate === undefined \|\| candidate\.isCurrent === true
 
 const pickStart=sourceHost.indexOf('async pick(candidate: SourceSwitchCandidate');
 const pickSource=sourceHost.slice(pickStart,sourceHost.indexOf('async rollback(',pickStart));
-assert.match(pickSource,/sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)[\s\S]*sourceSwitchCandidateKey\(context\.query\.sourceId, context\.query\.bookId\)/);
+assert.match(pickSource,/sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)[\s\S]*sourceSwitchCandidateKey\(initialContext\.query\.sourceId, initialContext\.query\.bookId\)/);
+assert.ok(pickSource.indexOf('await this.gateway.resolveProbeQueryIdentity') < pickSource.indexOf('acquireBook(seed'),
+  'candidate first paint must not bypass current query qualification before acquisition');
+assert.ok(pickSource.indexOf('await this.gateway.resolveProbeQueryIdentity') < pickSource.indexOf('new ReaderWriteEvidence()'),
+  'query qualification precedes any durable write evidence');
 assert.match(sourceHost,/new RemoteReadingFlowGateway\(this\.runtime\)\.loadProgress/);
 assert.match(pickSource,/buildSourceSwitchCommitParams\([\s\S]*anchor\.chapterTitle, anchor\.chapterIndex/);
 assert.match(index,/private async reconcilePendingSourceSwitches\(\): Promise<void>/);
@@ -136,7 +140,7 @@ assert.match(sourceHost, /force && previous\.length > 0[\s\S]*?candidates: previ
   'actual captured owner retains prior candidate identities during force refresh');
 assert.match(sourceHost, /const cached = force \? \[\] : await this\.gateway\.loadCachedCandidates\(context\.query, current, knownCandidates\(\)\)/,
   'initial discovery uses exact cached candidates through the typed gateway');
-assert.match(sourceHost, /refreshCandidates\(context\.query, current, force \? \[\] : context\.searchedSourceIds,\s*publishProgress, force \? previous : initialKnown\)/,
+assert.match(sourceHost, /refreshCandidates\(context\.query, current, force \? \[\] : context\.searchedSourceIds,\s*publishProgress, force \? previous : \(cached\.length > 0 \? cached : initialKnown\)\)/,
   'force refresh clears prior searched-source exclusions while passing progressive publication and retained identities');
 
 console.log('source-switch post-commit transaction contract: PASS');
@@ -155,7 +159,7 @@ const settle = async () => { await settleOwner(); await new Promise(setImmediate
   x.index.refreshSourceSwitch(x.index.sourceSwitchScopeId);await settleOwner();
   assert.equal(f.host.current().state.refreshing,true);
   const retained=f.host.current().state.candidates;
-  const withoutTiming=rows=>rows.map(({latencyMs,latencyKind,...row})=>row);
+  const withoutTiming=rows=>rows.map(({latencyMs,latencyKind,latencyMeasuredAt,...row})=>row);
   assert.notEqual(retained,before,'new sweep snapshots rows without modifying old observers');
   assert.deepEqual(withoutTiming(retained),withoutTiming(before),
     'all candidate identities and non-timing facts remain visible while new source IO is pending');

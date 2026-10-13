@@ -30,7 +30,7 @@ for(const [name,path] of [['SourceManagementPage','features/source/SourceManagem
 const clone=v=>v===undefined?undefined:structuredClone(v),tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{resolve,promise};};
 const row=()=>({sourceId:'a',name:'A',baseUrl:'https://a.test',enabled:true,enabledExplore:false,bookSource:{bookSourceType:0}});
-function rpc(){const context={},disk=new Map(Object.entries({autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true}));const r={context,disk,calls:[],rows:[row()],readFail:0,writeFail:false,admission:false,malformed:false,pause:undefined,puts:0,flushes:0,getUIAbilityContext:()=>context,supportsCoreCapability:()=>false,
+function rpc(){const context={},disk=new Map(Object.entries({autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true,developerMode:false}));const r={context,disk,calls:[],rows:[row()],readFail:0,writeFail:false,admission:false,malformed:false,pause:undefined,puts:0,flushes:0,getUIAbilityContext:()=>context,supportsCoreCapability:()=>false,
  async clearSourceCookieSession(){},async request(method,params,options={}){if(options.canDispatch?.()===false||options.canContinue?.()===false)throw Error('not dispatched');options.onDispatch?.();this.calls.push(method);if(this.pause?.method===method)await this.pause.promise;
  if(method==='runtime.status')return{data:{pendingHostOperationCount:0}};
  if(method==='source.update'){if(this.admission){this.admission=false;throw Object.assign(Error('gate'),{typedAdmission:true});}this.rows[0].enabled=params.enabled;if(this.writeFail){this.writeFail=false;throw Error('ack lost');}return{data:{source:clone(this.rows[0])}};}
@@ -42,7 +42,7 @@ function rpc(){const context={},disk=new Map(Object.entries({autoCheckUpdate:tru
 // Index @State, then actual SDK child props carry those facts to the page.
 function field(index,name,deps){const text=source('pages/Index.ets'),a=text.indexOf('  private '+name+':'),b=text.indexOf('\n  );',a)+6,initializer=text.slice(a,b);const expression=initializer.slice(initializer.indexOf('=')+1).trim().replace(/;$/,'');return new Function(...Object.keys(deps),stripTypeScriptTypes('const value='+expression+';')+'return value;').call(index,...Object.values(deps));}
 function fixture(kind){const SettingsHost=freshSettingsHost();const r=rpc();currentOwner=r;const sourceDomain=kind==='source',method=sourceDomain?'sourceManagementContent':'settingsContent';const index=createReaderBuilderProbe(source('pages/Index.ets'),[method,'settingsSurface','bindSettingsPresentation','sourceManagementSurface','bindSourceManagement','isCurrentSourceManagement','retireSourceManagementPresentation','isCurrentSettingsPresentation','isCurrentRuntime','reconcileSettingsCache'],{ReaderRuntimeOwner,SourceManagementPage:Child,SettingsPage:Child,deviceInfo:{deviceType:'phone'}}).owner;
- Object.assign(index,{route:sourceDomain?'source':'settings',sourceSources:[],sourceStatusKind:'idle',sourceStatusMessage:'',sourceOperation:{action:'load',sourceId:''},settingsOperation:{action:'load'},settingsSnapshot:{autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true},settingsSection:'general',mountedRuntimeOwner:r,detailShelfAdmissionMount:1,navigationGeneration:1,shelfReceiptRetired:false,sourcePresentationIdentity:'',settingsPresentationIdentity:'',rssInstanceIdentity:1});
+ Object.assign(index,{route:sourceDomain?'source':'settings',sourceSources:[],sourceStatusKind:'idle',sourceStatusMessage:'',sourceOperation:{action:'load',sourceId:''},settingsOperation:{action:'load'},settingsSnapshot:{autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true,developerMode:false},settingsSection:'general',mountedRuntimeOwner:r,detailShelfAdmissionMount:1,navigationGeneration:1,shelfReceiptRetired:false,sourcePresentationIdentity:'',settingsPresentationIdentity:'',rssInstanceIdentity:1});
  const host=field(index,sourceDomain?'sourceHost':'settingsHost',{SourceHost,SettingsHost});index[sourceDomain?'sourceHost':'settingsHost']=host;if(sourceDomain)assert.equal(index.bindSourceManagement(),true);else assert.equal(index.bindSettingsPresentation(),true);
  let rendered=false;const refresh=()=>{if(!rendered){index[method]();rendered=true;}else index.replay();return [...index.children.values()].at(-1).params;};
  function page(){const params=refresh(),path=sourceDomain?'features/source/SourceManagementPage.ets':'features/settings/SettingsPage.ets';
@@ -95,7 +95,7 @@ for(const failure of ['before','after']){
  assert.equal(f.receipt().receipt.receipt.confirmation,'unknown');assert.equal(f.index.settingsSnapshot.reduceMotion,true);
  oldSave();await f.settle();assert.equal(f.r.puts,puts,'pure refresh retires the old generation action');
  const debugPage=f.page();const save=f.native(debugPage,'重试保存当前设置');save();save();await f.settle();
- assert.equal(f.r.puts,puts+4);assert.equal(f.r.flushes,flushes+1);
+ assert.equal(f.r.puts,puts+5);assert.equal(f.r.flushes,flushes+1);
  assert.equal(f.receipt().receipt.receipt.confirmation,'confirmed');
  // A retained SDK physical actor is never upgraded by a new generation.
  f.r.writeFail=true;f.host.toggle('crashLog',false,f.index.settingsPresentationIdentity);await f.settle();const before=f.r.puts;

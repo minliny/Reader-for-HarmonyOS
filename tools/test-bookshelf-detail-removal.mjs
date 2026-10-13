@@ -18,8 +18,8 @@ assert.match(detail, /onRemove: \(identity\?: string\) => void/);
 assert.match(detail, /Text\(this\.shelfActionLabel\(\)\)/);
 assert.match(detail, /return this\.inBookshelf \? '移除书架' : '加入书架';/,
   'the same admitted detail action must support explicit shelf join and removal');
-assert.match(detail, /\.enabled\(this\.removalEnabled && !this\.removing && !this\.cancellingAdd\)/);
-assert.match(detail, /if \(this\.removalEnabled && !this\.removing && !this\.cancellingAdd\) \{\s*if \(this\.adding\) this\.onCancelAdd\(identity\);\s*else this\.onRemove\(identity\);/,
+assert.match(detail, /\.enabled\(this\.removalEnabled && !this\.removing && !this\.cancellingAdd && this\.detailBookAvailable\(\)\)/);
+assert.match(detail, /if \(this\.removalEnabled && !this\.removing && !this\.cancellingAdd && this\.detailBookAvailable\(\)\) \{\s*if \(this\.adding\) this\.onCancelAdd\(identity\);\s*else this\.onRemove\(identity\);/,
   'the destructive visual must dispatch only through the admitted removal callback');
 
 assert.match(index, /onRemove: \(identity\?: string\): void => \{ if \(this\.isCurrentDetailShelfAdmission\(identity\)\) this\.requestDetailShelfMutation\(\)/);
@@ -49,8 +49,12 @@ assert.match(operation, /reconcile[\s\S]*confirmation: receipt\.receipt\.confirm
   'read-only recovery preserves the original confirmation rather than deriving it from absence');
 assert.doesNotMatch(index, /reconcileDetailBookRemovalFailure|reconcileShelfBookRemovalFailure/,
   'obsolete exact-key absence inference and compensation paths must be removed');
-assert.match(index, /this\.invalidateBookshelfProjection\(\);\s*if \(this\.route === 'detail' && this\.isSameDetailBook\(book\)\) \{\s*this\.returnFromDetail\(\);[\s\S]*?this\.invalidateBookshelfProjection\(\);\s*this\.applyBookshelfState\(shelf\);/,
-  'the exact mutation result must replace stale shelf reads when returning from detail (origin-aware dispatch)');
+assert.match(index, /this\.invalidateBookshelfProjection\(\);\s*if \(this\.route === 'detail' && this\.isSameDetailBook\(book\)\) \{\s*this\.detailInBookshelf = false;\s*this\.applyBookshelfState\(shelf\);/,
+  'the exact mutation result replaces stale shelf reads while retaining the detail presentation');
+const removalHandlers=index.slice(index.indexOf('  private removeDetailBook('),index.indexOf('\n  private emptyShelfRecovery('))+
+  index.slice(index.indexOf('  private applyDetailBookRemoval('),index.indexOf('\n  private openReading('));
+assert.doesNotMatch(removalHandlers,/this\.returnFromDetail\(\)|this\.nextNavigationGeneration\(\)/,
+  'success, failure and unknown detail removal must never navigate or retire the mounted surface');
 const projection=read('entry/src/main/ets/features/bookshelf/BookshelfProjectionOwner.ts');
 assert.match(index,/this\.shelfBooks = snapshot\.books;[\s\S]*this\.isBookshelfVisualAdmitted = snapshot\.visualAdmitted/,'page consumes owner rows and visual admission together');
 assert.match(projection,/books, facts, revision:[\s\S]*coreEmpty: state\.kind === 'empty', visualAdmitted: state\.kind === 'populated'/,'an empty removal result clears stale cards and admission in the single owner');

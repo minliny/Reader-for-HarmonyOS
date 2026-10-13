@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { createHash, X509Certificate } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 
 import {
   deploymentRoute,
@@ -16,9 +17,21 @@ import {
   resolveSigningMode,
   freezeSigningMaterial,
   assertResolvedCorePackage,
+  buildContractScope,
+  controllerSnapshot,
+  workspaceContractSnapshot,
+  snapshotDescriptor,
+  publishContractEvidence,
+  verifyContractEvidence,
+  assertSnapshotUnchanged,
+  contractToolchainSnapshot,
+  remainingContractBudget,
+  run as runPipelineCommand,
 } from '../scripts/hap-pipeline.mjs';
+import { runContractsBounded } from './run-contract-tests.mjs';
+import { contentSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
 
-const { assertCanonicalHapInvocation, isPackageTask } = createRequire(import.meta.url)('../hvigor/reader-hap-guard.cjs');
+const { assertCanonicalHapInvocation, assertReaderHapInvocation, isPackageTask } = createRequire(import.meta.url)('../hvigor/reader-hap-guard.cjs');
 const baseline = { app: { products: [{ name: 'default', compileSdkVersion: 'current-sdk' }] }, modules: [{ name: 'entry' }] };
 const local = { app: { products: [{ name: 'default', signingConfig: 'fixture', compileSdkVersion: 'stale-sdk' }],
   signingConfigs: [{ name: 'fixture', material: Object.fromEntries(
@@ -68,6 +81,14 @@ try {
   assert.doesNotThrow(() => assertCanonicalHapInvocation(['compileNative', 'PreviewArkTS'], guardFixture, {}));
   assert.throws(() => assertCanonicalHapInvocation(['assembleHap'], guardFixture, { ...env, READER_HAP_PIPELINE_TOKEN: 'wrong' }));
   assert.throws(() => assertCanonicalHapInvocation(['assembleHap'], process.cwd(), env), /pipeline/);
+  const changedSigning = { pipeline: { assertIdeSigningUnchanged() { throw new Error('Private signing inputs changed'); } }, session: {} };
+  assert.throws(() => assertReaderHapInvocation(['assembleHap'], changedSigning, guardFixture, {}), /Private signing inputs changed/,
+    'native IDE admission must recheck the private signing inputs before packaging');
+  assert.throws(() => assertReaderHapInvocation(['assembleHap'], changedSigning, guardFixture,
+    { ...env, READER_HAP_PIPELINE_TOKEN: 'wrong' }), /pipeline/,
+    'an IDE signing session must never bypass an invalid canonical marker');
+  assert.throws(() => assertReaderHapInvocation(['assembleHap'], undefined, guardFixture, {}), /pipeline/,
+    'raw packaging without a configured private signing session remains blocked');
   writeFileSync(resolve(guardFixture, 'build-profile.json5'), '{"changed":true}');
   assert.throws(() => assertCanonicalHapInvocation(['assembleHap'], guardFixture, env), /pipeline/);
 } finally { rmSync(guardFixture, { recursive: true, force: true }); }
@@ -240,5 +261,166 @@ try {
       'the dependency directory itself must remain inside the build sandbox');
   } finally { rmSync(outside, { recursive: true, force: true }); }
 } finally { rmSync(dependencies, { recursive: true, force: true }); }
+
+const scoped = mkdtempSync(join(tmpdir(), 'reader-hap-scoped-contracts-'));
+try {
+  const run = join(scoped, 'run'); mkdirSync(run);
+  mkdirSync(join(scoped, 'tools')); mkdirSync(join(scoped, 'entry/src'), { recursive: true }); mkdirSync(join(scoped, 'sdk'));
+  writeFileSync(join(scoped, 'entry/src/App.ets'), 'original source');
+  writeFileSync(join(scoped, 'sdk/compiler.js'), 'original compiler');
+  const loaderFixture = join(scoped, 'sdk/build-tools/ets-loader');
+  for (const name of ['lib', 'declarations', 'node_modules/typescript', 'node_modules/json5']) {
+    mkdirSync(join(loaderFixture, name), { recursive: true });
+  }
+  writeFileSync(join(loaderFixture, 'main.js'), 'original SDK main');
+  writeFileSync(join(loaderFixture, 'package.json'), '{"name":"SDK fixture"}');
+  writeFileSync(join(loaderFixture, 'node_modules/json5/index.js'), 'original dependency');
+  const sdkBefore = contractToolchainSnapshot([loaderFixture]);
+  for (const path of ['main.js', 'package.json', 'node_modules/json5/index.js']) {
+    const file = join(loaderFixture, path), original = readFileSync(file);
+    writeFileSync(file, 'changed actual SDK input');
+    assert.throws(() => assertSnapshotUnchanged(sdkBefore, contractToolchainSnapshot([loaderFixture]), 'actual SDK dependency'), /changed/);
+    writeFileSync(file, original);
+  }
+  assert.ok(remainingContractBudget(performance.now(), 2000) <= 108000);
+  assert.throws(() => remainingContractBudget(performance.now() - 110001), /deadline exceeded/);
+  assert.throws(() => runPipelineCommand(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { timeoutMs: 120 }),
+    error => error.code === 'ETIMEDOUT', 'actual synchronous stage child is killed at its remaining budget');
+  for (const name of ['test-selected.mjs', 'test-omitted.mjs']) writeFileSync(join(scoped, 'tools', name), 'console.log("actual child PASS");');
+  const classification = { schemaVersion: 1, source: ['test-selected.mjs'], integration: ['test-omitted.mjs'],
+    scopes: { 'manga-image-cache': ['test-selected.mjs'] } };
+  writeFileSync(join(scoped, 'tools/contract-test-tiers.json'), JSON.stringify(classification));
+  mkdirSync(join(scoped, 'scripts'));
+  copyFileSync(new URL('../scripts/hap-pipeline.mjs', import.meta.url), join(scoped, 'scripts/hap-pipeline.mjs'));
+  copyFileSync(new URL('./hap-contract-evidence-policy.json', import.meta.url), join(scoped, 'tools/hap-contract-evidence-policy.json'));
+  assert.equal(buildContractScope(new Map(), scoped), undefined);
+  assert.equal(buildContractScope(new Map([['--contracts-scope', 'manga-image-cache']]), scoped), 'manga-image-cache');
+  for (const options of [new Map([['--class', 'acceptance'], ['--contracts-scope', 'manga-image-cache']]),
+    new Map([['--contracts-scope', 'unknown']]), new Map([['--contracts-scope', '']]), new Map([['--resume', 'old']])]) {
+    assert.throws(() => buildContractScope(options, scoped), /contracts-scope|unknown build argument|missing/);
+  }
+  // Actual canonical argv rejects before signing, Native admission or any build.
+  for (const argv of [['--class', 'acceptance', '--contracts-scope', 'manga-image-cache'],
+    ['--contracts-scope', 'unknown'], ['--resume', 'old'], ['--contracts-scope', '--signing', 'unsigned'],
+    ['--class', 'iteration', '--class', 'acceptance']]) {
+    let rejected;
+    try { execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/hap-pipeline.mjs', import.meta.url)), 'build', ...argv],
+      { encoding: 'utf8', timeout: 5000 }); } catch (error) { rejected = error; }
+    assert.ok(rejected); assert.equal(rejected.status, 2);
+    assert.match(rejected.stderr, /contracts-scope|unknown build argument|invalid argument|duplicate argument/);
+  }
+  const snapshots = { source: sourceSnapshot(scoped), controller: controllerSnapshot(scoped),
+    workspace: workspaceContractSnapshot(scoped), toolchain: contentSnapshot(scoped, ['sdk']) };
+  const names = { source: 'source-snapshot.json', controller: 'controller-snapshot.json',
+    workspace: 'workspace-contract-snapshot.json', toolchain: 'contract-toolchain-snapshot.json' };
+  const inputs = Object.fromEntries(Object.entries(snapshots).map(([key, snapshot]) => {
+    writeFileSync(join(run, names[key]), JSON.stringify(snapshot));
+    return [key, snapshotDescriptor(snapshot, names[key])];
+  }));
+  const actual = await runContractsBounded(scoped, 'full', 1, { scope: 'manga-image-cache', timeoutMs: 2000 });
+  actual.pipelineGateMilliseconds = actual.millisecondsTotal;
+  const contracts = publishContractEvidence(run, actual, 'manga-image-cache', inputs, scoped);
+  const manifest = { buildClass: 'iteration', acceptanceEligible: false, source: { buildInputs: inputs.source }, gates: {
+    harmonyContracts: 'PARTIAL', contracts, controllerInputs: inputs.controller,
+    workspaceContractInputs: inputs.workspace, contractToolchainInputs: inputs.toolchain } };
+  verifyContractEvidence(run, manifest);
+  assert.deepEqual(contracts.selected, ['test-selected.mjs']); assert.deepEqual(contracts.omitted, ['test-omitted.mjs']);
+  assert.equal(contracts.fullSuite, 'NOT_RUN');
+  for (const change of [value => { value.gates.harmonyContracts = 'PASS'; }, value => { value.buildClass = 'acceptance'; },
+    value => { value.acceptanceEligible = true; }, value => { delete value.gates.contracts; },
+    value => { value.gates.contracts.selected.push('test-omitted.mjs'); }, value => { value.gates.contracts.fullSuite = 'PASS'; },
+    value => { delete value.gates.contracts; delete value.gates.contractToolchainInputs; value.gates.harmonyContracts = 'PASS'; },
+    value => { delete value.gates.contracts; delete value.gates.contractToolchainInputs; delete value.gates.controllerInputs; value.gates.harmonyContracts = 'PASS'; },
+    value => { delete value.gates.controllerInputs; }]) {
+    const invalid = structuredClone(manifest); change(invalid); assert.throws(() => verifyContractEvidence(run, invalid));
+  }
+  const controllerPath = join(run, 'controller-snapshot.json'), controllerBytes = readFileSync(controllerPath);
+  const strippedController = JSON.parse(controllerBytes);
+  strippedController.files = strippedController.files.filter(file => file.path !== 'tools/hap-contract-evidence-policy.json');
+  writeFileSync(controllerPath, JSON.stringify(strippedController));
+  const strippedManifest = structuredClone(manifest);
+  delete strippedManifest.gates.contracts; delete strippedManifest.gates.contractToolchainInputs; strippedManifest.gates.harmonyContracts = 'PASS';
+  assert.throws(() => verifyContractEvidence(run, strippedManifest), /controller snapshot identity mismatch/,
+    'deleting the saved policy record cannot reuse its original controller fingerprint');
+  writeFileSync(controllerPath, controllerBytes);
+  rmSync(controllerPath);
+  assert.throws(() => verifyContractEvidence(run, strippedManifest), /ENOENT/,
+    'deleting the saved controller file cannot create a legacy fallback');
+  writeFileSync(controllerPath, controllerBytes);
+
+  // Genuine pre-policy v2 shape: a bound legacy controller and full PASS,
+  // without the new mandatory-policy record or detailed contract ledger.
+  const legacyRoot = join(scoped, 'legacy-source'), legacyRun = join(scoped, 'legacy-run');
+  mkdirSync(join(legacyRoot, 'scripts'), { recursive: true }); mkdirSync(legacyRun);
+  writeFileSync(join(legacyRoot, 'scripts/hap-pipeline.mjs'), 'pre-policy full controller fixture\n');
+  const legacyController = controllerSnapshot(legacyRoot);
+  writeFileSync(join(legacyRun, 'controller-snapshot.json'), JSON.stringify(legacyController));
+  const legacyManifest = { schemaVersion: 2, buildClass: 'iteration', acceptanceEligible: false,
+    gates: { harmonyContracts: 'PASS', controllerInputs: snapshotDescriptor(legacyController, 'controller-snapshot.json') } };
+  assert.doesNotThrow(() => verifyContractEvidence(legacyRun, legacyManifest));
+  const legacyWithoutController = structuredClone(legacyManifest); delete legacyWithoutController.gates.controllerInputs;
+  assert.throws(() => verifyContractEvidence(legacyRun, legacyWithoutController), /controller snapshot path/);
+  const legacyPartial = structuredClone(legacyManifest); legacyPartial.gates.harmonyContracts = 'PARTIAL';
+  assert.throws(() => verifyContractEvidence(legacyRun, legacyPartial), /evidence is missing/);
+  const legacyWithNewLedger = structuredClone(legacyManifest); legacyWithNewLedger.gates.contracts = contracts;
+  assert.throws(() => verifyContractEvidence(legacyRun, legacyWithNewLedger), /not bound to its controller policy/);
+  const receiptPath = join(run, 'contracts/results.json'), receipt = JSON.parse(readFileSync(receiptPath, 'utf8'));
+  const saveReceipt = value => {
+    writeFileSync(receiptPath, JSON.stringify(value));
+    const bytes = readFileSync(receiptPath);
+    manifest.gates.contracts.evidence = { path: 'contracts/results.json', bytes: bytes.length, sha256: hash(bytes) };
+  };
+  for (const change of [value => { value.results = []; }, value => { value.results.push(value.results[0]); },
+    value => { value.results[0].timedOut = true; }, value => { value.results[0].status = 7; },
+    value => { value.selected.push('test-omitted.mjs'); }, value => { value.omitted = []; },
+    value => { value.inputs.controller.fingerprint = 'bad'; }, value => { value.timeoutMs = 110001; },
+    value => { value.scope = 'full'; }, value => { value.scopeExpired = true; },
+    value => { value.unrun = ['test-selected.mjs']; }, value => { value.millisecondsTotal = 110001; },
+    value => { value.pipelineGateMilliseconds = 110001; }, value => { value.scopeTimeoutMs = null; },
+    value => { value.results[0].milliseconds = value.millisecondsTotal + 1; }]) {
+    const invalid = structuredClone(receipt); change(invalid); saveReceipt(invalid);
+    assert.throws(() => verifyContractEvidence(run, manifest), /contract evidence/);
+  }
+  saveReceipt(receipt);
+  const logPath = join(run, receipt.results[0].log.path), log = readFileSync(logPath);
+  writeFileSync(logPath, 'altered log'); assert.throws(() => verifyContractEvidence(run, manifest), /file identity mismatch/);
+  writeFileSync(logPath, log);
+  const selectedPath = join(run, receipt.selection.path), selectionBytes = readFileSync(selectedPath);
+  writeFileSync(selectedPath, JSON.stringify({ ...classification, scopes: { 'manga-image-cache': ['test-omitted.mjs'] } }));
+  const newSelection = readFileSync(selectedPath), altered = structuredClone(receipt);
+  altered.selection.bytes = newSelection.length; altered.selection.sha256 = hash(newSelection); saveReceipt(altered);
+  assert.throws(() => verifyContractEvidence(run, manifest), /tested controller snapshot/);
+  writeFileSync(selectedPath, selectionBytes); saveReceipt(receipt); verifyContractEvidence(run, manifest);
+  rmSync(logPath); symlinkSync(join(scoped, 'sdk/compiler.js'), logPath);
+  assert.throws(() => verifyContractEvidence(run, manifest), /symbolic links/);
+  rmSync(logPath); writeFileSync(logPath, log);
+
+  // Full remains all selected, with no omissions; a scope cannot be laundered
+  // into full by changing only the outer status labels.
+  const fullRun = join(scoped, 'full-run'); mkdirSync(fullRun);
+  const fullReport = await runContractsBounded(scoped, 'full', 1, { timeoutMs: 2000 });
+  fullReport.pipelineGateMilliseconds = fullReport.millisecondsTotal;
+  for (const [key, snapshot] of Object.entries(snapshots)) writeFileSync(join(fullRun, names[key]), JSON.stringify(snapshot));
+  const fullContracts = publishContractEvidence(fullRun, fullReport, undefined, inputs, scoped);
+  const fullManifest = structuredClone(manifest); fullManifest.gates.harmonyContracts = 'PASS'; fullManifest.gates.contracts = fullContracts;
+  verifyContractEvidence(fullRun, fullManifest); assert.equal(fullContracts.selected.length, 2); assert.deepEqual(fullContracts.omitted, []);
+  const failedReport = structuredClone(actual); failedReport.results[0].timedOut = true;
+  assert.throws(() => publishContractEvidence(join(scoped, 'failed'), failedReport, 'manga-image-cache', inputs, scoped), /unsuccessful/);
+
+  writeFileSync(join(scoped, 'entry/src/App.ets'), 'changed during contracts');
+  assert.throws(() => assertSnapshotUnchanged(snapshots.source, sourceSnapshot(scoped), 'source inputs during contracts'), /changed/);
+  writeFileSync(join(scoped, 'tools/test-selected.mjs'), 'changed during contracts');
+  assert.throws(() => assertSnapshotUnchanged(snapshots.controller, controllerSnapshot(scoped), 'controller inputs during contracts'), /changed/);
+  writeFileSync(join(scoped, 'sdk/compiler.js'), 'changed during contracts');
+  assert.throws(() => assertSnapshotUnchanged(snapshots.toolchain, contentSnapshot(scoped, ['sdk']), 'toolchain inputs during contracts'), /changed/);
+  assert.ok(pipeline.indexOf('const sourceBefore = sourceSnapshot(REPO_ROOT)') < pipeline.indexOf('const contractsResultPath'),
+    'tested source snapshot must be captured before the selected gate');
+  assert.match(pipeline, /source inputs during contracts/); assert.match(pipeline, /contract toolchain inputs during contracts/);
+  assert.match(pipeline, /contract toolchain inputs'\)/);
+  assert.match(pipeline, /nativeProvenanceArguments\(\), '--preflight'/);
+  assert.match(pipeline, /assertSigningMaterialAuthority\(signingProfile/);
+  assert.match(pipeline, /'--no-daemon', '--no-incremental'/);
+  console.log('PASS scoped HAP contracts: actual children, full inventory, early argv rejection, exact receipt/log/input binding and tamper rejection');
+} finally { rmSync(scoped, { recursive: true, force: true }); }
 
 console.log('HarmonyOS HAP pipeline contract: PASS');

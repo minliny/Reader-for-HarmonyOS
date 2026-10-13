@@ -243,7 +243,7 @@ for (const name of ['LocalBookDetail', 'NoCoverCover']) {
 sdkRequire(sdkRoot + '/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('externalDirectory');
 function detailSdk(f) {
   const read = file => readFileSync(new URL(file, base), 'utf8');
-  const parent = createReaderBuilderProbe(read('pages/Index.ets'), ['detailContent','detailSurface','detailReadableAdmission','detailBookKey','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','isCurrentRuntime'], { EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,message:''},LocalBookDetail: DetailChild, LOCAL_SOURCE_ID: 'local' }).owner;
+  const parent = createReaderBuilderProbe(read('pages/Index.ets'), ['detailContent','detailSurface','detailReadableAdmission','detailShelfMessage','detailBookKey','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','isCurrentRuntime'], { EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,message:''},LocalBookDetail: DetailChild, LOCAL_SOURCE_ID: 'local' }).owner;
   Object.assign(parent, f.page, { shelfOperation: {generation:0,removalKey:'',busy:false,batchRemovalBusy:false}, readableAdmissions: [], detailShelfAdmissionMount:1,
     offlineMutationActiveKey: '',
     detailBookKey: b => JSON.stringify([b.sourceId, b.bookId]), hasUnknownShelfWrite: () => false,

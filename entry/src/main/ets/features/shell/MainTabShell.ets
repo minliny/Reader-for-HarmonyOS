@@ -7,6 +7,7 @@ import {
   readerInteractiveSafeLeft,
   readerVisualSafeTop,
 } from '../common/ReaderWindowMetrics';
+import { ReaderPageFrameModifier } from '../common/ReaderPageShell';
 
 
 // MainTabShell —— 主页面(书架/发现/RSS/设置)公共骨架 (FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §七)。
@@ -43,6 +44,7 @@ export struct MainTabShell {
       }
       .width('100%')
       .height('100%')
+      .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
     } else {
       Stack({ alignContent: Alignment.Bottom }) {
@@ -63,6 +65,7 @@ export struct MainTabShell {
       }
       .width('100%')
       .height('100%')
+      .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
     }
   }

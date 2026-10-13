@@ -5,6 +5,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { mangaDirectoryPresentation } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
 import { mangaDirectoryEntryRows } from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600 } from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
@@ -13,12 +14,12 @@ import { sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/
 const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets', import.meta.url), 'utf8');
 const names = ['row', 'presentation', 'scheme', 'currentChapterIndex', 'collapsedBranches', 'query', 'showContext',
   'interactionEnabled', 'chapterDownloadEnabled', 'branchControlsEnabled', 'onSelectEntry', 'onToggleBranch', 'onDownloadEntry',
-  'fontScale', 'cellHeight', 'windowMetricsRevision', 'liveEntry', 'liveLabel', 'facts', 'color', 'current', 'expanded', 'downloadable', 'title', 'gridLabel', 'accessibility', 'activateEntry',
+  'fontScale', 'cellHeight', 'windowMetricsRevision', 'liveEntry', 'liveLabel', 'facts', 'color', 'current', 'expanded', 'downloadable', 'title', 'status', 'gridLabel', 'accessibility', 'activateEntry',
   'download', 'numberCell', 'branchToggle', 'fullWidthEntry', 'fullWidthEntryBody', 'emptySlots', 'build'];
 const fonts = { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600 };
 function mount(entries, options = {}, candidate = source) {
   const properties = createArkUIPropertyRuntimeProbe();
-  const { owner } = createReaderBuilderProbe(candidate, names, { ...visual, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: options.systemFontScale ?? 1 }) }, ...fonts, ...properties.sdk }, properties.hooks);
+  const { owner } = createReaderBuilderProbe(candidate, names, { ...visual, mangaDirectoryDisplay, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: options.systemFontScale ?? 1 }) }, ...fonts, ...properties.sdk }, properties.hooks);
   const selected = [], folded = [], downloaded = [];
   const presentation = mangaDirectoryPresentation(entries);
   Object.assign(owner, { row: mangaDirectoryEntryRows(entries, presentation)[0], presentation,
@@ -65,6 +66,12 @@ assert.equal(downloadShield.focusable, false); assert.equal(downloadShield.acces
 downloadShield.onClick();
 assert.deepEqual(parent.selected, [7], 'the inert download shield has no chapter callback authority');
 assert.equal(parent.nodes().find(node => node.type === 'Row' && node.constraintSize).constraintSize.minHeight, 58);
+
+const paid = mount([{ index: 13, title: '特别篇', navigable: true, downloadState: 'completed', isVip: true, isPay: true },
+  { index: 14, title: '番外篇', navigable: true, downloadState: 'missing', isVip: true, isPay: false }]);
+assert.ok(paid.nodes().some(node => node.type === 'Text' && node.create === 'VIP · 已购'), 'paid VIP status is rendered from explicit Core facts');
+assert.equal(mangaDirectoryDisplay({ title: '第14话', isVip: true, isPay: false }).statusText, 'VIP',
+  'unpaid VIP status remains distinct from purchased');
 
 const group = mount([{ index: 11, title: '卷组', level: 1, navigable: false },
   { index: 23, title: '1', level: 2, navigable: true }]);

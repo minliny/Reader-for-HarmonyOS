@@ -5,7 +5,7 @@ import { stripTypeScriptTypes } from 'node:module';
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const executable = async source => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
 const withoutImports = source => source.replace(/^import[\s\S]*?;\n/gm, '');
-const dependencies = `${read('features/common/BookAuthorMetadata.ts')}\n${read('app/ErrorMessage.ts')}\n${read('features/source/ReaderSourceCategory.ts')}\n${withoutImports(read('features/common/CachedBookIdentity.ts'))}\n${withoutImports(read('features/common/BookAcquisitionPresentation.ts'))}`;
+const dependencies = `${read('features/common/BookAuthorMetadata.ts')}\n${withoutImports(read('features/common/BookSearchTiming.ts'))}\n${read('app/ErrorMessage.ts')}\n${read('features/source/ReaderSourceCategory.ts')}\n${withoutImports(read('features/source/SourceSwitchProviderFamily.ts'))}\n${withoutImports(read('features/common/CachedBookIdentity.ts'))}\n${withoutImports(read('features/common/BookAcquisitionPresentation.ts'))}`;
 const { SearchGateway } = await executable(dependencies + withoutImports(read('features/search/SearchBookProjection.ts')) + withoutImports(read('features/search/SearchGateway.ts')));
 const switchSource = read('features/source/SourceSwitchGateway.ts');
 const { SourceSwitchGateway, sourceSwitchCandidateKey, sourceSwitchSourceCount } = await executable(dependencies + withoutImports(read('app/BookRequestScheduler.ts')) + withoutImports(switchSource));
@@ -72,7 +72,7 @@ const seed = { sourceId: 'source-0', bookId: 'book-0', detailUrl: 'book-0', titl
   groupKey: '搜索旧名\u0000作者', sourceRuleVersion: 'v1', sourceName: '书源 0', category: 'novel', variables: [] };
 const search = new SearchGateway(runtime);
 const picker = new SourceSwitchGateway(runtime);
-const query = { sourceId: seed.sourceId, bookId: seed.bookId, bookName: seed.title, author: seed.author,
+const query = { sourceId: seed.sourceId, bookId: seed.bookId, bookName: '详情新名', author: seed.author,
   currentChapterIndex: 0, currentChapterTitle: '' };
 const liveSeed = row => ({ ...seed, sourceId: row.origin, sourceName: `书源 ${row.origin}`, bookId: row.bookUrl, detailUrl: row.bookUrl });
 const querySeeds = admittedRows.map(liveSeed);
@@ -223,8 +223,10 @@ assert.ok(calls.every(method => ['source.list', 'search-book.batch.get', 'search
   for (const selected of [first, bridge, { ...first, sourceId: 'chain-72', bookId: 'url-72', title: 'Old title' }]) {
     const projection = await switcher.loadCachedCandidates({ ...query, sourceId: selected.sourceId, bookId: selected.bookId,
       bookName: selected.title, author: selected.author });
-    assert.deepEqual(projection.map(identity).sort(), expected, 'opening any candidate must resolve the same cache component');
-    assert.equal(sourceSwitchSourceCount(projection), 73);
+    const selectable = related.filter(row => row.name === selected.title);
+    assert.deepEqual(projection.map(identity).sort(), selectable.map(row=>identity({sourceId:row.origin,bookUrl:row.bookUrl})).sort(),
+      'source switching requires canonical same-book metadata even when historical aliases bridge a larger search component');
+    assert.equal(sourceSwitchSourceCount(projection), selected.title === 'Old title' ? 12 : 61);
   }
 }
 
@@ -260,4 +262,4 @@ assert.equal(bookIntroText(`<span ${' '.repeat(100000)}`), '<span', 'an unfinish
 assert.match(page.slice(cardStart), /if \(this\.displayIntro\(\)\.length > 0\)/, 'markup-only search summaries must not reserve a blank row');
 assert.match(page.slice(cardStart), /Text\(this\.displayIntro\(\)\)/);
 assert.match(detail, /Text\(this\.displayIntro\(\) \|\| '暂无简介'\)/);
-console.log('shared metadata: identical 56/55 and transitive 74/73 URL/source sets, rename/remount, no network, synopsis presentation: PASS');
+console.log('shared metadata: canonical 56/55 source sets; Search retains transitive 74/73 history while source switching verifies current title/author; remount, no network, synopsis presentation: PASS');

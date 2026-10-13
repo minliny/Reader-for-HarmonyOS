@@ -15,6 +15,34 @@ const tree=ts.createSourceFile('/tmp/MangaRenderKeyProbe.ets',source,ts.ScriptTa
 assert.equal(tree.parseDiagnostics.length,0);
 const component=tree.statements.find(node=>node.name?.getText(tree)==='MangaReadingSurface');
 const names=component.members.map(node=>node.name?.getText(tree)).filter(Boolean);
+// Verify the actual production syncLoad argument against the official Image
+// declaration as well as executing its SDK-emitted Builder property below.
+const imageBuilder=component.members.find(node=>node.name?.getText(tree)==='imageViewport');
+const syncArguments=[];
+function findSyncLoad(node){
+  if(ts.isCallExpression(node)&&node.expression?.name?.text==='syncLoad')syncArguments.push(node.arguments[0].getText(tree));
+  ts.forEachChild(node,findSyncLoad);
+}
+findSyncLoad(imageBuilder);assert.deepEqual(syncArguments,['true']);
+const officialChecker=require(`${sdk}/lib/ets_checker.js`);
+const typePath='/tmp/MangaLocalImageSyncType.ts';
+const typeOptions={...officialChecker.compilerOptions,
+  ets:{...officialChecker.compilerOptions.ets,libs:[`${sdk}/declarations/index-full.d.ts`]},
+  target:ts.ScriptTarget.ES2021,lib:['lib.es2021.d.ts'],module:ts.ModuleKind.CommonJS,moduleResolution:ts.ModuleResolutionKind.NodeJs,
+  strict:true,noEmit:true,skipLibCheck:true,allowNonTsExtensions:true};
+function imageArgumentDiagnostics(argument){
+  const host=ts.createCompilerHost(typeOptions),original=host.getSourceFile,exists=host.fileExists;
+  host.fileExists=path=>path===typePath||exists(path);
+  host.getSourceFile=(path,version,...rest)=>{
+    const file=path===typePath?ts.createSourceFile(path,`Image('file://prepared-display.png').syncLoad(${argument});`,version,true,ts.ScriptKind.TS,typeOptions):original(path,version,...rest);
+    if(file)file.version='1';return file;
+  };
+  const program=ts.createSemanticDiagnosticsBuilderProgram([typePath,`${sdk}/../../component/image.d.ts`,...officialChecker.readDeaclareFiles()],typeOptions,host);
+  return program.getSyntacticDiagnostics().concat(program.getSemanticDiagnostics()).filter(item=>item.file?.fileName===typePath)
+    .map(item=>({code:item.code,message:ts.flattenDiagnosticMessageText(item.messageText,' ')}));
+}
+assert.deepEqual(imageArgumentDiagnostics(syncArguments[0]),[],'production Image.syncLoad argument passes formal SDK semantics');
+assert.ok(imageArgumentDiagnostics("'async'").some(item=>item.code===2345),'the official Image declaration rejects an invalid synchronous-loading argument');
 const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
 const Projection=new Function(`${stripTypeScriptTypes(projectionSource)};return MangaStripProjection`)();
 const dataSourceText=tree.statements.find(node=>node.name?.getText(tree)==='MangaStripDataSource').getText(tree);
@@ -80,10 +108,13 @@ tiles.set('0:0',{image:{fileUri:'file://lease-a.png',revision:'image-r1'}});noti
 assert.notEqual(frame().key,geometryKey,'ready pixels must replace the former spinner branch');
 assert.ok(has('Image'));assert.ok(!has('LoadingProgress'));
 assert.equal(frame().nodes.find(node=>node.type==='Image').create,'file://lease-a.png');
+assert.equal(frame().nodes.find(node=>node.type==='Image').syncLoad,true,
+  'the actual SDK local-display Image must request synchronous loading on a ready lease');
 assert.equal(frame().nodes.find(node=>node.type==='Image').draggable,false,
   'the actual SDK Image must explicitly disable system drag-and-drop');
 const listNode=[...owner.nodes.values()].find(node=>node.type==='List');
 const scrollNode=[...owner.nodes.values()].find(node=>node.type==='Scroll');
+assert.equal(listNode.cachedCount,0,'local image sync loading does not preload or retain chapter-wide native nodes');
 for(const node of [listNode,scrollNode]){
   assert.ok(node);assert.notEqual(node.enabled,false,'image drag suppression must not disable its scrolling parent');
   assert.notEqual(node.hitTestBehavior,'HitTestMode.None','parent hit testing must remain available');
@@ -129,6 +160,7 @@ assert.equal(secondReady.nodes.find(node=>node.type==='Image')?.create,'file://s
 assert.ok(!secondReady.nodes.some(node=>node.type==='LoadingProgress'));
 assert.equal(secondReady.businessKey,secondPending.businessKey);
 assert.equal(secondReady.nodes.find(node=>node.type==='Image').draggable,false,'newly published tiles keep the explicit drag policy');
+assert.equal(secondReady.nodes.find(node=>node.type==='Image').syncLoad,true,'later completed display regions also load synchronously');
 // Error ownership is a presentation transition even when each failed tile's
 // own error text/geometry are unchanged. Retain old branches strictly by key.
 tiles.set('0:0',{error:'READING_IMAGE_HTTP_FAILED'});
@@ -148,6 +180,26 @@ tiles.set('0:0',{image:{fileUri:'file://recovered-primary.png',revision:'recover
 const promotedFailure=lazy.rows.get(1);
 assert.notEqual(promotedFailure.key,demotedFailure.key,'recovered first image transfers the card without changing the next tile error');
 assert.ok(promotedFailure.nodes.some(node=>node.type==='Button'),'the next unresolved tile has a retry after its predecessor recovers');
+
+// Whole-chapter ready facts stay with the Controller. Native virtualization
+// can remount a distant row without the Surface rebuilding a pending branch.
+// Model row disposal explicitly, then execute the SDK item/key callbacks;
+// this checks Builder lowering and business state, not native painted frames.
+geometry.set(0,{width:600,height:12000,tileHeight:600});
+pages.set(0,{ordinal:0,status:'ready'});
+for(let tile=0;tile<20;tile++)tiles.set(`0:${tile}`,{image:{fileUri:`file://chapter-region-${tile}.png`,revision:`region-${tile}`}});
+project();
+const returnRow=owner.data.getData(0),returnKey=owner.rowRenderKey(returnRow);
+for(const index of [0,4,8,12,16,19,12,4,0]){
+  owner.first=index;owner.last=index;lazy.visible=[index];lazy.rows.delete(index);
+  owner.publish();
+  const row=lazy.rows.get(index),image=row?.nodes.find(node=>node.type==='Image');
+  assert.ok(image,`ready whole-chapter region ${index} remounts directly as Image`);
+  assert.equal(image.create,`file://chapter-region-${index}.png`);assert.equal(image.syncLoad,true);
+  assert.ok(!row.nodes.some(node=>node.type==='LoadingProgress'),'returning ready facts cannot become a Surface pending placeholder');
+}
+assert.equal(owner.rowRenderKey(returnRow),returnKey,'distant remounts preserve the completed row key and original URI/revision');
+console.log('PASS actual SDK local display Image syncLoad=true across first/replacement and 20-region whole-chapter backscroll remount; cachedCount remains zero (native first-frame pixels, read/decode and frame time require target validation)');
 console.log('PASS actual SDK Image draggable=false on first/replacement tile; scrolling parents retain hit testing, enabled state and real touch/scroll callbacks (native gesture outcome not tested)');
 console.log('PASS actual SDK LazyForEach item/key callbacks with strict per-index retention: placeholder geometry, ready image, errors, retry, URI/revision changes, unchanged and nonvisible stability, logical identity and anchor preservation, actual publish to the next requested visible tile (native layout/pixels not tested)');
 console.log('PASS actual SDK retained failure rows transfer a visible retry card after viewport scrolling and preceding-image recovery');

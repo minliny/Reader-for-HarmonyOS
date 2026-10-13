@@ -493,7 +493,7 @@ const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/Rea
   'widePanel','persistentDirectory','directoryColumnWidth','panelWidth','panelContentInset','panelHeight','panelContentHeight',
   'panelInsets','interactiveInsets','windowInteractiveInsets','controlsPresentedForWindow','pageOrdinal'],{...mangaDirectoryAdaptiveDependencies,...deps.mangaSurfaceSdkDependencies}).owner;
  const entries=[{index:2,title:'Volume',navigable:false,level:1},{index:7,title:'Chapter',navigable:true,level:2},{index:9,title:'Renamed chapter',navigable:true,level:2}];
- Object.assign(owner,{sourceId:'source',bookId:'book',remoteSession:{entries},downloadEnabled:true,
+ Object.assign(owner,{sourceId:'source',bookId:'book',remoteSession:{contentKind:'manga',identity:{sourceId:'source',bookId:'book'},entries},downloadEnabled:true,
   directoryProjection:[{index:7,title:'Chapter',downloadState:'paused'},{index:9,title:'Other title',downloadState:'completed'}],
   directoryQuery:'',directoryAscending:true,directoryRevision:0,directoryOpenRevision:0,publishedManifestVersion:'version',
   backgroundPreference:'paper',panelPhase:'open',stageWidth:500,stageHeight:900,viewportWidth:500,viewportHeight:900,
@@ -510,8 +510,9 @@ const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/Rea
 }
 {
  const owner=createReaderBuilderProbe(readFileSync(indexFile,'utf8'),['externalDirectory','directoryRecovery'],
-  {BookDirectoryPage:Child,EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery,
-    ReaderRuntimeOwner:{current:()=>({supportsCoreCapability:()=>true})}}).owner;
+  {BookDirectoryPage:Child,ReaderFullDirectory:Child,EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery,
+    ReaderRuntimeOwner:{current:()=>({supportsCoreCapability:()=>true})}},
+  {childSources:{ReaderFullDirectory:readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderFullDirectory.ets',import.meta.url),'utf8')}}).owner;
  const calls=[];Object.assign(owner,{detailBook:{sourceId:'source',bookId:'book',title:'Title',contentKind:'manga'},detailToc:[],
   directoryOperationPresentationId:()=>'',directoryOperation:undefined,offlineOperation:undefined,
   loadMangaDownloadActions:async index=>{calls.push(['load',index]);return [];},performMangaDownloadAction:async(...args)=>calls.push(['action',...args])});

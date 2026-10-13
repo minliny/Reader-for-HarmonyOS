@@ -48,7 +48,7 @@ async function fixture(text=indexSource,gatewayText=source('features/bookshelf/B
 for(const fail of['read','lost','lostBefore','malformed']){
  const f=await fixture(),b=f.r.books[0];f.i.openShelfGroup(b);await f.settle();
  if(fail==='read')f.r.readFailure='book-group.list';if(fail==='lost')f.r.lost='bookshelf.group.assign';if(fail==='lostBefore')f.r.lostBefore='bookshelf.group.assign';if(fail==='malformed')f.r.malformed=true;
- f.group().select.onClick();await f.settle();assert.equal(f.writes().length,1);assert.equal(f.i.editingShelfGroupBook,b);
+ f.group().select.onClick();await f.settle();assert.equal(f.writes().length,1);assert.equal(f.raw(f.i.editingShelfGroupBook),b);
  const receipt=f.i.bookshelfManagementSnapshot.receipt;assert.equal(receipt.receipt.confirmation,fail==='read'?'confirmed':'unknown');
  f.i.shelfGroupContent();const n=f.notice();assert.ok(n?.onClick,'actual shared Notice/Action native read-only recovery');n.onClick();n.onClick();await f.settle();
  assert.equal(f.writes().length,1,'double read recovery never repeats group write');
@@ -66,7 +66,7 @@ for(const stage of['before','after']){
  assert.equal(oldOwner.isPresentationCurrent(next.i.bookshelfManagementPresentationIdentity),true,'stale attach cannot steal successor');
  f.host.detachManagementPresentation();gate.resolve();await oldTail;await f.settle();
  assert.deepEqual(f.i.bookshelfManagementSnapshot,oldSnapshot);assert.equal(f.writes().length,stage==='before'?0:1);
- assert.equal(next.i.editingShelfGroupBook,replacementBook);assert.equal(next.refresh(),0);
+ assert.equal(next.raw(next.i.editingShelfGroupBook),replacementBook);assert.equal(next.refresh(),0);
  if(stage==='after')assert.equal(next.i.bookshelfManagementSnapshot.receipt.receipt.confirmation,'confirmed','actual old ACK settles domain truth for same Runtime successor');
  cases++;
 }

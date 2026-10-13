@@ -1,12 +1,20 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
+import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+registerHooks({ resolve(specifier, context, nextResolve) {
+  try { return nextResolve(specifier, context); }
+  catch (error) {
+    if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return nextResolve(`${specifier}.ts`, context);
+    throw error;
+  }
+} });
+const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
 const manifest = {chapter:{sourceId:'s',bookId:'b',chapterId:'chapter'},sourceRuleVersion:'rules',manifestVersion:'v',decodeRevision:'bytes-v1',pages:[{ordinal:0,pageId:'page',resourceRef:'page'}]};
 const file = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
 const methods = ['loadReadingImage', 'loadReadingImageOwned', 'prefetchReadingImage',
   'prefetchReadingImageOwned', 'runMangaImageWork', 'drainMangaImageWork', 'mangaStorageChapter', 'prepareReadingImageBytes',
-  'assertReadingImageCurrent', 'admitReadingImage', 'releaseReadingImage',
+  'assertReadingImageCurrent', 'admitReadingImage', 'releaseReadingImage', 'captureReadingContentValidity',
   'markOfflineImageChapterComplete', 'isOfflineImageChapterComplete'];
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return {promise,resolve,reject}; };
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -39,20 +47,90 @@ function fixture() {
     hilog:{error(...args){failures.push(args.at(-1));}},LOG_DOMAIN:0
   });
   const owner = new Owner(); owner.state='ready';owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;owner.mangaImageQueue=[];owner.mangaImageActive=false;owner.mangaImageUrgentStreak=0;
+  const preparations = new ReadingEntryPreparation(owner, false);
+  owner.readingEntryPreparations = () => preparations;
+  const storage = { epoch: 0, restoring: false, closed: false };
   owner.readingImageCacheIdentity=(sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl)=>({sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl});
   owner.resolveReadingImageRequest=async(_sourceId,imageUrl)=>({bookId:imageUrl});
   owner.readingImageDiskCache={
-    captureValidity(_sourceId,bookId,current) { const generation=generations.get(bookId)??0;return ()=>owner.state==='ready'&&(generations.get(bookId)??0)===generation&&current?.()!==false; },
+    captureValidity(_sourceId,bookId,current) { const generation=generations.get(bookId)??0, epoch=storage.epoch;return ()=>owner.state==='ready'&&!storage.closed&&!storage.restoring&&storage.epoch===epoch&&(generations.get(bookId)??0)===generation&&current?.()!==false; },
     async loadResource(identity,current) { if(identity.resourceRef!==undefined)assert.equal(identity.mangaDecodeRevision,manifest.decodeRevision);assert.equal(current(),true);events.push(['read',key(identity)]);return cached.get(key(identity)); },
-    async storeResource(identity,bytes,current) { events.push(['store-start',key(identity)]);await stores.get(key(identity))?.promise;if(!current())throw Error('stale store');events.push(['store-end',key(identity)]); },
+    async storeResource(identity,bytes,current) { events.push(['store-start',key(identity)]);await stores.get(key(identity))?.promise;if(!current())throw Error('stale store');cached.set(key(identity),bytes.slice());events.push(['store-end',key(identity)]); },
     async removeResource(identity){events.push(['remove',key(identity)]);},
     async markChapterComplete(chapter,resources,current) { assert.equal(current(),true);events.push(['seal-start',key(chapter),resources[0]?.resourceRef]);await seals.get(key(chapter))?.promise;if(!current())throw Error('stale seal');events.push(['seal-end',key(chapter)]); },
     async isChapterComplete(chapter) { events.push(['check-start',key(chapter)]);await checks.get(key(chapter))?.promise;events.push(['check-end',key(chapter)]);return true; }
   };
   const load=(bookId,current=()=>true,allowNetwork=true)=>owner.loadReadingImage('s',bookId,0,'v','image','chapter',allowNetwork,current,'page',0,manifest.sourceRuleVersion,false,manifest.decodeRevision);
   const prefetch=(bookId,current=()=>true)=>owner.prefetchReadingImage({sourceId:'s',bookId,chapterIndex:0,contentVersion:'v',imageUrl:'image',baseUrl:'chapter',resourceRef:'page',mangaDecodeRevision:manifest.decodeRevision},current,'rules',true);
-  return {owner,body,events,failures,released,stores,fetches,generations,cached,seals,checks,load,prefetch,maxReads:()=>maxReads};
+  return {owner,body,events,failures,released,stores,fetches,generations,cached,seals,checks,load,prefetch,preparations,storage,maxReads:()=>maxReads};
 }
+// A viewport is allowed to retire after first paint while the owned store is
+// still pending. Revisit must use saved originals, including without network.
+{
+  const f=fixture(), gate=deferred(); let visible=true;
+  f.stores.set('b1',gate);
+  const image=await f.load('b1',()=>visible);
+  assert.equal(image.fileUri,'file://page-1');assert.equal(f.cached.has('b1'),false);
+  visible=false;f.body.release(image.fileUri);gate.resolve();await f.owner.mangaImageTail;
+  assert.deepEqual(f.cached.get('b1'),new Uint8Array([1]),'scrolling cannot cancel an already displayed original write');
+  assert.deepEqual(f.failures,[]);
+  await f.load('b1',()=>true,false);await f.load('b1');await f.owner.mangaImageTail;
+  assert.equal(f.events.filter(event=>event[0]==='prepare').length,1,'offline and online revisits do not fetch or transform the image again');
+}
+{
+  const f=fixture();let visible=true;
+  const decode=f.body.loadMangaBytes;
+  f.body.loadMangaBytes=async(...args)=>{const payload=await decode(...args);visible=false;return payload;};
+  await assert.rejects(f.load('b1',()=>visible),/cancelled|superseded/);await f.owner.mangaImageTail;
+  assert.deepEqual(f.released,['file://page-1'],'a cancelled first display still releases its lease');
+  assert.equal(f.events.some(event=>event[0]==='store-start'),false,'unadmitted bytes do not start a viewport-independent write');
+}
+// Use the real content mutation owner: ordinary progress does not replace the
+// bytes, while source/rule/chapter/switch/clear/restore epochs always do.
+{
+  const f=fixture(), gate=deferred();f.stores.set('b1',gate);await f.load('b1');
+  const params={sourceId:'s',bookId:'b1'};
+  assert.equal(f.preparations.beginRequest('reading.progress.update',params),true);
+  f.preparations.finishRequest('reading.progress.update',params);
+  gate.resolve();await f.owner.mangaImageTail;
+  assert.equal(f.cached.has('b1'),true,'ordinary read progress keeps the displayed content owner');
+}
+for (const [method,params] of [
+  ['source.update',{sourceId:'s'}],
+  ['chapter.content',{sourceId:'s',bookId:'b1',forceRefresh:true}],
+  ['replace-rule.update',{}],
+  ['source.switch.commit',{sourceId:'s',bookId:'b1'}],
+  ['manga.sourceSwitch.commit',{sourceId:'s',bookId:'b1'}],
+  ['cache.clear',{sourceId:'s',bookId:'b1'}],
+  ['runtime.storage.restore',{}],
+]) {
+  const f=fixture(), gate=deferred();f.stores.set('b1',gate);await f.load('b1');
+  assert.equal(f.preparations.beginRequest(method,params),true,method);
+  f.preparations.finishRequest(method,params);
+  gate.resolve();await f.owner.mangaImageTail;
+  assert.equal(f.cached.has('b1'),false,`${method} rejects bytes acquired under the old content owner`);
+  assert.deepEqual(f.failures,['stale store']);
+}
+for (const fence of ['clear','restore','restore-pending','disk-close','owner-close','content-owner-close']) {
+  const f=fixture(), gate=deferred();f.stores.set('b1',gate);await f.load('b1');
+  if(fence==='clear')f.generations.set('b1',1);
+  if(fence==='restore')f.storage.epoch++;
+  if(fence==='restore-pending')f.storage.restoring=true;
+  if(fence==='disk-close')f.storage.closed=true;
+  if(fence==='owner-close')f.owner.state='closing';
+  if(fence==='content-owner-close')f.preparations.close();
+  gate.resolve();await f.owner.mangaImageTail;
+  assert.equal(f.cached.has('b1'),false,`${fence} rejects the pending original write`);
+  assert.deepEqual(f.failures,['stale store']);
+}
+{
+  const f=fixture(), gate=deferred();f.stores.set('b1',gate);await f.load('b1');
+  f.preparations.beginRequest('source.update',{sourceId:'other'});
+  f.preparations.finishRequest('source.update',{sourceId:'other'});
+  gate.resolve();await f.owner.mangaImageTail;
+  assert.equal(f.cached.has('b1'),true,'an unrelated source mutation must not discard this book\'s fetched original');
+}
+console.log('PASS displayed manga originals survive viewport retirement and ordinary progress; offline/online revisit avoids HTTP, while actual content mutations and captured clear/restore/owner-close fences revoke stale writes');
 // First-frame completion and owned byte drain are different promises. All manga
 // paths wait before cache reads/HTTP, but a novel call retains existing behavior.
 {

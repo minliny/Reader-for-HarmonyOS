@@ -181,24 +181,24 @@ for(const retirement of ['runtime','mount','closed']){
   assert.deepEqual(i.settingsSnapshot,snapshot,retirement+' late Preferences reply cannot publish values');
   assert.deepEqual(i.settingsOperation,operation,retirement+' late Preferences reply cannot publish completion');cases++;
 }
-for(const failure of ['before','after']){
+for(const changedKey of ['reduceMotion','developerMode'])for(const failure of ['before','after']){
   const n=navigation(),{i}=n;i.openSettings();await n.idle();const initial=n.home();
-  n.f.fail(failure);i.settingsHost.toggle('reduceMotion',true,i.settingsPresentationIdentity);await n.idle();
+  n.f.fail(failure);i.settingsHost.toggle(changedKey,true,i.settingsPresentationIdentity);await n.idle();
   const owner=i.settingsHost.orchestrator,original=owner.gateway.writeFacts(),writeGeneration=owner.writeGeneration,
     originalReceiptGeneration=i.settingsOperation.receipt.facts.generation;
-  assert.equal(i.settingsSnapshot.reduceMotion,true,'real owner keeps the accepted switch value');
+  assert.equal(i.settingsSnapshot[changedKey],true,'real owner keeps the accepted switch value');
   assert.equal(i.settingsOperation.receipt.receipt.confirmation,'unknown');
-  assert.equal(n.f.disk.get('reduceMotion'),failure==='after','fixture distinguishes not-durable and durable-with-lost-ACK flush');
+  assert.equal(n.f.disk.get(changedKey),failure==='after','fixture distinguishes not-durable and durable-with-lost-ACK flush');
   assert.equal(original.pendingReconciliation,true);assert.equal(original.acceptedRevision,1);assert.equal(original.savedRevision,0);
   const writes=()=>n.f.events.filter(event=>event[0]==='put'||event[0]==='flush');
-  const dispatched=structuredClone(writes());assert.equal(dispatched.filter(event=>event[0]==='put').length,4);
+  const dispatched=structuredClone(writes());assert.equal(dispatched.filter(event=>event[0]==='put').length,5);
   assert.equal(dispatched.filter(event=>event[0]==='flush').length,1);
   const pending=n.home();pending.click();assert.equal(i.route,'source');await n.idle();
   const source=n.params('source');source.onBack();assert.equal(i.route,'settings');
   assert.equal(i.settingsHost.orchestrator,owner,'return attaches the original exact Runtime owner');
   assert.equal(i.settingsOperation.receipt.receipt.confirmation,'unknown','synchronous bind does not qualify the missing flush ACK');
   await n.idle();
-  assert.equal(i.settingsSnapshot.reduceMotion,true);assert.equal(i.settingsOperation.action,'reduceMotion');
+  assert.equal(i.settingsSnapshot[changedKey],true);assert.equal(i.settingsOperation.action,changedKey);
   assert.equal(i.settingsOperation.receipt.receipt.confirmation,'unknown','open/read cannot promote cached accepted values to durable');
   assert.equal(i.settingsOperation.receipt.facts.fact,'pendingReconciliation');
   assert.ok(i.settingsOperation.receipt.facts.generation>originalReceiptGeneration,'new presentation gets a fresh projection generation');
@@ -206,7 +206,7 @@ for(const failure of ['before','after']){
   assert.equal(owner.writeGeneration,writeGeneration,'navigation does not allocate a replacement write');
   assert.equal(i.settingsOperation.canRetryAccepted,true,'the existing explicit same-snapshot recovery remains available without invoking it');
   const returned=n.home(),before={route:i.route,generation:i.navigationGeneration,identity:i.settingsPresentationIdentity};
-  initial.click();pending.click();source.onBack();initial.props.onToggle('reduceMotion',false);
+  initial.click();pending.click();source.onBack();initial.props.onToggle(changedKey,false);
   assert.deepEqual({route:i.route,generation:i.navigationGeneration,identity:i.settingsPresentationIdentity},before,
     'old physical navigation and old accepted setter cannot borrow the new visit');
   returned.click();assert.equal(i.route,'source','fresh native navigation stays usable while the save remains unknown');

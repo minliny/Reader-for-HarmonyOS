@@ -2,6 +2,17 @@ import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import type { LocalReadingDownloadState } from '../reading/LocalReadingFlowGateway';
 
 export type DownloadContentKind = 'novel' | 'manga';
+export class SharedDownloadActionTarget {
+  sourceId: string;
+  bookId: string;
+  chapterIndices?: number[];
+
+  constructor(sourceId: string, bookId: string, chapterIndices?: number[]) {
+    this.sourceId = sourceId;
+    this.bookId = bookId;
+    this.chapterIndices = chapterIndices;
+  }
+}
 export type DownloadBookState = 'downloading' | 'downloaded' | 'none';
 export type DownloadProjectionStatus = 'unloaded' | 'ready' | 'unavailable';
 
@@ -101,8 +112,8 @@ export interface DownloadReadingTarget {
   route: 'novelReader' | 'mangaReader' | 'unavailable';
   label: string;
   description: string;
-  /** This delivery describes a route; it does not navigate or write progress. */
-  wired: false;
+  /** The Host hands this target to the existing reader admission path. */
+  wired: true;
 }
 
 export function sharedDownloadBookKey(book: { sourceId: string; bookId: string }): string {
@@ -217,5 +228,5 @@ export function describeDownloadReadingTarget(book: DownloadBookView,
     chapterIndex: target?.index, chapterId: target === undefined || target.chapterId.length === 0 ? undefined : target.chapterId,
     chapterTitle: target?.title,
     route: chapter !== undefined && !exact ? 'unavailable' : route,
-    label: '阅读', description: `${kindLabel} · 《${book.title}》 · ${chapterLabel}；阅读入口尚未接线`, wired: false };
+    label: '阅读', description: `${kindLabel} · 《${book.title}》 · ${chapterLabel}；将打开缓存阅读页并恢复进度`, wired: true };
 }

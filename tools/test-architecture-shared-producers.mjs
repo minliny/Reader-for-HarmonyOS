@@ -138,7 +138,9 @@ for (const component of ['ReaderToggle','ReaderSegmentedControl']) {
  assert.throws(()=>verifyArchitectureRegistration(privateSpec,baseline,contract,root), /producer\/consumer\/spec edges changed/, 'exact finite F04 spec cannot drift');
 }
 const iconSites=inventory.rows.flatMap(row=>row.elements.filter(element=>element.kind==='ReaderIconButton').map(element=>({row,element})));
-assert.equal(iconSites.length,5,'all five actual finite icon consumers registered');
+assert.equal(iconSites.length,6,'all six actual finite icon consumers registered');
+assert.equal(iconSites.filter(site=>site.row.file==='features/reading/ReaderChapterLoadingState.ets').length,1,
+  'pending chapter delegates its unique back action to the shared icon control');
 for(const {row:site,element:originalCall} of iconSites){
  const index=site.elements.indexOf(originalCall);
  for(const property of ['boxSize','iconSize','radius']){

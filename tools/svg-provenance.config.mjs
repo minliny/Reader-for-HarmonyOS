@@ -77,8 +77,6 @@ export const svgRadixSheetRecipes = [
     radixSheetIcon(name, component, '#425D45', `manga sheet ${name} accent`),
     radixSheetIcon(`${name}_theme_night`, component, '#B9CEB1', `manga sheet ${name} night accent`),
   ]),
-  radixSheetIcon('vertical_accent', 'ViewVerticalIcon', '#425D45', 'manga sheet ascending sort accent'),
-  radixSheetIcon('vertical_accent_theme_night', 'ViewVerticalIcon', '#B9CEB1', 'manga sheet ascending sort night accent'),
   radixSheetIcon('chevron_right', 'ChevronRightIcon', '#A39C90', 'manga sheet chapter disclosure'),
   radixSheetIcon('chevron_right_theme_night', 'ChevronRightIcon', '#767D71', 'manga sheet chapter disclosure night'),
   radixSheetIcon('chevron_down', 'ChevronDownIcon', '#756F69', 'manga sheet volume group disclosure'),

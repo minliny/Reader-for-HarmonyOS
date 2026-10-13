@@ -59,6 +59,7 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
+import { ReaderHeaderFrameModifier, ReaderPageFrameModifier, readerPageContentStartInset } from '../common/ReaderPageShell';
 
 export type {
   SearchInitialPresentation,
@@ -72,6 +73,14 @@ export type {
   SearchOperationValue,
   SearchPresentation,
 } from './SearchPresentation';
+
+const SEARCH_LOCAL_SCOPE = '本地';
+const SEARCH_ONLINE_SCOPE = '在线';
+
+interface SearchScopeEntry {
+  name: string;
+  sourceIds: string[];
+}
 
 class SearchLayoutFrame extends FrameCallback {
   private action: () => void;
@@ -309,6 +318,8 @@ export struct SearchPage {
   // retain their identities for the incremental projection.
   @State private presentation: SearchPresentation = { kind: 'initial', history: [] };
   private shelfBooks: ShelfBook[] = [];
+  /** The latest source.list snapshot; used by both scope dispatch and result projection. */
+  private searchSources: SearchSource[] = [];
   viewState: SearchViewState = new SearchViewState();
   private resultScroller: Scroller = new Scroller();
   private restoreKey: string = '';
@@ -371,6 +382,7 @@ export struct SearchPage {
   private acceptPublication(): void {
     this.presentation = this.publication.presentationAt(this.publicationRevision);
     this.shelfBooks = this.publication.shelfAt(this.publicationRevision);
+    this.searchSources = this.publication.sourcesAt(this.publicationRevision);
     this.refreshVisibleResults();
   }
 
@@ -424,7 +436,13 @@ export struct SearchPage {
           this.contentTypeRow();
         }
       }.width('100%').height(this.searchHeaderHeight())
-        .position({ top: 0, left: 0 }).hitTestBehavior(HitTestMode.Transparent);
+        // Search filters are a fixed header over the result surface. The
+        // explicit paper layer prevents result cards from showing through
+        // the filter rows while the list is moving underneath.
+        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
+        .position({ top: 0, left: 0 }).zIndex(10).clip(true)
+        .attributeModifier(new ReaderHeaderFrameModifier('search', 'solid', this.appThemeScheme))
+        .hitTestBehavior(HitTestMode.Transparent);
       // Stable actor anchored to the whole safe viewport, outside changing
       // source/category/result rows. Caption keeps its lane during streaming.
       Column({ space: 18 }) {
@@ -440,12 +458,18 @@ export struct SearchPage {
     }
     .width('100%').height('100%')
     .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
+    .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme))
     .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
   }
 
   private searchHeaderHeight(): number {
     const groups = this.presentation.kind === 'results' || this.presentation.kind === 'empty';
-    return (this.isTablet ? 56 : 52) + (groups && this.groupNames().length > 0 ? 41.5 : 0);
+    // Results/Empty renders two independent filter rows when search scopes
+    // are available: the source row followed by the content-type row. The
+    // stats bar and result list both use this value as their absolute start;
+    // omitting the second row lets them cover the content-type chips.
+    const filterRows = groups ? (this.groupNames().length > 0 ? 2 : 1) : 0;
+    return (this.isTablet ? 56 : 52) + filterRows * 41.5;
   }
 
   private searchBottomInset(minimum: number = 20): number {
@@ -510,11 +534,60 @@ export struct SearchPage {
 
   /** undefined = all enabled sources; otherwise the selected group's usable subset. */
   private scopeSourceIds(): string[] | undefined {
-    return undefined;
+    if (this.selectedGroupName === '全部') return undefined;
+    const scope = this.scopeEntries().find((entry: SearchScopeEntry): boolean => entry.name === this.selectedGroupName);
+    return scope === undefined ? [] : scope.sourceIds.slice();
   }
 
   private groupNames(): string[] {
-    return ['本地', '在线'];
+    return this.scopeEntries().map((entry: SearchScopeEntry): string => entry.name);
+  }
+
+    /**
+     * Keep the first-release search scope intentionally small.  Core source
+     * groups are still carried by SearchSource for source-switch and future
+     * grouped search, but they are not a user-facing search scope yet.  A
+     * source group here used to turn every provider label (for example 七猫)
+     * into a filter chip, which changed the approved local/online contract and
+     * made the header grow as sources arrived.
+     */
+  private scopeEntries(): SearchScopeEntry[] {
+    const entries: SearchScopeEntry[] = [];
+    const byName: Map<string, SearchScopeEntry> = new Map();
+    const add = (name: string, sourceId: string): void => {
+      const trimmed = name.trim();
+      if (trimmed.length === 0 || sourceId.trim().length === 0) return;
+      let entry = byName.get(trimmed);
+      if (entry === undefined) {
+        entry = { name: trimmed, sourceIds: [] };
+        byName.set(trimmed, entry);
+        entries.push(entry);
+      }
+      if (entry.sourceIds.indexOf(sourceId) < 0) entry.sourceIds.push(sourceId);
+    };
+    const presentedResults = this.presentation.kind === 'results' && Array.isArray(this.presentation.results) ?
+      this.presentation.results : [];
+    // The first-release contract always exposes exactly the local and online
+    // scopes.  An empty local scope is still useful feedback (it produces the
+    // local empty state) and must not make the filter row change shape as
+    // streaming results arrive.
+    add(SEARCH_LOCAL_SCOPE, 'local');
+    const knownRemoteIds = new Set<string>();
+    const sources = Array.isArray(this.searchSources) ? this.searchSources : [];
+    for (const source of sources) {
+      if (!source.enabled) continue;
+      add(SEARCH_ONLINE_SCOPE, source.sourceId);
+      knownRemoteIds.add(source.sourceId);
+    }
+    // During a streaming sweep a result can arrive before the corresponding
+    // source snapshot is published. Keep the row filter and the next submit
+    // coherent by admitting that source to the fallback online scope.
+    if (this.presentation.kind === 'results') {
+      for (const book of presentedResults) {
+        if (book.sourceId !== 'local' && !knownRemoteIds.has(book.sourceId)) add(SEARCH_ONLINE_SCOPE, book.sourceId);
+      }
+    }
+    return entries;
   }
 
   private selectGroup(name: string): void {
@@ -581,8 +654,8 @@ export struct SearchPage {
 
       // The search action doubles as the ACQ-02 stop control: while a sweep
       // is live the pill reads 停止 and stops the sweep; otherwise it submits.
-      // Loading additionally inlines a 13px spinner and submitSearch prevents
-      // re-entry.
+      // LoadingProgress paints a ring inside its layout box. Keep enough
+      // native drawing space for a visible ~16vp indicator in the 36vp pill.
       ReaderButton({ scheme: this.appThemeScheme, specId: this.isTablet ? 'search-field-wide' : 'search-field-phone',
         label: this.isSweeping() ? '停止' : '搜索', isBusy: this.isSweeping(), actionEnabled: this.canSubmit(),
         leading: (): void => this.searchActionLeading(),
@@ -598,7 +671,7 @@ export struct SearchPage {
   @Builder
   private searchActionLeading() {
     SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
-      reduceMotion: this.reduceMotion, diameter: 13, light: true });
+      reduceMotion: this.reduceMotion, diameter: 28, light: true });
   }
 
   @Builder
@@ -707,8 +780,9 @@ export struct SearchPage {
   }
 
   // Figma 2635:58985 / 2635:59076: the chip wall sits directly under the
-  // search bar in Results/Empty — row 41.5 tall, chips 23 tall, 8px gaps,
-  // horizontally scrollable when the group names overflow.
+  // search bar in Results/Empty — row 41.5 tall, chips 23 tall, 8px gaps.
+  // The first-release source scopes are fixed to local/online; future source
+  // groups must not change this row's shape.
   @Builder
   private groupScopeRow() {
     if (this.groupNames().length > 0) {
@@ -994,9 +1068,15 @@ export struct SearchPage {
     if (update.orderChanged || categoryChanged || typeChanged ||
       (contentType !== '全部类型' && update.changedKeys.size > 0) || this.projectedGroupKeys === undefined) {
       this.projectedGroupKeys = update.orderedKeys.filter((key: string): boolean => {
-        const scopeMatches = this.selectedGroupName === '全部' ||
-          (this.selectedGroupName === '本地' ? key.startsWith('local:') : !key.startsWith('local:'));
         const book = (this.projectedGroups.get(key) as SearchBookGroup).book;
+        const scopeIds = this.selectedGroupName === '全部' ? undefined :
+          this.scopeEntries().find((entry: SearchScopeEntry): boolean => entry.name === this.selectedGroupName)?.sourceIds;
+        // Legacy snapshots may not carry source.list yet; retain the previous
+        // identity fallback for the local/online labels until the first source
+        // publication arrives.
+        const scopeMatches = scopeIds !== undefined ? scopeIds.indexOf(book.sourceId) >= 0 :
+          (this.selectedGroupName === '全部' ||
+            (this.selectedGroupName === SEARCH_LOCAL_SCOPE ? book.sourceId === 'local' : book.sourceId !== 'local'));
         // Facts admitted by the gateway determine type. Unknown declarations
         // remain visible under All; titles/genres never grant type admission.
         const typeMatches = contentType === '全部类型' || (contentType === '漫画' ? book.category === 'comic' :
@@ -1580,12 +1660,12 @@ struct SearchResultCard {
       // Only the gap above the tags grows for short metadata. Long metadata
       // grows the row naturally, while the original cover ratio stays intact.
       .constraintSize({ minHeight: this.coverHeight() })
-      .justifyContent(FlexAlign.SpaceBetween)
+      .justifyContent(FlexAlign.Start)
       .alignItems(HorizontalAlign.Start);
     }
     .width(this.cardWidth)
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
-    .alignItems(VerticalAlign.Bottom)
+    .alignItems(VerticalAlign.Top)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } })
       .onClick((): void => this.onSelectResult(this.group.book, this.group.variants));
   }

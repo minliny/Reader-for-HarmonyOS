@@ -22,7 +22,7 @@ export interface SettingsOperationProjection {
 }
 
 export type SettingsKey =
-  'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog';
+  'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode';
 
 /** Same Runtime, one original settings business lane. Presentations attach
  * with finite identities; disposing an Index retires only its projection.
@@ -278,6 +278,7 @@ export class SettingsOrchestrator {
       tapBottomScrollTop: key === 'tapBottomScrollTop' ? value : current.tapBottomScrollTop,
       reduceMotion: key === 'reduceMotion' ? value : current.reduceMotion,
       crashLog: key === 'crashLog' ? value : current.crashLog,
+      developerMode: key === 'developerMode' ? value : current.developerMode,
     };
   }
 }

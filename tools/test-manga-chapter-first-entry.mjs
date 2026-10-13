@@ -1,3 +1,4 @@
+import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -8,7 +9,7 @@ function load(name,dependencies={}) {
   return new Function(...Object.keys(dependencies),`${stripTypeScriptTypes(source)};return ${name};`)(...Object.values(dependencies));
 }
 const MangaSessionGateway=load('MangaSessionGateway'),MangaResourceGateway=load('MangaResourceGateway');
-const Controller=load('MangaSessionController',{MangaSessionGateway,MangaResourceGateway});
+const Controller=load('MangaSessionController',{MangaRetainedTileCache,MangaSessionGateway,MangaResourceGateway});
 const chapter={manifest:{chapter:{sourceId:'target',bookId:'book',chapterId:'/chapter'},sourceRuleVersion:'rules',manifestVersion:'version',decodeRevision:'identity-v1',
   pages:Array.from({length:6},(_,ordinal)=>{const pageId=`mp1:${String(ordinal).padStart(64,'0')}`;return{ordinal,pageId,resourceRef:`manga:${pageId}`};})},chapterIndex:17,chapterTitle:'第17话',cached:false,resources:[]};
 chapter.resources=chapter.manifest.pages.map(page=>({resourceRef:page.resourceRef,request:{url:`https://fixture.invalid/${page.ordinal}`}}));

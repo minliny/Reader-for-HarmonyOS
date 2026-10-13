@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import * as state from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
-import { resolveReaderReadingLayout } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
+import { resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
 import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { measureReaderPageChromeText, readerPageChromeTopTextStyle } from './lib/reader-page-chrome-measurement-probe.mjs';
 
@@ -21,7 +21,8 @@ const facts = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0,0,390,844),new 
 const Owner = productionMotionMethods(file, ['commitReaderWindowSettings', 'readingLayout', 'windowMetricsLayoutKey',
   'reflowAfterWindowGeometryChange', 'onWindowMetricsRevisionChanged','captureReaderSettingsAdmission',
   'notifyReaderSettingsSavePending','retryPendingReaderSettings','isSessionActive'], {
-  resolveReaderReadingLayout, ReaderWindowCoordinator: { metrics: () => facts },
+  resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP,
+  ReaderWindowCoordinator: { metrics: () => facts },
   measureReaderPageChromeText, readerPageChromeTopTextStyle,
 });
 async function fixture(extended=false, controls=false) {
@@ -65,7 +66,7 @@ for(const extended of [false,true])for(const controls of [false,true])for(const 
   const f=await fixture(extended,controls),oldTop=f.owner.readingLayout().contentTop,target=f.change(),gate=f.holdFlush();f.failFlush(failure);
   f.owner.commitReaderWindowSettings(target);await settle();
   assert.deepEqual(f.writes,[!extended]);assert.equal(f.measurements.length,1);
-  assert.notEqual(f.measurements[0].top,oldTop,'cutout reaches body measurement without a native resize');assert.equal(f.measurements[0].anchor,173);
+  assert.equal(f.measurements[0].top,oldTop,'cutout preference cannot create a second status-height information lane');assert.equal(f.measurements[0].anchor,173);
   gate.resolve();await settle();
   assert.deepEqual(f.owner.readerSettingsSnapshot,target,'native policy success is retained when Preferences confirmation is missing');
   assert.deepEqual(f.policies,[!extended]);assert.equal(f.measurements.length,1,'unknown durable result cannot reflow an old policy');
@@ -81,7 +82,7 @@ for(const extended of [false,true])for(const controls of [false,true])for(const 
 for(const extended of [false,true])for(const controls of [false,true]){
   const f=await fixture(extended,controls),oldTop=f.owner.readingLayout().contentTop,gate=f.holdWindow();
   f.owner.commitReaderWindowSettings(f.change());await settle();f.owner.onWindowMetricsRevisionChanged();
-  assert.equal(f.measurements.length,1);assert.notEqual(f.measurements[0].top,oldTop);
+  assert.equal(f.measurements.length,1);assert.equal(f.measurements[0].top,oldTop);
   gate.reject(Error('native window policy refused after metric callback'));await settle();
   assert.deepEqual(f.owner.readerSettingsSnapshot,f.initial);assert.deepEqual(f.writes,[],'actual native refusal precedes the durable setter');
   assert.deepEqual(f.policies,[!extended,extended]);assert.deepEqual(f.measurements[1],{top:oldTop,anchor:173},'native failure reflows restored settings even with unchanged metrics');

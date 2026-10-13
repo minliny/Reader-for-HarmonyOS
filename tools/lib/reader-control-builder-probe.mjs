@@ -126,6 +126,47 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       },
     };
   }
+  // Index and reading-entry probes may mount the production full-directory
+  // child directly. Register its real @Prop contract with the SDK syntax
+  // validator even when an individual probe does not need to mount the child
+  // runtime. The fallback Child instance is enough for observer execution;
+  // focused directory probes can still provide an explicit implementation.
+  const knownChildren = [
+    // Index mounts the optional runtime geometry guide at the root. Keep it
+    // registered as a real custom component for SDK Builder probes so focused
+    // consumers do not need to know about this diagnostics-only child.
+    ['ReaderLayoutDebugOverlay', '../../entry/src/main/ets/features/common/ReaderLayoutDebugOverlay.ets'],
+    ['ReaderInlineSelect', '../../entry/src/main/ets/features/common/ReaderInlineSelect.ets'],
+    ['ReaderFullDirectory', '../../entry/src/main/ets/features/reading/ReaderFullDirectory.ets'],
+    ['BookDirectoryPage', '../../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets'],
+  ];
+  for (const [name, relative] of knownChildren) {
+    if (!new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n'))) continue;
+    if (dependencies[name] !== undefined) continue;
+    const sourceUrl = new URL(relative, import.meta.url);
+    if (!existsSync(sourceUrl)) continue;
+    syntax.componentCollection.customComponents.add(name);
+    syntax.propCollection.set(name, childProps(readFileSync(sourceUrl, 'utf8'), name));
+    dependencies = { ...dependencies, [name]: class {
+      constructor(owner, params, _storage, id) {
+        this.owner = owner; this.params = params; this.id = id; this.children = new Map(); this.nodes = new Map();
+        // Keep older focused probes able to exercise selection callbacks while
+        // the production page now delegates the visual contract to the shared
+        // ReaderInlineSelect host.
+        if (name === 'ReaderInlineSelect') {
+          const values = Array.isArray(params?.options) ? params.options : [];
+          const node = { type: 'Select', readerInline: true, create: values.map(value => ({ value })),
+            selected: params?.selectedIndex ?? 0, value: params?.value ?? '',
+            width: params?.controlWidth > 0 ? params.controlWidth : '100%',
+            onSelect: index => params?.onSelect?.(index, values[index]) };
+          this.nodes.set(0, node);
+        }
+      }
+      initialRender() {}
+      aboutToAppear() {}
+      updateStateVars(next) { Object.assign(this.params, next); }
+    } };
+  }
   main.partialUpdateConfig.partialUpdateMode = true;
   utils.storedFileInfo.setCurrentArkTsFile();
   // Register the actual shared child Prop names so the SDK emits its real
@@ -281,6 +322,17 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       'LineCapStyle', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
+    // Page-shell modifiers are imported TypeScript helpers in production ETS.
+    // Keep the isolated Builder probe's platform seam explicit so shared header
+    // consumers can be exercised without evaluating the whole module graph.
+    ReaderHeaderFrameModifier: class {
+      constructor(kind) { this.kind = kind; }
+      applyNormalAttribute(instance) { instance.clip(true).zIndex(this.kind === 'directoryTools' ? 1 : 10); }
+    },
+    ReaderPageFrameModifier: class {
+      applyNormalAttribute(instance) { instance.clip(true).zIndex(0); }
+    },
+    readerPageContentStartInset: (headerHeight = 58, toolsHeight = 0, gap = 0) => Math.max(0, headerHeight) + Math.max(0, toolsHeight) + Math.max(0, gap),
     ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect: {width: 393,height:852}, interactiveSafeInsets: {top:0,left:0,right:0,bottom:0} }) },
     readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
     ...dependencies };

@@ -19,6 +19,17 @@ export type ReadingGatewayImage = {
   revision: string;
 };
 
+/** Exact chapter presentation owned until its reader/preview closes. */
+export type MangaDisplaySessionScope = {
+  sourceId: string;
+  bookId: string;
+  chapterId: string;
+  contentVersion: string;
+  sourceRuleVersion: string;
+  decodeRevision: string;
+  preview: boolean;
+};
+
 export type ReadingGatewayImageCacheIdentity = {
   sourceId: string;
   bookId: string;
@@ -88,7 +99,14 @@ export interface ReadingGatewayRuntime {
     expectedSourceVersion?: string,
     mangaPreview?: boolean,
     mangaDecodeRevision?: string,
+    mangaDisplaySessionId?: number,
   ): Promise<ReadingGatewayImage>;
+
+  beginMangaDisplaySession?(scope: MangaDisplaySessionScope, isCurrent: () => boolean): number;
+  endMangaDisplaySession?(sessionId: number): void;
+  /** Synchronous prepared-file lease; no byte I/O, hashing or native decode. */
+  tryAcquireMangaPreparedImage?(sessionId: number, scope: MangaDisplaySessionScope, resourceRef: string,
+    mangaPosition: number, isCurrent: () => boolean): ReadingGatewayImage | undefined;
 
   prefetchReadingImage?(
     identity: ReadingGatewayImageCacheIdentity,
@@ -119,6 +137,6 @@ export interface ReadingGatewayRuntime {
   deleteMangaDownload?(chapter: { sourceId: string; bookId: string; chapterId: string; },
     manifestVersion: string, isCurrent?: () => boolean): Promise<boolean>;
 
-  /** Releases one display file/native fallback after the chapter window evicts it. */
+  /** Releases one acquired display lease when its caller retires or closes. */
   releaseReadingImage?(fileUri: string, pixelMap?: image.PixelMap): void;
 }

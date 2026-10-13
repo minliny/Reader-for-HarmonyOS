@@ -16,7 +16,7 @@ function makeSettings(f,{mount=1}={}){
  const idx=p.consumer(read('pages/Index.ets'),['settingsSnapshot','settingsOperation','settingsCacheCleanup','settingsContent','settingsSurface','bindSettingsPresentation','retireSettingsPresentation','isCurrentSettingsPresentation','isCurrentRuntime','reconcileSettingsCache','clearTextCache'],
   {ReaderRuntimeOwner:f.Runtime,SettingsPage:leaf,deviceInfo:{deviceType:'phone'}});
  Object.assign(idx,{route:'settings',navigationGeneration:1,detailShelfAdmissionMount:mount,mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,
-  rssInstanceIdentity:1,settingsPresentationIdentity:'',settingsSnapshot:{autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true},settingsOperation:{action:'load'},settingsSection:'general'});
+  rssInstanceIdentity:1,settingsPresentationIdentity:'',settingsSnapshot:{autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true,developerMode:false},settingsOperation:{action:'load'},settingsSection:'general'});
  const host=new f.SettingsHost(()=>{},()=>idx.settingsSnapshot,()=>idx.route==='settings',()=>f.runtime.getUIAbilityContext(),()=>{},(snapshot,owner)=>{if(idx.isCurrentRuntime(owner)&&idx.route==='settings')idx.settingsCacheCleanup=snapshot;});
  idx.settingsHost=host;assert.equal(idx.bindSettingsPresentation(),true);
  let rendered=false;const render=()=>{if(!rendered){idx.settingsContent();rendered=true;}else idx.replay();const page=[...idx.children.values()].find(c=>c instanceof leaf);Object.assign(page,{mounted:true,themeOwner:f.runtime,temporaryBackIdentity:'settings:'+mount,appThemeScheme:'day'});page.operationFeedback();return page;};

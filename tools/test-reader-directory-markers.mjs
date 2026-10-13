@@ -55,7 +55,7 @@ assert.match(fullPanel, /this\.switchTab\('bookmarks'\)/);
 assert.match(fullPanel, /@State private projectedBookmarks: ReaderBookmarkRowModel\[\] = \[\]/);
 assert.match(fullPanel, /projectReaderBookmarkRows\(\s*sourceEntries, query, this\.bookmarkIdentity\)/,
   'bookmark tab must use the behavior-tested projection');
-assert.match(fullPanel, /projectReaderDirectoryEntries\(sourceEntries, query, ascending\)/,
+assert.match(fullPanel, /projectReaderDirectoryEntries\(sourceEntries, query, ascending(?:, this\.mangaSearch)?\)/,
   'sort and search must use the behavior-tested complete TOC projection');
 assert.match(directoryList, /List\(\{ space: 0, scroller: this\.scroller \}\)/);
 assert.match(directoryList,

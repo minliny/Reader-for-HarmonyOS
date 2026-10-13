@@ -14,7 +14,7 @@ import { ReaderStartupContentOwner } from '../app/ReaderStartupContentOwner';
 import { installMangaAtomicPayloadReader } from '../app/MangaAtomicPayloadReader';
 import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
-import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../app/ReaderControlVerificationLaunch';
+import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerRebuildableCacheClearEnabled, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../app/ReaderControlVerificationLaunch';
 import { ReaderEventLoopProbe, ReaderEventLoopSample, readerEventLoopProbeEnabled } from '../app/ReaderEventLoopProbe';
 import { probeReaderAtomicSnapshot, type ReaderAtomicSnapshotSample } from '../app/ReaderAtomicSnapshotProbe';
 import { probeReaderAssetInventory, type ReaderAssetInventorySample } from '../app/ReaderAssetInventoryProbe';
@@ -138,6 +138,9 @@ export default class EntryAbility extends UIAbility {
         // The persistent receipt/journal remains pending; opening the UI permits retry.
         hilog.error(DOMAIN, 'Reader', 'Core or confirmed restore recovery failed: %{private}s', error.message);
       });
+    // Method-level probes may execute onCreate without private helpers; the
+    // production class still owns the concrete scheduler below.
+    this.scheduleRebuildableCacheClear?.(want, owner);
     ReaderSystemFileOpenHost.install(owner, this.recoveryReady);
     ReaderSystemFileOpenHost.receive(want);
     // This diagnostic is an explicit cold debug Want only. Normal starts and
@@ -161,7 +164,31 @@ export default class EntryAbility extends UIAbility {
   onNewWant(want: Want, _launchParam: AbilityConstant.LaunchParam): void {
     // Never reload the window or route directly; Index saves the active
     // reading session before presenting a successfully imported file.
+    this.scheduleRebuildableCacheClear?.(want, this.runtimeOwner);
     ReaderSystemFileOpenHost.receive(want);
+  }
+
+  private scheduleRebuildableCacheClear(want: Want, owner: ReaderRuntimeOwner | undefined): void {
+    if (owner === undefined || !readerRebuildableCacheClearEnabled(DEBUG, BUILD_MODE_NAME,
+      want.parameters?.readerClearRebuildableCache)) return;
+    void this.recoveryReady.then(async (): Promise<void> => {
+      if (this.runtimeOwner !== owner || !ReaderRuntimeOwner.isCurrent(owner)) return;
+      try {
+        const result = await owner.clearRebuildableCachesForVerification();
+        hilog.info(DOMAIN, 'Reader', 'READER_VM_CACHE_CLEAR %{public}s', JSON.stringify({
+          result: 'completed', ordinaryBytes: result.ordinaryBytes, derivedDisplayFiles: result.derivedDisplayFiles,
+          preserved: ['downloads', 'manifests', 'bookshelf', 'progress', 'active-leases'],
+        }));
+      } catch (error) {
+        hilog.error(DOMAIN, 'Reader', 'READER_VM_CACHE_CLEAR %{public}s', JSON.stringify({
+          result: 'failed', error: (error as Error).message,
+        }));
+      }
+    }).catch((error: Error): void => {
+      hilog.error(DOMAIN, 'Reader', 'READER_VM_CACHE_CLEAR %{public}s', JSON.stringify({
+        result: 'recovery-failed', error: error.message,
+      }));
+    });
   }
 
   private async prepareSelectedReadingFont(owner: ReaderRuntimeOwner, reusePrepared: boolean = false): Promise<void> {

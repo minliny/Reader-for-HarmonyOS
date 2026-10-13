@@ -7,6 +7,7 @@ import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerInteractiveSafeBottom } from '../common/ReaderWindowMetrics';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { NoCoverCover } from './NoCoverCover';
+import { ReaderHeaderFrameModifier, ReaderPageFrameModifier, readerPageContentStartInset } from '../common/ReaderPageShell';
 
 const WIDE_BREAKPOINT = 600;
 const PHONE_GRID_WIDTH = 351;
@@ -77,7 +78,7 @@ export struct BookshelfMultiSelectPage {
       }
       .height('100%')
       .width('100%')
-      .contentStartOffset(58 + 12)
+      .contentStartOffset(readerPageContentStartInset(58, 0, 12))
       .contentEndOffset(this.removeBarClearance() + 20)
       .alignListItem(ListItemAlign.Center)
       .scrollBar(BarState.Off);
@@ -88,6 +89,7 @@ export struct BookshelfMultiSelectPage {
     }
     .width('100%')
     .height('100%')
+    .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme))
     .backgroundColor(readerAppColor('app.BookshelfMultiSelectPage.build.backgroundColor.FFF8F4EC', this.appThemeScheme))
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = this.numericAreaLength(newValue.width);
@@ -141,6 +143,7 @@ export struct BookshelfMultiSelectPage {
     .height(58)
     .padding({ left: 20, right: 20, top: 8, bottom: 8 })
     .alignItems(VerticalAlign.Center)
+    .attributeModifier(new ReaderHeaderFrameModifier('selection', 'solid', this.appThemeScheme))
     .hitTestBehavior(HitTestMode.Transparent);
   }
 

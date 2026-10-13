@@ -775,7 +775,7 @@
       "owner": "MangaDirectoryEntryRow",
       "reason": "One concrete manga directory content renderer replaces duplicated fallback/full/detail bodies, with finite generated demo variants and original owner admission/callbacks. Code and SDK facts are recorded; native layout and user acceptance remain open.",
       "counts": {
-        "fontSize": 10,
+        "fontSize": 12,
         "backgroundColor": 2
       },
       "contractId": "shared-MangaDirectoryEntryRow",
@@ -802,9 +802,32 @@
         "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderInlineSelect.ets",
+      "counts": {
+        "bindPopup": 1
+      },
+      "kind": "finite-inline-shared-select-host",
+      "contractId": "shared-ReaderInlineSelect",
+      "reason": "One bounded secondary-page selector host delegates trigger and panel rendering to the existing ReaderSelect family and keeps popup lifetime identity scoped.",
+      "proof": "tools/test-shared-download-ui-sdk.mjs"
     }
   ],
   "uiPolicies": [
+    {
+      "file": "entry/src/main/ets/features/common/ReaderLayoutDebugOverlay.ets",
+      "kind": "opt-in-runtime-layout-diagnostic",
+      "owner": "ReaderLayoutDebugOverlay / General Settings developerMode",
+      "reason": "User-requested optional component-boundary diagnostic uses one Canvas for the mounted ArkUI tree, three measured geometry guide lines and one 10fp telemetry label. This exact file permits only those finite diagnostic actors, grants no common-directory exemption and does not alter any business-page style budget.",
+      "counts": {
+        "fontSize": 1,
+        "backgroundColor": 4
+      },
+      "proof": "tools/test-developer-mode-settings.mjs",
+      "approvalEvidence": "docs/DEVELOPER_LAYOUT_BOUNDS_20261013.md",
+      "status": "REGISTERED_USER_REQUESTED_DIAGNOSTIC_NOT_DEVICE_ACCEPTANCE"
+    },
     {
       "file": "entry/src/main/ets/app/ArkWebExecutionHost.ets",
       "kind": "platform-host",
@@ -823,7 +846,7 @@
       "reason": "Approved manga detail-catalog variant preserves standard directory recovery and shared rule/navigation owners. Finite manga group, readable volume/chapter, current state and metadata rows retain the approved geometry without title/index inference.",
       "counts": {
         "fontSize": 6,
-        "backgroundColor": 4
+        "backgroundColor": 6
       },
       "supersededLegacyCounts": {
         "fontSize": 1,
@@ -1240,6 +1263,19 @@
       "visualSuccessorContract": "tools/fixtures/design/novel-source-switch-successor-20261006.json",
       "visualSuccessorActor": "completion",
       "proof": "tools/test-source-switch-visual-sdk.mjs"
+    },
+    {
+      "file": "entry/src/main/ets/features/reading/ReaderChapterLoadingState.ets",
+      "kind": "reading-chapter-pending-state",
+      "owner": "ReadingExperience / current chapter selection and lifecycle",
+      "reason": "One finite pending chapter view delegates paper and back controls to ReaderPaperBackground and ReaderIconButton, uses existing public reading state typography and the native LoadingProgress animator, and owns no progress or acquisition transaction. The current selection, exit and recovery remain with ReadingExperience.",
+      "counts": {
+        "fontSize": 0,
+        "backgroundColor": 1
+      },
+      "proof": "tools/test-reader-recoverable-entry.mjs",
+      "approvalEvidence": "docs/READING_CHROME_AND_INTERACTION_20261012.md",
+      "status": "REGISTERED_READING_INTERACTION_NOT_DEVICE_ACCEPTANCE"
     }
   ]
 }

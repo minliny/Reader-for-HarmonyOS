@@ -12,7 +12,26 @@ const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 const helperSource = read('entry/src/main/ets/app/ErrorMessage.ts');
 const executable = stripTypeScriptTypes(helperSource);
 const helperUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
-const { errorMessageOf, isDomainResolutionFailure, isNetworkEnvironmentFailure, httpResponseFailureSummary } = await import(helperUrl);
+const { errorMessageOf, catalogCurrentChapterRecoveryMessage, isDomainResolutionFailure, isNetworkEnvironmentFailure, httpResponseFailureSummary } = await import(helperUrl);
+
+const catalogRecoveryCopy='目录更新无法对应当前章节，已保留原目录和阅读进度，可重试或换源';
+for(const cause of ['previousChapterMissing','chapterIdentityMissingOrAmbiguous','cachedChapterCoordinateChanged','cachedCatalogCoordinatesChanged']) {
+  const failure={code:'INVALID_PARAMS',message:'book.toc cannot safely restore the current chapter; previous catalog preserved',
+    details:{reason:'CATALOG_CURRENT_CHAPTER_UNRESOLVED',cause,previousCatalogPreserved:true,recoverable:true}};
+  for(const envelope of [failure,{error:failure},{event:{type:'error',requestId:5,error:failure}}]) {
+    assert.equal(catalogCurrentChapterRecoveryMessage(envelope),catalogRecoveryCopy);
+    assert.equal(errorMessageOf(envelope),catalogRecoveryCopy,'structured preserved-catalog recovery supersedes internal English copy');
+  }
+  for(const altered of [{...failure,code:'INTERNAL'},
+    {...failure,details:{...failure.details,previousCatalogPreserved:false}},
+    {...failure,details:{...failure.details,recoverable:false}},
+    {...failure,details:{...failure.details,cause:'unrelatedCause'}},
+    {...failure,details:{...failure.details,reason:'OTHER_INVALID_PARAMS'}}]) {
+    assert.equal(catalogCurrentChapterRecoveryMessage(altered),undefined);
+  }
+}
+assert.equal(catalogCurrentChapterRecoveryMessage({message:'CATALOG_CURRENT_CHAPTER_UNRESOLVED'}),undefined,
+  'a marker in source text is not structured recovery evidence');
 
 const responseDetails = { category: 'SOURCE_HTTP_FAILED', stage: 'chapter.content',
   cause: { phase: 'response', httpStatus: 403, requestHost: 'chapter.example',

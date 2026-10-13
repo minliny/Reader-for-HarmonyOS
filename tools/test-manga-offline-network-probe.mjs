@@ -250,7 +250,10 @@ let catalogReads=0,onlineAcquires=0,catalogFails=false;
 const entry={targetOrdinal:0,recoveryRequired:false,chapter:{chapterIndex:0,chapterTitle:'本章',totalPages:1,pageStart:0,cached:true,resources:[],manifest:{chapter:{sourceId:scope.sourceId,bookId:scope.bookId,chapterId:'/chapter'},sourceRuleVersion:'r',manifestVersion:'v',decodeRevision:'v',pages:[{ordinal:0,pageId:'page-0'}],displayHints:{}}},progress:{token:{epoch:1,revision:0},location:null}};
 const Surface=productionMotionMethods(url('features/manga/MangaReadingSurface.ets'),['open','acquireCatalog','aboutToDisappear'],{
   MangaSessionGateway:class{async entry(){return entry;}},
-  RemoteReadingFlowGateway:class{async openCachedSession(){catalogReads++;if(catalogFails)throw Error('no cached catalog');return {identity:scope,entries:[],acquisitionMode:'offline'};}},
+  RemoteReadingFlowGateway:class{
+   async openCachedCatalogSession(){catalogReads++;if(catalogFails)throw Error('no cached catalog');return {identity:scope,entries:[],acquisitionMode:'offline'};}
+   async openCachedSession(){return this.openCachedCatalogSession();}
+  },
   MangaBookPresentation, AppStorage: { setOrCreate() {} },
 });
 const makeSurface=()=>{
@@ -271,6 +274,7 @@ console.log('PASS production offline Surface uses only cached catalog, preserves
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
  if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;}}});
 const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const {ReadingEntryPreparation}=await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
 {
  const cachedRow=Object.freeze({chapterIndex:0,title:'Chapter',url:'/chapter'});
  const cachedData=Object.freeze({...scope,tocAvailable:true,chapters:Object.freeze([cachedRow])});
@@ -352,8 +356,11 @@ declare const MangaChapterPreparationCoordinator: {forRuntime(owner:object):{clo
 class RuntimeSeam {
 private state:'new'|'starting'|'ready'|'closing'|'closed'='ready';
 private mangaImageTail:Promise<void>=Promise.resolve();
+private mangaDisplaySessions:Map<number,{current:()=>boolean}>=new Map();
+endMangaDisplaySession(sessionId:number):void{}
 private readingImageDiskCache:{withMangaStorageRestore<T>(restore:()=>Promise<T>):Promise<T>;
-maintainMangaStorage(reason:'clear',scope?:{sourceId:string;bookId:string}):Promise<void>};
+maintainMangaStorage(reason:'clear',scope?:{sourceId:string;bookId:string}):Promise<void>;
+clearMangaRebuildableCache(scope?:{sourceId:string;bookId:string}):Promise<{deletedBytes:number;deletedFiles:number}>};
 private preparationIntentEpoch=0;private runtime:ReaderCoreRuntime|undefined;private mangaOfflineProbe:MangaOfflineNetworkProbe|undefined;
 private async start():Promise<void>{}private wakeReadingPreparations():void{}
 private readingEntryPreparations():{beginRequest(method:string,params:JsonObject):boolean;finishRequest(method:string,params:JsonObject):void}{throw Error();}
@@ -511,23 +518,25 @@ try {
   AtomicFile:class{constructor(path){this.path=path;}readFully(){const b=nodeFs.readFileSync(this.path);return b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);}}};
  class LRUCache{constructor(capacity){this.capacity=capacity;this.data=new Map();}get(key){return this.data.get(key);}put(key,value){this.data.set(key,value);}remove(key){this.data.delete(key);}clear(){this.data.clear();}}
  const util={LRUCache,TextEncoder:class{encodeInto(text){return new TextEncoder().encode(text);}},TextDecoder:class{decodeWithStream(bytes){return new TextDecoder().decode(bytes);}}};
- const cryptoFramework={createMd(){const hash=createHash('sha256');return {async update({data}){hash.update(data);},async digest(){return {data:new Uint8Array(hash.digest())};}};}};
+ let hashes=0,atomicReads=0,codecHeight=2;
+ const cryptoFramework={createMd(){hashes++;const hash=createHash('sha256');return {async update({data}){hash.update(data);},async digest(){return {data:new Uint8Array(hash.digest())};}};}};
  const encoded=new Uint8Array([0x89,0x50,0x4e,0x47,1,2,3,4]);let nativeSources=0,nativePixels=0,nativePackers=0;
  const image={PixelMapFormat:{RGBA_8888:3},DecodingDynamicRange:{SDR:1},CropAndScaleStrategy:{CROP_FIRST:2},
-  createImageSource(){nativeSources++;return {async getFrameCount(){return 1;},async getImageInfo(){return {size:{width:3,height:2},mimeType:'image/png'};},
-   async createPixelMap(){nativePixels++;return {async getImageInfo(){return {size:{width:3,height:2},pixelFormat:3};},getBytesNumberPerRow(){return 12;},getPixelBytesNumber(){return 24;},async release(){}};},async release(){}};},
+  createImageSource(){nativeSources++;return {async getFrameCount(){return 1;},async getImageInfo(){return {size:{width:3,height:codecHeight},mimeType:'image/png'};},
+   async createPixelMap(options){nativePixels++;const size=options.desiredSize??options.desiredRegion?.size??{width:3,height:codecHeight};return {async getImageInfo(){return {size,pixelFormat:3};},getBytesNumberPerRow(){return size.width*4;},getPixelBytesNumber(){return size.width*size.height*4;},async release(){}};},async release(){}};},
   createImagePacker(){nativePackers++;return {async packToFile(_pixels,fd){nodeFs.writeSync(fd,encoded);},async release(){}};}};
  const loadClass=(name,dependencies)=>new Function(...Object.keys(dependencies),
   stripTypeScriptTypes(readFileSync(url(`app/${name}.ts`),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''))+`;return ${name};`)(...Object.values(dependencies));
- const readMangaAtomicPayload=createMangaAtomicPayloadReaderFixture(fs);
+ const atomicReader=createMangaAtomicPayloadReaderFixture(fs);
+ const readMangaAtomicPayload=(...args)=>{atomicReads++;return atomicReader(...args);};
  const Retention=loadClass('MangaDisplayRetention',{fs,util,readMangaAtomicPayload});
  const FullBody=loadClass('ReadingBodyImageHost',{fs,util,cryptoFramework,image,MangaDisplayRetention:Retention,HttpExecuteHost,
   hilog:{warn(){}},readingImageHttpError:()=>Error('HTTP failure')});
  const makeBody=directory=>{const body=new FullBody();body.configureMangaDisplayCache(directory);body.setMangaDisplayReserve(async()=>({release(){}}));
   body.setMangaMetadataInspector(async(bytes,sha256)=>({status:'absent',orientation:null,sha256,bytes:bytes.length,
-   decodeProfile:{format:'png',encodedWidth:3,encodedHeight:2,allocationClass:'scanline'}}));return body;};
+   decodeProfile:{format:'png',encodedWidth:3,encodedHeight:codecHeight,allocationClass:'scanline'}}));return body;};
  const makeReadingOwner=(body,probe)=>{
-  const originals=new Map(),holds=new Map(),pending=new Map();let id=1000,httpCalls=0;
+  const originals=new Map(),holds=new Map(),pending=new Map();let id=1000,httpCalls=0,originalReads=0;
   const BodyPort={instance:body};
   const Registry=productionMotionMethods(url('app/ReaderHostRegistry.ts'),['createCapabilityRouter'],{
    CapabilityRouter:Router,ReadingBodyImageHost:BodyPort,HttpExecuteHost,MangaImageGraphicsHost:{instance:{}},MangaImageMetadataHost:{instance:{handle:async()=>({}),cancel(){}}},
@@ -535,26 +544,96 @@ try {
   const registry=new Registry();registry.mangaOfflineProbe=probe;registry.responseAssetBridge={};const router=registry.createCapabilityRouter();
   const Runtime=productionMotionMethods(url('app/ReaderRuntimeOwner.ts'),['requestDirect','loadReadingImage','loadReadingImageOwned','prefetchReadingImage',
    'prefetchReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes','assertReadingImageCurrent','admitReadingImage','releaseReadingImage',
-   'bindMangaReadingProbe','detachMangaReadingProbe','observeMangaReadingImageWork'],{
+   'bindMangaReadingProbe','detachMangaReadingProbe','observeMangaReadingImageWork','captureReadingContentValidity',
+   'mangaDisplaySessions','nextMangaDisplaySession','beginMangaDisplaySession','endMangaDisplaySession',
+   'tryAcquireMangaPreparedImage','mangaDisplaySessionKey','publishMangaPreparedImage','clearOfflineBookImages','closeRuntime'],{
    ReadingBodyImageHost:BodyPort,DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,
-   MangaImageDecodeHost:{instance:{async prepare(params,request,current){assert.equal(current(),true);return (await request(params)).data.bytes;}}},hilog:{error(){}},LOG_DOMAIN:0});
+   MangaImageDecodeHost:{instance:{async prepare(params,request,current){assert.equal(current(),true);return (await request(params)).data.bytes;}}},
+   MangaChapterPreparationCoordinator:{forRuntime(){return {close:async()=>{}};}},hilog:{error(){},warn(){}},LOG_DOMAIN:0});
   const owner=new Runtime();Object.assign(owner,{state:'ready',mangaOfflineProbe:probe,mangaImageTail:Promise.resolve(),mangaImagePending:0,mangaImageQueue:[],mangaImageActive:false,mangaImageUrgentStreak:0,mangaReadingProbeForeignImages:0});
-  owner.start=async()=>{};owner.wakeReadingPreparations=()=>{};owner.readingEntryPreparations=()=>({beginRequest:()=>false,finishRequest(){}});
+  owner.start=async()=>{};owner.wakeReadingPreparations=()=>{};
+  const preparations=new ReadingEntryPreparation(owner,false);owner.readingEntryPreparations=()=>preparations;
   owner.readingImageCacheIdentity=(sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl)=>({sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl});
   owner.request=(method,params,options)=>owner.requestDirect(method,params,options);
   const key=identity=>`${identity.bookId}:${identity.baseUrl}:${identity.resourceRef}`;
   owner.readingImageDiskCache={captureValidity(_s,_b,current){return ()=>owner.state==='ready'&&current?.()!==false;},
-   async loadResource(identity,current){assert.equal(current(),true);return originals.get(key(identity));},
+   async loadResource(identity,current){originalReads++;assert.equal(current(),true);return originals.get(key(identity));},
    async storeResource(identity,bytes,current){await holds.get(key(identity))?.promise;assert.equal(current(),true);originals.set(key(identity),new Uint8Array(bytes));},
-   async removeResource(identity){originals.delete(key(identity));}};
+   async removeResource(identity){originals.delete(key(identity));},async clearBook(){originals.clear();}};
   const transfer=async(requestId,params)=>{httpCalls++;const fetched=await router.route({capability:'manga.resource.transfer',requestId,params:{request:{url:'https://fixture.invalid/actual-image'}}});
    assert.ok(fetched.length>0);return {requestId,data:{bytes:encoded}};};
   owner.runtime={send(_method,params){pending.set(++id,params);return id;},async waitForResult(requestId){return transfer(requestId,pending.get(requestId));},async request(_method,params){return transfer(++id,params);}};
   if(probe?.mode==='reading')owner.bindMangaReadingProbe();
   const load=(chapter,ref,bookId=scope.bookId)=>owner.loadReadingImage(scope.sourceId,bookId,0,'v',`image-${ref}`,chapter,true,()=>true,ref,0,'rules',false,'bytes-v1');
   const prefetch=(chapter,ref)=>owner.prefetchReadingImage({...scope,chapterIndex:0,contentVersion:'v',imageUrl:`image-${ref}`,baseUrl:chapter,resourceRef:ref,mangaDecodeRevision:'bytes-v1'},()=>true,'rules',true,'background');
-  return {owner,originals,holds,load,prefetch,key,http:()=>httpCalls};
+  return {owner,originals,holds,load,prefetch,key,preparations,http:()=>httpCalls,originalReads:()=>originalReads};
  };
+ {
+  codecHeight=4097;
+  const body=makeBody(`${readingDirectory}/whole-chapter`),f=makeReadingOwner(body);
+  const {MangaResourceGateway:Gateway}=await import('../entry/src/main/ets/features/manga/MangaResourceGateway.ts');
+  const Scope=productionMotionMethods(url('features/manga/MangaChapterPreparationCoordinator.ts'),['scope']);
+  const chapter={chapterIndex:7,manifest:{chapter:{...scope,chapterId:'whole-chapter'},manifestVersion:'v',sourceRuleVersion:'rules',decodeRevision:'bytes-v1'}};
+  const resourceScope=new Scope().scope(chapter),resources=new Gateway(f.owner);
+  resources.beginDisplaySession(resourceScope,()=>true,false);
+  const pages=Array.from({length:24},(_,i)=>({url:`image-${i}`,resourceRef:`ref-${i}`}));
+  for(const page of pages)await resources.prefetchPage(resourceScope,page,()=>true,true,'chapter');
+  await f.owner.mangaImageTail;
+  const session=f.owner.mangaDisplaySessions.values().next().value;
+  assert.equal(session.aliases.size,24,'every prepared chapter resource is retained beyond the former eight-tile window');
+  assert.equal(session.files.size,3,'identical prepared files share exactly one session owner lease');
+  assert.ok([...session.files.values()].every(payload=>payload.pixelMap===undefined));
+  assert.deepEqual([...body.displayFileReferences.values()],[1,1,1],'prefetch callers released; each display has its single session lease');
+  const before=[f.http(),f.originalReads(),atomicReads,hashes,nativeSources,nativePixels,nativePackers];
+  for(const page of [...pages,...pages.toReversed()])for(const position of [0,2048/4097,4096/4097,1]) {
+   const payload=resources.tryAcquirePage(resourceScope,page,()=>true,position,false);
+   assert.ok(payload && !(payload instanceof Promise),'prepared foreground lookup is synchronous before any pending row');
+   assert.equal(payload.regionY,position===0?0:position===2048/4097?2048:4096);
+   resources.release(payload);
+  }
+  const boundary=resources.tryAcquirePage(resourceScope,pages[0],()=>true,(2048-0.0000003)/4097,false);
+  assert.equal(boundary.regionY,2048,'round-tripped position uses Body tolerance at the next-tile boundary');resources.release(boundary);
+  const laneGate=deferred(),busy=f.owner.runMangaImageWork(()=>true,async()=>{await laneGate.promise;},'background');
+  let settled=false;
+  const fastLoad=resources.loadPage(resourceScope,pages[23],false,()=>true,4096/4097,false).then(payload=>{settled=true;return payload;});
+  await tick();assert.equal(settled,true,'prepared load does not wait behind an occupied allocation lane');
+  const fast=await fastLoad;resources.release(fast);laneGate.resolve();await busy;await f.owner.mangaImageTail;
+  assert.deepEqual([f.http(),f.originalReads(),atomicReads,hashes,nativeSources,nativePixels,nativePackers],before,
+   'whole chapter forward/backward reuse performs zero original/display reads, hashes, HTTP, native source/pixel/packer work');
+  assert.equal(f.owner.mangaImagePending,0,'prepared load skips the allocation lane');
+  assert.throws(()=>resources.tryAcquirePage({...resourceScope,chapterIndex:-1},pages[0],()=>true),/IDENTITY/);
+  assert.throws(()=>resources.tryAcquirePage(resourceScope,{...pages[0],requestRule:''},()=>true),/RULE/);
+  assert.throws(()=>resources.tryAcquirePage(resourceScope,{...pages[0],headers:{Referer:'x'}},()=>true),/RULE_REQUIRED/);
+  const changedUrl=resources.tryAcquirePage(resourceScope,{...pages[0],url:'renewed-url'},()=>true);
+  assert.ok(changedUrl,'immutable manifest resourceRef, not a renewed transport URL, owns prepared identity');resources.release(changedUrl);
+  for(const [name,value]of [['sourceId','other'],['bookId','other'],['chapterUrl','other'],['contentVersion','other'],['sourceRuleVersion','other'],['decodeRevision','identity-v1']])
+   assert.equal(resources.tryAcquirePage({...resourceScope,[name]:value},pages[0],()=>true),undefined,`${name} never aliases the active chapter`);
+  assert.equal(resources.tryAcquirePage(resourceScope,pages[0],()=>true,0,true),undefined,'preview mode owns a distinct presentation');
+  resources.endDisplaySession();resources.endDisplaySession();
+  assert.equal(f.owner.mangaDisplaySessions.size,0);assert.equal(body.displayFileReferences.size,0,'chapter close releases all owner and caller leases');
+  resources.beginDisplaySession(resourceScope,()=>true,false);await resources.prefetchPage(resourceScope,pages[0],()=>true,false,'chapter');
+  f.preparations.beginRequest('source.update',{sourceId:scope.sourceId});f.preparations.finishRequest('source.update',{sourceId:scope.sourceId});
+  assert.equal(resources.tryAcquirePage(resourceScope,pages[0],()=>true),undefined,'real source/content mutation revokes prepared display aliases');
+  assert.equal(body.displayFileReferences.size,0);
+  resources.endDisplaySession();
+  for(const mutation of ['runtime.storage.restore','cache.clear']) {
+   resources.beginDisplaySession(resourceScope,()=>true,false);await resources.prefetchPage(resourceScope,pages[0],()=>true,false,'chapter');
+   const params=mutation==='cache.clear'?{scope:'book',sourceId:scope.sourceId,bookId:scope.bookId}:{};
+   f.preparations.beginRequest(mutation,params);f.preparations.finishRequest(mutation,params);
+   assert.equal(resources.tryAcquirePage(resourceScope,pages[0],()=>true),undefined,`${mutation} revokes captured alias ownership`);
+   assert.equal(body.displayFileReferences.size,0);resources.endDisplaySession();
+  }
+  resources.beginDisplaySession(resourceScope,()=>true,false);await resources.prefetchPage(resourceScope,pages[0],()=>true,false,'chapter');
+  await f.owner.clearOfflineBookImages(scope.sourceId,scope.bookId,true);
+  assert.equal(resources.tryAcquirePage(resourceScope,pages[0],()=>true),undefined,'direct book clear drops aliases before its storage operation');
+  assert.equal(body.displayFileReferences.size,0);resources.endDisplaySession();
+  resources.beginDisplaySession(resourceScope,()=>true,false);await resources.prefetchPage(resourceScope,pages[0],()=>true,true,'chapter');
+  f.owner.state='closing';f.owner.runtime=undefined;f.owner.ttsHost={close:async()=>{}};
+  await f.owner.closeRuntime();
+  assert.equal(f.owner.mangaDisplaySessions.size,0);assert.equal(body.displayFileReferences.size,0,'real Runtime close finally drains every prepared session lease');
+  body.releaseAllDisplayFiles();codecHeight=2;
+  console.log('PASS actual Coordinator scope→Gateway prefetch→Runtime→Body all-region prepared publication; 24-page full return is synchronous and zero byte reads/hash/decode/lane, unique file leases, floating boundaries, descriptor/scope fences and source/close cleanup');
+ }
  {
   const body=makeBody(`${readingDirectory}/reuse`),q=new MangaOfflineNetworkProbe(scope,()=>{},'reading');q.select(scope.sourceId,scope.bookId,true);
   const f=makeReadingOwner(body,q);await f.prefetch('chapter-A','A-0');await f.prefetch('chapter-A','A-1');await f.prefetch('chapter-B','B-0');

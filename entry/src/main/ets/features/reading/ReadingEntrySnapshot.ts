@@ -153,6 +153,10 @@ function decodeEntrySnapshot(data: JsonObject, sourceId: string, bookId: string,
     const value = raw['chapterProgress'];
     if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) throw new Error('invalid entry chapter progress');
     const progressIndex = integer(raw, 'chapterIndex');
+    // Implicit resume must display the chapter selected by its durable
+    // progress transaction. Explicit directory targets can carry the prior
+    // chapter's progress without using it as that target's position.
+    if (chapterIndex === undefined && progressIndex !== index) throw new Error('reading entry resume chapter mismatch');
     if (progressIndex === index && (raw['bodyVersion'] !== scope.bodyVersion || raw['processingVersion'] !== scope.processingVersion)) throw new Error('reading entry progress scope mismatch');
     progress = { kind: 'restored', progress: { bookId, chapterIndex: progressIndex,
       chapterOffset: integer(raw, 'chapterOffset'), chapterProgress: value, updatedAt: integer(raw, 'updatedAt'),

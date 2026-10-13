@@ -66,7 +66,7 @@ const puts=f=>f.events.filter(e=>e[0]==='put').length;
  old.params.onOpenBookshelfSettings();old.params.onRssRequested();old.params.onDiscoverRequested();old.params.onTemporaryBackBridge(()=>true,'old');
  assert.equal(await old.params.onRestoreDefaults(),false);assert.equal(await old.params.onClearCache(),undefined);await old.params.onReconcileCache(1);await old.params.onContinueCache(1);await settle();
  assert.equal(puts(f),before);assert.deepEqual(a.routes,[]);assert.equal(a.i.settingsSection,'general');
- const live=b.page();live.toggle()();await settle();assert.equal(puts(f),before+4);assert.equal(b.i.settingsSnapshot.reduceMotion,true);
+ const live=b.page();live.toggle()();await settle();assert.equal(puts(f),before+5);assert.equal(b.i.settingsSnapshot.reduceMotion,true);
  assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'confirmed');live.params.onOpenSourceManagement();assert.deepEqual(b.routes,['openSourceManagement']);cases++;
 }
 for(const failure of ['before','after']){
@@ -76,14 +76,14 @@ for(const failure of ['before','after']){
  const b=index(f);await b.open();const n=puts(f);oldSave();await settle();assert.equal(puts(f),n);
  const page=b.page(),refresh=page.native('刷新设置');refresh();refresh();await settle();assert.equal(puts(f),n,'native reconciliation does not issue put');
  assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'unknown');
- const current=b.page(),save=current.native('重试保存当前设置');save();save();await settle();assert.equal(puts(f),n+4);assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'confirmed');
+ const current=b.page(),save=current.native('重试保存当前设置');save();save();await settle();assert.equal(puts(f),n+5);assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'confirmed');
  f.fail('after');b.page().toggle()();await settle();const after=puts(f);old.refresh();oldSave();await settle();assert.equal(puts(f),after,'V1 Props update cannot upgrade the old physical generation');cases++;
 }
 {
  const f=fixture(),a=index(f);await a.open();const gate=deferred();f.hangFlush(gate);a.page().toggle()();await settle();
  const prior={...a.i.settingsSnapshot};const b=index(f);await b.open();assert.equal(a.i.settingsHost.orchestrator,b.i.settingsHost.orchestrator);
  assert.equal(b.i.settingsSnapshot.reduceMotion,true);gate.resolve();await settle();assert.deepEqual(a.i.settingsSnapshot,prior);
- assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'confirmed');assert.equal(puts(f),4,'one accepted write survives reconstruction in the original chain');cases++;
+ assert.equal(b.i.settingsOperation.receipt.receipt.confirmation,'confirmed');assert.equal(puts(f),5,'one five-field accepted write survives reconstruction in the original chain');cases++;
 }
 for(const retirement of ['nav','mount','unset','closed']){
  const f=fixture(),a=index(f);await a.open();const old=a.page(),tap=old.toggle();if(retirement==='nav')a.i.navigationGeneration++;
@@ -93,7 +93,7 @@ for(const retirement of ['nav','mount','unset','closed']){
 {
  const f=fixture(),a=index(f,'bookshelfSettings');await a.open();const old=a.page();f.fail('after');old.toggle();await settle();assert.equal(a.i.settingsOperation.receipt.receipt.confirmation,'unknown');
  const save=a.page().native('重试保存当前设置'),b=index(f,'bookshelfSettings');await b.open();const n=puts(f);save();old.params.onAutoCheckUpdate(true);await settle();assert.equal(puts(f),n);
- const current=b.page();current.native('重试保存当前设置')();await settle();assert.equal(puts(f),n+4);assert.equal(b.i.settingsSnapshot.autoCheckUpdate,false);cases++;
+ const current=b.page();current.native('重试保存当前设置')();await settle();assert.equal(puts(f),n+5);assert.equal(b.i.settingsSnapshot.autoCheckUpdate,false);cases++;
 }
 {
  const mutant=indexSource.replace("(!attached || (identity.length > 0 && identity === this.settingsPresentationIdentity && host.isPresentationCurrent(owner, identity)))",'true');

@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
+import { registerHooks } from 'node:module';
 import { MangaImageDecodeHost } from '../entry/src/main/ets/app/MangaImageDecodeHost.ts';
+registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
+ if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;}}});
+const {ReadingEntryPreparation}=await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
 function fixture(options={}) {
  const host=new MangaImageDecodeHost(), assets=new Map(), released=[];let id=0,current=true,validated=false;
  const bridge={begin(_r,_o,n){assets.set(++id,new Uint8Array(n));return id},write(_r,_o,i,b){assets.get(i).set(b);return b.length},commit(_r,_o,i){return assets.get(i).length},async read(_r,_o,i,offset,limit){if(options.cancelRead)current=false;return assets.get(i).slice(offset,offset+limit-(options.short?1:0))},release(_r,_o,i){released.push(i);assets.delete(i)}};
@@ -24,12 +28,13 @@ const manifest = {chapter:{sourceId:'s',bookId:'b',chapterId:'chapter'},sourceRu
 const ownerFile = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
 for(const cached of [false,true]) {
  const calls=[],bytes=new Uint8Array([9,8]);
- const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','prefetchReadingImage','prefetchReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes'],{
+ const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','prefetchReadingImage','prefetchReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes','captureReadingContentValidity'],{
   MangaImageDecodeHost:{instance:{async prepare(params,request,current){calls.push(['decode',params]);assert.equal(current(),true);return bytes}}},
   ReadingBodyImageHost:{instance:{async loadMangaBytes(bytes,_owner,current,position){return this.loadBytes(bytes,current,position)},async prepareMangaDisplay(bytes,_owner,current){return this.validateBytes?.(bytes,current,0)},async loadBytes(value,current,position){calls.push(['load',value,position]);return {fileUri:'file://ok'}},async validateBytes(value,current,position){calls.push(['validate',value,position]);assert.equal(position,0)},async fetchRequestBytes(){throw Error('bypassed manga decode')}}},
   hilog:{error(){}},LOG_DOMAIN:0
  });
  const owner=new Owner();owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;owner.mangaImageQueue=[];owner.mangaImageActive=false;owner.mangaImageUrgentStreak=0;owner.assertReadingImageCurrent=()=>{};owner.admitReadingImage=p=>p;
+ const preparation=new ReadingEntryPreparation(owner,false);owner.readingEntryPreparations=()=>preparation;
  owner.readingImageCacheIdentity=(sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl)=>({sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl:baseUrl?.split('#')[0]});
  owner.readingImageDiskCache={captureValidity:()=>()=>true,async loadResource(){return cached?bytes:undefined},async storeResource(i,b){assert.equal(i.mangaDecodeRevision,manifest.decodeRevision);assert.equal(b,bytes);calls.push(['store',i])},async removeResource(){}};
  await owner.loadReadingImage('s','b',3,'v','https://image','https://chapter#part',true,()=>true,'resource',0,manifest.sourceRuleVersion,false,manifest.decodeRevision);
@@ -38,8 +43,9 @@ for(const cached of [false,true]) {
  if(!cached){assert.equal(calls.find(c=>c[0]==='decode')[1].chapter.chapterId,'https://chapter#part');assert.equal(calls.filter(c=>c[0]==='store').length,2);}
 }
 {
- const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter'],{ReadingBodyImageHost:{instance:{}}});
+ const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','captureReadingContentValidity'],{ReadingBodyImageHost:{instance:{}}});
  const owner=new Owner();owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;owner.mangaImageQueue=[];owner.mangaImageActive=false;owner.mangaImageUrgentStreak=0;owner.assertReadingImageCurrent=()=>{};owner.readingImageCacheIdentity=()=>({sourceId:'s',bookId:'b'});
+ const preparation=new ReadingEntryPreparation(owner,false);owner.readingEntryPreparations=()=>preparation;
  owner.readingImageDiskCache={captureValidity:()=>()=>true,async loadResource(){return undefined}};
  owner.prepareReadingImageBytes=()=>{throw Error('network called')};
  await assert.rejects(owner.loadReadingImage('s','b',0,'v','image','chapter',false,()=>true,'r',0,'version',false,manifest.decodeRevision),/NOT_DOWNLOADED/);
@@ -58,13 +64,14 @@ console.log('PASS manga transfer preserves actionable HTTP failure identity acro
  // A newly admitted owner reuses persisted *decoded* bytes while offline; it
  // cannot call the key/library preparation route again.
  const decoded=new Uint8Array([254,253,252]),persisted=new Map();let prepareCalls=0,online=true;
- const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes'],{
+ const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes','captureReadingContentValidity'],{
   MangaImageDecodeHost:{instance:{async prepare(){assert.equal(online,true,'offline must not enter nested key/library route');prepareCalls++;return decoded}}},
   ReadingBodyImageHost:{instance:{async loadMangaBytes(bytes,_owner,current,position){return this.loadBytes(bytes,current,position)},async prepareMangaDisplay(bytes,_owner,current){return this.validateBytes?.(bytes,current,0)},async loadBytes(bytes){assert.deepEqual(bytes,decoded);return {fileUri:'file://decoded'}},async fetchRequestBytes(){throw Error('network bypass')}}},
   hilog:{error(){}},LOG_DOMAIN:0
  });
  const createOwner=()=>{
   const owner=new Owner();owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;owner.mangaImageQueue=[];owner.mangaImageActive=false;owner.mangaImageUrgentStreak=0;owner.assertReadingImageCurrent=()=>{};owner.admitReadingImage=p=>p;
+  const preparation=new ReadingEntryPreparation(owner,false);owner.readingEntryPreparations=()=>preparation;
   owner.readingImageCacheIdentity=(sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl)=>({sourceId,bookId,chapterIndex,contentVersion,imageUrl,baseUrl});
   owner.readingImageDiskCache={captureValidity:()=>()=>true,async loadResource(identity){return persisted.get(JSON.stringify(identity))},async storeResource(identity,bytes){persisted.set(JSON.stringify(identity),bytes)},async removeResource(identity){persisted.delete(JSON.stringify(identity))}};
   return owner;

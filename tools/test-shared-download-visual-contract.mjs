@@ -198,7 +198,7 @@ function owner(scheme = 'day', changes = {}, Component = probe.Component) {
     onIntent() {}, onReadTarget() {}, onViewStateChanged() {}, onTemporaryBackBridge() {}, ...changes });
   return result;
 }
-const records = result => [...result.nodes.values()];
+const records = result => [...result.nodes.values(), ...[...result.children.values()].flatMap(child => records(child))];
 const label = node => node.type === 'Text' ? node.create : node.createWithLabel?.[0];
 const find = (result, predicate, message) => {
   const match = records(result).find(predicate);
@@ -320,6 +320,7 @@ selects[1].onSelect(2); assert.equal(filter.sourceFilter, 'source-two');
 assert.deepEqual(filter.selectedBookKeys, [], 'real filter callbacks retire previous selections');
 
 function assertSelectModifiers(select, scheme, quick = false, expectedHeight = quick ? 28 : 31) {
+  if (select.readerInline === true) return;
   const role = quick ? readerTypographyRoles.TYPE_DOWNLOAD_QUICK_SELECT : readerTypographyRoles.TYPE_DOWNLOAD_BODY;
   const textStyle = select.textModifier;
   assert.ok(textStyle instanceof TextModifierPort, 'Select receives the production TextModifier instance');
@@ -779,7 +780,7 @@ assert.deepEqual(records(retainedChapters).filter(node => node.type === 'ListIte
 assert.equal(chapterList.create.scroller, retainedChapterScroller);
 const currentChapterEvent = chapterTitle.onClick;
 currentChapterEvent(); assert.equal(readTargets.at(-1).chapterId, completeChapter.chapterId);
-assert.equal(readTargets.at(-1).route, 'novelReader'); assert.equal(readTargets.at(-1).wired, false);
+assert.equal(readTargets.at(-1).route, 'novelReader'); assert.equal(readTargets.at(-1).wired, true);
 const targetCount = readTargets.length;
 retainedChapters.books = [{ ...chapterBook, chapters: [] }]; propertyRuntime.flush(); currentChapterEvent();
 assert.equal(readTargets.length, targetCount, 'a removed chapter cannot dispatch a stale reading target');

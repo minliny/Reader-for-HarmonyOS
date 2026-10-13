@@ -128,6 +128,14 @@ export class ReadingBodyImageHost {
     return this.mangaDisplay?.inventory() ?? [];
   }
 
+  /** Reclaim idle, rebuildable manga display derivatives for VM maintenance.
+   * Original manga files and Core manifests are owned by ReadingImageDiskCache;
+   * this method only touches the versioned display namespace. */
+  async clearRebuildableMangaDisplay(current: () => boolean = (): boolean => true): Promise<number> {
+    await this.recoverMangaTemporaryFiles();
+    return this.mangaDisplay?.clearRebuildable(current) ?? 0;
+  }
+
   private async recoverMangaTemporaryFiles(): Promise<void> {
     const directory = this.mangaDisplayDir;
     const generation = this.resourceGeneration;
@@ -204,15 +212,18 @@ export class ReadingBodyImageHost {
   /** Prepare bounded regions sequentially, then release their in-memory
    * leases. Persistent display proofs remain under the shared disk budget. */
   async prepareMangaDisplay(bytes: Uint8Array, chapter: MangaStorageChapter, current: () => boolean,
-    priority: 'foreground' | 'chapter' | 'background' | 'download'): Promise<void> {
+    priority: 'foreground' | 'chapter' | 'background' | 'download',
+    onPrepared?: (payload: ReadingBodyImagePayload, position: number) => void): Promise<void> {
     const header = await this.loadMangaBytes(bytes, chapter, current, 0, false, priority);
     const width = header.intrinsicWidth, height = header.intrinsicHeight;
-    this.release(header.fileUri);
+    try { onPrepared?.(header, 0); }
+    finally { this.release(header.fileUri); }
     const tileHeight = Math.min(height, 2048, Math.max(1, Math.floor(1024 * 1024 / width)));
     for (let y = tileHeight; y < height; y += tileHeight) {
       this.assertCurrent(current);
       const tile = await this.loadMangaBytes(bytes, chapter, current, y / height, false, priority);
-      this.release(tile.fileUri);
+      try { onPrepared?.(tile, y / height); }
+      finally { this.release(tile.fileUri); }
     }
   }
 
@@ -339,6 +350,13 @@ export class ReadingBodyImageHost {
     if (references === undefined) return false;
     this.displayFileReferences.set(path, references + 1);
     return true;
+  }
+
+  /** Borrow another lease from an already live immutable display descriptor.
+   * The chapter owner, not a PixelMap cache, keeps its physical file alive. */
+  retainMangaDisplay(payload: ReadingBodyImagePayload): ReadingBodyImagePayload | undefined {
+    if (payload.pixelMap !== undefined || !this.retainPayload(payload)) return undefined;
+    return { ...payload, pixelMap: undefined };
   }
 
   /** Decode-validate one offline resource without creating a display file. */

@@ -38,7 +38,7 @@ const util = {
   TextDecoder:{create:(_,opts)=>({decodeToString:b=>new TextDecoder('utf-8',opts).decode(b)})},
 };
 const crypto = {createMd:()=>{const h=createHash('sha256');return{update:async({data})=>{h.update(data);},digest:async()=>({data:h.digest()})};}};
-class MaterializationError extends Error {constructor(kind,message){super(message);this.kind=kind;}}
+class MaterializationError extends Error {constructor(kind,message){super(message);this.kind=kind;this.code=kind;}}
 const readMangaAtomicPayload = createMangaAtomicPayloadReaderFixture(io);
 const Cache = new Function('fileIo','statfs','cryptoFramework','util','canonicalReadingImageBaseUrl','assertReadingOfflineWriteCapacity','ReadingOfflineMaterializationError','readMangaAtomicPayload', `${executable}\nreturn ReadingImageDiskCache;`)(
   io,{getFreeSize:async()=>8*1024**3},crypto,util,b=>b?.trim().split('#')[0]||undefined,
@@ -62,8 +62,9 @@ function authority(defaultClass='cache') {
     async pending(){return [...pending.values()];},
   };
 }
-async function fixture(name,freeBytes=8*1024**3) {const dir=join(root,name);await fs.mkdir(dir);const a=authority();let free=freeBytes;
-  const cache=new Cache({filesDir:dir},{getFreeBytes:async()=>free});cache.setMangaStorageAuthority(a);return{dir,a,cache,setFree:value=>{free=value;}};
+async function fixture(name,freeBytes=8*1024**3,totalBytes=undefined) {const dir=join(root,name);await fs.mkdir(dir);const a=authority();let free=freeBytes;
+  const probe={getFreeBytes:async()=>free};if(totalBytes!==undefined)probe.getTotalBytes=async()=>totalBytes;
+  const cache=new Cache({filesDir:dir},probe);cache.setMangaStorageAuthority(a);return{dir,a,cache,setFree:value=>{free=value;},setTotal:value=>{totalBytes=value;}};
 }
 async function seed(cache,a,c,classification='cache'){a.register(c,classification);const i=image(c);await cache.storeResource(i,bytes);await cache.markChapterComplete(c,[i]);return i;}
 async function exists(path){return fs.access(path).then(()=>true,()=>false);}
@@ -147,10 +148,10 @@ try {
   {
     const {dir,a,cache,setFree}=await fixture('download-derived-quota');const c=chapter('permanent');const i=await seed(cache,a,c,'download');
     assert.equal((await cache.mangaStorageUsage()).ordinaryBytes,0,'permanent originals and their manifest are outside ordinary cache');
-    const originalExtra=join(await cache.chapterDirectory(c),'permanent-content.bin');await sparse(originalExtra,2*1024**3+1);
-    const derived=join(dir,'display','downloaded-derived.bin');await sparse(derived,2*1024**3-32*1024**2);
+    const originalExtra=join(await cache.chapterDirectory(c),'permanent-content.bin');await sparse(originalExtra,10*1024**3+1);
+    const derived=join(dir,'display','downloaded-derived.bin');await sparse(derived,10*1024**3-32*1024**2);
     cache.setMangaExternalStorage({inventory:async()=>[{path:derived,owners:[owner(c)],live:false}],remove:async()=>{throw Error('download originals cannot grant ordinary eviction');}});
-    assert.equal((await cache.mangaStorageUsage()).ordinaryBytes,2*1024**3-32*1024**2);
+    assert.equal((await cache.mangaStorageUsage()).ordinaryBytes,10*1024**3-32*1024**2);
     await assert.rejects(cache.reserveExternalWrite(owner(c),1,'background','derived'),/MANGA_CACHE_STORAGE_FULL/);
     const original=await cache.reserveExternalWrite(owner(c),2*1024**2,'foreground');
     const foreground=await cache.reserveExternalWrite(owner(c),32*1024**2,'foreground','derived');
@@ -163,7 +164,7 @@ try {
     await assert.rejects(cache.reserveExternalWrite(owner(c),1,'foreground','original'),/MANGA_CACHE_STORAGE_FULL/);free.release();
     setFree(512*1024**2);await assert.rejects(cache.reserveExternalWrite(owner(c),1,'foreground','original'),/MANGA_CACHE_STORAGE_FULL/);
     assert.equal(await exists(await cache.resourcePath(i)),true);assert.equal(await exists(originalExtra),true);
-    pass('download originals remain permanent outside ordinary quota but obey 512MiB free space; all downloaded derivatives obey 2GiB, foreground reserve and concurrent budgets');
+    pass('download originals remain permanent outside ordinary quota but obey 512MiB free space; all downloaded derivatives obey 10GiB, foreground reserve and concurrent budgets');
   }
   {
     const {dir,a,cache}=await fixture('original-derived-shared-inode');const c=chapter('permanent'),i=await seed(cache,a,c,'download');
@@ -201,7 +202,7 @@ try {
   }
   {
     const {dir,a,cache}=await fixture('quota');const c=chapter('new');a.register(c);
-    const historical=join(dir,'external','unknown-history.bin');await sparse(historical,2*1024**3-32*1024**2);
+    const historical=join(dir,'external','unknown-history.bin');await sparse(historical,10*1024**3-32*1024**2);
     cache.setMangaExternalStorage({inventory:async()=>[{path:historical,owners:[],live:false}],remove:async()=>{throw Error('unknown file must not be removed');}});
     await assert.rejects(cache.reserveExternalWrite(owner(c),1,'background'),/MANGA_CACHE_STORAGE_FULL/);
     const foreground=await cache.reserveExternalWrite(owner(c),32*1024**2,'foreground');
@@ -210,7 +211,27 @@ try {
     foreground.release();foreground.release();assert.equal((await cache.mangaStorageUsage()).reservedBytes,0);
     await assert.rejects(cache.reserveExternalWrite(owner(c),32*1024**2+1,'foreground'),/MANGA_CACHE_STORAGE_FULL/);
     assert.equal(await exists(historical),true);
-    pass('real 2GiB byte quota includes derived files and concurrent reservations; background leaves 32MiB for foreground');
+    pass('real 10GiB byte quota includes derived files and concurrent reservations; background leaves 32MiB for foreground');
+  }
+  {
+    // A total-size aware probe derives a small-VM budget and keeps the two
+    // ordinary buckets separate.  The explicit cleanup entry can reclaim only
+    // rebuildable display bytes; the permanent original remains untouched.
+    const total=512*1024**2,free=total-8*1024**2;const {dir,a,cache}=await fixture('dynamic-capacity',free,total);
+    const capacity=await cache.mangaStorageCapacity();
+    assert.equal(capacity.totalBytes,total);assert.equal(capacity.systemReserveBytes,64*1024**2);
+    assert.equal(capacity.cacheBudgetBytes,total-capacity.systemReserveBytes);
+    assert.equal(capacity.originalBudgetBytes+capacity.derivedBudgetBytes,capacity.cacheBudgetBytes);
+    assert.ok(capacity.cacheBudgetBytes<10*1024**3);assert.ok(capacity.derivedBudgetBytes>capacity.originalBudgetBytes);
+    const c=chapter('dynamic-derived');a.register(c,'download');policies(a);
+    const file=await derivedFile(dir,c,'large.bin',capacity.derivedBudgetBytes-1024);const files=[file];const events=[];derivedStorage(cache,files,events);
+    let full;try{await cache.reserveExternalWrite(owner(c),2048,'foreground','derived');}catch(error){full=error;}
+    assert.equal(full?.code,'storage_full');assert.equal(full?.message,'MANGA_CACHE_STORAGE_FULL');
+    const original=await seed(cache,a,chapter('permanent-dynamic'),'download');
+    await cache.clearMangaDerivedCache();assert.deepEqual(events,[c.chapterId]);assert.equal(await exists(file.path),false);
+    assert.equal(await exists(await cache.resourcePath(original)),true,'derived cleanup never removes permanent original bytes');
+    const retry=await cache.reserveExternalWrite(owner(c),2048,'foreground','derived');retry.release();
+    pass('total-size probe derives small-VM original/derived budgets; storage_full/MANGA_CACHE_STORAGE_FULL is observable and derived-only cleanup restores admission without touching downloads');
   }
   {
     const {a,cache,setFree}=await fixture('free',512*1024**2+48*1024**2);const c=chapter('A');a.register(c);
@@ -246,7 +267,7 @@ try {
   {
     const {dir,a,cache}=await fixture('pressure-order');const first=chapter('first'),second=chapter('second'),next=chapter('next');
     await seed(cache,a,first);const kept=await seed(cache,a,second);a.register(next);
-    const large=join(dir,'derived','large.bin');await sparse(large,2*1024**3-1024);
+    const large=join(dir,'derived','large.bin');await sparse(large,10*1024**3-1024);
     cache.setMangaExternalStorage({inventory:async()=>[{path:large,owners:[owner(first)],live:false}],remove:async(_,files)=>{for(const f of files)await fs.unlink(f.path);return true;}});
     const reservation=await deadline(cache.reserveExternalWrite(owner(next),1,'background'));reservation.release();
     assert.deepEqual(a.claims.map(c=>c.chapterId),[first.chapterId]);assert.equal(await exists(large),false);assert.deepEqual(await cache.loadResource(kept),bytes);
@@ -379,7 +400,7 @@ try {
   {
     const {dir,a,cache,setFree}=await fixture('download-derived-pressure');const ordinary=chapter('ordinary'),first=chapter('first'),second=chapter('second'),next=chapter('next');
     await seed(cache,a,ordinary);const originals=[await seed(cache,a,first,'download'),await seed(cache,a,second,'download')];a.register(next,'download');policies(a);
-    const files=[await derivedFile(dir,first,'first.bin',1024**3+64),await derivedFile(dir,second,'second.bin',1024**3+64)];const events=[];let free=512*1024**2;setFree(free);
+    const files=[await derivedFile(dir,first,'first.bin',5*1024**3+64),await derivedFile(dir,second,'second.bin',5*1024**3+64)];const events=[];let free=512*1024**2;setFree(free);
     beforeUnlink=async path=>{if(await exists(path)){free+=(await fs.stat(path)).size;setFree(free);events.push(path.startsWith(join(dir,'display'))?'derived':'ordinary');}};
     const selected=[];derivedStorage(cache,files,selected);const reservation=await deadline(cache.reserveExternalWrite(owner(next),1,'foreground','derived'));reservation.release();beforeUnlink=async()=>{};
     assert.deepEqual(a.claims.map(c=>c.chapterId),[ordinary.chapterId]);assert.deepEqual(selected,[first.chapterId]);assert.equal(await exists(files[0].path),false);assert.equal(await exists(files[1].path),true);
@@ -419,6 +440,30 @@ try {
     await cache.maintainMangaStorage();await cache.maintainMangaStorage();assert.equal(calls,1);
     await cache.maintainMangaStorage('clear');assert.equal(calls,2);
     assert.equal(handles.size,0);pass('foreground expiry is checked once per 24h; explicit clear bypasses cadence and descriptors close');
+  }
+  {
+    // Core caps classifyBatch/policyBatch requests at 256 entries. Exercise
+    // every production batch path with a 300-chapter shelf so a future caller
+    // cannot accidentally pass the complete candidate array in one RPC.
+    const {dir,a,cache}=await fixture('authority-batch-bounds');
+    const chapters=Array.from({length:300},(_,index)=>chapter(`batch-${index}`));
+    chapters.forEach(c=>a.register(c,'protected'));
+    const classifySizes=[],policySizes=[];
+    a.classifyBatch=async batch=>{classifySizes.push(batch.length);return batch.map(()=> 'protected');};
+    a.policyBatch=async batch=>{policySizes.push(batch.length);return batch.map(()=>({status:'protected',inUse:false,lastReadAt:null}));};
+    await cache.maintainMangaStorage('clear');
+    assert.deepEqual(classifySizes,[128,128,44], 'clear maintenance slices classifyBatch requests');
+    await cache.maintainMangaStorage('expiry');
+    assert.deepEqual(policySizes,[128,128,44], 'expiry maintenance slices policyBatch requests');
+    const files=[];
+    for(const c of chapters){const path=join(dir,'display',`${c.chapterId.split('/').at(-1)}.bin`);await fs.mkdir(dirname(path),{recursive:true});await fs.writeFile(path,new Uint8Array([1]));files.push({path,owners:[owner(c)],live:false});}
+    a.policy=async()=>({status:'download',inUse:false,lastReadAt:null});
+    a.policyBatch=async batch=>{policySizes.push(batch.length);return batch.map(()=>({status:'download',inUse:false,lastReadAt:null}));};
+    cache.setMangaExternalStorage({inventory:async()=>files,remove:async()=>false});
+    await cache.mangaStorageSummary();
+    assert.deepEqual(policySizes.slice(-3),[128,128,44], 'storage summary slices cleanable policy requests');
+    assert.ok(Math.max(...classifySizes,...policySizes)<=128, 'no authority batch exceeds the Host safety ceiling');
+    pass('300-chapter classify, expiry policy and cleanable-summary paths stay within bounded Core requests');
   }
   console.log(JSON.stringify({status:'PASS',productionSourceSha256:createHash('sha256').update(source).digest('hex'),checks},null,2));
 } finally {beforeSync=async()=>{};beforeUnlink=async()=>{};rejectUnlink=()=>false;await fs.rm(root,{recursive:true,force:true});}

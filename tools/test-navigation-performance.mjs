@@ -31,8 +31,8 @@ assert.match(remoteDetail, /shelfSnapshot: ShelfBook \| undefined = undefined/);
 assert.ok(remoteDetail.indexOf('this.route = entryRoute') < remoteDetail.indexOf('host.openRemote('));
 const remoteOwner = method(entry, 'async openRemote(', '/** A real reader/source-switch admission');
 assert.match(remoteOwner, /input.shelfSnapshot !== undefined && this.sameBook\(input.retainedSession, seed\)/);
-assert.match(remoteOwner, /const supplied = input\.validatedSession\?\.contentKind !== 'manga' && this\.sameBook\(input\.validatedSession, seed\) && preparedRemoteChapterMatches\(/,
-  'only an exact admitted text session with a current prepared chapter skips acquisition; manga keeps its image admission');
+assert.match(remoteOwner, /const supplied = input\.validatedSession\?\.contentKind !== 'manga' && this\.sameBook\(input\.validatedSession, seed\) &&\s*coordinator\.hasCurrentCatalogProjection\(input\.validatedSession!\) && preparedRemoteChapterMatches\(/,
+  'only an exact admitted text session owned by the current catalog with a current prepared chapter skips acquisition; manga keeps its image admission');
 assert.match(remoteOwner, /coordinator.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent: current \}\)/);
 assert.ok(remoteOwner.indexOf('this.begin(') < remoteOwner.indexOf('loadShelfBook(seed.sourceId, seed.bookId)'),
   'mandatory exact membership never blocks the inert shell');

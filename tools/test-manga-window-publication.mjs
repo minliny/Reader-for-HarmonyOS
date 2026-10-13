@@ -1,3 +1,4 @@
+import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -10,19 +11,22 @@ function load(name, dependencies = {}) {
 }
 const MangaSessionGateway = load('MangaSessionGateway');
 const MangaResourceGateway = load('MangaResourceGateway');
-const Controller = load('MangaSessionController', { MangaSessionGateway, MangaResourceGateway });
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
-function fixture() {
+function fixture(options = {}) {
   const calls = [], released = [], events = [], gates = [];
   const control = { delayNeighbor: false, delayRegion: true };
+  const imageSize = options.largeImage === true ? 5000 : 600;
+  const imageHeight = options.largeImage === true ? 5000 : 800;
+  const intrinsicHeight = options.largeImage === true ? 5000 : 3200;
   const pages = Array.from({ length: 2 }, (_, ordinal) => {
     const pageId = `mp1:${String(ordinal).padStart(64, '0')}`;
     return { ordinal, pageId, resourceRef: `manga:${pageId}` };
   });
   const runtime = { supportsCoreCapability: () => true, async loadReadingImage(...args) {
-    const image = { fileUri: `file://display-${calls.length}`, width: 600, height: 800,
-      intrinsicWidth: 600, intrinsicHeight: 3200, revision: 'pixels' };
+    const image = { fileUri: `file://display-${calls.length}`, width: imageSize, height: imageHeight,
+      intrinsicWidth: imageSize, intrinsicHeight, revision: 'pixels' };
     calls.push({ image, args });
     if ((control.delayRegion && args[9] > 0) || (control.delayNeighbor && args[8] === pages[1].resourceRef)) {
       const gate = deferred(); gates.push({ gate, image }); await gate.promise;
@@ -84,10 +88,27 @@ console.log('PASS pending joins are silent while new attempt, failure, retry, re
   const neighborUri = f.gates[0].image.fileUri;
   assert.equal(f.released.includes(neighborUri), false); f.events.length = 0;
   await f.controller.setTileWindow(window);
-  assert.equal(f.released.filter(uri => uri === neighborUri).length, 1, 'unchanged window still retires an unused late header lease');
-  assert.equal(f.events.length, 0, 'metadata lease cleanup does not republish unchanged visible images');
+  assert.equal(f.released.filter(uri => uri === neighborUri).length, 0, 'unchanged window transfers the completed neighbor header to its chapter owner');
+  assert.equal(f.controller.tile(1, 0)?.image?.fileUri, neighborUri);
+  assert.equal(f.events.length, 0, 'offscreen header transfer does not republish unchanged visible images');
   await f.controller.setTileWindow(window);
-  assert.equal(f.released.filter(uri => uri === neighborUri).length, 1);
+  assert.equal(f.released.filter(uri => uri === neighborUri).length, 0);
   f.controller.close();
+  assert.equal(f.released.filter(uri => uri === neighborUri).length, 1);
 }
-console.log('PASS silent unchanged window still performs late metadata resource cleanup exactly once');
+console.log('PASS silent unchanged window retains late metadata resources and releases once at chapter close');
+
+// A hard-budget rejection must retire the caller-owned active lease immediately.
+// The controller must not leave an oversized image in its active map until close,
+// which would bypass the retained cache's byte boundary.
+{
+  const f = fixture({ largeImage: true });
+  await f.controller.openPrepared(f.entry, true); await tick();
+  await f.controller.setTileWindow([]);
+  assert.equal(f.controller.tile(0, 0), undefined, 'rejected oversized header is not kept in active tiles');
+  const released = f.released.length;
+  assert.equal(released, f.entry.chapter.totalPages, 'rejected oversized header leases are released immediately');
+  f.controller.close();
+  assert.equal(f.released.length, released, 'retired oversized leases are not released again at close');
+}
+console.log('PASS rejected oversized retained tile releases once without active-map overflow');

@@ -12,6 +12,7 @@ import {
 } from './ReaderWindowMetrics';
 import { TYPE_PAGE_TITLE } from './ReaderTypography';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_650 } from './ReaderFontFamilies.ts';
+import { ReaderHeaderFrameModifier } from './ReaderPageShell';
 
 // 二级页面统一返回栏:44×44 圆角返回钮 + 24px 思源宋体标题,58 高、20vp 内边距。
 // 曾被 Settings/SourceManagement/Sync/Rss/LocalBookDetail 各自复制实现。
@@ -24,6 +25,14 @@ export struct PageBackBar {
   @Prop centered: boolean = false;
   @Prop floating: boolean = false;
   @Prop variant: 'standard' | 'mangaDirectory' = 'standard';
+  /**
+   * Header surface is an explicit variant contract. Secondary pages are
+   * fixed above a scrolling body, so the standard variant is solid by
+   * default; callers that intentionally float over reader content must opt
+   * into transparent explicitly. Manga and floating variants always retain
+   * their own surface treatment below.
+   */
+  @Prop surface: 'solid' | 'transparent' = 'solid';
   /** 默认 `search_back`;详情页等可传其他返回图标。 */
   backIcon?: Resource;
   /** 可选父页面颜色；默认颜色在渲染时读取当前主题，不能冻结在构造阶段。 */
@@ -70,7 +79,7 @@ export struct PageBackBar {
     .height(this.variant === 'mangaDirectory' ? mangaDirectoryHeaderHeight(this.mangaFontScale()) : this.floating ? 52 : 58)
     .padding({ left: this.leftInset(), right: this.rightInset() })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(this.variant === 'mangaDirectory' ? mangaDirectoryColor('surface', this.appThemeScheme) : this.floating ? readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme) : Color.Transparent)
+    .backgroundColor(this.variant === 'mangaDirectory' ? mangaDirectoryColor('surface', this.appThemeScheme) : this.floating || this.surface === 'solid' ? readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme) : Color.Transparent)
     .border({ width: this.floating ? this.variant === 'mangaDirectory' ? visual.borderWidth : 1 : 0,
       color: this.variant === 'mangaDirectory' ? mangaDirectoryColor('line', this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(this.floating ? this.variant === 'mangaDirectory' ? visual.headerRadius : 18 : 0)
@@ -78,6 +87,8 @@ export struct PageBackBar {
     .shadow(this.floating ? { radius: this.variant === 'mangaDirectory' ? visual.shadowRadius : 18,
       color: this.variant === 'mangaDirectory' ? mangaDirectoryColor('shadow', this.appThemeScheme) : readerAppColor('app.BookshelfPage.projectionBookCoverLayer.color.1A594632', this.appThemeScheme),
       offsetX: 0, offsetY: this.variant === 'mangaDirectory' ? visual.shadowOffsetY : 5 } : { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
+    .attributeModifier(new ReaderHeaderFrameModifier(this.variant === 'mangaDirectory' ? 'mangaDirectory' : this.floating ? 'floating' : 'standard',
+      this.surface, this.appThemeScheme))
     .hitTestBehavior(HitTestMode.Transparent);
   }
 

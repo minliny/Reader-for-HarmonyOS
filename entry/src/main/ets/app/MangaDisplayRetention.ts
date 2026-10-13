@@ -22,6 +22,9 @@ export class MangaDisplayRetention {
   private readonly records: util.LRUCache<string, MangaDisplayRecord> = new util.LRUCache<string, MangaDisplayRecord>(256);
   private readonly recordFingerprints: util.LRUCache<string, string> = new util.LRUCache<string, string>(256);
   private readonly knownFiles = new Set<string>();
+  /** Payload files proven during prewarm/store. Scroll lookups consult this
+   * in-memory scope first; a miss schedules the normal asynchronous proof. */
+  private readonly validatedFiles = new Set<string>();
   private readonly writes = new Set<string>();
   // Serialize publication of one immutable Reader display proof, including
   // its fixed temporary sidecar; this is an I/O ownership lane, not a cache.
@@ -31,6 +34,7 @@ export class MangaDisplayRetention {
   private readonly hash: (bytes: Uint8Array) => Promise<string>;
   private readonly live: (path: string) => boolean;
   private readonly reads: Map<string, number> = new Map<string, number>();
+  private readonly validationTasks = new Set<string>();
   private readonly removals: Set<string> = new Set<string>();
   constructor(directory: string, hash: (bytes: Uint8Array) => Promise<string>, live: (path: string) => boolean) {
     this.directory = directory; this.hash = hash; this.live = live;
@@ -59,6 +63,20 @@ export class MangaDisplayRetention {
     if (record === undefined || !this.sameOwner(record.owner, owner)) return undefined;
     const path = this.payloadPath(record.payload, key);
     if (path === undefined || this.removals.has(path)) return undefined;
+    // A live display lease is expected during backscroll. It is an in-memory
+    // ownership fact and must not force another stat/hash on the scroll path.
+    // Writes/removals are the only fences that invalidate this fast path;
+    // read pins can overlap because the payload is immutable once published.
+    if (this.validatedFiles.has(path) && !this.writes.has(path) && !this.removals.has(path)) {
+      const payload = { ...record.payload, pixelMap: undefined };
+      acquire?.(payload);
+      // The record was proven when it entered the in-memory retention set.
+      // Keep this scroll path entirely in memory; maintenance/prewarm callers
+      // can perform the asynchronous recheck without adding a hash or file
+      // read to every backscroll hit.
+      this.scheduleValidatedFileCheck(key, record, path, current);
+      return payload;
+    }
     activePath = path; this.reads.set(path, (this.reads.get(path) ?? 0) + 1);
     if (!(await fs.access(path))) return undefined;
     const stat = await fs.stat(path);
@@ -67,7 +85,7 @@ export class MangaDisplayRetention {
     if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
     if (bytes.byteLength !== record.fileBytes || await this.hash(bytes) !== record.fileHash) return undefined;
     if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
-    this.records.put(key, record); this.knownFiles.add(path);
+    this.records.put(key, record); this.knownFiles.add(path); this.validatedFiles.add(path);
     const payload = { ...record.payload, pixelMap: undefined };
     acquire?.(payload);
     return payload;
@@ -80,6 +98,40 @@ export class MangaDisplayRetention {
   private releaseRead(path: string): void {
     const count = (this.reads.get(path) ?? 1) - 1;
     if (count === 0) this.reads.delete(path); else this.reads.set(path, count);
+  }
+
+  /** Recheck a fast-path file off the caller's scroll await. A replacement or
+   * deletion is marked invalid for the next request; the current lease remains
+   * valid until its normal owner release. */
+  private scheduleValidatedFileCheck(key: string, record: MangaDisplayRecord, path: string,
+    current: () => boolean): void {
+    if (this.validationTasks.has(path)) return;
+    this.validationTasks.add(path);
+    // Keep the immutable payload pinned while the background proof is in
+    // flight. This prevents a maintenance trim from unlinking the file
+    // between access/stat and the atomic read, while keeping the caller's
+    // scroll await free of filesystem work.
+    this.reads.set(path, (this.reads.get(path) ?? 0) + 1);
+    // Let the current interaction settle before doing the proof. The delay
+    // keeps the caller's scroll burst free of a competing checksum while still
+    // surfacing an externally replaced file promptly on the next frame.
+    setTimeout((): void => { void (async (): Promise<void> => {
+      try {
+        if (!current() || !(await fs.access(path))) { this.validatedFiles.delete(path); return; }
+        const stat = await fs.stat(path);
+        if (stat.isDirectory() || stat.size !== record.fileBytes || stat.size > 32 * 1024 * 1024) {
+          this.validatedFiles.delete(path); return;
+        }
+        const bytes = await readMangaAtomicPayload(path, stat.size, 32 * 1024 * 1024, current);
+        if (current() && (bytes.byteLength !== record.fileBytes || await this.hash(bytes) !== record.fileHash)) {
+          this.validatedFiles.delete(path);
+        }
+      } catch (_) { this.validatedFiles.delete(path); }
+      finally {
+        this.releaseRead(path);
+        this.validationTasks.delete(path);
+      }
+    })(); }, 10);
   }
 
   private fileBusy(path: string): boolean {
@@ -127,7 +179,7 @@ export class MangaDisplayRetention {
       if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
       await fs.rename(temp, recordPath);
       ownsTemp = false; this.temporaryOwners.delete(temp);
-      this.records.put(key, record); this.knownFiles.add(path);
+      this.records.put(key, record); this.knownFiles.add(path); this.validatedFiles.add(path);
       this.recordFingerprints.remove(key);
     } finally {
       // Remove only the temporary file this call opened. Failed unlink stays
@@ -180,11 +232,47 @@ export class MangaDisplayRetention {
         await fs.unlink(file.path);
       }
       this.knownFiles.delete(file.path); this.temporaryOwners.delete(file.path);
+      this.validatedFiles.delete(file.path);
       const match = /manga-display-([0-9a-f]{64})\.json$/.exec(file.path);
       if (match !== null) { this.records.remove(match[1]); this.recordFingerprints.remove(match[1]); }
     }
     return true;
     } finally { for (const file of selected) this.removals.delete(file.path); }
+  }
+
+  /**
+   * Remove only rebuildable display derivatives that are currently idle.
+   *
+   * This is intentionally separate from the Core-owned manga eviction grant:
+   * a VM maintenance run may reclaim derived display files to recover space,
+   * while downloaded originals, manifests and reading progress remain owned by
+   * their normal authorities. Live leases, writes and reads are skipped so a
+   * maintenance request cannot invalidate an on-screen image.
+   */
+  async clearRebuildable(current: () => boolean = (): boolean => true): Promise<number> {
+    const files = await this.inventory();
+    // A cold/partial sidecar has no proven chapter owner. Keep it for the
+    // normal inventory/recovery path rather than inferring that an unknown
+    // file is disposable merely from its filename.
+    const selected = files.filter(file => file.owners.length > 0 && !this.fileBusy(file.path));
+    for (const file of selected) this.removals.add(file.path);
+    let removed = 0;
+    try {
+      for (const file of selected) {
+        if (!current() || this.live(file.path) || this.writes.has(file.path) || this.reads.has(file.path)) continue;
+        if (!file.path.startsWith(`${this.directory}/`) || file.path.slice(this.directory.length + 1).includes('/')) continue;
+        if (await fs.access(file.path)) {
+          if (!current() || this.live(file.path) || this.writes.has(file.path) || this.reads.has(file.path)) continue;
+          await fs.unlink(file.path);
+        }
+        this.knownFiles.delete(file.path); this.temporaryOwners.delete(file.path);
+        this.validatedFiles.delete(file.path);
+        const match = /manga-display-([0-9a-f]{64})\.json$/.exec(file.path);
+        if (match !== null) { this.records.remove(match[1]); this.recordFingerprints.remove(match[1]); }
+        removed++;
+      }
+    } finally { for (const file of selected) this.removals.delete(file.path); }
+    return removed;
   }
 
   private sameOwner(a: MangaStorageChapter, b: MangaStorageChapter): boolean {

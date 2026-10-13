@@ -32,24 +32,30 @@ const sdk=boundedSurfaceSdk();
 const Book=createReaderBuilderProbe(bookSource,boundedMembers(bookSource),{...sdk.deps,ReaderWindowCoordinator:{metrics:()=>metrics},ReaderDialogSurface:SurfaceChild,DialogActionView},sdk.hooks).Component;
 const Group=createReaderBuilderProbe(selectorSource,boundedMembers(selectorSource),sdk.deps,sdk.hooks).Component;
 let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
-const methods=['isCurrentRuntime','isCurrentBookshelfPresentation','isCurrentBookRemoval','openBookRemovalDialog','bookRemovalDialogContent','dismissBookRemovalDialog','confirmBookRemovalDialog',
+const methods=['editingShelfGroupBook','editingShelfGroupBusy','editingShelfGroupPresentation','shelfBookKey','isCurrentRuntime','isCurrentBookshelfPresentation','isCurrentBookRemoval','openBookRemovalDialog','bookRemovalDialogContent','dismissBookRemovalDialog','confirmBookRemovalDialog',
  'bindBookshelfManagement','bookshelfManagementIdentity','isCurrentBookshelfManagement','closeShelfGroup','shelfGroupRecovery','canContinueShelfGroup','shelfGroupRecoveryContent','openShelfGroup','shelfGroupContent','shelfGroupSurface','shelfGroupBody','isCurrentShelfGroup','assignShelfDefaultGroup'];
 const defer=()=>{let resolve,reject;const promise=new Promise((r,j)=>{resolve=r;reject=j;});return{promise,resolve,reject};};
 function fixture(text=indexSource, runtime){
  const controllers=[];
  class Controller{constructor(options){this.options=options;this.opens=0;this.closes=0;controllers.push(this);}open(){this.opens++;this.options.builder();}close(){this.closes++;}}
  const r=runtime??{};currentOwner=r;
- const probe=createReaderBuilderProbe(text,methods,{BookRemovalDialog:Book,CustomDialogController:Controller,DialogAlignment:{Center:'center'},ReaderRuntimeOwner,
-  ReaderDialogSurface:SurfaceChild,BookshelfGroupSelector:Group,ReaderRecoveryNotice:sdk.deps.ReaderRecoveryNotice,ReaderRecoveryAction:sdk.deps.ReaderRecoveryAction,readerRecoveryView,DOMAIN:0,hilog:{error(){}},errorMessageOf:e=>e.message}, {mountChildren:true});
+ const probe=createReaderBuilderProbe(text,methods,{...sdk.deps,BookRemovalDialog:Book,CustomDialogController:Controller,DialogAlignment:{Center:'center'},ReaderRuntimeOwner,
+  ReaderDialogSurface:SurfaceChild,BookshelfGroupSelector:Group,ReaderRecoveryNotice:sdk.deps.ReaderRecoveryNotice,ReaderRecoveryAction:sdk.deps.ReaderRecoveryAction,readerRecoveryView,DOMAIN:0,hilog:{error(){}},errorMessageOf:e=>e.message}, {...sdk.hooks,mountChildren:true});
  const i=probe.owner;Object.assign(i,{mountedRuntimeOwner:r,navigationGeneration:1,detailShelfAdmissionMount:1,route:'bookshelf',shelfReceiptRetired:false,
   bookRemovalPresentation:0,bookRemovalDialogOpen:false,editingShelfGroupPresentation:0,editingShelfGroupBusy:false,bookshelfManagementSnapshot:{busy:false},bookshelfManagementPresentationIdentity:'',rssInstanceIdentity:1,appThemeScheme:'day'});
- let refresh=0,invalid=0;const writes=[],toasts=[];let task;
- i.bookshelfHost={bindManagement:()=>true,openManagement(){},detachManagementPresentation(){},isManagementPresentationCurrent:()=>true,assignDefaultGroup:async book=>{writes.push(book);if(task)await task.promise;return{receipt:{receipt:{confirmation:'confirmed',fact:'confirmedCurrent'}}};}};
+ let refresh=0,invalid=0;const writes=[],toasts=[],bindings=[],opens=[];let task,management;
+ // Match the actual Host's initial current()/Runtime admission. A fixture that
+ // unconditionally binds would hide State proxy versus captured raw identity.
+ const managementCurrent=(owner,identity)=>management?.owner===owner&&management.identity===identity&&
+  ReaderRuntimeOwner.isCurrent(owner)&&management.current();
+ i.bookshelfHost={bindManagement:(owner,identity,current)=>{const accepted=ReaderRuntimeOwner.isCurrent(owner)&&current();bindings.push({owner,identity,accepted});if(!accepted)return false;management={owner,identity,current};return true;},
+  openManagement:identity=>opens.push(identity),detachManagementPresentation:()=>{management=undefined;},isManagementPresentationCurrent:managementCurrent,
+  assignDefaultGroup:async(book,identity)=>{if(!managementCurrent(r,identity))return undefined;writes.push(book);if(task)await task.promise;return{receipt:{receipt:{confirmation:'confirmed',fact:'confirmedCurrent'}}};}};
  i.invalidateBookshelfProjection=()=>invalid++;i.refreshBookshelf=()=>refresh++;i.getUIContext=()=>({getPromptAction:()=>({showToast:v=>toasts.push(v.message)})});
  const leaf=()=>[...i.children.values()].findLast(c=>c instanceof Book);
  const native=()=>{const b=leaf();b.initialRender();const surface=sharedSurface([...b.children.values()][0].params);return{b,surface,
   confirm:[...surface.nodes.values()].filter(n=>n.type==='Button'&&n.onClick)[1],cancel:[...surface.nodes.values()].filter(n=>n.type==='Button'&&n.onClick)[0]};};
  const group=()=>{i.shelfGroupContent();const child=[...i.children.values()].findLast(c=>c instanceof Group);child.initialRender();return{child,select:[...child.nodes.values()].find(n=>n.create==='默认'&&n.onClick),mask:[...i.nodes.values()].findLast(n=>n.type==='Row'&&n.height==='100%'&&n.onClick)};};
- return{i,r,controllers,native,group,writes,toasts,refresh:()=>refresh,invalid:()=>invalid,setTask:t=>task=t,retire:()=>{currentOwner=undefined;}};
+ return{i,r,controllers,native,group,writes,toasts,bindings,opens,output:probe.output,raw:value=>sdk.properties.sdk.ObservedObject.GetRawObject(value),refresh:()=>refresh,invalid:()=>invalid,setTask:t=>task=t,retire:()=>{currentOwner=undefined;}};
 }
 export {fixture as bookshelfDialogPresentationFixture,indexSource,defer,sdk as bookshelfDialogSdk};

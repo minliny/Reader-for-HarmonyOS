@@ -6,6 +6,7 @@ import { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot } from '../en
 import * as geometry from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
 import { createReadingPaginationLayoutSignature } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
 import { ReaderPageChromeMeasurements, resolveReaderPageChromeLayout } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
+import { READER_PAGE_CHROME_TOP_ROW_PADDING_VP } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
 
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
@@ -33,12 +34,14 @@ for (const [width, height, tablet] of forms) for (const statusHeight of [24, 40,
       assert.deepEqual([page.viewportWidth, page.viewportHeight], [width, height],
         'the entire window remains the page in both extension and system-bar states');
     }
-    assert.equal(off.contentTop, statusTop + statusHeight * 2 + 8, 'visible status and information lanes set the body top without an authored floor');
-    assert.equal(onBeforeHide.contentTop, statusTop + statusHeight + 8, 'extending uses one information lane and the existing 8vp text gap');
+    assert.equal(off.contentTop, statusTop + statusHeight + 8, 'metadata owns the measured status band without a second information lane');
+    assert.equal(onBeforeHide.contentTop, statusTop + statusHeight + 8, 'both cutout settings use the same status band and existing 8vp text gap');
     assert.equal(onAfterHide.contentTop, onBeforeHide.contentTop, 'late system avoid-area hide must not shift the body again');
     assert.equal(offBeforeReveal.contentTop, offAfterReveal.contentTop, 'late system avoid-area reveal must not shift the body again');
-    assert.ok(Math.abs(off.contentTop - onBeforeHide.contentTop - statusHeight) < 1e-8);
-    assert.ok(Math.abs(onBeforeHide.bodyHeight(false) - off.bodyHeight(false) - statusHeight) < 1e-8);
+    assert.equal(off.pageChromeVisualSafeTop, statusTop, 'top metadata starts at the actual window-relative status origin');
+    assert.equal(onBeforeHide.pageChromeVisualSafeTop, statusTop);
+    assert.equal(off.contentTop, onBeforeHide.contentTop, 'cutout preference cannot move the body by another status band');
+    assert.equal(onBeforeHide.bodyHeight(false), off.bodyHeight(false));
     assert.equal(off.contentLeft, onBeforeHide.contentLeft);
     assert.equal(off.contentBottom, onBeforeHide.contentBottom);
     const controlVisible = geometry.resolveReaderControlLayout(width, height, tablet, visible);
@@ -51,13 +54,19 @@ for (const [width, height, tablet] of forms) for (const statusHeight of [24, 40,
 for (const [width, height, tablet] of forms) for (const statusHeight of [24, 40]) for (const extended of [false, true]) {
   const cutoutBottom = statusHeight * 2 + 30;
   const inset = metrics(width, height, statusHeight, 0, cutoutBottom);
-  assert.equal(geometry.resolveReaderReadingLayout(width, height, tablet, inset, extended).contentTop, cutoutBottom,
-    'body text always clears a taller physical cutout, including extended reading');
+  const cutoutLayout = geometry.resolveReaderReadingLayout(width, height, tablet, inset, extended);
+  assert.equal(cutoutLayout.pageChromeTopRegionHeight, cutoutBottom,
+    'the information lane includes the complete physical cutout when it exceeds the status rectangle');
+  assert.equal(cutoutLayout.contentTop, cutoutBottom + 8,
+    'body text keeps the existing 8vp clearance below the complete measured information lane');
   // TYPE_CUTOUT supplies a rectangle as well as an inset. A floating cutout's
   // height alone is insufficient when its top is not the window origin.
   const rect = metrics(width, height, statusHeight, 0, statusHeight);
   rect.statusBarCutoutRect = new ReaderRectVp(width / 2 - 30, 30, 60, statusHeight * 2);
-  assert.equal(geometry.resolveReaderReadingLayout(width, height, tablet, rect, extended).contentTop, cutoutBottom);
+  const floatingCutoutLayout = geometry.resolveReaderReadingLayout(width, height, tablet, rect, extended);
+  assert.equal(floatingCutoutLayout.pageChromeTopRegionHeight, cutoutBottom,
+    'a floating cutout contributes its bottom edge, including its nonzero origin');
+  assert.equal(floatingCutoutLayout.contentTop, cutoutBottom + 8);
   cases++;
 }
 
@@ -72,8 +81,10 @@ for (const [width, height, tablet] of forms) for (const statusHeight of [24, 40]
     const afterChromeChange = geometry.resolveReaderReadingLayout(width, height, tablet, hidden, extended, undefined, measuredHeight);
     const chrome = resolveReaderPageChromeLayout(layout, new ReaderPageChromeMeasurements(150, measuredHeight,
       60, measuredHeight, 0, 0, 0, 0, false, 0, 0, 24, 24));
-    assert.equal(layout.pageChromeTopRegionHeight, statusHeight, 'the platform status band is not replaced by a text measurement');
-    assert.equal(layout.contentTop, (extended ? 0 : statusHeight) + Math.max(statusHeight, measuredHeight) + 8);
+    const measuredLane = Math.max(statusHeight, measuredHeight + READER_PAGE_CHROME_TOP_ROW_PADDING_VP * 2);
+    assert.equal(layout.pageChromeTopRegionHeight, measuredLane,
+      'the top information lane follows the larger of status inset and measured text row');
+    assert.equal(layout.contentTop, measuredLane + 8);
     assert.ok(chrome.topStartY + measuredHeight + 8 <= layout.contentTop,
       'measured large top text keeps its complete height and an 8vp gap before body text');
     assert.ok(chrome.topEndY + measuredHeight + 8 <= layout.contentTop);
@@ -104,8 +115,8 @@ for (const [width, height, tablet] of forms) for (const ready of [false, true]) 
 }
 
 // Execute the actual reader cache, layout signature and reflow methods. The
-// unchanged owner must distinguish the two geometry budgets and ignore a
-// later chrome-only inset update, while preserving the current scalar anchor.
+// unchanged owner must retain the same body budget for either cutout setting
+// and ignore a later chrome-only inset update, preserving the scalar anchor.
 let currentMetrics = metrics(390, 844, 24);
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const Reader = productionMotionMethods(file, ['readingLayout', 'effectiveViewportWidth', 'effectiveViewportHeight',
@@ -133,13 +144,13 @@ const reader = Object.assign(new Reader(), { viewportWidth: 390, viewportHeight:
   beginMeasurement: token => measured.push(token),
 });
 const before = reader.readingLayout(), signatureBefore = reader.paginationLayoutSignature();
-assert.equal(before.contentTop, 72, 'actual owner passes measured 40vp text above the 24vp status lane to body geometry');
+assert.equal(before.contentTop, 64, 'actual owner reserves the complete measured information lane once');
 reader.lastWindowMetricsLayoutKey = reader.windowMetricsLayoutKey();
 reader.readerSettingsSnapshot.extendIntoCutout = true;
 reader.reflowAfterWindowGeometryChange();
 assert.notEqual(reader.readingLayout(), before, 'the actual layout cache includes the cutout preference');
-assert.equal(reader.readingLayout().contentTop, 48, 'actual owner preserves the whole measured row when extended');
-assert.notEqual(reader.paginationLayoutSignature(), signatureBefore, 'the existing pagination signature includes the corrected top inset');
+assert.equal(reader.readingLayout().contentTop, 64, 'actual owner preserves the whole measured row when extended');
+assert.equal(reader.paginationLayoutSignature(), signatureBefore, 'cutout preference preserves the same measured information and body geometry');
 assert.deepEqual(invalidated, [['source', 'book']]);
 assert.deepEqual(measured, [7]);
 assert.equal(reader.desiredChapterOffset, 123, 'reflow keeps the semantic location instead of substituting an old page number');

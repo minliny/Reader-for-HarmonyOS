@@ -25,6 +25,7 @@ import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
 import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
 import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from './MangaLayoutPolicy';
 import { MangaBookPresentation } from './MangaBookPresentation';
+import { mangaDirectoryDisplay } from './MangaDirectoryDisplay';
 import { MangaReadingDirectoryFallback } from './MangaReadingDirectoryFallback';
 import { MangaDownloadOperationsPanel } from './MangaDownloadOperationsPanel';
 import type { MangaDownloadAction, MangaDownloadActionId } from './MangaDownloadActionsGateway';
@@ -93,7 +94,7 @@ export struct MangaReadingSurface {
   directoryTargetProof: JsonObject | undefined = undefined;
   @Prop remoteSession: RemoteReadingSession | undefined = undefined;
   remoteBookSeed: RemoteReadingBookSeed | undefined = undefined;
-  onRemoteSessionReady: (session: RemoteReadingSession) => void = (): void => {};
+  onRemoteSessionReady: (session: RemoteReadingSession, refreshDirectoryDisplay?: boolean) => void = (): void => {};
   onChapterCommitted: (index: number, title: string) => void = (): void => {};
   offline: boolean = false;
   onSaveFailure: (message: string) => void = (_message: string): void => {};
@@ -162,6 +163,7 @@ export struct MangaReadingSurface {
   @State @Watch('onWindowChromeChanged') private loginRequiredForControls: boolean = false;
   private loginGeneration: number = 0;
   @State @Watch('onWindowChromeChanged') private openingRetry: boolean = false;
+  private resumeChangedContent: boolean = false;
   private layoutGeneration: number = 0;
   private viewportGeneration: number = 0;
   private presentationGeneration: number = 0;
@@ -248,14 +250,14 @@ export struct MangaReadingSurface {
     if (!retainPreparation) this.runtime?.finishMangaOfflineProbe?.(this.sourceId, this.bookId);
     this.detachOfflineProbe?.(); this.detachOfflineProbe = undefined;
   }
-  private async open(controller: MangaSessionController): Promise<void> {
+  private async open(controller: MangaSessionController, resumePosition: boolean = false): Promise<void> {
     try {
       this.detachOfflineProbe = this.offline ? this.runtime?.subscribeMangaOfflineProbe?.((state: string): void => {
         if (this.mounted) this.offlineProbeStatus = state;
       }) : undefined;
       const current = (): boolean => this.mounted && this.controller === controller;
       let index = this.chapterIndex;
-      const startAtChapterFirst = this.startAtChapterFirst && index !== undefined;
+      const startAtChapterFirst = !resumePosition && this.startAtChapterFirst && index !== undefined;
       let session = this.remoteSession;
       if (this.runtime !== undefined) {
         await controller.awaitPendingProgress(this.sourceId, this.bookId);
@@ -371,7 +373,9 @@ export struct MangaReadingSurface {
     if (this.offline) {
       // Already admitted manga identity; only read Core's durable catalog. A
       // missing/invalid cached catalog must never fall through to online acquire.
-      const cached = await new RemoteReadingFlowGateway(this.runtime).openCachedSession(this.remoteBookSeed, current);
+      if (this.remoteBookSeed.contentKind !== undefined && this.remoteBookSeed.contentKind !== 'manga')
+        throw new Error('MANGA_SESSION_IDENTITY_MISMATCH');
+      const cached = await new RemoteReadingFlowGateway(this.runtime).openCachedCatalogSession(this.remoteBookSeed, current, false, true);
       cached.contentKind = 'manga';
       return cached;
     }
@@ -898,12 +902,19 @@ export struct MangaReadingSurface {
     this.restore(next, 0);
   }
   private async openDirectory(): Promise<void> {
+    const session = this.remoteSession;
+    if (session?.contentKind === 'manga' && session.identity.sourceId === this.sourceId && session.identity.bookId === this.bookId)
+      this.onRemoteSessionReady(session, true);
     await this.openPanel('directory');
   }
   private async openSourceSwitch(): Promise<void> {
     await this.performPanelAction((): void => this.onSwitchSource());
   }
   private retry(row: MangaStripRow): void {
+    if (this.imageError(row) === 'MANGA_SESSION_CONTENT_CHANGED') {
+      void this.reopenChangedChapter();
+      return;
+    }
     const controller = this.controller;
     const chapter = controller?.chapter;
     const generation = this.presentationGeneration;
@@ -922,6 +933,23 @@ export struct MangaReadingSurface {
         (previousError.length === 0 || previousError === previousRowError)) this.error = '';
     }).catch((error: Error): void => { if (current() && error.message !== 'MANGA_SESSION_CANCELLED') this.error = error.message; });
   }
+  private retryLabel(row: MangaStripRow): string {
+    return this.imageError(row) === 'MANGA_SESSION_CONTENT_CHANGED' ? '重新打开本章' : '重试';
+  }
+  private async reopenChangedChapter(): Promise<void> {
+    const controller = this.controller;
+    if (!this.mounted || controller === undefined || this.openingRetry) return;
+    this.resumeChangedContent = true;
+    this.openingRetry = true; this.opened = false; this.error = '';
+    this.presentationGeneration++; this.viewportGeneration++;
+    this.first = 0; this.last = 0; this.viewportRangeObserved = false;
+    this.visibleAnchor = undefined; this.confirmedPosition = undefined;
+    this.publishedManifestVersion = ''; this.publishedRowKeys.clear();
+    this.detachOfflineProbe?.(); this.detachOfflineProbe = undefined;
+    controller.close('chapter');
+    try { await this.open(controller, true); }
+    finally { if (this.mounted && this.controller === controller) this.openingRetry = false; }
+  }
   private async retryOpen(): Promise<void> {
     const controller = this.controller;
     if (controller === undefined || this.opened || this.offline || this.openingRetry) return;
@@ -929,7 +957,7 @@ export struct MangaReadingSurface {
     this.error = '';
     controller.close('chapter');
     try {
-      if (this.mounted && this.controller === controller) await this.open(controller);
+      if (this.mounted && this.controller === controller) await this.open(controller, this.resumeChangedContent);
     } finally {
       if (this.mounted && this.controller === controller) this.openingRetry = false;
     }
@@ -1053,7 +1081,8 @@ export struct MangaReadingSurface {
     const session = this.remoteSession;
     if (current === undefined || session?.contentKind !== 'manga' ||
       session.identity.sourceId !== this.sourceId || session.identity.bookId !== this.bookId ||
-      session.requiresContextRefresh === true) return undefined;
+      (session.requiresContextRefresh === true && session.acquisitionMode !== 'offline') ||
+      current.manifest.chapter.sourceId !== this.sourceId || current.manifest.chapter.bookId !== this.bookId) return undefined;
     const position = session.entries.findIndex((entry: RemoteReadingTocEntry): boolean =>
       entry.index === current.chapterIndex && entry.url === current.manifest.chapter.chapterId);
     if (position < 0) return undefined;
@@ -1280,11 +1309,24 @@ export struct MangaReadingSurface {
     return entry === undefined || !entry.title.includes('卷') ? '继续阅读下一话' : '继续阅读下一卷';
   }
   private directoryEntries(): LocalReadingTocEntry[] {
+    const session = this.remoteSession;
+    if (session === undefined) return this.directoryProjection ?? [];
+    if (session.contentKind !== 'manga' || session.identity.sourceId !== this.sourceId ||
+      session.identity.bookId !== this.bookId || (session.requiresContextRefresh === true && session.acquisitionMode !== 'offline')) return [];
+    const chapter = this.controller?.chapter;
+    if (session.acquisitionMode === 'offline' && chapter !== undefined &&
+      (chapter.manifest.chapter.sourceId !== this.sourceId || chapter.manifest.chapter.bookId !== this.bookId ||
+      !session.entries.some((entry: RemoteReadingTocEntry): boolean => entry.index === chapter.chapterIndex && entry.url === chapter.manifest.chapter.chapterId))) return [];
+    const displayFactsCurrent = session.acquisitionMode !== 'offline' || chapter !== undefined &&
+      session.sourceVersion !== undefined && session.sourceVersion === chapter.manifest.sourceRuleVersion;
     const projection: Map<number, LocalReadingTocEntry> = new Map();
     for (const row of this.directoryProjection ?? []) projection.set(row.index, row);
-    return (this.remoteSession?.entries ?? []).map((entry: RemoteReadingTocEntry): LocalReadingTocEntry => {
+    return session.entries.map((entry: RemoteReadingTocEntry): LocalReadingTocEntry => {
       const row = projection.get(entry.index);
-      return { index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable,
+      const proved = displayFactsCurrent && (session.acquisitionMode !== 'offline' || entry.proofState === 'verified');
+      return { index: entry.index, title: entry.title, level: proved ? entry.level : undefined, navigable: entry.navigable,
+        displayTitle: proved ? entry.displayTitle : undefined, isVip: proved ? entry.isVip : undefined,
+        isPay: proved ? entry.isPay : undefined, contextTitle: proved ? entry.contextTitle : undefined,
         downloadState: row?.title === entry.title ? row.downloadState : 'unknown' };
     });
   }
@@ -1449,13 +1491,17 @@ export struct MangaReadingSurface {
           ListItem() {
             if (this.controller?.tile(row.ordinal, row.tileIndex)?.image !== undefined) {
               Image(this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri)
+                // Host has already materialized this bounded local region.
+                // Synchronous loading avoids the native asynchronous placeholder
+                // when its virtual row remounts; it does not retain a bitmap.
+                .syncLoad(true)
                 .width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width).objectFit(ImageFit.Fill).draggable(false)
             } else {
               Column() {
               if (this.rowHasError(row)) {
                 if (this.isPrimaryErrorRow(row)) {
                   Text(this.displayError(this.imageError(row))).fontColor(this.errorColor).maxLines(4)
-                  Button('重试').onClick((): void => this.retry(row))
+                  Button(this.retryLabel(row)).onClick((): void => this.retry(row))
                 } else {
                   // The adjacent failed row keeps its measured slot, while the
                   // viewport exposes a single actionable error for this load.
@@ -1746,7 +1792,7 @@ export struct MangaReadingSurface {
     const session = this.remoteSession;
     if (session !== undefined) {
       if (session.contentKind !== 'manga' || session.identity.sourceId !== this.sourceId ||
-        session.identity.bookId !== this.bookId || session.requiresContextRefresh === true) return undefined;
+        session.identity.bookId !== this.bookId || (session.requiresContextRefresh === true && session.acquisitionMode !== 'offline')) return undefined;
       return this.directoryEntries().find((entry: LocalReadingTocEntry): boolean => entry.index === index && entry.navigable !== false);
     }
     // The Shell binds this projection to the same source/book reader identity.
@@ -1757,9 +1803,9 @@ export struct MangaReadingSurface {
     const session = this.remoteSession;
     const index = this.directoryCurrentIndex();
     if (session?.contentKind === 'manga' && session.identity.sourceId === this.sourceId &&
-      session.identity.bookId === this.bookId && session.requiresContextRefresh !== true) {
-      const title = session.entries.find((entry: RemoteReadingTocEntry): boolean => entry.index === index)?.title;
-      if (title !== undefined) return title;
+      session.identity.bookId === this.bookId && (session.requiresContextRefresh !== true || session.acquisitionMode === 'offline')) {
+      const entry = session.entries.find((entry: RemoteReadingTocEntry): boolean => entry.index === index);
+      if (entry !== undefined) return mangaDirectoryDisplay(entry).title;
     }
     if (this.controller?.chapter !== undefined || index < 0) return this.title;
     const saved = MangaBookPresentation.get(this.sourceId, this.bookId);

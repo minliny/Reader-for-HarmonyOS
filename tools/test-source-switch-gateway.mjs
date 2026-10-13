@@ -13,6 +13,9 @@ const core = process.env.READER_SOURCE_SWITCH_CORE_ROOT ?? (existsSync(resolve(s
 const coreSdkUrl = pathToFileURL(resolve(core, 'bindings/harmony/sdk/reader_core.ts')).href;
 const { ReaderCoreRequestError } = await import(coreSdkUrl);
 const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAuthorMetadata.ts'), 'utf8');
+const searchTimingModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookSearchTiming.ts'), 'utf8');
+const sharedSearchDecoderModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchGateway.ts'), 'utf8')
+  .replace(/^import[\s\S]*?;\n/gm, '');
 const factModule = stripTypeScriptTypes(readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAcquisitionPresentation.ts'), 'utf8'));
 const { acquisitionCandidateRank } = await import(`data:text/javascript;base64,${Buffer.from(factModule).toString('base64')}`);
 const searchCandidateRank = (book, now) => acquisitionCandidateRank(book.acquisition, book.sourceRuleVersion, now);
@@ -42,7 +45,11 @@ assert.doesNotMatch(fetchTargetToc, /'book\.toc',\s*\{\s*sourceId,\s*bookId\s*\}
 
 assert.match(gateway, /private requireStringMap\([\s\S]*typeof variableValue !== 'string'/);
 assert.match(gateway, /candidate\.trim\(\)\.length === 0/);
-assert.match(gateway, /'change\.bookSource',[\s\S]*sourceIds:\s*\[candidateSourceId\]/);
+assert.match(gateway, /'book\.search',[\s\S]*sourceId:\s*source\.sourceId, keyword, page:\s*1/);
+assert.doesNotMatch(gateway, /'change\.bookSource'/,
+  'one-source discovery must receive real search failures rather than a soft-skipped Core batch');
+assert.match(gateway, /decodeBookSearchResult\(raw, searchSource/,
+  'source switching consumes the existing live search decoder');
 assert.match(gateway, /SOURCE_SWITCH_DISCOVERY_CONCURRENCY\s*=\s*8/);
 assert.match(gateway, /runBookSourceWorkers\(sources, SOURCE_SWITCH_DISCOVERY_CONCURRENCY/);
 assert.match(gateway, /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/);
@@ -64,9 +71,12 @@ const errorMessageModule = stripTypeScriptTypes(
 const sourceCategoryModule = stripTypeScriptTypes(
   readFileSync(resolve(repo, 'entry/src/main/ets/features/source/ReaderSourceCategory.ts'), 'utf8'),
 ).replace(/^export /gm, '');
+const providerFamilyModule = stripTypeScriptTypes(
+  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/SourceSwitchProviderFamily.ts'), 'utf8'),
+).replace(/^export /gm, '');
 
 const executable = stripTypeScriptTypes(
-  (authorMetadataModule + '\n' + gateway
+  (authorMetadataModule + '\n' + searchTimingModule + '\n' + sharedSearchDecoderModule + '\n' + gateway
     .replace(/^import \{ runBookSourceWorkers \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/app/BookRequestScheduler.ts'), 'utf8'))
     .replace(/^import \{[^}]+\} from ['"]\.\.\/common\/BookAcquisitionPresentation['"];$/m,
@@ -81,16 +91,34 @@ const executable = stripTypeScriptTypes(
     .replace(/^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m, '')
     .replace(/^import type \{ ShelfBook \} from ['"]\.\.\/\.\.\/app\/ReaderCoreGateway['"];$/m, '')
     .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\/ReaderSourceCategory['"];$/m,
-      () => sourceCategoryModule)).replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, ''),
+      () => sourceCategoryModule)
+    .replace(/^import \{[^\n]+\} from ['"]\.\/SourceSwitchProviderFamily['"];$/m,
+      () => providerFamilyModule))
+    .replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, '')
+    .replace(/^import \{[^\n]+\} from ['"][^'"]*BookSearchTiming(?:\.ts)?['"];?\n/gm, '')
+    .replace(/^import \{[^\n]+\} from ['"]\.\.\/search\/SearchGateway['"];?\n/gm, ''),
 );
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
-const { SourceSwitchGateway, sourceSwitchCandidateKey, buildSourceSwitchCommitParams } = await import(moduleUrl);
+const { SourceSwitchGateway, sourceSwitchCandidateKey, buildSourceSwitchCommitParams, readBookSearchTiming } = await import(moduleUrl);
+const providerFamilyUrl = `data:text/javascript;base64,${Buffer.from(`${providerFamilyModule}\nexport { sourceSwitchProviderFamilyKey };`).toString('base64')}`;
+const { sourceSwitchProviderFamilyKey } = await import(providerFamilyUrl);
 const transactionId = 'ss-core-owned-transaction';
+
+function searchResult(sourceId, books) {
+  return { data: { sourceId, books } };
+}
 
 assert.notEqual(
   sourceSwitchCandidateKey('a', 'bc'),
   sourceSwitchCandidateKey('ab', 'c'),
   'composite identity must not collapse ambiguous sourceId/bookUrl concatenations',
+);
+assert.equal(sourceSwitchProviderFamilyKey('七猫小说（优++）', 'https://api-bc.wtzw.com'), 'qimao',
+  'qimao rules share a diagnostic family without changing their identities');
+assert.notEqual(
+  sourceSwitchProviderFamilyKey('Provider A', 'https://shared.example.test'),
+  sourceSwitchProviderFamilyKey('Provider B', 'https://shared.example.test'),
+  'shared hosts must not manufacture one provider family for unrelated source rules',
 );
 
 let activeDiscoveries = 0;
@@ -110,13 +138,12 @@ const discoveryRuntime = {
         ],
       } };
     }
-    if (method === 'change.bookSource') {
-      assert.equal(params.sourceId, 'current-source');
-      assert.equal(params.bookId, 'current-book');
+    if (method === 'book.search') {
       assert.equal(params.keyword, 'Current Book');
-      assert.equal(params.sourceIds.length, 1,
-        'each Core request must own exactly one source timeout/error boundary');
-      const candidateSourceId = params.sourceIds[0];
+      assert.equal(params.page, 1);
+      assert.equal(params.sourceIds, undefined,
+        'each Core search owns one source timeout/error boundary');
+      const candidateSourceId = params.sourceId;
       discoveryCalls.push(candidateSourceId);
       activeDiscoveries += 1;
       maxActiveDiscoveries = Math.max(maxActiveDiscoveries, activeDiscoveries);
@@ -126,11 +153,7 @@ const discoveryRuntime = {
         if (candidateSourceId === 'candidate-3') {
           throw new Error('one source timed out');
         }
-        return { data: { candidates: [{
-          sourceId: candidateSourceId,
-          bookUrl: `/book/${index}`,
-          bookName: 'Current Book',
-        }] } };
+        return searchResult(candidateSourceId, [{ bookId: `/book/${index}`, title: 'Current Book' }]);
       } finally {
         activeDiscoveries -= 1;
       }
@@ -161,9 +184,9 @@ assert.deepEqual(
   const gateway = new SourceSwitchGateway({ request: async (method, params) => {
     if (method === 'source.list') return { data: { sources: Array.from({ length: 12 }, (_, i) =>
       ({ sourceId: `s${i}`, name: `s${i}`, enabled: true })) } };
-    const id = params.sourceIds[0]; started.push(id);
+    const id = params.sourceId; started.push(id);
     if (id === 's0') await slow;
-    return { data: { candidates: [{ sourceId: id, bookUrl: '/book', bookName: '鸣龙' }] } };
+    return searchResult(id, [{ bookId: '/book', title: '鸣龙' }]);
   } });
   const run = gateway.discoverCandidates('original', '/book', '鸣龙');
   for (let i = 0; i < 100 && !started.includes('s11'); i++) await new Promise(resolve => setTimeout(resolve, 0));
@@ -184,7 +207,7 @@ for (const envelope of ['host-diagnostics', 'native-cause']) {
   const gateway = new SourceSwitchGateway({ request: async (method, params) => {
     if (method === 'source.list') return { data: { sources: Array.from({ length: 20 }, (_, i) =>
       ({ sourceId: `proxy${i}`, name: `proxy${i}`, enabled: true })) } };
-    requests.push(params.sourceIds[0]); throw environment;
+    requests.push(params.sourceId); throw environment;
   } });
   await assert.rejects(gateway.discoverCandidates('original', '/book', '鸣龙'), error => error === environment);
   await new Promise(resolve => setTimeout(resolve, 0));
@@ -204,11 +227,11 @@ for (const scenario of ['one-dns', 'all-dns', 'dns-and-empty', 'late-dns']) {
         : {category:'NETWORK_ENVIRONMENT',host:{diagnostics:{details}}}}});
   const gateway=new SourceSwitchGateway({async request(method,params){
     if(method==='source.list') return {data:{sources:Array.from({length:12},(_,i)=>({sourceId:`dns-${i}`,enabled:true}))}};
-    assert.equal(params.sourceId,'unresolvable-old-source');assert.equal(params.keyword,'终宋');
-    const id=params.sourceIds[0];requests.push(id);
+    assert.match(params.sourceId,/^dns-\d+$/);assert.equal(params.keyword,'终宋');
+    const id=params.sourceId;requests.push(id);
     const fail=scenario==='all-dns'||id===(scenario==='late-dns'?'dns-10':'dns-0');
     if(fail)throw dns;
-    return {data:{candidates:scenario==='dns-and-empty'?[]:[{sourceId:id,bookUrl:'/book',bookName:'终宋'}]}};
+    return searchResult(id, scenario==='dns-and-empty'?[]:[{bookId:'/book',title:'终宋'}]);
   }});
   if(scenario==='all-dns'||scenario==='dns-and-empty'){
     await assert.rejects(gateway.discoverCandidates('unresolvable-old-source','/old','终宋'),error=>{
@@ -223,6 +246,242 @@ for (const scenario of ['one-dns', 'all-dns', 'dns-and-empty', 'late-dns']) {
   assert.equal(requests.length,12,'each enabled candidate is tried once, without automatic retries');
 }
 
+// A rejected/invalid search is distinct from an admitted empty response. The
+// old change.bookSource command hid these errors before the Host could inspect
+// them; exercise the same production worker/decoder against book.search DTOs.
+for (const envelope of ['direct', 'native-cause', 'host-diagnostics'])
+for (const scenario of ['all-http', 'all-rule-failed', 'successful-empty', 'mixed', 'failure-and-empty']) {
+  const methods = [], writes = [], published = [];
+  const labels = scenario === 'all-http' ? ['http', 'http'] : scenario === 'all-rule-failed' ? ['parse', 'parse'] :
+    scenario === 'successful-empty' ? ['empty', 'empty'] : scenario === 'mixed' ? ['http', 'parse', 'empty', 'healthy'] : ['http', 'empty'];
+  const query = { sourceId: 'original', bookId: '/book', bookName: '大明望族', author: '府天',
+    currentChapterIndex: 325, currentChapterTitle: '第三百二十六章' };
+  const owner = { async request(method, params) {
+    methods.push(method);
+    if (method === 'source.list') return { data: { sources: labels.map((label, index) =>
+      ({ sourceId: `${label}-${index}`, name: label, enabled: true, sourceVersion: 'v1' })) } };
+    if (method === 'search-book.put') { writes.push(params); return { data: {} }; }
+    assert.equal(method, 'book.search'); assert.equal(params.page, 1); assert.equal(params.keyword, query.bookName);
+    const label = params.sourceId.split('-')[0];
+    if (label === 'http' || label === 'parse') {
+      const safe = label === 'http' ? { category: 'SOURCE_HTTP_FAILED', httpStatus: 403 } : { category: 'SOURCE_RULE_FAILED' };
+      const details = envelope === 'native-cause' ? { category: safe.category, cause: safe } :
+        envelope === 'host-diagnostics' ? { category: safe.category, host: { diagnostics: { details: safe } } } : safe;
+      throw new ReaderCoreRequestError({ protocolVersion: 1, type: 'error', requestId: 2,
+        error: { code: 'INTERNAL', message: 'private response/URL/cookie must never appear', retryable: false, details } });
+    }
+    return { data: { sourceId: params.sourceId, sourceVersion: 'v1', contentKind: 'text', books: label === 'healthy' ? [
+      { bookId: '/good', title: '大明望族', author: '作者：府天', variables: { token: 'exact continuation' } },
+      { bookId: '/other-book', title: '跳出轮回', author: '府天' },
+      { bookId: '/other-author', title: '大明望族', author: '另一位作者' },
+    ] : [] } };
+  } };
+  const gw = new SourceSwitchGateway(owner);
+  const run = gw.discoverCandidates(query.sourceId, query.bookId, query.bookName, () => true, [], 'text',
+    async rows => { published.push(rows); }, query);
+  if (scenario === 'all-http' || scenario === 'all-rule-failed' || scenario === 'failure-and-empty') {
+    await assert.rejects(run, error => {
+      assert.match(error.message, /书源请求或规则执行失败/); assert.match(error.message, /请重试/);
+      if (scenario !== 'all-rule-failed') assert.match(error.message, /HTTP 403/);
+      assert.doesNotMatch(error.message, /private|response\/URL|cookie/); return true;
+    });
+  } else {
+    const outcome = await run;
+    assert.equal(outcome.kind, 'sources');
+    assert.equal(outcome.candidates.length, scenario === 'mixed' ? 1 : 0);
+    if (scenario === 'mixed') {
+      assert.equal(outcome.candidates[0].bookUrl, '/good');
+      assert.deepEqual(outcome.candidates[0].searchVariables, [{ name: 'token', value: 'exact continuation' }]);
+      assert.equal(outcome.candidates[0].sourceVersion, 'v1');
+      assert.equal(outcome.candidates[0].latencyKind, 'search');
+      assert.equal(writes.length, 1, 'only the same-book result receives a durable search timing');
+      assert.ok(published.some(rows => rows.some(row => row.bookUrl === '/good')),
+        'bad sources cannot erase or delay a completed healthy source');
+    }
+  }
+  assert.equal(methods.filter(method => method === 'book.search').length, labels.length);
+  assert.equal(methods.includes('change.bookSource'), false);
+}
+for (const invalid of ['source', 'version', 'media', 'malformed-books']) {
+  const owner = { request: async (method) => {
+    if (method === 'source.list') return { data: { sources: [{ sourceId: 's', name: 'S', enabled: true, sourceVersion: 'v1' }] } };
+    return { data: { sourceId: invalid === 'source' ? 'another' : 's', sourceVersion: invalid === 'version' ? 'v2' : 'v1',
+      contentKind: invalid === 'media' ? 'manga' : 'text', books: invalid === 'malformed-books' ? [{ bookId: '', title: '大明望族' }] : [] } };
+  } };
+  await assert.rejects(new SourceSwitchGateway(owner).discoverCandidates('original', '/book', '大明望族'), /规则执行失败/);
+}
+for (const late of ['success', 'failure']) {
+  let current = true, release, started;
+  const gate = new Promise(resolve => { release = resolve; });
+  const dispatch = new Promise(resolve => { started = resolve; });
+  const published = [], requests = [];
+  const owner = { request: async (method, params, options) => {
+    requests.push(method);
+    if (method === 'source.list') return { data: { sources: [{ sourceId: 's', name: 'S', enabled: true, sourceVersion: 'v1' }] } };
+    assert.equal(method, 'book.search'); started(); await gate;
+    assert.equal(options.shouldCancel(), true);
+    if (late === 'failure') throw Error('late private failure');
+    return searchResult(params.sourceId, [{ bookId: '/book', title: '大明望族', author: '府天' }]);
+  } };
+  const run = new SourceSwitchGateway(owner).discoverCandidates('original', '/book', '大明望族', () => current, [], 'text',
+    async rows => { published.push(rows); });
+  await dispatch; current = false; release();
+  assert.deepEqual(await run, { kind: 'noSources' });
+  assert.deepEqual(published, []); assert.equal(requests.includes('search-book.put'), false);
+}
+console.log('SourceSwitch real book.search HTTP/rule failures, empty/mixed results, shared decoding and late cancellation PASS');
+
+// A cached/known click cannot select a disabled, reclassified or replaced rule.
+// Target eligibility uses the same registry read as author qualification.
+for (const media of ['text', 'manga']) {
+  for (const scenario of ['current', 'stale', 'disabled', 'removed', 'category', 'media', 'invalid-version', 'blank-version']) {
+    const category = media === 'manga' ? 'comic' : 'novel';
+    const query = { contentKind: media, sourceId: 'old', bookId: '/old', bookName: 'Current Book', author: 'Writer',
+      currentChapterIndex: 325, currentChapterTitle: '' };
+    const candidate = { sourceId: 'target', sourceVersion: 'v1', category, bookUrl: '/target',
+      bookName: query.bookName, author: query.author };
+    const target = { sourceId: 'target', name: 'Target', enabled: scenario !== 'disabled',
+      sourceVersion: scenario === 'stale' ? 'v2' : scenario === 'invalid-version' ? 42 : scenario === 'blank-version' ? '' : 'v1',
+      bookSource: { bookSourceType: media === 'manga' ? 2 : 0 } };
+    if (scenario === 'category') candidate.category = 'other';
+    if (scenario === 'media') target.bookSource.bookSourceType = media === 'manga' ? 0 : 2;
+    const methods = [];
+    const owner = { bookAcquisitions: () => ({ sourceRegistryRevision: () => 1 }), request: async method => {
+      methods.push(method); assert.equal(method, 'source.list', 'no acquisition or writes during target qualification');
+      return { data: { sources: [{ sourceId: 'old', name: 'Old', enabled: true, sourceVersion: 'v1',
+        bookSource: { bookSourceType: media === 'manga' ? 2 : 0 } }, ...(scenario === 'removed' ? [] : [target])] } };
+    } };
+    const gw = new SourceSwitchGateway(owner);
+    if (scenario === 'current') assert.equal(await gw.resolveProbeQueryIdentity(query, () => true, candidate), query);
+    else await assert.rejects(gw.resolveProbeQueryIdentity(query, () => true, candidate), /候选书源已变更或不可用/);
+    assert.deepEqual(methods, ['source.list'], 'target eligibility must not add a per-click source RPC');
+  }
+}
+console.log('SourceSwitch current target version/category/media qualification PASS');
+
+// Restore an author decoration only from the exact current Core row and
+// source version. A missing reading session cannot erase this evidence, and
+// historical aliases can never authorize a different author or work.
+{
+  const query = { sourceId: 's', bookId: '/book', bookName: '大明望族', author: '@府天',
+    currentChapterIndex: 325, currentChapterTitle: '' };
+  const proof = { schemaVersion: 1, sourceVersion: 'v1', field: 'detail', raw: '@府天', label: '府天',
+    rule: 'author-nickname-at-v1' };
+  const original = JSON.stringify(query);
+  const valid = { origin: 's', bookUrl: '/book', name: '大明望族', author: '@府天',
+    acquisition: { sourceVersion: 'v1', authorIdentity: proof } };
+  for (const scenario of ['valid', 'missing', 'stale', 'wrong-source', 'wrong-url', 'wrong-title', 'raw-mismatch', 'invalid-proof']) {
+    let row = structuredClone(valid);
+    if (scenario === 'missing') row = null;
+    if (scenario === 'stale') { row.acquisition.sourceVersion = 'v0'; row.acquisition.authorIdentity.sourceVersion = 'v0'; }
+    if (scenario === 'wrong-source') row.origin = 'another';
+    if (scenario === 'wrong-url') row.bookUrl = '/another';
+    if (scenario === 'wrong-title') row.name = '跳出轮回';
+    if (scenario === 'raw-mismatch') row.author = '@雁九';
+    if (scenario === 'invalid-proof') row.acquisition.authorIdentity.raw = '@另一位作者';
+    const methods = [];
+    const owner = { bookAcquisitions: () => ({ sourceRegistryRevision: () => 1 }), request: async (method, params) => {
+      methods.push(method);
+      if (method === 'source.list') return { data: { sources: [{ sourceId: 's', name: '小说源', enabled: true, sourceVersion: 'v1' }] } };
+      assert.equal(method, 'search-book.get'); assert.deepEqual(params, { origin: 's', bookUrl: '/book' });
+      return { data: { book: row } };
+    } };
+    const gw = new SourceSwitchGateway(owner);
+    const result = await gw.resolveProbeQueryIdentity(query, () => true);
+    assert.equal(JSON.stringify(query), original, 'recovery must not mutate or strip the original metadata');
+    assert.deepEqual(methods, ['source.list', 'search-book.get']);
+    if (scenario === 'valid') {
+      assert.deepEqual(result, { ...query, authorIdentity: proof, sourceVersion: 'v1' });
+      assert.equal(gw.admitsCandidate({ bookName: '大明望族', author: '府天' }, result), true);
+      assert.equal(gw.admitsCandidate({ bookName: '跳出轮回', author: '府天' }, result), false);
+      assert.equal(gw.admitsCandidate({ bookName: '大明望族', author: '雁九' }, result), false);
+    } else assert.equal(result, query, `${scenario} cannot manufacture a proof`);
+  }
+  for (const scenario of ['plain', 'already-proven', 'disabled', 'removed', 'non-reading', 'book-review']) {
+    const currentQuery = scenario === 'plain' || scenario === 'non-reading' ? { ...query, author: '府天' } :
+      scenario === 'book-review' ? { ...query, author: '@雁九' } :
+      scenario === 'already-proven' ? { ...query, authorIdentity: proof, sourceVersion: 'v1' } : query;
+    const methods = [];
+    const owner = { bookAcquisitions: () => ({ sourceRegistryRevision: () => 1 }), request: async (method) => {
+      methods.push(method); assert.equal(method, 'source.list');
+      return { data: { sources: scenario === 'removed' ? [] : [{ sourceId: 's', name: scenario === 'book-review' ? '爱推书君（优）' : '小说源', enabled: scenario !== 'disabled',
+        sourceVersion: 'v1', bookSource: { bookSourceType: scenario === 'non-reading' ? 4 : 0 } }] } };
+    } };
+    const gw = new SourceSwitchGateway(owner);
+    if (scenario === 'non-reading' || scenario === 'book-review') await assert.rejects(gw.resolveProbeQueryIdentity(currentQuery), /当前书源提供书评或其他非阅读内容/);
+    else assert.equal(await gw.resolveProbeQueryIdentity(currentQuery), currentQuery);
+    assert.deepEqual(methods, ['source.list'], 'registry is checked without an unnecessary exact book read');
+    if (scenario === 'non-reading' || scenario === 'book-review') {
+      await assert.rejects(gw.resolveProbeQueryIdentity(currentQuery), /返回搜索选择小说正文书源/);
+      assert.equal(methods.length, 1, 'classification reuses the current source revision snapshot');
+    }
+  }
+  for (const scenario of ['old-proof-missing', 'old-proof-restored', 'old-proof-wrong-author', 'old-proof-wrong-title', 'removed-proof', 'disabled-proof']) {
+    const oldProof = { ...proof, sourceVersion: 'old' };
+    const currentQuery = { ...query, authorIdentity: oldProof, sourceVersion: 'old' };
+    const currentProof = { ...proof, sourceVersion: 'new' };
+    let row = { ...valid, acquisition: { sourceVersion: 'new', authorIdentity: currentProof } };
+    if (scenario === 'old-proof-missing') row = null;
+    if (scenario === 'old-proof-wrong-author') row = { ...row, author: '@雁九', acquisition: { sourceVersion: 'new',
+      authorIdentity: { ...currentProof, raw: '@雁九', label: '雁九' } } };
+    if (scenario === 'old-proof-wrong-title') row.name = '跳出轮回';
+    const methods = [];
+    const owner = { bookAcquisitions: () => ({ sourceRegistryRevision: () => 1 }), request: async method => {
+      methods.push(method);
+      if (method === 'source.list') return { data: { sources: scenario === 'removed-proof' ? [] : [{ sourceId: 's',
+        name: '小说源', enabled: scenario !== 'disabled-proof', sourceVersion: 'new' }] } };
+      assert.equal(method, 'search-book.get'); return { data: { book: row } };
+    } };
+    const gw = new SourceSwitchGateway(owner);
+    const result = await gw.resolveProbeQueryIdentity(currentQuery);
+    const sourceMissing = scenario === 'removed-proof' || scenario === 'disabled-proof';
+    if (scenario === 'old-proof-restored') {
+      assert.deepEqual(result.authorIdentity, currentProof); assert.equal(result.sourceVersion, 'new');
+      assert.equal(gw.admitsCandidate({ bookName: '大明望族', author: '府天' }, result), true);
+    } else {
+      assert.equal(result.authorIdentity, undefined, 'a caller hash cannot self-certify a stale or missing source');
+      assert.equal(result.sourceVersion, sourceMissing ? undefined : 'new');
+      assert.equal(result.author, '@府天');
+      assert.equal(gw.admitsCandidate({ bookName: '大明望族', author: '府天' }, result), false,
+        'an expired proof cannot keep author conversion authorized');
+    }
+    assert.deepEqual(methods, sourceMissing ? ['source.list'] : ['source.list', 'search-book.get']);
+    assert.equal(currentQuery.authorIdentity, oldProof, 'caller facts remain immutable');
+  }
+  for (const phase of ['registry', 'book'])
+  for (const late of ['success', 'failure']) {
+    let current = true, release, started;
+    const gate = new Promise(resolve => { release = resolve; });
+    const dispatch = new Promise(resolve => { started = resolve; });
+    const owner = { bookAcquisitions: () => ({ sourceRegistryRevision: () => 1 }), request: async (method) => {
+      if ((phase === 'registry' && method === 'source.list') || (phase === 'book' && method === 'search-book.get')) {
+        started(); await gate;
+        if (late === 'failure') throw Error('retired identity read failed');
+      }
+      return method === 'source.list' ? { data: { sources: [{ sourceId: 's', name: '小说源', enabled: true, sourceVersion: 'v1' }] } } :
+        { data: { book: valid } };
+    } };
+    const run = new SourceSwitchGateway(owner).resolveProbeQueryIdentity(query, () => current);
+    await dispatch; current = false; release(); assert.equal(await run, query);
+  }
+  for (const phase of ['registry', 'book']) {
+    let revision = 1;
+    const owner = { bookAcquisitions: () => ({ sourceRegistryRevision: () => revision }), request: async (method) => {
+      if ((phase === 'registry' && method === 'source.list') || (phase === 'book' && method === 'search-book.get')) revision++;
+      return method === 'source.list' ? { data: { sources: [{ sourceId: 's', name: '小说源', enabled: true, sourceVersion: 'v1' }] } } :
+        { data: { book: valid } };
+    } };
+    await assert.rejects(new SourceSwitchGateway(owner).resolveProbeQueryIdentity(query), /书源配置已变更/);
+  }
+  const failure = Error('exact cache read unavailable');
+  const owner = { request: async method => {
+    if (method === 'source.list') return { data: { sources: [{ sourceId: 's', name: '小说源', enabled: true, sourceVersion: 'v1' }] } };
+    throw failure;
+  } };
+  await assert.rejects(new SourceSwitchGateway(owner).resolveProbeQueryIdentity(query), error => error === failure);
+}
+console.log('SourceSwitch exact author proof restoration, registry eligibility, missing/stale/identity rejection and cancellation fences PASS');
+
 const identityRuntime = {
   async request(method, params) {
     if (method === 'source.list') {
@@ -231,18 +490,18 @@ const identityRuntime = {
         { sourceId: 'other-source', enabled: true },
       ] } };
     }
-    if (method === 'change.bookSource') {
-      if (params.sourceIds[0] === 'current-source') {
-        return { data: { candidates: [
-          { sourceId: 'current-source', bookUrl: 'current-book', bookName: 'Current Book' },
-          { sourceId: 'current-source', bookUrl: 'current-book', bookName: 'Duplicate' },
-          { sourceId: 'current-source', bookUrl: 'alternate-book', bookName: 'Alternate Book' },
-        ] } };
+    if (method === 'book.search') {
+      if (params.sourceId === 'current-source') {
+        return searchResult(params.sourceId, [
+          { bookId: 'current-book', title: 'Current Book' },
+          { bookId: 'current-book', title: 'Current Book' },
+          { bookId: 'alternate-book', title: 'Current Book' },
+        ]);
       }
-      return { data: { candidates: [
-        { sourceId: 'other-source', bookUrl: 'other-book', bookName: 'Other Book' },
-        { sourceId: 'other-source', bookUrl: 'other-book', bookName: 'Duplicate Other' },
-      ] } };
+      return searchResult(params.sourceId, [
+        { bookId: 'other-book', title: 'Current Book' },
+        { bookId: 'other-book', title: 'Current Book' },
+      ]);
     }
     throw new Error(`unexpected identity method: ${method}`);
   },
@@ -337,14 +596,35 @@ assert.equal(cachedCandidates[0].latencyKind, undefined);
 assert.equal(cachedCandidates[0].currentChapterIndex, 4);
 assert.equal(cachedCandidates[0].currentChapterTitle, 'Chapter 5');
 assert.equal(cachedCandidates[0].isCurrent, true);
-assert.equal(cacheCalls.some(([method]) => method === 'change.bookSource'), false,
+assert.equal(cacheCalls.some(([method]) => method === 'book.search'), false,
   'a valid local projection must not start source HTTP discovery');
 
-// Unrelated history never crosses this RPC boundary; aliases are indexed by Core.
+// Only the version-bound Core acquisition fact restores search timing after a
+// pane remount; legacy respondTime remains intentionally ignored.
+{
+  const timingRuntime = { request: async (method) => {
+    if (method === 'source.list') return { data: { sources: [{ sourceId: 'timed', name: 'Timed',
+      enabled: true, sourceVersion: 'v1' }] } };
+    return { data: relatedData([{ origin: 'timed', bookUrl: '/book', name: 'Current Book', author: 'Writer',
+      time: cachedAt, acquisition: { sourceVersion: 'v1', searchTiming: {
+        kind: 'search', sourceVersion: 'v1', durationMs: 321, measuredAt: cachedAt,
+      } }, respondTime: 9999 }]) };
+  } };
+  const timed = await new SourceSwitchGateway(timingRuntime).loadCachedCandidates({ sourceId: 'timed', bookId: '/book',
+    bookName: 'Current Book', author: 'Writer', currentChapterIndex: 0, currentChapterTitle: '' });
+  assert.equal(timed[0].latencyMs, 321);
+  assert.equal(timed[0].latencyKind, 'search');
+  assert.equal(timed[0].latencyMeasuredAt, cachedAt);
+}
+
+// The indexed relation is only a scoped read: historical alias bridges may
+// have been polluted by a source resolving another book at the same URL.
 {
   const calls = [];
   const rows = [{origin:'cache-source',bookUrl:'current-book',name:'Current Book',author:'Writer',time:cachedAt},
-    {origin:'cache-source',bookUrl:'renamed',name:'Old 15',author:'Writer',time:cachedAt}];
+    {origin:'cache-source',bookUrl:'normalized',name:' current   BOOK ',author:'作者：Writer',time:cachedAt},
+    {origin:'cache-source',bookUrl:'renamed',name:'Old 15',author:'Writer',time:cachedAt,
+      acquisition:{sourceVersion:'v1',aliases:[{name:'Current Book',author:'Writer'}]}}];
   const gateway = new SourceSwitchGateway({request:async(method,params)=> {
     calls.push({method,params});
     if(method==='source.list') return {data:{sources:[{sourceId:'cache-source',name:'缓存',enabled:true}]}};
@@ -355,7 +635,8 @@ assert.equal(cacheCalls.some(([method]) => method === 'change.bookSource'), fals
   }});
   const result = await gateway.loadCachedCandidates({sourceId:'cache-source',bookId:'current-book',bookName:'Current Book',
     author:'Writer',currentChapterIndex:0,currentChapterTitle:'One'});
-  assert.deepEqual(result.map(row=>row.bookUrl),['current-book','renamed']);
+  assert.deepEqual(result.map(row=>row.bookUrl).sort(),['current-book','normalized'],
+    'current title/author normalization is sufficient; historical alias JSON cannot authorize an unrelated title');
   assert.deepEqual(calls.map(call=>call.method),['source.list','search-book.related']);
 }
 
@@ -371,11 +652,11 @@ const refreshRuntime = {
       { sourceId: 'fresh-source', name: '新书源', enabled: true },
       { sourceId: 'old-source', name: '已有书源', enabled: true },
     ] } };
-    if (method === 'change.bookSource') {
-      if (params.sourceIds[0] === 'old-source') throw new Error('old source currently offline');
+    if (method === 'book.search') {
+      if (params.sourceId === 'old-source') throw new Error('old source currently offline');
       // Core book.search publishes candidates before returning discovery.
       refreshRows.push({ bookUrl: 'fresh-book', origin: 'fresh-source', name: 'Current Book', author: 'Writer', time: cachedAt });
-      return { data: { candidates: [{ sourceId: 'fresh-source', bookUrl: 'fresh-book', bookName: 'Current Book', author: 'Writer' }] } };
+      return searchResult(params.sourceId, [{ bookId: 'fresh-book', title: 'Current Book', author: 'Writer' }]);
     }
     throw new Error(`refresh must not delete successes or block on probing: ${method}`);
   },
@@ -408,14 +689,24 @@ assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', '
       ['old', 'new', 'fast', 'slow', 'empty', 'broken'].map(sourceId =>
         ({ sourceId, name: sourceId, enabled: true, sourceVersion: 'v1' })) } };
     if (method === 'search-book.related') return { data: relatedData(rows) };
-    if (method === 'change.bookSource') {
-      const sourceId = params.sourceIds[0];
+    if (method === 'search-book.batch.get') {
+      const books = [];
+      const missing = [];
+      for (const identity of params.identities) {
+        const row = rows.find(item => item.origin === identity.sourceId && item.bookUrl === identity.bookId);
+        if (row === undefined) missing.push(identity);
+        else books.push({ ...row, relationKey: 'relation', relationRevision: '1' });
+      }
+      return { data: { complete: true, books, missing } };
+    }
+    if (method === 'book.search') {
+      const sourceId = params.sourceId;
       if (sourceId === 'new' || sourceId === 'broken') throw Error('source search failed');
-      if (sourceId === 'old' || sourceId === 'empty') return { data: { candidates: [] } };
+      if (sourceId === 'old' || sourceId === 'empty') return searchResult(sourceId, []);
       await (sourceId === 'fast' ? fast : slow);
       const row = rawSourceRow(sourceId, `${sourceId}-book`);
       rows.push(row);
-      return { data: { candidates: [{ sourceId, bookUrl: row.bookUrl, bookName: row.name, author: row.author }] } };
+      return searchResult(sourceId, [{ bookId: row.bookUrl, title: row.name, author: row.author }]);
     }
     return original(method, params, options);
   };
@@ -429,8 +720,9 @@ assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', '
   assert.deepEqual(f.host.current().state.candidates.map(row => row.sourceId), ['new']);
   assert.equal(f.host.current().state.candidates[0].latencyMs, undefined,
     'a cached successful result does not need a new search timing to enter the list');
+  const refreshStart = requests.length;
   f.host.refresh(f.host.current().scopeId);
-  await waitUntil(() => requests.filter(row => row.method === 'change.bookSource').length === 6);
+  await waitUntil(() => requests.filter(row => row.method === 'book.search').length === 6);
   assert.equal(f.host.current().state.refreshing, true);
   assert.deepEqual(f.host.current().state.candidates.map(row => row.sourceId), ['new'],
     'pending, empty and failed searches do not create rows');
@@ -440,6 +732,9 @@ assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', '
     'the first success appears while an independent source search is still running');
   assert.deepEqual(new Set(f.host.current().state.candidates.map(row => row.sourceId)), new Set(['new', 'fast']));
   releaseSlow();
+  // refreshCandidates coalesces source completions on a 100ms debounce;
+  // allow that timer and the final relation verification to settle.
+  await new Promise(resolve => setTimeout(resolve, 150));
   await waitUntil(() => f.host.current().state.kind === 'candidates' &&
     f.host.current().state.refreshing === false);
   assert.deepEqual(new Set(f.host.current().state.candidates.map(row => row.sourceId)), new Set(['new', 'fast', 'slow']));
@@ -447,8 +742,13 @@ assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', '
     'finished searches without a successful same-book result remain absent');
   assert.equal(requests.some(row => ['book.detail', 'book.toc', 'chapter.content', 'search-book.delete'].includes(row.method)), false,
     'browsing progressive search results does not pre-acquire content or delete prior successes');
-  assert.equal(requests.filter(row => row.method === 'change.bookSource').length, 6,
+  assert.equal(requests.filter(row => row.method === 'book.search').length, 6,
     'one explicit refresh dispatches each enabled source once');
+  const refreshMethods = requests.slice(refreshStart).map(row => row.method);
+  assert.equal(refreshMethods.filter(method => method === 'search-book.related').length, 2,
+    'refresh performs one initial and one final complete relation verification');
+  assert.equal(refreshMethods.filter(method => method === 'search-book.batch.get').length, 1,
+    'source completions share one debounced batch identity projection');
   f.host.retire();
 
   function rawSourceRow(sourceId, bookUrl) {
@@ -567,7 +867,7 @@ console.log('source-switch gateway contract: PASS');
 {
   const searched=[];const owner={request:async(method,params)=>{
     if(method==='source.list')return{data:{sources:['a','b','c'].map(sourceId=>({sourceId,name:sourceId,enabled:true}))}};
-    assert.equal(method,'change.bookSource');searched.push(params.sourceIds[0]);return{data:{candidates:[]}};
+    assert.equal(method,'book.search');searched.push(params.sourceId);return searchResult(params.sourceId,[]);
   }};const gateway=new SourceSwitchGateway(owner);
   await gateway.discoverCandidates('a','/book','鸣龙',()=>true,['a','b']);assert.deepEqual(searched,['c']);
   searched.length=0;await gateway.discoverCandidates('a','/book','鸣龙',()=>true);assert.deepEqual(searched,['a','b','c']);
@@ -584,7 +884,7 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
   }};
   const gateway=new SourceSwitchGateway(owner);
   const query={sourceId:'a',bookId:'/book',bookName:'鸣龙',author:'关关公子',currentChapterIndex:0,currentChapterTitle:''};
-  const Index=productionMotionMethods(resolve(repo,'entry/src/main/ets/pages/Index.ets'), ['knownSearchSourceCandidates'], {searchCandidateRank});
+  const Index=productionMotionMethods(resolve(repo,'entry/src/main/ets/pages/Index.ets'), ['knownSearchSourceCandidates'], {searchCandidateRank,readBookSearchTiming});
   const page=Object.assign(new Index(),{detailReturnRoute:'search',sourceSwitchState:{kind:'discovering'},
     searchDetailCandidates:['a'].map(sourceId=>({sourceId,sourceName:sourceId,sourceRuleVersion:'v1',
       bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'}))});
@@ -601,7 +901,7 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
   release();for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));
   assert.equal(page.sourceSwitchState.candidates.length,2);
   assert.deepEqual(calls.slice(0,3),['source.list','search-book.related','search-book.batch.get']);
-  assert.ok(calls.includes('change.bookSource') || calls.includes('search-book.related'),
+  assert.ok(calls.includes('book.search') || calls.includes('search-book.related'),
     'the seeded candidates continue through the real incremental refresh path');
 }
 console.log('PH70 actual Index candidate projection → feature owner entry paints known candidates before cache RPC PASS');
@@ -651,6 +951,73 @@ for (const reset of [false, true]) {
   assert.equal(page.sourceSwitchState.candidates.length, 2);
 }
 console.log('PH70 actual SourceSwitchHost/Gateway retain failed delta/reset without automatic retry loops PASS');
+
+// Retiring a sweep must release debounce waiters and subscriptions even when
+// the Core RPC ignores shouldCancel and never returns until explicitly drained.
+for (const phase of ['debounce', 'in-flight']) {
+  let current = true, listener, released = 0, batchStarted, drainBatch;
+  const started = new Promise(resolve => { batchStarted = resolve; });
+  const batch = new Promise(resolve => { drainBatch = resolve; });
+  const progress = [];
+  const candidate = { sourceId: 'a', bookUrl: '/book', bookName: '鸣龙', author: '关关公子',
+    category: 'novel', sourceVersion: 'v1' };
+  const owner = {
+    bookAcquisitions: () => ({ sourceRegistryRevision: () => 1,
+      subscribe: fn => { listener = fn; return () => { released++; }; } }),
+    request: async (method, params) => {
+      if (method === 'source.list') return { data: { sources: [
+        { sourceId: 'a', name: 'A', enabled: true, sourceVersion: 'v1' },
+      ] } };
+      assert.equal(method, 'search-book.batch.get');
+      batchStarted();
+      await batch; // Deliberately ignore shouldCancel to test waiter release.
+      return { data: { books: [], missing: params.identities, complete: true } };
+    },
+  };
+  const gateway = new SourceSwitchGateway(owner);
+  gateway.loadCachedCandidates = async () => [];
+  gateway.discoverCandidates = async (_source, _book, _keyword, _current, _excluded, _kind, completed) => {
+    await completed([candidate]);
+    return { kind: 'sources', candidates: [candidate] };
+  };
+  const run = gateway.refreshCandidates({ sourceId: 'a', bookId: '/book', bookName: '鸣龙', author: '关关公子',
+    currentChapterIndex: 0, currentChapterTitle: '' }, () => current, [], rows => progress.push(rows));
+  for (let i = 0; i < 4; i++) await new Promise(resolve => setImmediate(resolve));
+  listener({ reset: false, identities: [{ sourceId: 'a', bookId: '/book' }] });
+  if (phase === 'in-flight') await started;
+  const published = progress.length;
+  current = false;
+  let timeout;
+  const outcome = await Promise.race([run, new Promise((_, reject) => {
+    timeout = setTimeout(() => reject(Error(`cancelled ${phase} flush did not settle`)), 500);
+  })]).finally(() => clearTimeout(timeout));
+  assert.equal(outcome.kind, 'noSources');
+  assert.equal(released, 1, `${phase} cancellation releases its acquisition subscription`);
+  listener({ reset: true, identities: [] });
+  drainBatch();
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(progress.length, published, 'retired subscriptions and late RPCs cannot publish');
+}
+console.log('SourceSwitch debounce/in-flight cancellation settles waiters and releases subscriptions PASS');
+
+// Manga relations use the dedicated Core candidate projection so a durable
+// current book cannot be mistaken for an alternate source.
+{
+  let relationParams;
+  const owner = { request: async (method, params) => {
+    if (method === 'source.list') return { data: { sources: [
+      { sourceId: 'comic', name: '漫画源', enabled: true, sourceVersion: 'v1', bookSource: { bookSourceType: 2 } },
+    ] } };
+    relationParams = params;
+    return { data: relatedData([{ origin: 'comic', bookUrl: '/book', name: '漫画', author: '作者',
+      acquisition: { sourceVersion: 'v1', catalogCount: 1, catalogAt: Date.now() } }]) };
+  } };
+  const result = await new SourceSwitchGateway(owner).loadCachedCandidates({ contentKind: 'manga',
+    sourceId: 'comic', bookId: '/book', bookName: '漫画', author: '作者', currentChapterIndex: 0, currentChapterTitle: '' });
+  assert.equal(result.length, 1);
+  assert.equal(relationParams.mode, 'mangaCandidates');
+}
+console.log('SourceSwitch manga candidate relation mode PASS');
 
 // Complete relation pages own membership; late/truncated/mixed snapshots never publish.
 {

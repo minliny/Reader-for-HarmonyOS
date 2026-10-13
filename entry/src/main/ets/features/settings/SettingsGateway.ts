@@ -10,8 +10,10 @@ export type SettingsSnapshot = {
   tapBottomScrollTop: boolean;
   reduceMotion: boolean;
   crashLog: boolean;
+  /** Development-only layout guide. Kept in app preferences so it survives page recreation. */
+  developerMode: boolean;
 };
-export type GeneralSettingsKey = 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog';
+export type GeneralSettingsKey = 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode';
 export interface GeneralSettingsWriteFacts {
   acceptedRevision: number;
   savedRevision: number;
@@ -22,10 +24,10 @@ export interface GeneralSettingsWriteFacts {
   saved?: SettingsSnapshot;
 }
 const DEFAULT_SNAPSHOT: SettingsSnapshot = {
-  autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false, crashLog: true,
+  autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false, crashLog: true, developerMode: false,
 };
 export function createDefaultSettingsSnapshot(): SettingsSnapshot {
-  return { autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false, crashLog: true };
+  return { autoCheckUpdate: true, tapBottomScrollTop: true, reduceMotion: false, crashLog: true, developerMode: false };
 }
 
 /** One real Preferences file, one IO lane across Ability/Runtime contexts.
@@ -115,6 +117,7 @@ export class SettingsGateway {
         tapBottomScrollTop: changedKey === 'tapBottomScrollTop' ? requested.tapBottomScrollTop : previous.tapBottomScrollTop,
         reduceMotion: changedKey === 'reduceMotion' ? requested.reduceMotion : previous.reduceMotion,
         crashLog: changedKey === 'crashLog' ? requested.crashLog : previous.crashLog,
+        developerMode: changedKey === 'developerMode' ? requested.developerMode : previous.developerMode,
       };
       // Actual first platform put is the dispatch boundary. Once dispatched,
       // retirement suppresses publication, not the already accepted flush.
@@ -155,6 +158,7 @@ export class SettingsGateway {
     await store.put('tapBottomScrollTop', snapshot.tapBottomScrollTop);
     await store.put('reduceMotion', snapshot.reduceMotion);
     await store.put('crashLog', snapshot.crashLog);
+    await store.put('developerMode', snapshot.developerMode);
   }
   private async readSnapshot(store: preferences.Preferences): Promise<SettingsSnapshot> {
     const snapshot: SettingsSnapshot = {
@@ -162,14 +166,16 @@ export class SettingsGateway {
       tapBottomScrollTop: (await store.get('tapBottomScrollTop', DEFAULT_SNAPSHOT.tapBottomScrollTop)) as boolean,
       reduceMotion: (await store.get('reduceMotion', DEFAULT_SNAPSHOT.reduceMotion)) as boolean,
       crashLog: (await store.get('crashLog', DEFAULT_SNAPSHOT.crashLog)) as boolean,
+      developerMode: (await store.get('developerMode', DEFAULT_SNAPSHOT.developerMode)) as boolean,
     };
     if (typeof snapshot.autoCheckUpdate !== 'boolean' || typeof snapshot.tapBottomScrollTop !== 'boolean' ||
-      typeof snapshot.reduceMotion !== 'boolean' || typeof snapshot.crashLog !== 'boolean') throw new Error('设置持久化数据格式异常');
+      typeof snapshot.reduceMotion !== 'boolean' || typeof snapshot.crashLog !== 'boolean' ||
+      typeof snapshot.developerMode !== 'boolean') throw new Error('设置持久化数据格式异常');
     return snapshot;
   }
   private copySnapshot(snapshot: SettingsSnapshot): SettingsSnapshot {
     return { autoCheckUpdate: snapshot.autoCheckUpdate, tapBottomScrollTop: snapshot.tapBottomScrollTop,
-      reduceMotion: snapshot.reduceMotion, crashLog: snapshot.crashLog };
+      reduceMotion: snapshot.reduceMotion, crashLog: snapshot.crashLog, developerMode: snapshot.developerMode };
   }
   private async ensureStore(): Promise<preferences.Preferences> {
     if (this.store === undefined) this.store = await preferences.getPreferences(this.context, SETTINGS_PREFERENCES_NAME);

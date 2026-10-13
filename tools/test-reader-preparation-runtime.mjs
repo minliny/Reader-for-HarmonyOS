@@ -16,7 +16,7 @@ function fixture() {
     supportsCoreCapability: () => true, preparationNetwork: { allowed: () => true },
     start: async () => {}, readingEntryPreparations: () => ({ beginRequest: () => false }),
     mangaImageTail: Promise.resolve(),
-    readingImageDiskCache: { maintainMangaStorage: async () => {}, withMangaStorageRestore: async restore => restore() },
+    readingImageDiskCache: { maintainMangaStorage: async () => {}, clearMangaRebuildableCache: async () => ({ deletedBytes: 0, deletedFiles: 0 }), withMangaStorageRestore: async restore => restore() },
     runtime: { async request(method, params) { calls.push({ method, params }); return { data: method === 'cache.clear' ? { scope: params.scope } : {} }; } },
     bookAcquisitions: () => ({ async resumeReadingPreparations(allowed, catalogAllowed) {
       rounds.push({ allowed: allowed(), catalogAllowed: catalogAllowed() });

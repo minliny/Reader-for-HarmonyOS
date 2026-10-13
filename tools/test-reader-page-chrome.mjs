@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import * as windowMetrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import * as readingGeometry from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
 import {
   ReaderPageChromeMeasurements,
   READER_PAGE_CHROME_BOOKMARK_SIZE,
@@ -62,6 +65,12 @@ const longerOrdinal = resolveReaderPageChromeLayout(layout(390, 844),
 assert.equal(longerOrdinal.sessionX, 269);
 assert.equal(longerOrdinal.bottomEndX, 144,
   'long localized/page-count text expands left while the capsule remains right-anchored');
+const longChapter = resolveReaderPageChromeLayout(layout(390, 844),
+  new ReaderPageChromeMeasurements(120, 14.4, 30, 14.4, 500, 14.4, 30, 14.4));
+assert.ok(longChapter.bottomEndMaxWidth >= 30,
+  'the right-hand percentage keeps a status slot even when the chapter title is long');
+assert.ok(longChapter.bottomStartMaxWidth < 500,
+  'a long chapter title is constrained to the remaining left footer width');
 
 const safeArea = resolveReaderPageChromeLayout(layout(365.71, 780, 'compact', 40, 34),
   new ReaderPageChromeMeasurements(120, 14.4, 30, 14.4, 30, 14.4, 80, 14.4,
@@ -87,6 +96,87 @@ assert.equal(formatReaderPageOrdinal(new ReaderPageOrdinal(8)), '第 9 页');
 // Exercise the production measurement method: a page update used to measure
 // all four strings again for every geometry expression (over 40 SDK calls).
 const chromeSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets', import.meta.url), 'utf8');
+const experienceSource = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
+// Exercise the actual SDK-emitted Text position attributes, rather than only
+// the layout helper. The visible and hidden avoid-area samples retain the
+// same real status rectangle; neither cutout setting may introduce a new lane.
+const statusContext = {
+  px2vp: value => value / 3, fp2px: value => value * 3, px2fp: value => value / 3,
+  getHostContext: () => ({ resourceManager: { getNumber: () => 48 } }),
+  getMeasureUtils: () => ({ measureTextSize: ({ textContent }) =>
+    ({ width: textContent.length * 21, height: 60 }) }),
+};
+const statusChrome = createReaderBuilderProbe(chromeSource,
+  ['build', 'chromeLayout', 'textMeasure', 'topTextStyle', 'footerExitX', 'footerExitY', 'metaColor'],
+  { ReaderPageChromeMeasurements, READER_PAGE_CHROME_BOOKMARK_SIZE, resolveReaderPageChromeLayout,
+    measureReaderPageChromeText, readerPageChromeTopTextStyle }).owner;
+Object.assign(statusChrome, {
+  topStartText: '实际书名', topEndText: '12:30', bottomStartText: '', bottomEndText: '',
+  topInfoSuppressed: false, topTranslateY: 0, incomingOpacity: 1,
+  footerOpacity: 1, footerTranslateX: 0, sessionExitProgress: 0,
+  sessionVisible: false, sessionWidth: 0, sessionHeight: 0,
+  sessionOverlayActive: false, isSessionOverlay: false,
+  textMeasureCache: new Map(), appearance: { activeTheme: 'paper' },
+  getUIContext: () => statusContext,
+});
+let renderedStatusChrome = false, statusCases = 0;
+function assertStatusTextPositions(page, expectedY) {
+  statusChrome.layout = page;
+  if (renderedStatusChrome) statusChrome.replay();
+  else { statusChrome.initialRender(); renderedStatusChrome = true; }
+  const nodes = [...statusChrome.nodes.values()].filter(node => node.type === 'Text');
+  const title = nodes.find(node => node.create === '实际书名');
+  const time = nodes.find(node => node.create === '12:30');
+  assert.ok(title && time, 'actual SDK creates both ordinary immersive top labels');
+  assert.equal(title.position.y, expectedY, 'SDK title centres in the measured status band');
+  assert.equal(time.position.y, expectedY, 'SDK clock shares that same status-band position');
+  assert.equal(title.lineHeight, undefined, 'the actual Text retains platform AUTO line height');
+  assert.ok(title.position.y + 20 + 8 <= page.contentTop, 'the body clears the complete measured information line');
+}
+for (const [width, height] of [[390, 844], [844, 390], [760, 960], [960, 760]]) {
+  for (const statusHeight of [24, 40, 137 / 3, 140 / 3]) for (const statusTop of [0, 3]) {
+    for (const extended of [false, true]) for (const systemTop of [0, statusHeight]) {
+      const metrics = new windowMetrics.ReaderWindowMetricsSnapshot();
+      Object.assign(metrics, { ready: true, revision: statusCases + 1,
+        windowRect: new windowMetrics.ReaderRectVp(0, 0, width, height),
+        systemInsets: new windowMetrics.ReaderInsetsVp(0, systemTop),
+        statusBarHeight: statusHeight,
+        statusBarRect: new windowMetrics.ReaderRectVp(0, statusTop, width, statusHeight) });
+      const page = readingGeometry.resolveReaderReadingLayout(width, height, width >= 600, metrics, extended);
+      assertStatusTextPositions(page, statusTop + Math.min(Math.max(0, statusHeight - 20),
+        Math.max(0, statusHeight - 20) / 2 + 4));
+      statusCases++;
+    }
+  }
+}
+// The top information row owns the measured status-bar origin. A visible
+// SYSTEM inset must not become a second vertical offset for the row.
+const geometrySource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts', import.meta.url), 'utf8');
+assert.match(geometrySource, /const informationTop = Number\.isFinite\(metrics\.statusBarRect\.top\)/);
+const regressionMetrics = new windowMetrics.ReaderWindowMetricsSnapshot();
+Object.assign(regressionMetrics, { ready: true, revision: 999,
+  statusBarHeight: 48, statusBarRect: new windowMetrics.ReaderRectVp(0, 3, 390, 48) });
+assertStatusTextPositions(readingGeometry.resolveReaderReadingLayout(390, 844, false, regressionMetrics, false), 21);
+// Exercise the SDK Text consumer with a body lane enlarged by a cutout and
+// large-font clearance. Those independent budgets must no longer move the
+// ordinary 20vp information labels out of the actual status-bar track.
+for (const statusHeight of [18, 24, 39, 60]) for (const top of [0, 3]) {
+  for (const extended of [false, true]) for (const visible of [false, true]) {
+    const metrics = new windowMetrics.ReaderWindowMetricsSnapshot();
+    Object.assign(metrics, { ready: true, revision: 2000 + statusCases,
+      windowRect: new windowMetrics.ReaderRectVp(0, 0, 390, 844),
+      systemInsets: new windowMetrics.ReaderInsetsVp(0, visible ? statusHeight : 0),
+      cutoutInsets: new windowMetrics.ReaderInsetsVp(0, statusHeight + 70),
+      statusBarHeight: statusHeight,
+      statusBarRect: new windowMetrics.ReaderRectVp(0, top, 390, statusHeight) });
+    const page = readingGeometry.resolveReaderReadingLayout(390, 844, false, metrics, extended, undefined, 60);
+    assertStatusTextPositions(page, top + Math.min(Math.max(0, statusHeight - 20),
+      Math.max(0, statusHeight - 20) / 2 + 4));
+    statusCases++;
+  }
+}
+console.log(`page chrome ${statusCases} actual SDK Text coordinate cases and no-double-offset status origin contract: PASS`);
+
 const measureSource = chromeSource.slice(chromeSource.indexOf('  private textMeasure('),
   chromeSource.indexOf('  private metaColor('));
 const ChromeMeasure = new Function('measureReaderPageChromeText', 'readerPageChromeTopTextStyle', `${stripTypeScriptTypes(`class ChromeMeasure { ${measureSource} }`)}; return ChromeMeasure;`)(measureReaderPageChromeText, readerPageChromeTopTextStyle);
@@ -138,8 +228,8 @@ const clockOwner = Object.assign(new ChromeOwner(), {
   pageChromeClockText: '12:30', pageTurnRenderRevision: 4, refreshes: 0,
   scheduleBookTurnTextureRefresh() { this.refreshes++; },
 });
-const chrome = { topStartText: 'Book', topEndText: '12:30', bottomStartText: '9%',
-  bottomEndText: '第 2 页', sessionVisible: false, sessionWidth: 0, sessionHeight: 0 };
+const chrome = { topStartText: 'Book', topEndText: '12:30', bottomStartText: '第 325 章',
+  bottomEndText: '38%', sessionVisible: false, sessionWidth: 0, sessionHeight: 0 };
 const identity = data => clockOwner.bookTurnTextureIdentity(1, 100, 'v1', 'layout', 0, data);
 assert.notEqual(identity(chrome), identity({ ...chrome, topEndText: '12:31' }));
 assert.notEqual(identity(chrome), identity({ ...chrome, sessionVisible: true, sessionWidth: 80, sessionHeight: 24 }));
@@ -157,7 +247,7 @@ const LayoutChrome = productionMotionMethods(
     READER_PAGE_CHROME_BOOKMARK_SIZE, readerPageChromeTopTextStyle });
 let layoutMeasures = 0;
 const layoutChrome = Object.assign(new LayoutChrome(), { ...chrome, layout: layout(390, 844),
-  topStartText: 'Book', topEndText: '12:30', bottomStartText: '9%', bottomEndText: '第 2 页',
+  topStartText: 'Book', topEndText: '12:30', bottomStartText: '第 325 章', bottomEndText: '38%',
   textMeasure() { layoutMeasures++; return { width: 30, height: 14.4 }; },
   getUIContext: owner.getUIContext });
 const geometry = layoutChrome.chromeLayout();
@@ -170,6 +260,13 @@ assert.equal(layoutMeasures, 8, 'in-place safe area changes invalidate geometry'
 layoutChrome.sessionVisible = true; layoutChrome.sessionWidth = 80; layoutChrome.sessionHeight = 24;
 assert.notEqual(layoutChrome.chromeLayout().bottomEndX, geometry.bottomEndX);
 console.log('page chrome complete layout reuse and safe-area/session invalidation: PASS');
+
+assert.match(experienceSource, /const chapterTitle = this\.pageChromeChapterTitle\(chapterIndex\);/,
+  'page chrome resolves the current chapter from the page-owned anchor');
+assert.match(experienceSource, /chapterTitle\.length > 0 \? chapterTitle : '—',[\s\S]*formatReaderPageProgress\(/,
+  'the footer contract is chapter title on the left and full-reading percentage on the right');
+assert.match(experienceSource, /continuousPageChromeSnapshot\(this\.continuousRenderRevision, ''\)\.bottomEndText/,
+  'continuous scrolling refreshes the right-hand percentage slot');
 
 const CaptureOwner = productionMotionMethods(
   new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),

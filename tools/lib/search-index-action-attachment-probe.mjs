@@ -13,6 +13,14 @@ const ts = req(sdk + '/node_modules/typescript'), options = req(sdk + '/lib/ets_
 const pageSource = read('features/search/SearchPage.ets');
 export const searchIndexSource = read('pages/Index.ets');
 const parse = source => ts.createSourceFile('/tmp/SearchAttachment.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const pageTree = parse(pageSource);
+const scopeConstants = Object.fromEntries(['SEARCH_LOCAL_SCOPE', 'SEARCH_ONLINE_SCOPE'].map(name => {
+  const declaration = pageTree.statements.filter(ts.isVariableStatement)
+    .flatMap(statement => [...statement.declarationList.declarations])
+    .find(value => value.name.getText(pageTree) === name);
+  assert.ok(declaration && ts.isStringLiteral(declaration.initializer), name + ' is the actual production scope label');
+  return [name, declaration.initializer.text];
+}));
 const member = (source, name) => { const tree = parse(source), component = tree.statements.find(n => n.name?.text === 'Index');
   const value = component.members.find(n => n.name?.getText(tree) === name); assert.ok(value, name); return value.getText(tree); };
 const [{ SearchPublication }, { SearchViewState }, { SearchResultProjection }, geometry, metrics, floating, author] = await Promise.all([
@@ -32,7 +40,7 @@ const SearchHost = new Function('SearchPublication', 'SearchViewState', 'SearchO
 export function searchAttachmentFixture({ mutatePredicate, pageDefinition = pageSource } = {}) {
   const controls = tailControls(), calls = [], native = { bookAcquisitions: () => ({ endSearch() { calls.push(['endSearch']); } }) };
   let currentRuntime = native;
-  const dependencies = { ...controls.dependencies, SearchPublication, SearchViewState, SearchResultProjection, SearchBookGroup, SearchResultDataSource,
+  const dependencies = { ...controls.dependencies, ...scopeConstants, SearchPublication, SearchViewState, SearchResultProjection, SearchBookGroup, SearchResultDataSource,
     ...geometry, ...metrics, ...floating, ...author, registerReaderFonts() {},
     ReaderWindowCoordinator: { metrics: () => metrics.createDefaultReaderWindowMetrics() },
     Scroller: class { scrollEdge() {} }, uiContext: { getFont: () => ({}), postFrameCallback() {} } };
@@ -51,6 +59,7 @@ export function searchAttachmentFixture({ mutatePredicate, pageDefinition = page
   host.orchestrator = { close() { calls.push(['closeSearch']); }, retryHistory() { calls.push(['retryHistory']); } };
   Object.assign(index, { route: 'search', navigationGeneration: 1, mountedRuntimeOwner: native, detailShelfAdmissionMount: 1,
     shelfReceiptRetired: false, searchHost: host, searchPublicationRevision: 0, settingsSnapshot: { reduceMotion: false },
+    pendingShelfReadbackKey: '',
     detailBook: { sourceId: 's', bookId: 'current-detail' }, detailToc: ['kept'], remoteReadingSession: undefined,
     nextNavigationGeneration() { this.navigationGeneration++; calls.push(['nextNavigation']); },
     installRemoteReadingSession(value) { this.remoteReadingSession = value; calls.push(['installSession', value]); },

@@ -19,6 +19,7 @@ import {
   readerFloatingTabContentInset,
 } from '../common/ReaderFloatingBarMetrics';
 import { MainTabShell } from '../shell/MainTabShell';
+import { ReaderHeaderFrameModifier, readerPageContentStartInset } from '../common/ReaderPageShell';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import { StatusBadge } from '../common/StatusBadge';
@@ -136,6 +137,7 @@ export struct RssPage {
           .width('100%')
           .height(RSS_FLOATING_HEADER_HEIGHT)
           .alignItems(HorizontalAlign.Start)
+          .attributeModifier(new ReaderHeaderFrameModifier('rss', 'solid', this.appThemeScheme))
           .hitTestBehavior(HitTestMode.Transparent);
         }
         .layoutWeight(1)

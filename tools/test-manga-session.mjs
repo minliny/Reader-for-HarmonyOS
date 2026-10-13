@@ -1,3 +1,4 @@
+import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -9,7 +10,7 @@ function load(name, dependencies = {}) {
 }
 const MangaSessionGateway = load('MangaSessionGateway');
 const MangaResourceGateway = load('MangaResourceGateway');
-const Controller = load('MangaSessionController', { MangaSessionGateway, MangaResourceGateway });
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
 const chapter = { manifest: { chapter: {sourceId:'s', bookId:'b', chapterId:'/c'}, sourceRuleVersion:'r', manifestVersion:'v', decodeRevision:'identity-v1',
   pages: Array.from({length:8}, (_,ordinal) => { const pageId=`mp1:${String(ordinal).padStart(64,'0')}`; return {ordinal,pageId,resourceRef:`manga:${pageId}`}; }) }, chapterIndex:0,chapterTitle:'chapter',cached:false,resources:[] };
 chapter.resources = chapter.manifest.pages.map(page => ({ resourceRef:page.resourceRef, request:{url:'https://test/repeated.jpg'} }));
@@ -30,7 +31,7 @@ assert.equal(controller.visiblePages().length,2);
 assert.equal(loaded[0][8],chapter.manifest.pages[0].resourceRef);
 assert.equal(loaded[0][10], chapter.manifest.sourceRuleVersion);
 await controller.selectPage(4);
-assert.equal(controller.visiblePages().length,3);assert.equal(released.length,2);
+assert.equal(controller.visiblePages().length,3);assert.equal(released.length,1, 'same-chapter navigation retains its ready header and only releases a cancelled neighbor attempt');
 await Promise.all([controller.savePosition(4,0,0.2),controller.savePosition(4,0,0.5)]);
 assert.equal(revision,2);assert.equal(saved.pageId,chapter.manifest.pages[4].pageId);
 await assert.rejects(controller.savePosition(4,0,NaN),/PROGRESS_INVALID/);
@@ -62,7 +63,9 @@ const oldWindow=tileController.setTileWindow([{ordinal:0,tileIndex:0},{ordinal:0
 await new Promise(r=>setImmediate(r));
 const newWindow=tileController.setTileWindow([{ordinal:0,tileIndex:3}]);
 resolve();await Promise.all([oldWindow,newWindow]);pendingImage=null;
-assert.equal(tileController.tile(0,0),undefined);assert.equal(tileController.tile(0,1),undefined);
+assert.ok(tileController.tile(0,0)?.image, 'completed first region is retained independently of the active viewport');
+assert.equal(tileController.tiles.has('0:0'),false, 'retained completion must not remain an active progress producer');
+assert.equal(tileController.tile(0,1),undefined);
 assert.ok(tileController.tile(0,3).image);
 await assert.rejects(tileController.savePosition(0,0,0.1),/POSITION_NOT_VISIBLE/);
 await tileController.savePosition(0,0,0.8);
@@ -403,7 +406,7 @@ for(const scenario of ['close','clear']){
   if(method==='manga.chapter.get'){if(params.chapterIndex===42){started();if(scenario==='close')await new Promise(resolve=>release=resolve);return {data:next};}return {data:structuredClone(chapter)};}return {data:{token:{epoch:23,revision:0},location:null}};
  },async prefetchReadingImage(){images++;}};
  const c=new Controller(rt);await c.open('s','b',0);c.configureNextChapter(42,'/next');await start;
- if(scenario==='close'){c.close();release();}else {await new Promise(r=>setImmediate(r));alive=false;await c.selectPage(7);}
+ if(scenario==='close'){c.close();release();}else {await new Promise(r=>setImmediate(r));alive=false;await assert.rejects(c.selectPage(7),/MANGA_SESSION_CONTENT_CHANGED/);}
  await new Promise(r=>setImmediate(r));assert.equal(images,0);c.close();
 }
 console.log('PASS optional adjacent work cannot survive session close or recapture a cleared content scope');
@@ -547,6 +550,48 @@ for (const mode of ['missing', 'reprocess', 'same-exact', 'same-unresolved', 'sa
  c.close();
 }
 console.log('PASS actual Surface/Gateway/Controller cached entry renewal: changed source opens fresh; same source refreshes once using exact/unresolved Core anchor proof; unchanged durable xy/CAS, explicit recovery, bounded failures, cached/offline/live-error exclusions and exit fences');
+
+// The original directory navigation's chapter-first Prop remains true for
+// this Surface's lifetime. Changed-content reopening must read Core's saved
+// location instead of replaying that old navigation intent.
+{
+ const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+ const currentChapter={...structuredClone(chapter),cached:true,totalPages:8,pageStart:0};
+ const durable={kind:'manga',chapter:currentChapter.manifest.chapter,manifestVersion:currentChapter.manifest.manifestVersion,
+  pageId:currentChapter.manifest.pages[3].pageId,pageOrdinalFallback:3,x:.24,y:.68,progressRevision:9};
+ const entry={chapter:currentChapter,targetOrdinal:3,recoveryRequired:false,progress:{token:{epoch:92,revision:9},location:durable}};
+ let contentRevision=0,writes=0,images=0,failNextEntry=false;const restores=[];
+ const rt={supportsCoreCapability:()=>true,captureReadingContentValidity:()=>{const revision=contentRevision;return ()=>revision===contentRevision;},
+  async request(method){if(method==='manga.entry.get'){if(failNextEntry){failNextEntry=false;throw Error('entry unavailable');}return {data:{entry:structuredClone(entry)}};}writes++;throw Error('reopen must not write progress or refetch the canonical cached chapter');},
+  async loadReadingImage(){return {fileUri:`file://reopen-${++images}`,width:600,height:800,revision:'r'};},releaseReadingImage(){}};
+ const Surface=productionMotionMethods(new URL('MangaReadingSurface.ets',root),['open','reopenChangedChapter','retryOpen','effectiveFit','configureAdjacentChapter'],
+  {MangaSessionGateway,MangaBookPresentation,AppStorage:{setOrCreate(){}}});
+ const c=new Controller(rt);
+ const catalog={contentKind:'manga',sourceVersion:'r',identity:{sourceId:'s',bookId:'b'},entries:[{index:0,url:'/c',title:'chapter'}]};
+ const surface=Object.assign(new Surface(),{mounted:true,controller:c,runtime:rt,sourceId:'s',bookId:'b',chapterIndex:0,startAtChapterFirst:true,
+  offline:false,fitPreference:'width',horizontal:false,remoteSession:catalog,opened:false,error:'',openingRetry:false,
+  presentationGeneration:0,viewportGeneration:0,publishedRowKeys:new Map(),publish(){},restore:(...args)=>restores.push(args),
+  updateViewport(){},onRemoteSessionReady(){}});
+ await surface.open(c);assert.equal(c.displayedOrdinal,0,'initial chapter navigation still starts at page zero');
+ contentRevision++;assert.equal(c.tile(0,0),undefined);failNextEntry=true;
+ await surface.reopenChangedChapter();assert.equal(surface.opened,false);assert.equal(surface.error,'entry unavailable');
+ await surface.retryOpen();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(surface.startAtChapterFirst,true,'reopening does not mutate the parent navigation Prop');
+ assert.equal(c.displayedOrdinal,3,'fresh entry resumes Core target instead of replaying the original page-zero intent');
+ assert.deepEqual(restores.at(-1),[3,.68,.24]);assert.deepEqual(c.savedLocation,durable);
+ assert.equal(writes,0);assert.equal(surface.openingRetry,false);assert.equal(surface.opened,true);c.close();
+ // The same failure on ordinary chapter navigation still retries page zero.
+ const initial=new Controller(rt),initialRestores=[];
+ const ordinary=Object.assign(new Surface(),{mounted:true,controller:initial,runtime:rt,sourceId:'s',bookId:'b',chapterIndex:0,startAtChapterFirst:true,
+  offline:false,fitPreference:'width',horizontal:false,remoteSession:catalog,opened:false,error:'',openingRetry:false,
+  presentationGeneration:0,viewportGeneration:0,publishedRowKeys:new Map(),publish(){},restore:(...args)=>initialRestores.push(args),
+  updateViewport(){},onRemoteSessionReady(){}});
+ failNextEntry=true;await ordinary.open(initial);assert.equal(ordinary.opened,false);
+ await ordinary.retryOpen();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(initial.displayedOrdinal,0,'ordinary failed chapter-first opening preserves page-zero intent on retry');
+ assert.deepEqual(initialRestores.at(-1),[0,0,0]);assert.equal(writes,0);initial.close();
+}
+console.log('PASS real Surface/Gateway/Controller failed changed-content reopen retries canonical page/xy, while ordinary failed chapter-first opening retries page zero without progress writes');
 
 // Cold shelf entry admits narrow cached pixels before its background catalog.
 // Exercise the real SDK parent payload, retained child updater and property

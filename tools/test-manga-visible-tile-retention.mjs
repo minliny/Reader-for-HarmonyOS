@@ -1,3 +1,4 @@
+import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -10,7 +11,7 @@ function load(name, dependencies = {}) {
 }
 const MangaSessionGateway = load('MangaSessionGateway');
 const MangaResourceGateway = load('MangaResourceGateway');
-const Controller = load('MangaSessionController', { MangaSessionGateway, MangaResourceGateway });
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
 function fixture(long = false) {
@@ -55,14 +56,15 @@ function fixture(long = false) {
   assert.equal(f.controller.visiblePages().find(page => page.ordinal === 2)?.status, 'ready', 'retained image keeps its ready metadata');
   await assert.rejects(f.controller.setVisible(0, Array.from({ length: 9 }, () => requested[0])), /TILE_WINDOW_BUDGET/);
   assert.equal(f.calls.length, beforeCalls); assert.equal(f.released.length, beforeReleased);
-  // Explicit navigation carries no prior viewport retention evidence.
+  // Explicit navigation retires demand, while completed leases keep their
+  // chapter lifetime until the reader actually closes this chapter.
   await f.controller.selectPage(4);
-  for (const ordinal of [0, 1, 2]) assert.equal(f.controller.tile(ordinal, 0), undefined);
-  for (const uri of original) assert.equal(f.released.filter(value => value === uri).length, 1);
+  for (const ordinal of [0, 1, 2]) assert.equal(f.controller.tiles.has(`${ordinal}:0`), false);
+  for (const uri of original) assert.equal(f.released.filter(value => value === uri).length, 0);
   f.controller.close();
   for (const uri of original) assert.equal(f.released.filter(value => value === uri).length, 1);
 }
-console.log('PASS actual multi-page viewport keeps exact display leases and ready metadata; far navigation/close retire once, budget stays eight');
+console.log('PASS actual multi-page viewport keeps exact leases; far navigation transfers demand and chapter close releases once');
 
 // A late regional decode joins while its exact tile remains actually visible.
 // A later far selection still revokes that work; no old wantedTiles retention.
@@ -86,10 +88,8 @@ console.log('PASS actual multi-page viewport keeps exact display leases and read
 }
 console.log('PASS precise visible pending tiles join one decode; far selection fences and releases late pixels');
 
-// A ready tile can outlive its page's metadata window. A later header reentry
-// may be pending while the same actual viewport shifts the first row again.
-// Retaining that pending page outside wanted would cancel its decode but keep
-// a permanent pending marker with no task, blocking every future reentry.
+// A completed region already proves the page geometry and readability. A
+// header that would block is no longer requested on metadata reentry.
 {
   const f = fixture(); await f.controller.openPrepared(f.entry, true); await tick();
   await f.controller.setVisible(1); await tick();
@@ -99,22 +99,42 @@ console.log('PASS precise visible pending tiles join one decode; far selection f
   const visibleTile = f.controller.tile(2, 0).image.fileUri;
   assert.equal(f.controller.visiblePages().find(page => page.ordinal === 2), undefined);
   f.control.deferHeaderOrdinal = 2;
+  const before = f.calls.length;
   await f.controller.setVisible(1, requested); await tick();
-  assert.equal(f.gates.length, 1);
-  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 2)?.status, 'pending');
+  assert.equal(f.gates.length, 0, 'completed visible tile bypasses the header lane');
+  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 2)?.status, 'ready');
   await f.controller.setVisible(0, requested);
-  f.gates[0].gate.resolve(); await tick(); await tick();
-  assert.notEqual(f.controller.visiblePages().find(page => page.ordinal === 2)?.status, 'pending',
-    'cancelled header metadata cannot survive without a pending task');
-  assert.equal(f.controller.tile(2, 0).image.fileUri, visibleTile, 'header cancellation never retires the visible tile');
+  assert.equal(f.calls.length, before, 'repeated metadata reentry performs no image work');
+  assert.equal(f.controller.tile(2, 0).image.fileUri, visibleTile);
   assert.equal(f.released.includes(visibleTile), false);
-  const calls = f.calls.length;
+  const calls = f.calls.filter(call => call[8] === f.entry.chapter.manifest.pages[2].resourceRef).length;
   await f.controller.setVisible(2, requested); await tick();
   assert.equal(f.controller.visiblePages().find(page => page.ordinal === 2)?.status, 'ready',
-    'reentry starts a fresh header attempt rather than staying pending forever');
-  assert.ok(f.calls.length > calls, 'cancelled metadata has a new attempt');
+    'ready metadata is restored from the same display lease');
+  assert.equal(f.calls.filter(call => call[8] === f.entry.chapter.manifest.pages[2].resourceRef).length, calls, 'ready metadata never queues a second header attempt');
   assert.equal(f.controller.tile(2, 0).image.fileUri, visibleTile);
   assert.ok(f.controller.visiblePages().length <= 3 + 8, 'retention cannot expand the metadata window without its tile budget');
   f.controller.close();
 }
-console.log('PASS retained visible tile survives cancelled header reentry without an orphan pending marker or widened prefetch');
+console.log('PASS completed visible tile restores ready metadata without a header attempt or widened prefetch');
+
+// A first header attempt can still leave demand before it completes. Its
+// pending marker must retire; a later visit owns a fresh attempt.
+{
+  const f = fixture(); await f.controller.openPrepared(f.entry, true); await tick();
+  f.control.deferHeaderOrdinal = 2;
+  await f.controller.setVisible(1); await tick();
+  assert.equal(f.gates.length, 1);
+  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 2)?.status, 'pending');
+  await f.controller.setVisible(0, [{ ordinal: 0, tileIndex: 0 }, { ordinal: 1, tileIndex: 0 }]);
+  f.gates[0].gate.resolve(); await tick(); await tick();
+  assert.notEqual(f.controller.visiblePages().find(page => page.ordinal === 2)?.status, 'pending', 'cancelled header cannot survive without its task');
+  assert.equal(f.controller.tile(2, 0), undefined, 'cancelled first header never becomes a completed chapter lease');
+  const calls = f.calls.filter(call => call[8] === f.entry.chapter.manifest.pages[2].resourceRef).length;
+  await f.controller.setVisible(2); await tick();
+  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 2)?.status, 'ready');
+  assert.equal(f.calls.filter(call => call[8] === f.entry.chapter.manifest.pages[2].resourceRef).length, calls + 1);
+  assert.equal(f.released.filter(uri => uri === f.gates[0].image.fileUri).length, 1, 'cancelled header pixels release once');
+  f.controller.close();
+}
+console.log('PASS first pending header cancels without an orphan marker and later starts a fresh live attempt');

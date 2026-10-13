@@ -81,6 +81,7 @@ export struct ReaderControlDirectoryContent {
   @Prop availableWidth: number = 286;
   @Prop availableHeight: number = 190;
   @Prop chapterDownloadEnabled: boolean = false;
+  @Prop mangaSearch: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   @Prop bookmarkLoadFailed: boolean = false;
   @Prop bookmarkLoadMessage: string = '';
@@ -140,7 +141,7 @@ export struct ReaderControlDirectoryContent {
       this.ascending, this.currentChapterIndex, this.bookmarkIdentity, {
         complete: this.catalogComplete, chapterCount: this.catalogChapterCount,
         currentPosition: this.catalogCurrentPosition, readableChapterCount: this.catalogReadableChapterCount,
-        readablePosition: this.catalogReadablePosition });
+        readablePosition: this.catalogReadablePosition }, this.mangaSearch);
     if (this.leadingKey !== undefined) {
       const index = next.rows.findIndex((row: ReaderControlDirectoryRow): boolean => row.key === this.leadingKey);
       this.leadingRow = index < 0 ? undefined : index + this.leadingFraction;

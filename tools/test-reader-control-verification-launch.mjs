@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import {
   readerControlVerificationColdStartPage,
+  readerRebuildableCacheClearEnabled,
 } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 
 const normal = 'pages/Index';
@@ -23,12 +24,20 @@ assert.equal(readerControlVerificationColdStartPage(true, 'debug', true, undefin
 assert.equal(readerControlVerificationColdStartPage(true, 'debug', undefined, true), rendererPilot);
 assert.equal(readerControlVerificationColdStartPage(true, 'debug', true, true), normal,
   'conflicting diagnostic requests fall back to the normal reader');
+assert.equal(readerRebuildableCacheClearEnabled(true, 'debug', true), true);
+for (const value of [false, undefined, null, 'true', 1, { enabled: true }])
+  assert.equal(readerRebuildableCacheClearEnabled(true, 'debug', value), false,
+    'cache maintenance requires an exact debug boolean Want');
+assert.equal(readerRebuildableCacheClearEnabled(false, 'debug', true), false);
+assert.equal(readerRebuildableCacheClearEnabled(true, 'release', true), false);
 
 // Supplemental integration guards: not a claim of compiled/device behavior.
 const ability = await readFile(new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url), 'utf8');
 assert.match(ability, /private coldStartPage: string = 'pages\/Index'/);
 assert.match(ability, /const page = this\.coldStartPage;[\s\S]*windowStage\.loadContent\(page,/);
 assert.match(ability, /readerControlVerificationColdStartPage\(/);
+assert.match(ability, /readerRebuildableCacheClearEnabled\(/);
+assert.match(ability, /clearRebuildableCachesForVerification/);
 assert.match(ability, /want\.parameters\?\.readerOpenSourcePilot/);
 assert.equal([...ability.matchAll(/this\.coldStartPage\s*=(?!=)/g)].length, 2,
   'only onCreate admits a destination, with one exact missing-page consumption reset');

@@ -223,7 +223,7 @@ assert.match(indexSource,
 const groupHost=bookshelfDialogPresentationFixture(),book={sourceId:'s',bookId:'book',group:''};
 groupHost.i.openShelfGroup(book);const first=groupHost.group();
 assert.ok(first.select?.onClick && first.mask?.onClick,'actual Index→shared surface→selector native actions');
-groupHost.i.editingShelfGroupBusy=true;first.mask.onClick();assert.equal(groupHost.i.editingShelfGroupBook,book);
+groupHost.i.editingShelfGroupBusy=true;first.mask.onClick();assert.equal(groupHost.raw(groupHost.i.editingShelfGroupBook),book);
 groupHost.i.editingShelfGroupBusy=false;first.mask.onClick();assert.equal(groupHost.i.editingShelfGroupBook,undefined);
 groupHost.i.openShelfGroup(book);const second=groupHost.group();second.select.onClick();await Promise.resolve();await Promise.resolve();
 assert.deepEqual(groupHost.writes,[book],'actual selector routes the captured book into the existing assignment Host');

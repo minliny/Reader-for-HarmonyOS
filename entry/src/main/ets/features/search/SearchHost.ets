@@ -74,6 +74,13 @@ export class SearchHost {
         },
         (sources: SearchSource[]): void => {
           this.publication.updateSources(sources);
+          // Source configuration is part of the page publication as well as
+          // the orchestrator's private search state. Advance the same
+          // revision used for presentation and shelf snapshots so a mounted
+          // SearchPage refreshes its scopeSourceIds() projection before the
+          // next submit. Without this, returning from Source Management could
+          // leave the chips and dispatched source IDs out of sync.
+          this.advanceRevision();
         },
         this.isSearchVisible,
       );

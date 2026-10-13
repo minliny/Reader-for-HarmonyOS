@@ -83,7 +83,7 @@ function runtimeFixture(cachedBytes) {
   const assertCurrent = current => assert.equal(current(), true);
   const Runtime = productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url),
     ['loadReadingImage', 'loadReadingImageOwned', 'prefetchReadingImage', 'prefetchReadingImageOwned',
-      'prepareReadingImageBytes', 'assertReadingImageCurrent', 'admitReadingImage', 'releaseReadingImage'], {
+      'prepareReadingImageBytes', 'assertReadingImageCurrent', 'admitReadingImage', 'releaseReadingImage', 'captureReadingContentValidity'], {
       ReadingBodyImageHost: { instance: {
         async fetchRequestBytes(request, current) { assertCurrent(current); events.push('http'); return networkBytes; },
         async loadBytes(bytes, current) { assertCurrent(current); events.push('pixels'); assert.equal(bytes, cachedBytes ?? networkBytes); return payload; },

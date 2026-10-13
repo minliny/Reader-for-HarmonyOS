@@ -172,6 +172,32 @@ export function decideBundledUpgrade(
   return 'upgrade';
 }
 
+/** This reviewed revision changes distribution defaults only. Copy the
+ * stored document so fields outside the legacy rule fingerprint, including
+ * user deletions and future extensions, cannot be replaced by bundle values. */
+export function mergeBundledDefaultStateCorrection(
+  bundled: JsonObject,
+  stored: JsonObject,
+  storedActualFingerprint: string,
+): JsonObject | undefined {
+  const provenance = bundled['provenance'] as JsonObject | undefined;
+  const correction = provenance?.['defaultStateCorrection'] as JsonObject | undefined;
+  if (stored['readerBuiltinWithdrawn'] === true || stored['readerTestBuiltinWithdrawn'] === true ||
+    correction?.['version'] !== 1 || correction?.['policy'] !== 'reader-login-defaults/1' ||
+    correction?.['preserveUserFields'] !== true || !hasBuiltinMarker(stored) ||
+    isUserModifiedBuiltinCopy(stored, storedActualFingerprint) ||
+    typeof stored['ruleFingerprint'] !== 'string' ||
+    stored['ruleFingerprint'] !== bundled['ruleFingerprint'] ||
+    correction?.['previousRuleFingerprint'] !== stored['ruleFingerprint']) {
+    return undefined;
+  }
+  const updated: JsonObject = { ...stored };
+  for (const field of ['builtinId', 'builtinVersion', 'defaultEnabled', 'provenance']) {
+    if (Object.prototype.hasOwnProperty.call(bundled, field)) updated[field] = bundled[field];
+  }
+  return updated;
+}
+
 type StoredLedger = {
   schemaVersion: number;
   installed: BundledSourceLedgerEntry[];

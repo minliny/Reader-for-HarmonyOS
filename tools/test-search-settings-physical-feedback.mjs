@@ -43,9 +43,9 @@ async function check(name, body) {
   try { await body(); results.push({ name, status: 'PASS' }); }
   catch (error) { results.push({ name, status: 'FAIL', message: error.stack }); }
 }
-await check('PH24 native loading indicator preserves 13/36 sizes and responds without remounting', () => {
+await check('PH24 native loading indicator preserves 28/36 sizes and responds without remounting', () => {
   const source = read('features/search/SearchSpinner.ets');
-  for (const [diameter, light] of [[13, true], [36, false]]) {
+  for (const [diameter, light] of [[28, true], [36, false]]) {
     const { owner } = createReaderBuilderProbe(source, ['build', ...(source.includes('private shouldAnimate') ? ['shouldAnimate'] : [])]);
     Object.assign(owner, { active: true, foreground: true, reduceMotion: false, diameter, light, appThemeScheme: 'day' });
     owner.initialRender();

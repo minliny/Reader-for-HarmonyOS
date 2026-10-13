@@ -12,6 +12,7 @@ import { applyQidianDirectoryCorrection } from './qidian-directory-source-correc
 import { applyPopofreeQuoteCorrection } from './popofree-source-correction.mjs';
 import { applyBaoziImageSourceCorrection } from './baozi-image-source-correction.mjs';
 import { applyTencentPictureSourceCorrection } from './tencent-picture-source-correction.mjs';
+import { applySourceLoginDefaultPolicy } from './source-login-default-policy.mjs';
 import {
   BUILTIN_VERSION,
   SUITE_VERSION,
@@ -298,6 +299,7 @@ applyPopofreeQuoteCorrection(sources);
 applyQidianDirectoryCorrection(sources);
 applyBaoziImageSourceCorrection(sources);
 applyTencentPictureSourceCorrection(sources);
+applySourceLoginDefaultPolicy(sources);
 
 // Keep the portable collection comfortably below the product's bounded JSON
 // import limit. The payload remains ordinary JSON and can be pretty-printed by

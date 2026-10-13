@@ -3,6 +3,7 @@ import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from
 import { MangaDirectoryPressFeedback } from './MangaDirectoryPressFeedback';
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
 import type { MangaDirectoryRowPresentation } from './MangaDirectoryPresentation';
+import { mangaDirectoryDisplay } from './MangaDirectoryDisplay';
 import type { MangaDirectoryLayoutRow, MangaDirectoryLabel } from './MangaDirectoryLayout';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600 } from '../common/ReaderFontFamilies';
@@ -77,6 +78,13 @@ export struct MangaDirectoryEntryRow {
     return title.length > 0 && title !== '第话' && title !== '第 话' ? current.title : `第${Math.max(1, current.index + 1)}话`;
   }
 
+  private status(entry: LocalReadingTocEntry): string {
+    const current = this.liveEntry(entry);
+    if (current === undefined) return '';
+    return mangaDirectoryDisplay({ title: current.title, displayTitle: current.displayTitle,
+      isVip: current.isVip, isPay: current.isPay }).statusText;
+  }
+
   private gridLabel(label: MangaDirectoryLabel): string {
     return label.kind === 'parts' ? `${label.numberText} · ${label.part}` : label.numberText ?? '';
   }
@@ -135,6 +143,12 @@ export struct MangaDirectoryEntryRow {
             Text(` · ${this.liveLabel(entry)?.part ?? ''}`).flexShrink(0).maxLines(1)
               .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.namedFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.namedLineHeight).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)
               .fontColor(this.color(this.current(entry) ? 'accent' : 'muted'));
+          }
+          if (this.status(entry).length > 0) {
+            Text(this.status(entry)).flexShrink(0).maxLines(1)
+              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize)
+              .lineHeight(MANGA_DIRECTORY_VISUAL.metaLineHeight).fontColor(this.color('muted'))
+              .margin({ left: MANGA_DIRECTORY_VISUAL.contentGap });
           }
         }.layoutWeight(1).constraintSize({ minWidth: 0 }).justifyContent(FlexAlign.Center)
           .height(this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2).padding({ left: MANGA_DIRECTORY_VISUAL.gridPaddingX, right: MANGA_DIRECTORY_VISUAL.gridPaddingX });
@@ -208,6 +222,13 @@ export struct MangaDirectoryEntryRow {
               .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.metaLineHeight)
               .fontColor(this.color('muted')).margin({ left: MANGA_DIRECTORY_VISUAL.groupCountGap })
               .wordBreak(WordBreak.BREAK_WORD).constraintSize({ maxWidth: '100%' }).flexShrink(1);
+          }
+          if (this.status(entry).length > 0) {
+            Text(this.status(entry)).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+              .minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale()))
+              .halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize)
+              .lineHeight(MANGA_DIRECTORY_VISUAL.metaLineHeight).fontColor(this.color('muted'))
+              .margin({ left: MANGA_DIRECTORY_VISUAL.contentGap }).maxLines(1);
           }
         }.width('100%');
         if (this.facts(entry)?.readableParent === true) {

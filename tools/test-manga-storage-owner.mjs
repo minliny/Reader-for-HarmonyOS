@@ -50,6 +50,7 @@ function fixture() {
   } };
   owner.readingImageDiskCache = {
     async maintainMangaStorage(reason, scope) { clears.push({ reason, scope }); events.push('disk.clear'); await cleanup(reason, scope); events.push('disk.cleared'); },
+    async clearMangaRebuildableCache(scope) { const actualScope = scope === undefined ? undefined : { sourceId: scope.sourceId, bookId: scope.bookId }; clears.push({ reason: 'clear', scope: actualScope }); events.push('disk.clear'); await cleanup('clear', actualScope); events.push('disk.cleared'); return { deletedBytes: 0, deletedFiles: 0 }; },
     async withMangaStorageRestore(restore) {
       events.push('disk.restore.barrier');
       try { return await restore(); }

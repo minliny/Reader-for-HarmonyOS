@@ -19,12 +19,21 @@ import {readerAppColor} from '../../entry/src/main/ets/features/common/ReaderThe
 import {SourceSwitchCompletionPresentation} from '../../entry/src/main/ets/features/source/SourceSwitchCompletionPresentation.ts';
 import * as appearanceRender from '../../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
 import * as sourceNames from '../../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts';
+import * as providerFamily from '../../entry/src/main/ets/features/source/SourceSwitchProviderFamily.ts';
+import * as authorMetadata from '../../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
+import * as errors from '../../entry/src/main/ets/app/ErrorMessage.ts';
+// The shared owner installs the extension resolver during evaluation. Load
+// these existing module graphs afterwards; static linking would run first.
+const {MangaSessionGateway}=await import('../../entry/src/main/ets/features/manga/MangaSessionGateway.ts');
+const {MangaSourceSwitchGateway,MangaSwitchChapterSelectionRequired}=await import('../../entry/src/main/ets/features/manga/MangaSourceSwitchGateway.ts');
+const {RemoteReadingFlowGateway}=await import('../../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 const {ReaderNativeAlertOwner}=await import('./reader-native-alert-sdk-probe.mjs');
 const {ReadingOfflineHost}=await import('./reader-reading-owner-sdk-probe.mjs');
 const settle=async()=>{await settleOwner();await new Promise(setImmediate);await settleOwner();};
 const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','applySourceSwitchSnapshot','retireRssPresentation','retireRssEditorPresentation','retireSourceSwitchPresentation',
  'bindSourceSwitchReader','applySourceSwitchEffect','openSourceSwitch','openDetailSourceSwitch','retrySourceSwitch','refreshSourceSwitch',
  'sourceSwitchProbeQuery','knownSearchSourceCandidates','onPickSource','retryFailedSourceSwitch','dismissSourceSwitchFailure','onRollbackSourceSwitch',
+ 'switchMangaSource','getSourceSwitchGateway','performMangaPreviewSourceSwitch','mangaSourceSwitchFailureMessage','presentMangaSourceSwitchAcquisitionFailure',
  'closeSourceSwitch','clearMangaSourceSwitchSelection','stopSourceDiscovery','readerOwnsWindowEdges','canCancelMangaSourcePreparation','performSourceSwitchSeam','resolveReaderSourceSwitchTransaction','reconcilePendingSourceSwitches','currentSourceSwitchTransactionId',
  'retireSettingsPresentation','retireSourceManagementPresentation','nextNavigationGeneration','isCurrentRuntime','openReading','onRemoteSessionReady','installRemoteReadingSession',
  'getReadingEntryHost','readingEntryLease','applyReadingEntrySnapshot','bindReadingEntryReader','retireReadingEntryPresentation',
@@ -78,7 +87,7 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
    searchListLazyRequests(indices).LazyForEach.create(id,owner,source,generate,key);
  },pop(){}};
  const effect=(kind,parameters)=>({kind,parameters,animation(options){return{...this,options,animation:this.animation};}});
- const deps={...p.deps,...horizontal,...metricsApi,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...gatewayExports,SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
+ const deps={...p.deps,...horizontal,...metricsApi,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...providerFamily,...gatewayExports,SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
    curves:{cubicBezierCurve(...values){return{kind:'cubic-bezier',values};}},
    ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},
    Scroller:class Scroller{},ScrollAlign:{START:'start'},TouchType:{Down:'down',Move:'move',Up:'up',Cancel:'cancel'},
@@ -103,7 +112,8 @@ export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
  const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
  const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
  const leafDeps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});
- const index=p.consumer(read('pages/Index.ets'),[...states,...methods],{...leafDeps,...evidence,ReaderRuntimeOwner:Runtime,
+ const index=p.consumer(read('pages/Index.ets'),[...states,...methods],{...leafDeps,...evidence,...authorMetadata,...errors,MangaSessionGateway,
+   MangaSourceSwitchGateway,MangaSwitchChapterSelectionRequired,RemoteReadingFlowGateway,ReaderRuntimeOwner:Runtime,
    SourceSwitchHost:f.Constructor,ReadingEntryHost,EMPTY_READABLE_ADMISSION:{key:'',generation:0,adding:false,cancelling:false,confirmation:'none'},ReadingOfflineHost,CacheClearOperationIntentStore:cacheAuthority?.types.CacheClearOperationIntentStore,LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{info(){},warn(){}},ReaderNativeAlertOwner},{sourceSwitchScopeId:0});
  Object.assign(index,{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,navigationGeneration:navigation,
    settingsSnapshot:{reduceMotion:false},directoryChapterTitle:'Chapter 1',directoryReturnTarget:'detail',

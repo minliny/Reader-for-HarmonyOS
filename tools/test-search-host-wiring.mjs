@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
 import { resolve } from 'node:path';
 
 const repo = resolve(new URL('..', import.meta.url).pathname);
@@ -24,4 +25,40 @@ assert.match(host, /publication\.updateShelf\(books\)/,
   'Search shelf snapshot updates must pass through the host');
 assert.match(index, /this\.searchHost\.updateShelf\(/,
   'Index must forward shelf snapshots to SearchHost');
+assert.match(host,
+  /\(sources: SearchSource\[\]\): void => \{[\s\S]*?publication\.updateSources\(sources\);[\s\S]*?this\.advanceRevision\(\);/,
+  'Search source snapshots must advance the publication revision');
+
+// Exercise the production SearchHost callback directly with a tiny
+// orchestrator/publication boundary. This catches a regression where the
+// source list is updated but the mounted SearchPage never receives a new
+// numeric publication revision.
+const hostModuleSource = host
+  .replace(/^import[^;]+;\s*/gm, '')
+  .replace(/^export /gm, '');
+const hostProbeSource = `
+class SearchViewState { reset() {} requestInputFocus() {} }
+class SearchPublication {
+  updateSources(sources) { this.sources = sources; }
+  sourcesAt() { return this.sources ?? []; }
+  updateShelf() {}
+  presentationAt() { return {}; }
+}
+class SearchOrchestrator {
+  constructor(emitPresentation, emitSources) {
+    this.emitPresentation = emitPresentation;
+    this.emitSources = emitSources;
+  }
+}
+${hostModuleSource}
+export { SearchHost };
+`;
+const hostModule = await import(`data:text/javascript;base64,${Buffer.from(
+  stripTypeScriptTypes(hostProbeSource)).toString('base64')}`);
+let publicationChanges = 0;
+const hostProbe = new hostModule.SearchHost(() => { publicationChanges += 1; }, () => true);
+const orchestratorProbe = hostProbe.getOrchestrator();
+orchestratorProbe.emitSources([{ sourceId: 'source-a', name: '源甲', enabled: true }]);
+assert.equal(publicationChanges, 1, 'source publication must notify the mounted page');
+assert.equal(hostProbe.sources()[0].sourceId, 'source-a', 'source publication must retain the refreshed ID');
 console.log('Search host wiring: PASS (Index dispatch boundary and single orchestrator owner)');

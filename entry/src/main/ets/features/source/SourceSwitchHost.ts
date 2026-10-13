@@ -11,7 +11,7 @@ import { remoteReadingFailureKindOf } from '../reading/RemoteContentAdmission';
 import type { RemoteReadingIdentity } from '../reading/RemoteReadingContract';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import type { SourceSwitchPanelState } from './SourceSwitchPresentationState';
-import { buildSourceSwitchCommitParams, sourceSwitchCandidateKey, SourceSwitchGateway,
+import { buildSourceSwitchCommitParams, sourceSwitchCandidateKey, sourceSwitchIsAlternative, SourceSwitchGateway,
   type PendingSourceSwitch, type SourceSwitchCandidate, type SourceSwitchCommitOutcome,
   type SourceSwitchProbeQuery } from './SourceSwitchGateway';
 import type { SourceSwitchTransactionProjection } from './SourceSwitchGateway';
@@ -86,6 +86,7 @@ export class SourceSwitchHost {
   private failedIdentity: RemoteReadingIdentity | undefined;
   private reconciliationGeneration: number = 0;
   private scopeGeneration: number = 0;
+  private pickQualification: { generation: number; scopeId: number } | undefined;
   private snapshot: SourceSwitchSnapshot = { scopeId: 0, visible: false, state: { kind: 'discovering' },
     failureMessage: '', rollbackInFlight: false };
 
@@ -111,14 +112,22 @@ export class SourceSwitchHost {
     return book;
   }
 
-  async prepareMangaPreview(candidate: SourceSwitchCandidate, isCurrent: () => boolean): Promise<RemoteReadingSession> {
+  async prepareMangaPreview(candidate: SourceSwitchCandidate, isCurrent: () => boolean,
+    qualifiedQuery?: SourceSwitchProbeQuery): Promise<RemoteReadingSession> {
     const current = (): boolean => ReaderRuntimeOwner.isCurrent(this.runtime) && isCurrent();
     if (!current() || candidate.category !== 'comic') throw new Error('MANGA_SESSION_CANCELLED');
+    if (qualifiedQuery !== undefined && !this.gateway.admitsCandidate(candidate, qualifiedQuery)) {
+      throw new Error('书籍身份已变更，请重新查找书源');
+    }
     const seed: RemoteReadingBookSeed = { ...this.seed(candidate), contentKind: 'manga' };
     const session = await this.runtime.bookAcquisitions().acquireBook(seed, { isCurrent: current, canDispatch: current });
     if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
     if (session.contentKind !== 'manga' || !this.sameIdentity(session.identity, seed))
       throw new Error('漫画换源返回了其他书籍的阅读会话');
+    const query = qualifiedQuery ?? this.context?.query ?? { sourceId: candidate.sourceId, bookId: candidate.bookUrl,
+      bookName: candidate.bookName, author: candidate.author ?? '', authorIdentity: candidate.authorIdentity,
+      sourceVersion: candidate.sourceVersion, currentChapterIndex: 0, currentChapterTitle: '' };
+    this.gateway.assertAcquiredBook(candidate, session, query);
     await new MangaAdmissionGateway(this.runtime).verify(session, current);
     if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
     return session;
@@ -204,9 +213,14 @@ export class SourceSwitchHost {
   }
 
   close(scopeId: number): boolean {
-    if (!this.snapshot.visible || !this.currentScope(scopeId) || this.busyOrUnknown() ||
+    const qualifying = this.pickQualification?.generation === this.generation &&
+      this.pickQualification?.scopeId === scopeId;
+    const busy = this.snapshot.rollbackInFlight || this.snapshot.write?.confirmation === 'unknown' ||
+      this.snapshot.write?.intentPending === true || (this.snapshot.state.kind === 'switching' && !qualifying);
+    if (!this.snapshot.visible || !this.currentScope(scopeId) || busy ||
       (this.snapshot.state.kind === 'failure' && this.snapshot.state.transactionId !== undefined)) return false;
     this.generation += 1;
+    this.pickQualification = undefined;
     this.stopDiscovery();
     this.snapshot = { ...this.snapshot, visible: false, state: { kind: 'discovering' } };
     this.publish();
@@ -219,6 +233,12 @@ export class SourceSwitchHost {
     this.generation += 1;
     this.reconciliationGeneration += 1;
     this.stopDiscovery();
+    // No acquisition or write has started in qualification. Release its UI
+    // lock immediately; the old response cannot own a successor scope.
+    if (this.pickQualification !== undefined) {
+      this.pickQualification = undefined;
+      this.snapshot = { ...this.snapshot, state: { kind: 'discovering' } };
+    }
     this.snapshot = { ...this.snapshot, visible: false };
     this.lease = undefined;
   }
@@ -248,28 +268,52 @@ export class SourceSwitchHost {
   }
 
   async pick(candidate: SourceSwitchCandidate, scopeId: number): Promise<void> {
-    const context = this.context;
-    if (context === undefined || !this.currentScope(scopeId) || !this.snapshot.visible ||
+    const initialContext = this.context;
+    if (initialContext === undefined || !this.currentScope(scopeId) || !this.snapshot.visible ||
       this.snapshot.state.kind !== 'candidates' || this.busyOrUnknown() ||
       sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl) ===
-        sourceSwitchCandidateKey(context.query.sourceId, context.query.bookId)) return;
+        sourceSwitchCandidateKey(initialContext.query.sourceId, initialContext.query.bookId)) return;
+    let context: SourceSwitchContext = initialContext;
     const canonical = this.snapshot.state.candidates.find((value): boolean =>
       sourceSwitchCandidateKey(value.sourceId, value.bookUrl) === sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl) &&
       value.sourceVersion === candidate.sourceVersion);
     if (canonical === undefined) return;
     candidate = canonical;
+    if (!this.gateway.admitsCandidate(candidate, context.query)) return;
     const generation = ++this.generation;
     this.stopDiscovery();
     this.failedCandidate = undefined; this.failedIdentity = undefined;
     this.snapshot = { ...this.snapshot, failureMessage: '', state: { kind: 'switching', targetSourceId: candidate.sourceId } };
+    const qualification = { generation, scopeId };
+    this.pickQualification = qualification;
     this.publish();
     const admitted = (): boolean => this.admitted(generation);
+    try {
+      // Known rows can paint before registry IO finishes; a click still must
+      // qualify the current query before acquisition or any durable write.
+      const query = await this.gateway.resolveProbeQueryIdentity(context.query, admitted, candidate);
+      if (!admitted()) return;
+      if (!this.gateway.admitsCandidate(candidate, query)) throw new Error('书籍身份已变更，请重新查找书源');
+      context = { ...context, query }; this.context = context;
+    } catch (error) {
+      if (admitted()) {
+        this.snapshot = { ...this.snapshot, state: { kind: 'discoveryError', message: errorMessageOf(error) } };
+        this.publish();
+      }
+      return;
+    } finally {
+      if (this.pickQualification === qualification) {
+        this.pickQualification = undefined;
+        this.settleRetired(generation);
+      }
+    }
     if (!context.inBookshelf) {
       try {
         const seed = this.seed(candidate);
         const session = await this.runtime.bookAcquisitions().acquireBook(seed, { isCurrent: admitted });
         if (!admitted()) return;
         if (!this.sameIdentity(session.identity, seed)) throw new Error('换源返回了其他书籍的阅读会话');
+        this.gateway.assertAcquiredBook(candidate, session, context.query);
         this.hide(); this.deliver({ kind: 'previewReady', seed, session, candidate });
       } catch (error) { if (admitted()) this.acquisitionFailed(candidate, errorMessageOf(error)); }
       finally { this.settleRetired(generation); }
@@ -281,6 +325,7 @@ export class SourceSwitchHost {
       if (!admitted()) return;
       const toc = await this.gateway.fetchTargetToc(candidate.sourceId, candidate.bookUrl, admitted, candidate);
       if (!admitted()) return;
+      this.gateway.assertAcquiredBook(candidate, toc.readingSession, context.query);
       this.targetSession = toc.readingSession;
       const identity = this.identity();
       const progressLane = new ReadingSessionFlowGateway(identity.sourceId, identity.bookId, { kind: 'remote' }, this.runtime);
@@ -519,20 +564,28 @@ export class SourceSwitchHost {
   }
 
   private async discover(force: boolean): Promise<void> {
-    const context = this.context;
-    if (context === undefined || !this.currentLease()) return;
-    const generation = ++this.generation, current = (): boolean => this.admitted(generation);
+    const initialContext = this.context;
+    if (initialContext === undefined || !this.currentLease()) return;
+    let context: SourceSwitchContext = initialContext;
+    const generation = ++this.generation, current = (): boolean => this.admitted(generation) && this.context === context;
     this.stopDiscovery();
+    const immediateKnown = (context.readKnownCandidates?.() ?? context.knownCandidates)
+      .filter((candidate): boolean => this.gateway.admitsCandidate(candidate, context.query));
+    if (!force && immediateKnown.length > 0) this.snapshot = { ...this.snapshot,
+      state: { kind: 'candidates', candidates: immediateKnown, refreshing: false } };
+    if (force && this.snapshot.state.kind === 'candidates') this.snapshot = { ...this.snapshot,
+      state: { ...this.snapshot.state, refreshing: true } };
+    this.publish();
     const knownCandidates = (): SourceSwitchCandidate[] => context.readKnownCandidates?.() ?? context.knownCandidates;
-    const initialKnown = knownCandidates();
-    const previous = this.snapshot.state.kind === 'candidates' ?
-      this.gateway.withoutSearchTiming(this.snapshot.state.candidates) : [];
+    let initialKnown = knownCandidates().filter((candidate): boolean => this.gateway.admitsCandidate(candidate, context.query));
+    let previous = this.snapshot.state.kind === 'candidates' ?
+      this.snapshot.state.candidates.filter((candidate): boolean => this.gateway.admitsCandidate(candidate, context.query)) : [];
     if (!force && initialKnown.length > 0) this.snapshot = { ...this.snapshot,
       state: { kind: 'candidates', candidates: initialKnown, refreshing: false } };
     if (force && previous.length > 0) this.snapshot = { ...this.snapshot,
       state: { kind: 'candidates', candidates: previous, refreshing: true } };
     this.publish();
-    let projecting = true, again = false, reset = false;
+    let projecting = true, again = false, reset = false, identityReady = false;
     const dirty = new Map<string, RemoteReadingIdentity>();
     const refreshProjection = (change: BookAcquisitionChange): void => {
       if (!current()) return;
@@ -566,23 +619,40 @@ export class SourceSwitchHost {
       this.publish();
     };
     try {
+      const query = await this.gateway.resolveProbeQueryIdentity(context.query, current);
+      if (!current()) return;
+      // Hold acquisition deltas during qualification, then use one query for
+      // cache, discovery, pick and final acquisition in this exact scope.
+      context = { ...context, query }; this.context = context; identityReady = true;
+      initialKnown = knownCandidates().filter((candidate): boolean => this.gateway.admitsCandidate(candidate, context.query));
+      previous = previous.filter((candidate): boolean => this.gateway.admitsCandidate(candidate, context.query));
+      if (!force && initialKnown.length > 0) this.snapshot = { ...this.snapshot,
+        state: { kind: 'candidates', candidates: initialKnown, refreshing: false } };
+      else if (this.snapshot.state.kind === 'candidates') this.snapshot = { ...this.snapshot,
+        state: { ...this.snapshot.state, candidates: previous } };
+      this.publish();
       const cached = force ? [] : await this.gateway.loadCachedCandidates(context.query, current, knownCandidates());
       if (!current()) return;
-      const outcome = cached.length > 0 ? { kind: 'sources' as const, candidates: cached }
-        : await this.gateway.refreshCandidates(context.query, current, force ? [] : context.searchedSourceIds,
-          publishProgress, force ? previous : initialKnown);
+      // A cached current binding is only context, so continue searching for
+      // alternatives. Once an alternate is cached, its relation projection is
+      // already selectable and remains the terminal first paint.
+      const outcome = cached.some(sourceSwitchIsAlternative) ?
+        { kind: 'sources' as const, candidates: cached } :
+        await this.gateway.refreshCandidates(context.query, current, force ? [] : context.searchedSourceIds,
+          publishProgress, force ? previous : (cached.length > 0 ? cached : initialKnown));
       if (!current()) return;
       this.snapshot = { ...this.snapshot, state: outcome.kind === 'noSources' || outcome.candidates.length === 0
         ? { kind: 'empty' } : { kind: 'candidates', candidates: outcome.candidates, refreshing: false } };
       this.publish();
     } catch (error) {
       if (!current()) return;
+      if (!identityReady) { this.stopDiscovery(); again = false; dirty.clear(); }
       const message = errorMessageOf(error);
-      const retained = this.snapshot.state.kind === 'candidates' ? this.snapshot.state.candidates : previous;
+      const retained = identityReady ? (this.snapshot.state.kind === 'candidates' ? this.snapshot.state.candidates : previous) : [];
       this.snapshot = { ...this.snapshot, state: retained.length > 0
         ? { kind: 'candidates', candidates: retained, refreshing: false, refreshError: message }
         : { kind: 'discoveryError', message } }; this.publish();
-    } finally { projecting = false; if (again) refreshProjection({ reset: false, identities: [] }); }
+    } finally { projecting = false; if (identityReady && again) refreshProjection({ reset: false, identities: [] }); }
   }
 
   private recordWrite(generation: number, action: 'commit' | 'rollback', evidence: ReaderWriteEvidence,

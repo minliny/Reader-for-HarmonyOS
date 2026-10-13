@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
@@ -11,10 +12,80 @@ const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/B
 const { BookRequestScheduler } = await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
 const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 const { withPreparedRemoteChapter, preparedRemoteChapterMatches } = await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
+const {ReaderCoreRequestError}=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
+const {RemoteReadingGatewayError,isRemoteReadingCacheRecoveryEligible,isRemoteReadingCacheFallbackEligible}=await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
+const {remoteReadingFailureKindOf}=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
 const deferred = () => { let resolve; let reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; };
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 async function until(predicate) { for (let i=0;i<150;i++) { if (predicate()) return; await tick(); } assert.fail('fixture did not settle'); }
 const seed = (bookId, sourceId='s1') => ({ sourceId, bookId, detailUrl:bookId, title:'书', author:'作者', sourceVersion:'v1' });
+
+// Exercise current source metadata through the production coordinator before
+// any prepared/on-disk cache branch. A saved review is not a novel body.
+const informationSourceIds = new Set(['corpus-0a6f4d44c21e', 'corpus-b4ac220076f9', 'corpus-e48578e73828',
+  'corpus-b2e0cc78abe1', 'corpus-2bc4d79e35ee', 'corpus-657f2375eb28', 'corpus-bdeaa8132c97',
+  'corpus-510d385bfa39', 'corpus-ed739b845f1e', 'corpus-424dac3e7197', 'corpus-97f48b779f35', 'corpus-c9e9adfbdfab']);
+const bundled = JSON.parse(readFileSync(new URL('../entry/src/main/resources/rawfile/reader-tested-book-source-collection.json', import.meta.url), 'utf8'));
+const bundledRows = Array.isArray(bundled) ? bundled : bundled.sources;
+const informationRows = bundledRows.filter(source => informationSourceIds.has(source.sourceId));
+assert.equal(informationRows.length, informationSourceIds.size);
+for (const raw of informationRows) {
+  const original = JSON.stringify(raw), calls = [], bookId = '/saved-review';
+  const runtime = new BookAcquisitionCoordinator(async method => {
+    calls.push(method);
+    assert.equal(method, 'source.list', 'unsupported information never requests cache/HTTP or mutates shelf/progress');
+    return { data: { sources: [{ sourceId: raw.sourceId, name: raw.bookSourceName,
+      baseUrl: raw.bookSourceUrl, enabled: true, sourceVersion: 'v1', bookSource: raw }] } };
+  });
+  const saved = { sourceId: raw.sourceId, bookId, detailUrl: bookId, title: '大明望族', author: '@雁九', sourceVersion: 'v1' };
+  const prepared = { session: { identity: saved, retainedReview: true }, at: Date.now(), projectionRevision: 0 };
+  runtime.prepared.set(JSON.stringify([raw.sourceId, bookId, 'v1']), prepared);
+  const rejected = error => error instanceof RemoteReadingGatewayError && error.code === 'invalidInput' &&
+    error.command === 'source.list' && error.message === '此书源提供书评或其他非阅读内容，请返回搜索选择小说正文书源';
+  await assert.rejects(runtime.acquireBook(saved), rejected);
+  await assert.rejects(runtime.acquireBook(saved, { forceRefresh: true }), rejected);
+  await assert.rejects(runtime.acquireBookWithBackgroundRefresh(saved), rejected);
+  assert.deepEqual(calls, ['source.list'], 'the same registry snapshot serves all admission paths');
+  assert.equal(runtime.prepared.get(JSON.stringify([raw.sourceId, bookId, 'v1'])), prepared, 'classification does not destroy retained data');
+  assert.equal(JSON.stringify(raw), original, 'raw source rules and user metadata remain untouched');
+  runtime.close();
+}
+console.log('PASS all 12 real review/information providers are rejected before prepared/cache/live reading; source/user data retained');
+
+// The real Core DTO means a refresh was refused to protect the current
+// chapter. Retrying another candidate or clearing caches would discard the
+// preserved recovery context; execute the actual Coordinator/Gateway path.
+for(const cause of ['previousChapterMissing','chapterIdentityMissingOrAmbiguous','cachedChapterCoordinateChanged','cachedCatalogCoordinatesChanged']) {
+  const calls=[],oldCatalog={chapterIndex:324,title:'第325章',url:'/325'},oldProgress={chapterIndex:324,chapterOffset:81};
+  const retained=JSON.stringify({oldCatalog,oldProgress});
+  const failure=new ReaderCoreRequestError({protocolVersion:1,type:'error',requestId:7,
+    error:{code:'INVALID_PARAMS',message:'book.toc cannot safely restore the current chapter; previous catalog preserved',retryable:false,
+      details:{reason:'CATALOG_CURRENT_CHAPTER_UNRESOLVED',cause,previousCatalogPreserved:true,recoverable:true}}});
+  const runtime=new BookAcquisitionCoordinator(async(method,params)=>{
+    calls.push([method,params]);
+    if(method==='source.list')return{data:{sources:['s1','s2'].map(sourceId=>({sourceId,enabled:true,sourceVersion:'v1'}))}};
+    if(method==='search-book.get')return{data:{book:null}};
+    if(method==='book.detail')return{data:{sourceId:params.sourceId,book:{bookId:params.book.bookId,title:'大明望族',author:'府天'},tocUrl:'/toc',sourceVersion:'v1'}};
+    if(method==='book.toc')throw failure;
+    assert.fail(`retained-catalog recovery must not execute ${method}`);
+  });
+  const candidates=['s1','s2'].map(sourceId=>({seed:{sourceId,bookId:'/book',detailUrl:'/book',title:'大明望族',author:'府天',sourceVersion:'v1'},catalogReady:false,failed:false}));
+  await assert.rejects(runtime.acquireCandidateGroup(candidates,{forceRefresh:true,requireReadable:true}),error=>{
+    assert.ok(error instanceof RemoteReadingGatewayError);assert.equal(error.code,'positionContextStale');
+    assert.equal(error.category,'POSITION_CONTEXT_STALE');assert.equal(remoteReadingFailureKindOf(error),'POSITION_CONTEXT_STALE');
+    assert.equal(error.message,'目录更新无法对应当前章节，已保留原目录和阅读进度，可重试或换源');
+    assert.equal(isRemoteReadingCacheRecoveryEligible(error),false);assert.equal(isRemoteReadingCacheFallbackEligible(error),false);return true;
+  });
+  assert.equal(calls.filter(([method])=>method==='book.detail').length,1,'no automatic alternate source after a retained-position refusal');
+  assert.equal(calls.filter(([method])=>method==='book.toc').length,1);
+  assert.equal(calls.some(([method])=>['cache.clear','search-book.put','reading.progress.update','bookshelf.add','chapter.content'].includes(method)),false,
+    'no derived cleanup, durable source-failure verdict, fallback body or progress mutation');
+  assert.equal(JSON.stringify({oldCatalog,oldProgress}),retained);runtime.close();
+  const cacheGateway=new RemoteReadingFlowGateway({async request(method){assert.equal(method,'cache.book.status');throw failure;}});
+  await assert.rejects(cacheGateway.openCachedSession(candidates[0].seed),error=>error.code==='positionContextStale'&&error.category==='POSITION_CONTEXT_STALE',
+    'central structured recovery cannot be reclassified as cacheDerivedCorrupt by cached-session admission');
+}
+console.log('PASS exact Core catalog-refusal DTO preserves current catalog/progress; actual Coordinator stops automatic fallback, cleanup and persistent source-failure publication');
 
 function fixture() {
   const calls=[]; const gates=new Map(); const rows=new Map(); let version='v1';
@@ -275,6 +346,7 @@ for (const method of ['source.import', 'source.update', 'source.delete', 'runtim
   await owner.request('source.delete', { sourceIds: ['removed'] });
   list.resolve(); await pending;
   assert.equal(owner.versions.has('removed'), false, 'late registry response cannot resurrect a deleted identity');
+  assert.equal(owner.sourceCategories.has('removed'), false, 'late registry response cannot republish a retired category snapshot');
   assert.equal(owner.registryReady, false);
   owner.close();
 }
@@ -282,12 +354,13 @@ console.log('PH65 registry epoch: five mutation entries success/failure and late
 
 // R1/R2: the original engineering failures replay the real coordinator and
 // gateway with controlled Core responses, clock and request queue.
-function cachedFixture({ catalogAt = Date.now() - 2 * 86400000, cache = true, detailGate, tocGate, searchGate } = {}) {
+function cachedFixture({ catalogAt = Date.now() - 2 * 86400000, cache = true, detailGate, tocGate, searchGate,
+  sourceRows = [{ sourceId: 's1', enabled: true, sourceVersion: 'v1' }] } = {}) {
   const calls = [];
   const runtime = new BookAcquisitionCoordinator(async (method, params, options) => {
     calls.push({ method, params, options });
     if (method === 'book.search') { await searchGate.promise; return { data: { sourceId: params.sourceId, books: [] } }; }
-    if (method === 'source.list') return { data: { sources: [{ sourceId: 's1', enabled: true, sourceVersion: 'v1' }] } };
+    if (method === 'source.list') return { data: { sources: sourceRows } };
     if (method === 'search-book.get') return { data: { book: { origin: 's1', bookUrl: params.bookUrl,
       name: '缓存目录', author: '作者', variable: '{}', acquisition: { schemaVersion: 2, sourceVersion: 'v1', catalogAt } } } };
     if (method === 'cache.book.status') return { data: { sourceId: 's1', bookId: params.bookId, tocAvailable: cache,
@@ -308,6 +381,19 @@ function cachedFixture({ catalogAt = Date.now() - 2 * 86400000, cache = true, de
   });
   return { runtime, calls };
 }
+
+for (const sourceRows of [[], [{ sourceId: 's1', name: '普通小说', baseUrl: 'https://novel.example.test',
+  enabled: false, sourceVersion: 'v1', bookSource: { bookSourceType: 0 } }]]) {
+  const f = cachedFixture({ sourceRows });
+  const admission = await f.runtime.acquireBookWithBackgroundRefresh(seed('/offline-novel'));
+  assert.equal(admission.session.book.title, '书', 'without a live version, cached directory keeps the requested book metadata');
+  assert.equal(admission.session.entries.length, 1);
+  assert.equal(admission.backgroundRefresh, undefined);
+  assert.equal(f.calls.some(call => ['book.detail', 'book.toc', 'search-book.put'].includes(call.method)), false,
+    'stopped/deleted ordinary novel keeps its cached directory without network or mutations');
+  f.runtime.close();
+}
+console.log('PASS stopped/deleted ordinary novels remain readable from their existing offline cache');
 
 for (const failAt of ['none', 'detail', 'toc']) {
   const detailGate = deferred(); const tocGate = deferred();
@@ -469,6 +555,23 @@ for (const [method, params, invalidates] of mutationCases) for (const rejects of
     'offline body existence must still inspect cached/download state');
 }
 console.log('PASS actual cache handoff: ordinary prefetch preserves other/current books; real mutations invalidate; title projection skips chapter-state scans');
+
+// Download progress owns a separate clock and event stream. Prefetch must
+// invalidate download rows without invalidating an active reading projection.
+{
+  const runtime = new BookAcquisitionCoordinator(async () => ({ data: {} }));
+  const changes = [];
+  const unsubscribe = runtime.subscribeDownloadStatus(change => changes.push(change));
+  const readingRevision = runtime.readingProjectionRevision();
+  const downloadRevision = runtime.downloadStatusRevision('s1', 'current');
+  await runtime.request('cache.book.prefetch', { sourceId: 's1', bookId: 'current', chapterIndexes: [0] });
+  assert.equal(runtime.readingProjectionRevision(), readingRevision, 'prefetch does not invalidate active reading projection');
+  assert.ok(runtime.downloadStatusRevision('s1', 'current') > downloadRevision, 'prefetch advances independent download status clock');
+  await new Promise(resolve => setTimeout(resolve, 24));
+  assert.ok(changes.some(change => change.identities.some(identity => identity.sourceId === 's1' && identity.bookId === 'current')),
+    'prefetch emits a scoped download status notification');
+  unsubscribe(); runtime.close();
+}
 
 // Entry reuses a current Core catalog, but conversion, refresh and source
 // mutations must retain the canonical projection fallback.

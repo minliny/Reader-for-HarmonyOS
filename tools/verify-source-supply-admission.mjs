@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertSourceLoginDefault } from './source-login-default-policy.mjs';
 import {
   REQUIRED_CAPABILITIES,
   SUITE_VERSION,
@@ -101,6 +102,8 @@ for (const source of sources) {
   result.static.secrets = collectSecretFindings(source);
   result.static.paywall = collectPaywallFindings(source);
   result.static.metadataErrors = validateBundledMetadata(source);
+  try { assertSourceLoginDefault(source); }
+  catch (error) { result.static.metadataErrors.push(error.message); }
   if (result.static.insecureUrls.length > 0) {
     result.reasons.push('insecure http:// URLs in rules');
   }

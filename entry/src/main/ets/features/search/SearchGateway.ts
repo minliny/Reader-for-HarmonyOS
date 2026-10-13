@@ -1,4 +1,5 @@
 import { bookTitleAuthorKey, readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
+import { readBookSearchTiming } from '../common/BookSearchTiming';
 import type { JsonObject } from '@reader/core-harmony';
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import type { BookRequestOptions } from '../../app/BookRequestScheduler';
@@ -138,6 +139,7 @@ export class SearchGateway {
   private loadingSourceRevision: number | undefined = undefined;
   private bookProjectionEpoch: number = 0;
   private bookProjection: SearchBookProjection = new SearchBookProjection();
+  private searchTimingPersistence: Promise<void> = Promise.resolve();
 
   private sourceRevision(): number | undefined {
     return this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision?.();
@@ -224,10 +226,17 @@ export class SearchGateway {
       sourceRuleVersion: source.sourceVersion ?? '',
     };
     try {
+      let dispatchedAt: number | undefined = undefined;
+      const options = this.requestOptions(isCurrent, canDispatch, SEARCH_SOURCE_REQUEST_TIMEOUT_MS);
+      // Measure this Core search only after the shared scheduler dispatches it.
+      // Waiting for page visibility or a request lane is not source latency.
+      options.onDispatch = (): void => { dispatchedAt = Date.now(); };
       const result = await this.runtimeOwner.request('book.search', {
         sourceId: source.sourceId,
         keyword: keyword,
-      }, this.requestOptions(isCurrent, canDispatch, SEARCH_SOURCE_REQUEST_TIMEOUT_MS));
+      }, options);
+      const measuredAt = Date.now();
+      if (isCurrent?.() === false) return { ok: false, error: 'search superseded' };
       const data = result.data;
       const returnedSourceId = requiredString(data, 'sourceId');
       if (returnedSourceId !== source.sourceId) {
@@ -265,6 +274,19 @@ export class SearchGateway {
         }
       }
       if (books.length === 0 && discardedCount > 0) return { ok: false, error: discardedReasons[0] };
+      const durationMs = dispatchedAt === undefined ? undefined : measuredAt - dispatchedAt;
+      if (identity.sourceRuleVersion.length > 0 && durationMs !== undefined && Number.isSafeInteger(durationMs) &&
+        durationMs >= 0 && durationMs <= 0xffffffff && Number.isSafeInteger(measuredAt) && measuredAt > 0) {
+        const timedBooks: SearchBook[] = [];
+        for (const book of books) {
+          const previous = readBookSearchTiming(book.acquisition, identity.sourceRuleVersion);
+          if (previous !== undefined && previous.latencyMeasuredAt > measuredAt) continue;
+          book.acquisition = { ...book.acquisition, schemaVersion: 2, sourceVersion: identity.sourceRuleVersion,
+            searchTiming: { kind: 'search', sourceVersion: identity.sourceRuleVersion, durationMs, measuredAt } };
+          timedBooks.push(book);
+        }
+        if (timedBooks.length > 0) this.enqueueSearchTimings(timedBooks, isCurrent);
+      }
       if (discardedCount > 0) return { ok: true, results: books, discardedCount, discardedReasons };
       return { ok: true, results: books };
     } catch (error) {
@@ -272,6 +294,29 @@ export class SearchGateway {
       const diagnostic = httpTransportFailureSummary(error);
       return diagnostic === undefined ? { ok: false, error: message } : { ok: false, error: message, diagnostic };
     }
+  }
+
+  /** Timing enrichments use the existing Core merge contract and never delay
+   * first results. One gateway owns at most four writes across every source. */
+  private enqueueSearchTimings(books: SearchBook[], isCurrent: SearchRequestGuard | undefined): void {
+    this.searchTimingPersistence = this.searchTimingPersistence.then(async (): Promise<void> => {
+      for (let offset = 0; offset < books.length; offset += 4) {
+        if (isCurrent?.() === false) return;
+        await Promise.all(books.slice(offset, offset + 4).map(async (book: SearchBook): Promise<void> => {
+          const timing = readBookSearchTiming(book.acquisition, book.sourceRuleVersion);
+          if (timing === undefined || isCurrent?.() === false) return;
+          try {
+            await this.runtimeOwner.request('search-book.put', { origin: book.sourceId, bookUrl: book.bookId,
+              acquisition: { schemaVersion: 2, sourceVersion: book.sourceRuleVersion, stage: 'search',
+                checkedAt: timing.latencyMeasuredAt, searchTiming: { kind: 'search', sourceVersion: book.sourceRuleVersion,
+                  durationMs: timing.latencyMs, measuredAt: timing.latencyMeasuredAt } } }, this.requestOptions(isCurrent));
+          } catch (_error) {
+            // Legacy/read-only Core and a failed enrichment leave valid live
+            // results and their in-memory sample available for first open.
+          }
+        }));
+      }
+    });
   }
 
   async searchLocalBooks(keyword: string, searchRequestId: string,
@@ -558,11 +603,27 @@ export class SearchGateway {
     const sources = await this.loadSources();
     if (epoch !== this.bookProjectionEpoch) throw new Error('search projection superseded');
     const revision = this.sourceRevision();
-    return this.bookProjection.refresh(books, change, sources,
+    const patch = await this.bookProjection.refresh(books, change, sources,
       async (method: string, params: JsonObject): Promise<JsonObject> => {
         const result = await this.runtimeOwner.request(method, params);
         return result.data;
       }, (): boolean => revision === this.sourceRevision());
+    // A metadata read can finish before its background timing write. Retain
+    // only a newer sample of this exact identity and current source version;
+    // cached catalog/readability facts remain authoritative for other fields.
+    for (const book of patch.upserted) {
+      const sourceVersion = sources.find((source: SearchSource): boolean => source.sourceId === book.sourceId)?.sourceVersion;
+      if (sourceVersion === undefined || book.sourceRuleVersion !== sourceVersion) continue;
+      const previous = patch.captured.get(`${book.sourceId}\u0000${book.bookId}`);
+      const live = readBookSearchTiming(previous?.acquisition, book.sourceRuleVersion);
+      const stored = readBookSearchTiming(book.acquisition, book.sourceRuleVersion);
+      if (live !== undefined && (stored === undefined || live.latencyMeasuredAt > stored.latencyMeasuredAt)) {
+        book.acquisition = { ...book.acquisition, schemaVersion: 2, sourceVersion: book.sourceRuleVersion,
+          searchTiming: { kind: 'search', sourceVersion: book.sourceRuleVersion,
+            durationMs: live.latencyMs, measuredAt: live.latencyMeasuredAt } };
+      }
+    }
+    return patch;
   }
 
   /** Compatibility entry for callers without a query-owned identity index. */
@@ -593,7 +654,7 @@ export class SearchGateway {
  * Every result carries the full immutable source identity of the request that
  * produced it: any dedupe or aggregation downstream must keep per-source rows.
  */
-function decodeBookSearchResult(
+export function decodeBookSearchResult(
   value: unknown,
   source: SearchSource,
   identity: { searchRequestId: string; bookSourceUrl: string; sourceRuleVersion: string },
@@ -626,6 +687,11 @@ function decodeBookSearchResult(
   const intro = optionalString(book, 'intro');
   const kind = optionalString(book, 'kind');
   const latestChapterTitle = optionalString(book, 'lastChapter');
+  const acquisition = book['acquisition'];
+  if (acquisition !== null && typeof acquisition === 'object' && !Array.isArray(acquisition) &&
+    (acquisition as JsonObject)['sourceVersion'] === identity.sourceRuleVersion) {
+    decoded.acquisition = { ...(acquisition as JsonObject) };
+  }
   if (coverUrl !== undefined) {
     decoded.coverUrl = coverUrl;
   }

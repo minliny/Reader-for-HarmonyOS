@@ -96,6 +96,9 @@ for(const cancelled of [new ReadingOfflineMaterializationError('cancelled',secre
 }
 for(const [error,expected] of [
  [new ReadingOfflineMaterializationError('storage_full',secret),/存储空间不足/],
+ [new Error('MANGA_CACHE_STORAGE_FULL'),/存储空间不足/],
+ [new Error('MANGA_CHAPTER_CACHE_CAPACITY'),/存储空间不足/],
+ [new Error('ENOSPC'),/存储空间不足/],
  [new Error('deadline exceeded '+secret),/超时/],
  [new Error('opaque private '+secret),/网络|稍后重试/],
  [new Error('opaque PRIVATE_TEST_TOKEN PRIVATE_TEST_COOKIE'),/稍后重试/],

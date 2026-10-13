@@ -649,7 +649,9 @@ export class SearchOrchestrator {
     else if (!hasResults) phase = failed ? 'failed' : 'empty';
     else if (failed || run.failures.size > 0) phase = 'partial';
     else phase = 'succeeded';
-    const canRetry = !searching && (stopped || failed || run.failures.size > 0);
+    // A health/cooldown skip is not a live empty result. Keep explicit retry
+    // available so the page can dispatch the skipped sources with fresh work.
+    const canRetry = !searching && (stopped || failed || run.failures.size > 0 || run.skippedSourceCount > 0);
     return projectOperationFacts({
       phase,
       value: hasResults ? value : undefined,

@@ -33,6 +33,8 @@ const operationFactsModule = stripTypeScriptTypes(
 const operationFactsImport =
   /^import \{ projectOperationFacts \} from ['"][^'"]*ReaderOperationFacts['"];\n/m;
 const gatewaySource = read('entry/src/main/ets/features/search/SearchGateway.ts')
+  .replace(/^import \{ readBookSearchTiming \} from .*;$/m, () =>
+    read('entry/src/main/ets/features/common/BookSearchTiming.ts'))
   .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))
   .replace(errorMessageImport, '')
@@ -398,6 +400,63 @@ console.log('history failure/retry, source independence, clear ordering, stale s
   assert.equal(owner.state.calls.length, 2, 'manual retry bypasses the cooldown');
   search.close();
 }
+
+// All skipped sources must remain recoverable through the actual page gate,
+// not only a direct controller call. A completed local empty result does not
+// turn a health skip into a network failure or authorize retry while running.
+{
+  const pageSource = read('entry/src/main/ets/features/search/SearchPage.ets');
+  const retryBody = pageSource.match(/private retryOperation\(\): void \{([\s\S]*?)\n  \}/)?.[1];
+  assert.ok(retryBody, 'the page retry entry must be exercised from production');
+  const retryPage = new Function(`return ${stripTypeScriptTypes(`function retryOperation() {${retryBody}\n}`)}`)();
+  for (const reason of ['healthFailed', 'cooldown']) {
+    const checkedAtMs = Date.now();
+    const sources = makeSources(2).map((source) => ({ ...source, sourceVersion: `v-${source.sourceId}`,
+      ...(reason === 'healthFailed' ? { checkReports: [{ checkedAtMs, stale: false, report: {
+        mode: 'search', ruleDigest: `v-${source.sourceId}`,
+        steps: [{ level: 'L1', requested: true, status: 'fail' }, { level: 'L2', requested: true, status: 'fail' }],
+      } }] } : {}) }));
+    let shouldFail = reason === 'cooldown';
+    const owner = fakeOwner({ sources, failFor: () => shouldFail,
+      resultsFor: (sourceId) => [{ bookId: `/${sourceId}`, title: '大明望族', author: '雁九' }] });
+    const { orchestrator, presentations } = capture();
+    const search = orchestrator(owner); search.open();
+    let priorCalls = 0;
+    if (reason === 'cooldown') {
+      search.search('旧关键词');
+      await waitUntil(owner.state, () => last(presentations).kind === 'error');
+      priorCalls = owner.state.calls.length;
+      assert.equal(priorCalls, 2);
+      shouldFail = false;
+    }
+    search.search('大明望族');
+    await waitUntil(owner.state, () => last(presentations).kind === 'empty');
+    const skipped = last(presentations);
+    assert.equal(owner.state.calls.length, priorCalls, 'skipped sources issue no live request');
+    assert.equal(skipped.searchedSourceCount, 0);
+    assert.equal(skipped.failedSourceCount, 0, 'a skip must not fabricate a failed live request');
+    assert.equal(skipped.localSearchFailed, false);
+    assert.equal(skipped.skippedSourceCount, 2);
+    assert.ok(skipped.skippedSources.every((source) => source.reason === reason));
+    assert.equal(skipped.operation.fact, 'empty');
+    assert.equal(skipped.operation.canRetry, true);
+    let invocations = 0;
+    const page = { operation: () => last(presentations).operation,
+      onRetry: () => { invocations += 1; search.retry(); } };
+    retryPage.call(page);
+    assert.equal(invocations, 1, 'the mounted page must reach explicit retry');
+    assert.equal(last(presentations).operation.canRetry, false, 'running retry cannot be duplicated');
+    retryPage.call(page);
+    assert.equal(invocations, 1);
+    await waitUntil(owner.state, () => last(presentations).kind === 'results' && !last(presentations).searching);
+    assert.equal(owner.state.calls.length, priorCalls + 2, 'explicit retry dispatches each skipped source once');
+    assert.equal(last(presentations).skippedSourceCount, undefined);
+    assert.equal(last(presentations).operation.canRetry, false, 'healthy success does not claim failure recovery');
+    assert.equal(last(presentations).results.length, 2);
+    search.close();
+  }
+}
+console.log('PASS all-health/all-cooldown skip recovers through actual page retry gate; no fabricated failure or duplicate work');
 
 // 2. One broken source is isolated; healthy sources still finish and display.
 {

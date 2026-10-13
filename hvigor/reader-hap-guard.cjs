@@ -1,6 +1,7 @@
 const { readFileSync, lstatSync, realpathSync } = require('node:fs');
 const { resolve } = require('node:path');
 const { createHash } = require('node:crypto');
+const { pathToFileURL } = require('node:url');
 
 function isPackageTask(name) {
   return /(?:^|[:@])(?:assemble|package|sign)(?:hap|app|hsp|har)$/i.test(name);
@@ -22,4 +23,31 @@ function assertCanonicalHapInvocation(tasks, cwd = process.cwd(), env = process.
   } catch (_) { stop(); }
 }
 
-module.exports = { assertCanonicalHapInvocation, isPackageTask };
+async function configureIdeSigning(context, cwd = process.cwd(), env = process.env) {
+  if (env.READER_HAP_PIPELINE_ROOT || env.READER_HAP_PIPELINE_TOKEN) {
+    assertCanonicalHapInvocation(['assembleHap'], cwd, env);
+    return undefined;
+  }
+  const pipeline = await import(pathToFileURL(resolve(cwd, 'scripts/hap-pipeline.mjs')).href);
+  const session = pipeline.prepareIdeSigningProfile(context.getBuildProfileOpt());
+  context.setBuildProfileOpt(session.profile);
+  return { pipeline, session };
+}
+
+function assertReaderHapInvocation(tasks, ide, cwd = process.cwd(), env = process.env) {
+  if (!tasks.some(isPackageTask)) return;
+  if (env.READER_HAP_PIPELINE_ROOT || env.READER_HAP_PIPELINE_TOKEN || !ide) {
+    return assertCanonicalHapInvocation(tasks, cwd, env);
+  }
+  ide.pipeline.assertIdeSigningUnchanged(ide.session);
+}
+
+function verifyIdeOutput(ide, cwd = process.cwd()) {
+  if (!ide) return;
+  const artifact = ide.pipeline.verifyIdeSignedHap(
+    resolve(cwd, 'entry/build/default/outputs/default/entry-default-signed.hap'), ide.session);
+  console.log(`Reader DevEco signed HAP verified: ${artifact.sha256}`);
+}
+
+module.exports = { assertCanonicalHapInvocation, isPackageTask, configureIdeSigning,
+  assertReaderHapInvocation, verifyIdeOutput };

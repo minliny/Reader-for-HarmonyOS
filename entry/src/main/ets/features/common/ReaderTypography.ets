@@ -580,8 +580,12 @@ export const TYPE_SHELF_SELECTION_AUTHOR_WIDE = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC, 400, 13, 16, undefined, 'system', 'appBaseline');
 export const TYPE_SHELF_COVER_PLACEHOLDER = new ReaderTextStyle(
   READER_FONT_NOTO_SERIF_SC_BOLD, 700, 15, 18.3, undefined, 'system', 'appBaseline');
-export const TYPE_SEARCH_FIELD_ACTION = TYPE_APP_PRIMARY_ACTION;
-export const TYPE_SEARCH_FIELD_ACTION_WIDE = TYPE_SEARCH_RETRY_ACTION;
+// Search/stop labels share a row with the native loading indicator. Keep the
+// original face, weight and size, but admit the CJK fallback line metrics.
+export const TYPE_SEARCH_FIELD_ACTION = new ReaderTextStyle(
+  READER_FONT_INTER, 800, 13, 20, undefined, 'system', 'appBaseline');
+export const TYPE_SEARCH_FIELD_ACTION_WIDE = new ReaderTextStyle(
+  READER_FONT_INTER, 800, 14, 22, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_SCOPE_LABEL = new ReaderTextStyle(
   READER_FONT_INTER, 500, 12, 12, undefined, 'system', 'appBaseline');
 export const TYPE_SEARCH_SCOPE_SELECTED = TYPE_SOURCE_SWITCH_RECOVERY;

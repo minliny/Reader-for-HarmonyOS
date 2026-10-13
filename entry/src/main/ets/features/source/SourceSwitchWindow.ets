@@ -243,6 +243,25 @@ export struct SourceSwitchWindow {
   private candidateKey(candidate: SourceSwitchCandidate): string {
     return sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
   }
+  /**
+   * Keep every discovered rule as a selectable row.
+   *
+   * Provider-family metadata is useful for diagnostics and labels, but it is
+   * never a selection identity. Collapsing a family to its first candidate
+   * made alternate 七猫 rules unreachable and could silently select a rule
+   * that was not the fastest or most complete one. Shared hosts are also not
+   * sufficient evidence that two source rules are interchangeable.
+   */
+  private presentationCandidates(candidates: SourceSwitchCandidate[]): SourceSwitchCandidate[] {
+    // Preserve discovery order here. Gateway owns latency ordering and this
+    // layer must not manufacture a representative row for a family. Keeping
+    // the exact object also means candidateKey() and selectCandidate() refer
+    // to the same sourceId + bookUrl tuple.
+    // ArkTS forbids object spread for this production path. The gateway's
+    // candidate is already immutable for the current projection, so preserve
+    // the exact instances and identities here.
+    return candidates;
+  }
   private publishCandidates(candidates: SourceSwitchCandidate[]): void {
     this.displayedCandidates = candidates;
     this.candidateDataSource.publish(candidates);
@@ -280,10 +299,10 @@ export struct SourceSwitchWindow {
       }
     }
     this.retestingKeys = Array.from(this.pendingSearchKeys);
-    // Metadata and discoveries update immediately. Existing row positions stay
-    // stable until idle; the gateway's incoming order is then applied verbatim.
+    // Metadata and discoveries update immediately. Every candidate remains a
+    // real row so alternate rules retain their exact selectable identity.
     const incoming = new Map<string, SourceSwitchCandidate>();
-    for (const candidate of this.latestCandidates) incoming.set(this.candidateKey(candidate), candidate);
+    for (const candidate of this.presentationCandidates(this.latestCandidates)) incoming.set(this.candidateKey(candidate), candidate);
     const retained: SourceSwitchCandidate[] = [];
     for (const previous of this.displayedCandidates) {
       const current = incoming.get(this.candidateKey(previous));
@@ -304,16 +323,15 @@ export struct SourceSwitchWindow {
       if (!this.mounted || !this.foreground || epoch !== this.presentationEpoch || this.touching || this.scrolling || this.busy()) return;
       this.heldKey = '';
       this.publishOrder();
-    }, 220);
+    }, this.isSweeping() ? 0 : 80);
   }
   private publishOrder(): void {
     if (this.state.kind !== 'candidates') return;
-    // New novel results append in discovery order. Rechecking enriches a row
-    // without making latency updates move a live hit target or reading anchor.
+    // The gateway publishes latency-sorted candidates after every source;
+    // apply that order while searching instead of waiting for the final sweep.
     const latestKeys = new Set(this.latestCandidates.map((candidate: SourceSwitchCandidate): string => this.candidateKey(candidate)));
-    const next = this.contentKind === 'manga' ? this.latestCandidates.slice() :
-      this.displayedCandidates.filter((candidate: SourceSwitchCandidate): boolean =>
-        latestKeys.has(this.candidateKey(candidate)));
+    const next = this.presentationCandidates(this.latestCandidates).filter((candidate: SourceSwitchCandidate): boolean =>
+      latestKeys.has(this.candidateKey(candidate)));
     if (next.length === this.displayedCandidates.length && next.every((candidate: SourceSwitchCandidate, index: number): boolean =>
       this.candidateKey(candidate) === this.candidateKey(this.displayedCandidates[index]))) return;
     let anchorKey: string = '';

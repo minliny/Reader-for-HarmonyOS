@@ -32,17 +32,20 @@ manifest。`entry/build/` 不再是交付目录，`check-local.sh --hap` 已停�
 
 `test-*-server.mjs` 是常驻 fixture server，不计入测试数量，也不会由本命令启动。
 
-## 仅编译诊断
+## DevEco 原生开发构建与安装
 
 ```bash
 /Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw \
   assembleHap --mode module \
   -p product=default -p module=entry@default -p buildMode=debug \
-  --no-daemon --no-incremental
+  --parallel --incremental --daemon
 ```
 
-该命令绕过源码内容绑定、产物自校验和 immutable manifest，只能用于本地编译诊断，产物不得安装、
-分发或作为任何验收证据。
+按用户 2026-10-12 的明确要求，DevEco Build/Run 可直接使用此入口。Hvigor 在内存中注入
+`.reader-local/signing/build-profile.json5` 的指定私有签名，复用流水线的证书/Profile、Native/SDK
+预检和 signed HAP 验签；增量命中也检查最终签名输出。DevEco 的安装元数据指向
+`entry-default-signed.hap`，不得卸载或清除应用数据。开发构建不运行每次全量合同，
+不声称 immutable manifest 或发布验收通过；agent 交付与 acceptance 仍使用隔离流水线。
 
 当前开发 HAP 会编译尚未纳入 L0 验收的 RSS、Discover、Sync 等扩展页面；开发构建成功不代表这些
 页面已进入发布范围。最近一次已审计交付 HAP 的精确哈希、安装结果、阅读生命周期、冲突项和证据边界见

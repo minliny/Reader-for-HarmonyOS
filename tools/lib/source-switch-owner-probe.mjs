@@ -15,8 +15,10 @@ const { MangaAdmissionGateway } = await import('../../entry/src/main/ets/feature
 const content = await import('../../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
 const errors = await import('../../entry/src/main/ets/app/ErrorMessage.ts');
 const metadata = await import('../../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
+const searchTiming = await import('../../entry/src/main/ets/features/common/BookSearchTiming.ts');
 const acquisition = await import('../../entry/src/main/ets/features/common/BookAcquisitionPresentation.ts');
 const category = await import('../../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
+const providerFamily = await import('../../entry/src/main/ets/features/source/SourceSwitchProviderFamily.ts');
 const scheduler = await import('../../entry/src/main/ets/app/BookRequestScheduler.ts');
 const { ReaderWriteEvidence } = await import('../../entry/src/main/ets/app/ReaderWriteEvidence.ts');
 const repo=fileURLToPath(new URL('../../',import.meta.url)),siblingCore=resolve(repo,'../Reader-Core-Native');
@@ -29,19 +31,44 @@ const compile = (source, name, deps) => new Function(...Object.keys(deps),
 let currentRuntime;
 export const setCurrentRuntime=value=>{currentRuntime=value;};
 export const Runtime = { current: () => currentRuntime, isCurrent: runtime => currentRuntime === runtime && !runtime.closed };
-const common = { ReaderRuntimeOwner: Runtime, ...sdk, ...errors, ...metadata, ...acquisition, ...category, ...scheduler };
+const common = { ReaderRuntimeOwner: Runtime, ...sdk, ...errors, ...metadata, ...searchTiming, ...acquisition, ...category, ...providerFamily, ...scheduler };
+// Keep source-switch discovery on the same exported live-search decoder as
+// production. Extract its ordinary function dependency closure with the
+// installed compiler instead of copying the JSON/admission implementation.
+const require = createRequire(import.meta.url);
+const etsLoader = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const ts = require(`${etsLoader}/node_modules/typescript`);
+const searchTree = ts.createSourceFile('SearchGateway.ts', read('features/search/SearchGateway.ts'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+assert.equal(searchTree.parseDiagnostics.length, 0, 'production SearchGateway parses');
+const searchFunctions = new Map(searchTree.statements.filter(ts.isFunctionDeclaration).map(node => [node.name?.text, node]));
+const decoderNode = searchFunctions.get('decodeBookSearchResult');
+assert.ok(decoderNode?.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword), 'live search decoder is exported for its production consumer');
+const decoderFunctions = new Map();
+const captureDecoderFunction = name => {
+  if (decoderFunctions.has(name)) return;
+  const node = searchFunctions.get(name);
+  assert.ok(node, `production search decoder dependency ${name}`);
+  decoderFunctions.set(name, node);
+  const visit = child => {
+    if (ts.isCallExpression(child) && ts.isIdentifier(child.expression) && searchFunctions.has(child.expression.text)) captureDecoderFunction(child.expression.text);
+    ts.forEachChild(child, visit);
+  };
+  ts.forEachChild(node, visit);
+};
+captureDecoderFunction('decodeBookSearchResult');
+common.decodeBookSearchResult = compile([...decoderFunctions.values()].map(node => node.getText(searchTree)).join('\n'), 'decodeBookSearchResult', common);
 export const ReaderCoreRequestError = sdk.ReaderCoreRequestError;
 export const Gateway = compile(read('features/source/SourceSwitchGateway.ts'), 'SourceSwitchGateway', common);
 export const Core = compile(read('app/ReaderCoreGateway.ts'), 'ReaderCoreGateway', common);
 export const gatewayExports = compile(read('features/source/SourceSwitchGateway.ts'),
-  '{buildSourceSwitchCommitParams,sourceSwitchCandidateKey}', common);
+  '{buildSourceSwitchCommitParams,sourceSwitchCandidateKey,sourceSwitchIsAlternative,sourceSwitchSourceCount,readBookSearchTiming,readSourceSwitchSearchTiming}', common);
 export const hostSource = read('features/source/SourceSwitchHost.ts');
 export const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a;reject=b; });return{promise,resolve,reject}; };
 export const settle = async () => { for(let i=0;i<50;i++) await Promise.resolve(); };
 export const origin = {sourceId:'old',bookId:'book',title:'Book',author:'Writer',addedAt:1,sortIndex:0};
 export const target = {...origin,sourceId:'new',bookId:'target'};
 export const rawCandidate = {origin:'new',bookUrl:'target',name:'Book',author:'Writer',time:Math.floor(Date.now()/1000),
-  relationKey:'same-book',relationRevision:'1',sourceVersion:'v1'};
+  relationKey:'same-book',relationRevision:'1',sourceVersion:'v1',acquisition:{sourceVersion:'v1'}};
 export const session = {identity:{sourceId:'new',bookId:'target'},book:{title:'Book',author:'Writer'},sourceVersion:'v1',
   tocUrl:'https://target/toc',continuationVariables:[],entries:[{index:0,title:'Chapter 1',url:'https://target/0',variables:[]}]};
 export function fixture(options={},productionSource=hostSource) {
@@ -89,7 +116,10 @@ export function fixture(options={},productionSource=hostSource) {
         if(options.failRelated)throw Error('snapshot unavailable');
         return{data:{books:rows,snapshotRevision:'s1',complete:true,sourceVersions:[{sourceId:'new',sourceVersion:'v1',enabled:true}]}};
       }
-      if(method==='change.bookSource')return{data:{candidates:[]}};
+      if(method==='book.search'){
+        assert.equal(params.page,1,'source discovery requests the actual first search page');
+        return{data:{sourceId:params.sourceId,sourceVersion:'v1',contentKind:'text',books:[]}};
+      }
       if(method==='source.switch.pending.list')return{data:{pending:pending.map(row=>({...row,phase:'pending',
         from:{sourceId:row.fromSourceId,bookId:row.fromBookId},target:{sourceId:row.targetSourceId,bookId:row.targetBookId}}))}};
       if(method==='source.switch.transaction.query') {

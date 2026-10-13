@@ -13,7 +13,7 @@
       "historicalPath": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
       "historicalEntrySha256": "1c225df5417fed2eccf3d7aac2a6f8118c7dd5efc8ed4d7ba87f893161650948",
       "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
-      "sourceSha256": "738fc6738d452034cd281b1f9ea3a3c56441e66c3976bf45a31b2cd2eb27fd58",
+      "sourceSha256": "eb6dd8da1450513995e5cffb1e8bad7bc8c100870b2ea1392ae97eea5e02d9c7",
       "carriers": [
         {
           "owner": "BookDirectoryPage",
@@ -96,30 +96,6 @@
           "method": "mangaToolbar",
           "kind": "Text",
           "text": "'定位当前条目'",
-          "modifiers": {
-            "lineHeight": {
-              "expression": "visual.toolLineHeight",
-              "extra": []
-            },
-            "fontSize": {
-              "expression": "visual.toolFontSize",
-              "extra": []
-            },
-            "fontWeight": {
-              "expression": "400",
-              "extra": []
-            },
-            "fontFamily": {
-              "expression": "READER_FONT_NOTO_SANS_SC_UI_REGULAR",
-              "extra": []
-            }
-          }
-        },
-        {
-          "owner": "BookDirectoryPage",
-          "method": "mangaToolbar",
-          "kind": "Text",
-          "text": "this.ascending ? '正序' : '倒序'",
           "modifiers": {
             "lineHeight": {
               "expression": "visual.toolLineHeight",
@@ -1245,7 +1221,7 @@
       "historicalPath": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
       "historicalEntrySha256": "88d94d7ac330688bf2962f9f5fc377f89840232a59f42651559547d4bd5cafe8",
       "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
-      "sourceSha256": "c6c140bcfeb3b78b91deaa2b77c0121abf8331e1855e3e655b6f509aee957cae",
+      "sourceSha256": "18208edf438caab3e746b2339e07b40cc31ddc8a09c7e07a49d5c8df57ddeb26",
       "carriers": [
         {
           "owner": "MangaReadingSurface",
@@ -1900,6 +1876,21 @@
           }
         }
       ],
+      "retiredNativeDefaults": [
+        {
+          "carrier": {
+            "owner": "MangaReadingSurface",
+            "method": "imageViewport",
+            "kind": "Button",
+            "text": "'重试'",
+            "inheritsTextStyle": false,
+            "attributes": {
+              "onClick": "(): void => this.retry(row)"
+            }
+          },
+          "reason": "Content identity changes now expose the explicit reopen action while ordinary image failures retain the retry action."
+        }
+      ],
       "roles": {},
       "fontFamilies": {
         "READER_FONT_NOTO_SERIF_SC_BOLD": "ReaderNotoSerifSCBold",
@@ -1923,7 +1914,7 @@
           "owner": "MangaReadingSurface",
           "method": "imageViewport",
           "kind": "Button",
-          "text": "'重试'",
+          "text": "this.retryLabel(row)",
           "inheritsTextStyle": false,
           "attributes": {
             "onClick": "(): void => this.retry(row)"

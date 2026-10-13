@@ -1,4 +1,5 @@
 import { ReaderButton } from '../common/ReaderButton';
+import { ReaderInlineSelect } from '../common/ReaderInlineSelect';
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
@@ -640,17 +641,21 @@ export struct SourceToolsPage {
     Column({ space: TOK_SPACE_SM }) {
       this.heading(this.snapshot.debugSourceId.length > 0 ? '最近一次检测详情' : '书源调试');
       Row({ space: TOK_SPACE_SM }) {
-        Select([{ value: '搜索' }, { value: '发现' }])
-          .selected(this.snapshot.checkMode === 'explore' ? 1 : 0)
-          .value(this.snapshot.checkMode === 'explore' ? '发现' : '搜索')
-          .enabled(!this.snapshot.busy)
-          .onSelect((index: number): void => this.onCheckSelectionChanged(
-            index === 1 ? 'explore' : 'search', this.snapshot.checkDepth));
-        Select([{ value: '列表' }, { value: '详情' }, { value: '目录' }, { value: '正文' }])
-          .selected(this.snapshot.checkDepth - 2)
-          .value(['列表', '详情', '目录', '正文'][this.snapshot.checkDepth - 2])
-          .enabled(!this.snapshot.busy)
-          .onSelect((index: number): void => this.onCheckSelectionChanged(this.snapshot.checkMode, index + 2));
+        ReaderInlineSelect({
+          value: this.snapshot.checkMode === 'explore' ? '发现' : '搜索',
+          options: ['搜索', '发现'],
+          selectedIndex: this.snapshot.checkMode === 'explore' ? 1 : 0,
+          actionEnabled: !this.snapshot.busy,
+          onSelect: (index: number, _value: string): void => this.onCheckSelectionChanged(
+            index === 1 ? 'explore' : 'search', this.snapshot.checkDepth),
+        });
+        ReaderInlineSelect({
+          value: ['列表', '详情', '目录', '正文'][this.snapshot.checkDepth - 2] ?? '列表',
+          options: ['列表', '详情', '目录', '正文'],
+          selectedIndex: Math.max(0, this.snapshot.checkDepth - 2),
+          actionEnabled: !this.snapshot.busy,
+          onSelect: (index: number, _value: string): void => this.onCheckSelectionChanged(this.snapshot.checkMode, index + 2),
+        });
       }.width('100%');
       ReaderFormField({ scheme: this.appThemeScheme, specId: 'source-debug', text: this.snapshot.debugKey,
         placeholder: '检测关键词（留空时使用 Core 默认“我的”）', onTextChange: (value: string): void => this.onDebugKeyChanged(value) });

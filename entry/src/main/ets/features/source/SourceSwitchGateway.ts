@@ -1,4 +1,5 @@
 import { bookAuthorIdentity, readBookAuthorIdentity, type BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
+import { readBookSearchTiming } from '../common/BookSearchTiming';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 import type { BookRequestOptions } from '../../app/BookRequestScheduler';
@@ -18,6 +19,8 @@ import {
   readerSourceCategoryIsReadable,
   type ReaderSourceCategory,
 } from './ReaderSourceCategory';
+import { sourceSwitchProviderFamilyKey } from './SourceSwitchProviderFamily';
+import { decodeBookSearchResult, type SearchSource } from '../search/SearchGateway';
 
 // Legado caps ChangeBookSourceDialog at nine workers. Keep one lane in reserve
 // for the foreground reading session while avoiding one unbounded request per
@@ -38,6 +41,9 @@ export type SourceSwitchCandidate = {
   searchVariables?: RemoteReadingVariable[];
   sourceId: string;
   sourceName?: string;
+  /** Display-only provider family; sourceId/bookUrl remain the identity. */
+  providerFamily?: string;
+  providerFamilyCount?: number;
   category: ReaderSourceCategory;
   sourceOrder?: number;
   bookUrl: string;
@@ -50,9 +56,10 @@ export type SourceSwitchCandidate = {
   currentChapterIndex?: number;
   chapterWordCount?: number;
   checkedAt?: number;
-  /** Current source search request duration; never first-image/content latency. */
+  /** Version-bound source search duration; never first-image/content latency. */
   latencyMs?: number;
   latencyKind?: 'search';
+  latencyMeasuredAt?: number;
   offline?: boolean;
   timeout?: boolean;
   isCurrent?: boolean;
@@ -76,6 +83,8 @@ type SourceSwitchRegistryEntry = {
   sourceOrder: number;
   sourceVersion?: string;
   category: ReaderSourceCategory;
+  baseUrl?: string;
+  providerFamily: string;
 };
 
 type SourceSwitchCachedChapter = {
@@ -86,7 +95,12 @@ type SourceSwitchCachedChapter = {
 type SourceSwitchSearchSample = {
   sourceVersion?: string;
   latencyMs: number;
+  measuredAt: number;
 };
+
+/** Shared by live Search seeds and persisted candidate projection. Legacy
+ * body respondTime and timing from another source rule are never admitted. */
+export const readSourceSwitchSearchTiming = readBookSearchTiming;
 
 /** Stable identity shared by discovery, rendering, and click admission. */
 export function sourceSwitchCandidateKey(sourceId: string, bookUrl: string): string {
@@ -96,8 +110,16 @@ export function sourceSwitchCandidateKey(sourceId: string, bookUrl: string): str
 /** Match the search card's distinct-source unit; alternate URLs stay selectable. */
 export function sourceSwitchSourceCount(candidates: SourceSwitchCandidate[]): number {
   const sources = new Set<string>();
+  // Status text counts selectable source identities. Provider-family folding
+  // only changes the visible row; sourceId/bookUrl remain the exact action
+  // target and alternate rules must still be counted as distinct sources.
   for (const candidate of candidates) sources.add(candidate.sourceId);
   return sources.size;
+}
+
+/** The current shelf binding is context, not a selectable alternate source. */
+export function sourceSwitchIsAlternative(candidate: SourceSwitchCandidate): boolean {
+  return candidate.isCurrent !== true;
 }
 
 function deduplicateSourceSwitchCandidates(
@@ -222,7 +244,7 @@ export type PendingSourceSwitch = {
  * `source.switch.rollback` boundary and validates every JSON envelope before
  * the panel sees it.
  *
- * `change.bookSource`, `book.detail`, and `book.toc` are remote commands that
+ * `book.search`, `book.detail`, and `book.toc` are remote commands that
  * delegate the HTTP round-trip to the Host via `http.execute`. Host transport
  * limits surface as a plain Error, which Index presents through the admitted
  * discovery/failure state. The wire contract is authoritative regardless.
@@ -231,6 +253,7 @@ export class SourceSwitchGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private readonly normalizedMatchText = new Map<string, string>();
   private cachedSources: Map<string, SourceSwitchRegistryEntry> | undefined;
+  private cachedNonReadableSourceIds = new Set<string>();
   private cachedSourceRevision: number | undefined;
   private confirmedScope: string = '';
   private confirmedCandidates = new Set<string>();
@@ -242,10 +265,95 @@ export class SourceSwitchGateway {
     this.runtimeOwner = runtimeOwner;
   }
 
-  /** A new sweep retains identity/context but must not display an old timing. */
-  withoutSearchTiming(candidates: SourceSwitchCandidate[]): SourceSwitchCandidate[] {
-    return candidates.map((candidate: SourceSwitchCandidate): SourceSwitchCandidate =>
-      ({ ...candidate, latencyMs: undefined, latencyKind: undefined }));
+  /** Historical aliases can be polluted by a source misparsing another book
+   * at the same URL. A relation snapshot scopes the read, but only current
+   * exact title/author metadata authorizes a selectable source. */
+  admitsCandidate(candidate: SourceSwitchCandidate, query: SourceSwitchProbeQuery): boolean {
+    return this.matchesCandidateBook(candidate, query);
+  }
+
+  /** A shelf projection can outlive its reading session. Recover only the
+   * existing exact book's current rule proof; an alias or raw @ prefix never
+   * authorizes stripping a pen-name character. This read performs no HTTP. */
+  async resolveProbeQueryIdentity(query: SourceSwitchProbeQuery,
+    isCurrent: (() => boolean) | undefined = undefined,
+    expectedCandidate: SourceSwitchCandidate | undefined = undefined): Promise<SourceSwitchProbeQuery> {
+    if (isCurrent?.() === false) return query;
+    this.validateProbeQuery(query);
+    const revision = this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision();
+    let sources: Map<string, SourceSwitchRegistryEntry>;
+    try {
+      sources = new Map(await this.loadEnabledSources(isCurrent));
+    } catch (error) {
+      if (isCurrent?.() === false) return query;
+      throw error;
+    }
+    if (isCurrent?.() === false) return query;
+    if (revision !== this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision()) {
+      throw new Error('书源配置已变更，请重试');
+    }
+    if (this.cachedNonReadableSourceIds.has(query.sourceId)) {
+      throw new Error('当前书源提供书评或其他非阅读内容，请返回搜索选择小说正文书源。');
+    }
+    // A visible row may predate a registry update. Reuse this same snapshot
+    // to qualify its exact target before acquisition or any progress write.
+    if (expectedCandidate !== undefined) {
+      const target = sources.get(expectedCandidate.sourceId);
+      if (target === undefined || target.category !== expectedCandidate.category ||
+        (target.category === 'comic') !== (query.contentKind === 'manga') ||
+        target.sourceVersion !== expectedCandidate.sourceVersion) {
+        throw new Error('候选书源已变更或不可用，请重新查找');
+      }
+    }
+    const source = sources.get(query.sourceId);
+    if (!query.author.startsWith('@')) return query;
+    const currentVersion = source?.sourceVersion;
+    const currentProof = readBookAuthorIdentity(query.authorIdentity, query.author, currentVersion);
+    if (currentProof !== undefined) return query.sourceVersion === currentVersion ? query :
+      { ...query, sourceVersion: currentVersion };
+    // A proof bound only to the caller's old source hash cannot authorize an
+    // author conversion after the registry changed or the source disappeared.
+    const unproved = query.authorIdentity === undefined ? query :
+      { ...query, authorIdentity: undefined, sourceVersion: currentVersion };
+    if (currentVersion === undefined || currentVersion.length === 0) return unproved;
+    let data: JsonObject;
+    try {
+      data = (await this.runtimeOwner.request('search-book.get', { origin: query.sourceId, bookUrl: query.bookId },
+        this.requestOptions(isCurrent))).data;
+    } catch (error) {
+      if (isCurrent?.() === false) return unproved;
+      throw error;
+    }
+    if (isCurrent?.() === false) return unproved;
+    if (revision !== this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision()) {
+      throw new Error('书源配置已变更，请重试');
+    }
+    const raw = data['book'];
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return unproved;
+    const book = raw as JsonObject;
+    if (book['origin'] !== query.sourceId || book['bookUrl'] !== query.bookId ||
+      book['name'] !== query.bookName || book['author'] !== query.author) return unproved;
+    const acquisition = book['acquisition'];
+    if (acquisition === null || typeof acquisition !== 'object' || Array.isArray(acquisition)) return unproved;
+    const facts = acquisition as JsonObject;
+    if (facts['sourceVersion'] !== currentVersion) return unproved;
+    const proof = readBookAuthorIdentity(facts['authorIdentity'], query.author, currentVersion);
+    return proof === undefined ? unproved : { ...query, authorIdentity: proof, sourceVersion: currentVersion };
+  }
+
+  /** A rule can return another book's detail at the requested URL. Compare
+   * resolved metadata before delivering a preview or accepting a shelf write.
+   * An existing canonical candidate or the current book supplies the allowed
+   * title/author; an unobserved alias cannot authorize changing books. */
+  assertAcquiredBook(candidate: SourceSwitchCandidate, session: RemoteReadingSession,
+    query: SourceSwitchProbeQuery): void {
+    const resolved: SourceSwitchCandidate = { ...candidate, bookName: session.book.title,
+      author: session.book.author, authorIdentity: session.book.authorIdentity, sourceVersion: session.sourceVersion };
+    const expected: SourceSwitchProbeQuery = { ...query, bookName: candidate.bookName,
+      author: candidate.author ?? '', authorIdentity: candidate.authorIdentity, sourceVersion: candidate.sourceVersion };
+    if (!this.matchesCandidateBook(resolved, expected) && !this.matchesCandidateBook(resolved, query)) {
+      throw new Error('书源返回的书名或作者与当前书籍不一致，已阻止换源');
+    }
   }
 
   /**
@@ -267,6 +375,10 @@ export class SourceSwitchGateway {
     const scope = sourceSwitchCandidateKey(query.sourceId, query.bookId);
     const confirmed = new Set(this.confirmedScope === scope ? this.confirmedCandidates : []);
     const revision = this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision();
+    const knownByKey = new Map<string, SourceSwitchCandidate>();
+    for (const candidate of known) {
+      knownByKey.set(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl), candidate);
+    }
     // Core owns the indexed alias closure. Stage a complete, version-consistent
     // relation before replacing the pane; a partial page never means deletion.
     const records = await this.loadRelatedBooks(query, enabledSources, isCurrent);
@@ -276,8 +388,21 @@ export class SourceSwitchGateway {
       const sourceId = this.requireString(book, 'origin', 'search-book.related');
       const source = enabledSources.get(sourceId);
       confirmed.add(sourceSwitchCandidateKey(sourceId, this.requireString(book, 'bookUrl', 'search-book.related')));
-      if (source !== undefined) candidates.push(this.decodeCachedCandidate(
-        book, query, this.optionalNumber(book, 'time') ?? 0, source));
+      if (source !== undefined) {
+        const decoded = this.decodeCachedCandidate(book, query, this.optionalNumber(book, 'time') ?? 0, source);
+        if (!this.admitsCandidate(decoded, query)) continue;
+        const previous = knownByKey.get(sourceSwitchCandidateKey(decoded.sourceId, decoded.bookUrl));
+        // Preserve an in-memory timing while Core persistence catches up. A
+        // source-version mismatch must never display timing from another rule.
+        candidates.push(previous !== undefined && decoded.latencyMs === undefined &&
+          previous.latencyKind === 'search' && previous.latencyMs !== undefined &&
+          previous.sourceVersion === source.sourceVersion ? {
+            ...decoded,
+            latencyMs: previous.latencyMs,
+            latencyKind: 'search',
+            latencyMeasuredAt: previous.latencyMeasuredAt,
+          } : decoded);
+      }
     }
     const keys = new Set(candidates.map((candidate: SourceSwitchCandidate): string =>
       sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)));
@@ -286,6 +411,7 @@ export class SourceSwitchGateway {
     const unpersisted = new Set<string>();
     const extras = known.filter((candidate: SourceSwitchCandidate): boolean =>
       enabledSources.has(query.sourceId) && enabledSources.has(candidate.sourceId) &&
+      this.matchesCandidateBook(candidate, query) &&
       !keys.has(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)));
     for (let start = 0; start < extras.length; start += 128) {
       const batch = extras.slice(start, start + 128);
@@ -322,6 +448,7 @@ export class SourceSwitchGateway {
       const key = sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
       if (source === undefined || keys.has(key) || !unpersisted.has(key)) continue;
       candidates.push({ ...candidate, sourceName: source.sourceName, sourceOrder: source.sourceOrder,
+        providerFamily: source.providerFamily,
         acquisitionState: candidate.sourceVersion === source.sourceVersion ? candidate.acquisitionState : 'stale',
         isCurrent: candidate.sourceId === query.sourceId && candidate.bookUrl === query.bookId });
       keys.add(key);
@@ -331,12 +458,14 @@ export class SourceSwitchGateway {
     this.confirmedScope = scope; this.confirmedCandidates = confirmed;
     return this.sortCandidates(candidates.map((candidate: SourceSwitchCandidate): SourceSwitchCandidate => {
       const source = enabledSources.get(candidate.sourceId);
-      const sample = this.discoveryScope === scope ? this.discoverySamples.get(candidate.sourceId) : undefined;
+      const sample = this.discoveryScope === scope ? this.discoverySamples.get(
+        sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)) : undefined;
       const currentSample = sample !== undefined && sample.sourceVersion === source?.sourceVersion ? sample : undefined;
-      // Legacy respondTime has no stage/version contract. Never mix it with
-      // the current sweep's measured per-source search request duration.
-      return { ...candidate, latencyMs: currentSample?.latencyMs,
-        latencyKind: currentSample === undefined ? undefined : 'search' };
+      // A live, version-bound sample supersedes the durable acquisition fact.
+      // Legacy respondTime has no stage/version contract and remains ignored.
+      return currentSample !== undefined && currentSample.measuredAt >= (candidate.latencyMeasuredAt ?? 0)
+        ? { ...candidate, latencyMs: currentSample.latencyMs, latencyKind: 'search',
+          latencyMeasuredAt: currentSample.measuredAt } : candidate;
     }));
   }
 
@@ -359,6 +488,9 @@ export class SourceSwitchGateway {
           if (isCurrent?.() === false) return [];
           const params: JsonObject = { identity: { sourceId: query.sourceId, bookId: query.bookId },
             name: query.bookName, author: query.author, limit: 128 };
+          // Manga candidates use the source-scoped relation projection. The
+          // default relation mode remains strict for novel source switching.
+          if (query.contentKind === 'manga') params['mode'] = 'mangaCandidates';
           if (cursor !== undefined) params['cursor'] = cursor;
           const response = await this.runtimeOwner.request('search-book.related', params, this.requestOptions(isCurrent));
           if (isCurrent?.() === false) return [];
@@ -430,65 +562,247 @@ export class SourceSwitchGateway {
     this.validateProbeQuery(query);
     if (isCurrent?.() === false) return { kind: 'noSources' };
     const generation = ++this.discoveryGeneration;
-    this.discoveryScope = sourceSwitchCandidateKey(query.sourceId, query.bookId);
-    this.discoverySamples.clear();
+    const scope = sourceSwitchCandidateKey(query.sourceId, query.bookId);
+    if (this.discoveryScope !== scope) this.discoverySamples.clear();
+    this.discoveryScope = scope;
     let finished = false;
     const current = (): boolean => !finished && generation === this.discoveryGeneration && isCurrent?.() !== false;
-    let candidates: SourceSwitchCandidate[] = initialCandidates.slice();
-    let projection: Promise<void> = Promise.resolve();
-    // Queue the complete related-book projection, including live seeds. A
-    // slower earlier read can neither replace a later publication nor lose a
-    // just-arrived candidate while Core finishes its durable relation update.
-    const project = (discovered: SourceSwitchCandidate[]): Promise<void> => {
-      const next = projection.then(async (): Promise<void> => {
+    const candidateMap = new Map<string, SourceSwitchCandidate>();
+    for (const candidate of initialCandidates) {
+      if (!this.admitsCandidate(candidate, query)) continue;
+      candidateMap.set(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl), candidate);
+    }
+    let candidates: SourceSwitchCandidate[] = this.sortCandidates(Array.from(candidateMap.values()));
+    let enabledSources: Map<string, SourceSwitchRegistryEntry> | undefined;
+    const pendingIdentityKeys = new Set<string>();
+    const pendingIdentityValues = new Map<string, { sourceId: string; bookId: string }>();
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+    let flushInFlight: Promise<void> = Promise.resolve();
+    let flushWaiters: Array<{ resolve: () => void; active: boolean }> = [];
+    let cancelled = false;
+
+    const publish = (): void => {
+      if (!current()) return;
+      candidates = this.sortCandidates(Array.from(candidateMap.values()));
+      onProgress?.(candidates);
+    };
+
+    const mergeCandidate = (candidate: SourceSwitchCandidate, queueProjection: boolean = true): void => {
+      if (!this.admitsCandidate(candidate, query)) return;
+      const key = sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
+      const previous = candidateMap.get(key);
+      if (previous === undefined && candidate.acquisitionState === undefined) {
+        candidate = { ...candidate, acquisitionState: 'discovered' };
+      }
+      // Discovery and acquisition updates are partial facts. Preserve fields
+      // already proven by the cache when a later event only carries identity
+      // or timing, while allowing a newer failure/readability state through.
+      candidateMap.set(key, previous === undefined ? candidate : { ...previous, ...candidate,
+        acquisitionState: candidate.acquisitionState === undefined ? previous.acquisitionState : candidate.acquisitionState,
+        latencyMs: candidate.latencyMs === undefined ? previous.latencyMs : candidate.latencyMs,
+        latencyKind: candidate.latencyKind === undefined ? previous.latencyKind : candidate.latencyKind,
+        latencyMeasuredAt: candidate.latencyMeasuredAt === undefined ? previous.latencyMeasuredAt : candidate.latencyMeasuredAt,
+        searchVariables: candidate.searchVariables === undefined ? previous.searchVariables : candidate.searchVariables,
+        authorIdentity: candidate.authorIdentity === undefined ? previous.authorIdentity : candidate.authorIdentity });
+      if (queueProjection) {
+        pendingIdentityKeys.add(key);
+        pendingIdentityValues.set(key, { sourceId: candidate.sourceId, bookId: candidate.bookUrl });
+      }
+    };
+
+    const mergeIdentities = (identities: { sourceId: string; bookId: string }[]): void => {
+      for (const identity of identities) {
+        if (typeof identity.sourceId !== 'string' || typeof identity.bookId !== 'string' ||
+          identity.sourceId.trim().length === 0 || identity.bookId.trim().length === 0) continue;
+        const key = sourceSwitchCandidateKey(identity.sourceId, identity.bookId);
+        pendingIdentityKeys.add(key);
+        pendingIdentityValues.set(key, { sourceId: identity.sourceId, bookId: identity.bookId });
+      }
+    };
+
+    const settleFlushWaiters = (): void => {
+      if (!cancelled && (debounceTimer !== undefined || pendingIdentityKeys.size > 0)) return;
+      const waiters = flushWaiters;
+      flushWaiters = [];
+      for (const waiter of waiters) {
+        if (!waiter.active) continue;
+        waiter.active = false;
+        waiter.resolve();
+      }
+    };
+
+    // A source sweep can be retired while the debounce timer or a batch RPC is
+    // pending. Clear queued identities and release every waiter immediately;
+    // the in-flight request still observes requestOptions(current) and is
+    // allowed to settle independently.
+    const cancelFlush = (): void => {
+      if (cancelled) return;
+      cancelled = true;
+      if (debounceTimer !== undefined) { clearTimeout(debounceTimer); debounceTimer = undefined; }
+      pendingIdentityKeys.clear(); pendingIdentityValues.clear();
+      settleFlushWaiters();
+    };
+
+    const flushDelta = async (): Promise<void> => {
+      if (!current() || pendingIdentityKeys.size === 0) return;
+      const keys = Array.from(pendingIdentityKeys);
+      pendingIdentityKeys.clear();
+      if (enabledSources === undefined) enabledSources = new Map(await this.loadEnabledSources(current));
+      for (let start = 0; start < keys.length; start += 128) {
         if (!current()) return;
-        const known = deduplicateSourceSwitchCandidates([...discovered, ...candidates]);
-        const updated = await this.loadCachedCandidates(query, current, known);
+        const batch = keys.slice(start, start + 128);
+        const result = await this.runtimeOwner.request('search-book.batch.get', {
+          identities: batch.map((key: string): JsonObject => {
+            const identity = pendingIdentityValues.get(key);
+            if (identity !== undefined) return { sourceId: identity.sourceId, bookId: identity.bookId };
+            const candidate = candidateMap.get(key);
+            if (candidate !== undefined) return { sourceId: candidate.sourceId, bookId: candidate.bookUrl };
+            throw new Error('候选身份索引缺失');
+          }),
+        }, this.requestOptions(current));
         if (!current()) return;
-        candidates = updated;
-        onProgress?.(candidates);
+        if (result.data['complete'] !== true || !Array.isArray(result.data['books']) ||
+          !Array.isArray(result.data['missing'])) throw new Error('候选身份快照不完整');
+        const expected = new Set(batch);
+        const returned = new Set<string>();
+        for (const raw of result.data['books']) {
+          if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('候选身份无效');
+          const row = raw as JsonObject;
+          const sourceId = this.requireString(row, 'origin', 'search-book.batch.get');
+          const bookId = this.requireString(row, 'bookUrl', 'search-book.batch.get');
+          const key = sourceSwitchCandidateKey(sourceId, bookId);
+          if (!expected.has(key) || returned.has(key)) throw new Error('候选身份不匹配');
+          returned.add(key);
+          const source = enabledSources.get(sourceId);
+          if (source !== undefined && (source.category === 'comic') === (query.contentKind === 'manga')) mergeCandidate(this.decodeCachedCandidate(row, query,
+            this.optionalNumber(row, 'time') ?? Date.now(), source), false);
+          if (!pendingIdentityKeys.has(key)) pendingIdentityValues.delete(key);
+        }
+        for (const raw of result.data['missing']) {
+          if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('候选身份无效');
+          const row = raw as JsonObject;
+          const key = sourceSwitchCandidateKey(this.requireString(row, 'sourceId', 'search-book.batch.get'),
+            this.requireString(row, 'bookId', 'search-book.batch.get'));
+          if (!expected.has(key) || returned.has(key)) throw new Error('候选身份不匹配');
+          returned.add(key);
+          if (!pendingIdentityKeys.has(key)) pendingIdentityValues.delete(key);
+        }
+        if (returned.size !== expected.size) throw new Error('候选身份快照缺失');
+        publish();
+      }
+    };
+
+    let scheduleFlush: () => void = (): void => {};
+    const runFlush = (): void => {
+      flushInFlight = flushInFlight.then(flushDelta).catch((): void => {
+        // Partial acquisition failures retain the last known candidate. The
+        // final complete relation check remains authoritative for deletion.
+      }).finally((): void => {
+        if (current() && pendingIdentityKeys.size > 0) scheduleFlush();
+        settleFlushWaiters();
       });
-      // Event subscribers have no await owner. Keep the queue usable after a
-      // transient cache read; discovery/final projection still owns failures.
-      projection = next.catch((): void => {});
-      return next;
+    };
+
+    scheduleFlush = (): void => {
+      if (!current() || debounceTimer !== undefined || pendingIdentityKeys.size === 0) return;
+      debounceTimer = setTimeout((): void => {
+        debounceTimer = undefined;
+        runFlush();
+      }, 100);
+    };
+
+    const awaitFlush = async (): Promise<void> => {
+      while (!cancelled && (debounceTimer !== undefined || pendingIdentityKeys.size > 0)) {
+        if (!current()) { cancelFlush(); return; }
+        await new Promise<void>((resolve): void => {
+          const waiter = { resolve, active: true };
+          flushWaiters.push(waiter);
+          const poll = (): void => {
+            if (!waiter.active) return;
+            if (!current()) { waiter.active = false; cancelFlush(); resolve(); return; }
+            setTimeout(poll, 16);
+          };
+          setTimeout(poll, 16);
+        });
+      }
+      if (cancelled || !current()) { cancelFlush(); return; }
+      let watching = true;
+      const cancellation = new Promise<void>((resolve): void => {
+        const poll = (): void => {
+          if (!watching) return;
+          if (!current()) { cancelFlush(); resolve(); return; }
+          setTimeout(poll, 16);
+        };
+        setTimeout(poll, 16);
+      });
+      await Promise.race([flushInFlight, cancellation]);
+      watching = false;
+      if (!cancelled && !current()) cancelFlush();
+      if (!cancelled && (debounceTimer !== undefined || pendingIdentityKeys.size > 0)) await awaitFlush();
+    };
+
+    const projectInitial = async (): Promise<void> => {
+      const updated = await this.loadCachedCandidates(query, current, initialCandidates);
+      if (!current()) return;
+      candidateMap.clear();
+      for (const candidate of updated) candidateMap.set(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl), candidate);
+      candidates = updated;
+      onProgress?.(candidates);
     };
     const coordinator = this.runtimeOwner.bookAcquisitions?.();
     const unsubscribe = onProgress === undefined ? undefined : coordinator?.subscribe?.((change: BookAcquisitionChange): void => {
       if (!current() || (!change.reset && change.identities.length === 0)) return;
-      void project([]).catch((): void => {});
+      if (change.reset) mergeIdentities(Array.from(candidateMap.values()).map((candidate): { sourceId: string; bookId: string } =>
+        ({ sourceId: candidate.sourceId, bookId: candidate.bookUrl })));
+      mergeIdentities(change.identities);
+      publish();
+      scheduleFlush();
     });
     try {
       if (!current()) return { kind: 'noSources' };
-      await project([]);
+      await projectInitial();
       await this.discoverCandidates(query.sourceId, query.bookId, query.bookName, current, excludedSourceIds, query.contentKind,
         async (discovered: SourceSwitchCandidate[]): Promise<void> => {
           if (!current()) return;
           for (const candidate of discovered) {
-            if (candidate.latencyKind === 'search' && candidate.latencyMs !== undefined) {
-              this.discoverySamples.set(candidate.sourceId, { sourceVersion: candidate.sourceVersion,
-                latencyMs: candidate.latencyMs });
+            if (candidate.latencyKind === 'search' && candidate.latencyMs !== undefined &&
+              candidate.latencyMeasuredAt !== undefined) {
+              this.discoverySamples.set(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl), {
+                sourceVersion: candidate.sourceVersion, latencyMs: candidate.latencyMs,
+                measuredAt: candidate.latencyMeasuredAt });
             }
+            mergeCandidate(candidate);
           }
-          if (onProgress !== undefined) await project(discovered);
-        });
+          publish();
+          scheduleFlush();
+        }, query);
       if (!current()) return { kind: 'noSources' };
-      await project([]);
+      await awaitFlush();
+      // One complete relation read at the end owns membership/deletion. A
+      // source completion never performs this read, so N source results do not
+      // become N full relation scans.
+      const finalCandidates = await this.loadCachedCandidates(query, current, Array.from(candidateMap.values()));
       if (!current()) return { kind: 'noSources' };
+      candidateMap.clear();
+      for (const candidate of finalCandidates) candidateMap.set(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl), candidate);
+      candidates = finalCandidates;
+      onProgress?.(candidates);
       return candidates.length === 0 ? { kind: 'noSources' } : { kind: 'sources', candidates };
     } catch (error) {
       if (!current()) return { kind: 'noSources' };
       throw error;
     } finally {
       finished = true;
+      if (isCurrent?.() === false || generation !== this.discoveryGeneration) cancelFlush();
+      if (debounceTimer !== undefined) { clearTimeout(debounceTimer); debounceTimer = undefined; }
       unsubscribe?.();
     }
   }
 
   /**
-   * Discovery: enabled source registry → `change.bookSource` candidates for
-   * the given book. Never invokes `change.bookSource` with an empty
-   * `sourceIds` (Core rejects it); that resolves to `{kind:'noSources'}`.
+   * Search each enabled source through the shared `book.search` decoder.
+   * Core's multi-source command soft-skips HTTP/parse failures, so a single
+   * source search is required to distinguish failures from a valid empty list.
    */
   async discoverCandidates(
     sourceId: string,
@@ -498,6 +812,7 @@ export class SourceSwitchGateway {
     excludedSourceIds: string[] = [],
     contentKind: 'text' | 'manga' = 'text',
     onSourceComplete: ((candidates: SourceSwitchCandidate[]) => Promise<void>) | undefined = undefined,
+    expectedBook: SourceSwitchProbeQuery | undefined = undefined,
   ): Promise<SourceSwitchDiscoveryOutcome> {
     this.assertNonBlankString(sourceId, 'sourceId');
     this.assertNonBlankString(bookId, 'bookId');
@@ -538,12 +853,15 @@ export class SourceSwitchGateway {
         const category = classifyReaderSource({ bookSourceType, name: sourceName, group, sourceId,
           baseUrl: this.optionalString(source, 'baseUrl') });
         if (contentKind === 'manga' ? category !== 'comic' : !readerSourceCategoryIsText(category)) continue;
+        const baseUrl = this.optionalString(source, 'baseUrl');
         sources.push({
           sourceId,
           sourceName: sourceName === undefined || sourceName.trim().length === 0 ? sourceId : sourceName,
           sourceOrder,
           sourceVersion: this.optionalString(source, 'sourceVersion'),
           category,
+          baseUrl,
+          providerFamily: sourceSwitchProviderFamilyKey(sourceName, baseUrl),
         });
       }
     }
@@ -552,26 +870,43 @@ export class SourceSwitchGateway {
     }
     const candidates: SourceSwitchCandidate[] = [];
     let domainFailures = 0;
+    let sourceFailures = 0;
+    const httpStatuses = new Map<number, number>();
     await runBookSourceWorkers(sources, SOURCE_SWITCH_DISCOVERY_CONCURRENCY,
       async (source: SourceSwitchRegistryEntry): Promise<void> => {
+        let group: SourceSwitchCandidate[];
         try {
-          const group = await this.discoverFromSource(sourceId, bookId, keyword, source, isCurrent);
-          if (isCurrent?.() !== false) {
-            candidates.push(...group);
-            await onSourceComplete?.(group);
-          }
+          group = await this.discoverFromSource(keyword, source, isCurrent, expectedBook);
         } catch (error) {
-          if (!isDomainResolutionFailure(error)) throw error;
+          if (isCurrent?.() === false) return;
+          if (!isDomainResolutionFailure(error)) {
+            if (isNetworkEnvironmentFailure(error)) throw error;
+            sourceFailures += 1;
+            const status = this.discoveryHttpStatus(error);
+            if (status !== undefined) httpStatuses.set(status, (httpStatuses.get(status) ?? 0) + 1);
+            return;
+          }
           // A failed candidate hostname must not cancel independent sources.
           // Route/proxy configuration failures still stop the shared batch.
           domainFailures += 1;
+          return;
+        }
+        if (isCurrent?.() !== false) {
+          candidates.push(...group);
+          await onSourceComplete?.(group);
         }
       }, async (): Promise<boolean> => isCurrent?.() !== false);
     if (isCurrent?.() === false) return { kind: 'noSources' };
+    const statuses = Array.from(httpStatuses.keys()).sort((left: number, right: number): number => left - right)
+      .slice(0, 4).map((status: number): string => `HTTP ${status}：${httpStatuses.get(status)}个`);
+    const responseSummary = statuses.length === 0 ? '' : `（${statuses.join('，')}）`;
     if (candidates.length === 0 && domainFailures > 0) {
       throw new Error(domainFailures === sources.length
         ? '本次换源搜索的书源均出现域名解析失败，请稍后重试或调整书源。'
-        : `本次换源搜索未找到可用候选，其中${domainFailures}个书源域名解析失败，请稍后重试或调整书源。`);
+        : `本次换源搜索未找到可用候选，其中${domainFailures}个书源域名解析失败${sourceFailures > 0 ? `，${sourceFailures}个书源请求或规则执行失败${responseSummary}` : ''}，请稍后重试或调整书源。`);
+    }
+    if (candidates.length === 0 && sourceFailures > 0) {
+      throw new Error(`本次换源搜索未找到可用候选，${sourceFailures}个书源请求或规则执行失败${responseSummary}，请重试或调整书源。`);
     }
     candidates.sort((left: SourceSwitchCandidate, right: SourceSwitchCandidate): number =>
       (left.sourceOrder ?? 0) - (right.sourceOrder ?? 0));
@@ -584,79 +919,133 @@ export class SourceSwitchGateway {
   }
 
   private async discoverFromSource(
-    sourceId: string,
-    bookId: string,
     keyword: string,
     source: SourceSwitchRegistryEntry,
     isCurrent: (() => boolean) | undefined,
+    expectedBook: SourceSwitchProbeQuery | undefined,
   ): Promise<SourceSwitchCandidate[]> {
+    if (isCurrent?.() === false) return [];
+    const startedAt = Date.now();
+    const result = await this.runtimeOwner.request(
+      'book.search',
+      { sourceId: source.sourceId, keyword, page: 1 },
+      this.requestOptions(isCurrent),
+    );
+    if (isCurrent?.() === false) return [];
+    const latencyMs = Math.max(0, Date.now() - startedAt);
+    const measuredAt = Date.now();
+    const decoded = await this.decodeDiscoveryCandidates(result.data, source, isCurrent);
+    const candidates = decoded.filter((candidate): boolean =>
+      expectedBook !== undefined ? this.matchesCandidateBook(candidate, expectedBook) :
+        this.normalizeBookName(candidate.bookName) === this.normalizeBookName(keyword))
+      .map((candidate: SourceSwitchCandidate): SourceSwitchCandidate =>
+        ({ ...candidate, latencyMs, latencyKind: 'search', latencyMeasuredAt: measuredAt }));
+    // Search latency is a durable, version-bound fact. A failed timing
+    // write must never hide a valid discovery result (legacy rows and
+    // read-only runtimes are allowed), while successful writes make the next
+    // drawer open show the last measured value without another search.
+    for (const candidate of candidates) {
+      await this.persistSearchTiming(candidate, candidate.sourceVersion, latencyMs, measuredAt, isCurrent);
+    }
+    return candidates;
+  }
+
+  /** Aggregate only numeric HTTP evidence; arbitrary source error text and
+   * response bodies must not enter the discovery empty/error presentation. */
+  private discoveryHttpStatus(error: unknown): number | undefined {
+    if (error === null || typeof error !== 'object' || Array.isArray(error)) return undefined;
+    const raw = error as JsonObject;
+    const event = raw['event'] as JsonObject | undefined;
+    const failure = (event?.['error'] ?? raw['error'] ?? raw) as JsonObject;
+    const details = failure?.['details'] as JsonObject | undefined;
+    if (details?.['category'] !== 'SOURCE_HTTP_FAILED') return undefined;
+    const host = details['host'] as JsonObject | undefined;
+    const diagnostics = host?.['diagnostics'] as JsonObject | undefined;
+    const evidence = (details['cause'] ?? diagnostics?.['details'] ?? details) as JsonObject;
+    const status = evidence?.['httpStatus'];
+    return typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599
+      ? status : undefined;
+  }
+
+  private async persistSearchTiming(
+    candidate: SourceSwitchCandidate,
+    sourceVersion: string | undefined,
+    latencyMs: number,
+    measuredAt: number,
+    isCurrent: (() => boolean) | undefined,
+  ): Promise<void> {
+    if (sourceVersion === undefined || sourceVersion.trim().length === 0 || isCurrent?.() === false) return;
     try {
-      const candidateSourceId = source.sourceId;
-      const startedAt = Date.now();
-      const result = await this.runtimeOwner.request(
-        'change.bookSource',
-        { sourceId, bookId, keyword, sourceIds: [candidateSourceId] },
-        this.requestOptions(isCurrent),
-      );
-      if (isCurrent?.() === false) return [];
-      const latencyMs = Math.max(0, Date.now() - startedAt);
-      return this.decodeDiscoveryCandidates(result.data, source).map((candidate: SourceSwitchCandidate): SourceSwitchCandidate =>
-        ({ ...candidate, latencyMs, latencyKind: 'search' }));
-    } catch (error) {
-      if (isCurrent?.() === false) return [];
-      if (isNetworkEnvironmentFailure(error)) throw error;
-      // A source-switch search is a batch. One dead, challenged, or malformed
-      // source must not erase candidates from the remaining enabled sources.
-      return [];
+      await this.runtimeOwner.request('search-book.put', {
+        bookUrl: candidate.bookUrl,
+        origin: candidate.sourceId,
+        acquisition: {
+          schemaVersion: 2,
+          sourceVersion,
+          stage: 'search',
+          checkedAt: measuredAt,
+          searchTiming: { kind: 'search', sourceVersion, durationMs: latencyMs, measuredAt },
+        },
+      }, this.requestOptions(isCurrent));
+    } catch (_error) {
+      // Timing is an enrichment. Discovery remains usable when Core is an
+      // older build, a legacy row is missing, or persistence is unavailable.
     }
   }
 
-  private decodeDiscoveryCandidates(
+  private async decodeDiscoveryCandidates(
     data: JsonObject,
     source: SourceSwitchRegistryEntry,
-  ): SourceSwitchCandidate[] {
-    const rawCandidates = data['candidates'];
+    isCurrent: (() => boolean) | undefined,
+  ): Promise<SourceSwitchCandidate[]> {
+    if (data['sourceId'] !== source.sourceId) throw new Error('book.search returned a mismatched sourceId');
+    const returnedVersion = data['sourceVersion'];
+    if (returnedVersion !== undefined && (typeof returnedVersion !== 'string' || returnedVersion.length === 0 ||
+      (source.sourceVersion !== undefined && returnedVersion !== source.sourceVersion))) {
+      throw new Error('book.search returned a mismatched sourceVersion');
+    }
+    if ((source.category === 'comic' && data['contentKind'] !== 'manga') ||
+      (source.category === 'novel' && data['contentKind'] !== undefined && data['contentKind'] !== 'text')) {
+      throw new Error('book.search returned a mismatched contentKind');
+    }
+    const rawCandidates = data['books'];
     if (!Array.isArray(rawCandidates)) {
-      throw new Error('change.bookSource returned invalid data');
+      throw new Error('book.search returned invalid books');
     }
+    const searchSource: SearchSource = { sourceId: source.sourceId, name: source.sourceName,
+      enabled: true, category: source.category, baseUrl: source.baseUrl, sourceVersion: source.sourceVersion };
+    const version = typeof returnedVersion === 'string' ? returnedVersion : source.sourceVersion ?? '';
     const candidates: SourceSwitchCandidate[] = [];
+    let discarded = 0;
+    let processed = 0;
     for (const raw of rawCandidates) {
-      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-        continue;
+      if (++processed % 32 === 0) {
+        await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
+        if (isCurrent?.() === false) return [];
       }
-      const candidate = raw as JsonObject;
-      const sourceId = this.optionalString(candidate, 'sourceId');
-      const bookUrl = this.optionalString(candidate, 'bookUrl');
-      const bookName = this.optionalString(candidate, 'bookName');
-      if (sourceId === undefined || sourceId !== source.sourceId || bookUrl === undefined || bookName === undefined) {
-        continue;
+      try {
+        const book = decodeBookSearchResult(raw, searchSource, { searchRequestId: `source-switch-${source.sourceId}`,
+          bookSourceUrl: source.baseUrl ?? source.sourceId, sourceRuleVersion: version });
+        candidates.push({
+          sourceId: book.sourceId,
+          sourceName: source.sourceName,
+          category: source.category,
+          sourceOrder: source.sourceOrder,
+          sourceVersion: version.length > 0 ? version : undefined,
+          providerFamily: source.providerFamily,
+          bookUrl: book.bookId,
+          bookName: book.title,
+          author: book.author,
+          authorIdentity: book.authorIdentity,
+          coverUrl: book.coverUrl,
+          latestChapterTitle: book.latestChapterTitle,
+          searchVariables: book.variables,
+        });
+      } catch (_error) {
+        discarded += 1;
       }
-      const entry: SourceSwitchCandidate = {
-        sourceId,
-        sourceName: source.sourceName,
-        category: source.category,
-        sourceOrder: source.sourceOrder,
-        sourceVersion: source.sourceVersion,
-        bookUrl,
-        bookName,
-      };
-      const author = this.optionalString(candidate, 'author');
-      const coverUrl = this.optionalString(candidate, 'coverUrl');
-      if (author !== undefined) {
-        entry.author = author;
-        entry.authorIdentity = readBookAuthorIdentity(candidate['authorIdentity'], author, source.sourceVersion);
-      }
-      if (coverUrl !== undefined) {
-        entry.coverUrl = coverUrl;
-      }
-      if (candidate['offline'] === true) {
-        entry.offline = true;
-      }
-      if (candidate['timeout'] === true) {
-        entry.timeout = true;
-      }
-      candidates.push(entry);
     }
+    if (candidates.length === 0 && discarded > 0) throw new Error('book.search returned invalid books');
     return candidates;
   }
 
@@ -1190,6 +1579,7 @@ export class SourceSwitchGateway {
       throw new Error('source.list returned invalid data');
     }
     const sources = new Map<string, SourceSwitchRegistryEntry>();
+    const nonReadable = new Set<string>();
     for (let sourceOrder = 0; sourceOrder < rawSources.length; sourceOrder += 1) {
       const raw = rawSources[sourceOrder];
       if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
@@ -1197,6 +1587,9 @@ export class SourceSwitchGateway {
       }
       const source = raw as JsonObject;
       const sourceId = this.optionalString(source, 'sourceId');
+      const sourceVersion = source['sourceVersion'];
+      if (sourceVersion !== undefined &&
+        (typeof sourceVersion !== 'string' || sourceVersion.trim().length === 0)) continue;
       if (source['enabled'] === true && sourceId !== undefined && sourceId.trim().length > 0) {
         const sourceName = this.optionalString(source, 'name');
         const rawBookSource = source['bookSource'];
@@ -1209,19 +1602,23 @@ export class SourceSwitchGateway {
         }
         const category = classifyReaderSource({ bookSourceType, name: sourceName, group, sourceId,
           baseUrl: this.optionalString(source, 'baseUrl') });
-        if (!readerSourceCategoryIsReadable(category)) continue;
+        if (!readerSourceCategoryIsReadable(category)) { nonReadable.add(sourceId); continue; }
+        const baseUrl = this.optionalString(source, 'baseUrl');
         sources.set(sourceId, {
           sourceId,
           sourceName: sourceName === undefined || sourceName.trim().length === 0 ? sourceId : sourceName,
           sourceOrder,
           sourceVersion: this.optionalString(source, 'sourceVersion'),
           category,
+          baseUrl,
+          providerFamily: sourceSwitchProviderFamilyKey(sourceName, baseUrl),
         });
       }
     }
     if (revision !== this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision()) throw new Error('书源配置已变更，请重试');
     this.cachedSourceRevision = revision;
     this.cachedSources = sources;
+    this.cachedNonReadableSourceIds = nonReadable;
     return sources;
   }
 
@@ -1248,6 +1645,7 @@ export class SourceSwitchGateway {
       sourceName: source.sourceName,
       category: source.category,
       sourceOrder: source.sourceOrder,
+      providerFamily: source.providerFamily,
       bookUrl,
       bookName,
       checkedAt,
@@ -1257,6 +1655,12 @@ export class SourceSwitchGateway {
     const facts = book['acquisition'] as JsonObject | undefined;
     const version = facts === undefined ? undefined : this.optionalString(facts, 'sourceVersion');
     candidate.sourceVersion = version;
+    const timing = readSourceSwitchSearchTiming(facts, source.sourceVersion);
+    if (timing !== undefined) {
+      candidate.latencyMs = timing.latencyMs;
+      candidate.latencyKind = 'search';
+      candidate.latencyMeasuredAt = timing.latencyMeasuredAt;
+    }
     const catalogAt = facts === undefined ? checkedAt : this.optionalNumber(facts, 'catalogAt') ?? checkedAt;
     const stale = catalogAt <= 0 || Date.now() < catalogAt || Date.now() - catalogAt >= SOURCE_SWITCH_CACHE_TTL_MS ||
       facts?.['stale'] === true || (source.sourceVersion !== undefined && version !== source.sourceVersion);

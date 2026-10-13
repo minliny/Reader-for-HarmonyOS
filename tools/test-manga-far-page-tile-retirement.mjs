@@ -1,3 +1,4 @@
+import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -10,7 +11,7 @@ function load(name, dependencies = {}) {
 }
 const MangaSessionGateway = load('MangaSessionGateway');
 const MangaResourceGateway = load('MangaResourceGateway');
-const Controller = load('MangaSessionController', { MangaSessionGateway, MangaResourceGateway });
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
 const pages = Array.from({ length: 6 }, (_, ordinal) => {
   const pageId = `mp1:${String(ordinal).padStart(64, '0')}`;
   return { ordinal, pageId, resourceRef: `manga:${pageId}` };
@@ -32,8 +33,9 @@ await controller.setTileWindow([{ ordinal: 0, tileIndex: 3 }]);
 const oldTile = controller.tile(0, 3)?.image?.fileUri;
 assert.ok(oldTile);
 await controller.selectPage(4);
-assert.equal(controller.tile(0, 3), undefined, 'a far selection retires a tile outside the new three-page window');
-assert.equal(released.filter(uri => uri === oldTile).length, 1, 'the obsolete decoded tile lease is released once');
+assert.equal(controller.tiles.has('0:3'), false, 'a far selection retires the old active viewport owner');
+assert.equal(controller.tile(0, 3)?.image?.fileUri, oldTile, 'completed pixels remain available within the same chapter');
+assert.equal(released.filter(uri => uri === oldTile).length, 0, 'chapter ownership preserves the completed display lease');
 controller.close();
 assert.equal(released.filter(uri => uri === oldTile).length, 1, 'close cannot release an already retired tile twice');
-console.log('PASS far-page selection retires the obsolete tile before a new viewport callback');
+console.log('PASS far-page selection retires the active tile window and preserves its chapter lease until close');
