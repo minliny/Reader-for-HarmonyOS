@@ -8,11 +8,24 @@ import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-pr
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { actualReaderPageShell, readerPageShellSourceUrl } from './lib/reader-page-shell-runtime-probe.mjs';
 import { verifyReaderPageFrameworkCoverage } from './lib/reader-page-framework-coverage.mjs';
+import { readerPageBuilderSlots } from './lib/reader-page-builder-slots.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
 const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
+for (const [name, file, slots] of [
+  ['ReaderPageScaffold', 'common/ReaderPageScaffold.ets', ['content', 'header', 'footer', 'overlayContent']],
+  ['ReaderStandardPage', 'common/ReaderStandardPage.ets', ['content', 'header', 'footer', 'overlayContent']],
+  ['MainTabShell', 'shell/MainTabShell.ets', ['content', 'header', 'overlayContent']],
+]) {
+  const source = readFileSync(`entry/src/main/ets/features/${file}`, 'utf8');
+  assert.deepEqual([...readerPageBuilderSlots(source, name)], slots, `${name}: all original public slots retain their actual declarations`);
+  const collision = source.replaceAll('overlayContent', 'overlay');
+  assert.notEqual(collision, source);
+  assert.throws(() => readerPageBuilderSlots(collision, name), /collides.*native CustomComponent/,
+    `${name}: the focused SDK gate must reject the compiler-only native overlay collision`);
+}
 const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
 const findChild = (owner, predicate) => {
   for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
@@ -80,7 +93,7 @@ for (const variant of ['standard', 'mainTab', 'settings', 'detail', 'mangaDetail
   const slots = [], headerHeights = [], footerHeights = [];
   Object.assign(probe.owner, { variant, headerKind: variant === 'reader' ? 'reader' : 'standard',
     frameInsetLeft: 13, frameInsetRight: 17, headerTop: 6, footerBottom: 28,
-    content: () => slots.push('body'), header: () => slots.push('header'), footer: () => slots.push('footer'), overlay: () => slots.push('overlay'),
+    content: () => slots.push('body'), header: () => slots.push('header'), footer: () => slots.push('footer'), overlayContent: () => slots.push('overlay'),
     onHeaderHeightChange: height => headerHeights.push(height), onFooterHeightChange: height => footerHeights.push(height) });
   probe.owner.initialRender();
   assert.deepEqual(slots, ['body', 'header', 'footer', 'overlay'], 'actual finite host delegates every slot exactly once');

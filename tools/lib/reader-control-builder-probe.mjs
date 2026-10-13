@@ -15,6 +15,7 @@ import { mangaDirectoryEntryRowSdk } from './manga-directory-entry-row-probe.mjs
 import { actualReaderPageShell } from './reader-page-shell-runtime-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
 import { createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { readerPageBuilderSlots } from './reader-page-builder-slots.mjs';
 
 const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -59,6 +60,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   assert.equal(original.parseDiagnostics.length, 0, 'production ETS parses');
   const struct = componentDeclaration(original, hooks.componentName);
   assert.ok(struct, 'production component declaration exists');
+  readerPageBuilderSlots(source,struct.name.getText(original));
   // Match the real SDK frontend's whole-struct Builder name collection. A
   // focused probe may supply a pre-existing nonselected Builder seam, but its
   // actual declared UI syntax must still be recognized by the compiler.
@@ -288,6 +290,8 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   for (const [name, child] of Object.entries(hooks.childSources ?? {})) {
     syntax.componentCollection.customComponents.add(name);
     syntax.propCollection.set(name, childProps(child, name));
+    const pageSlots=readerPageBuilderSlots(child,name);
+    if(pageSlots)syntax.builderParamObjectCollection.set(name,pageSlots);
   }
   const file = parse(`@Component struct ReaderBuilderProbe {\n${members.join('\n')}\n${names.includes('build') ? '' : 'build() { Column() {} }'}\n}`);
   // The full SDK frontend collects declared method names before transforming

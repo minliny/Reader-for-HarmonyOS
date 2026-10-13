@@ -7337,7 +7337,7 @@
                 ]
               },
               {
-                "name": "overlay",
+                "name": "overlayContent",
                 "type": "() => void",
                 "decorators": [
                   "@BuilderParam"
@@ -7476,7 +7476,7 @@
             ]
           }
         ],
-        "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderFixedHeaderHost } from './ReaderFixedHeaderHost';\nimport { ReaderHeaderKind, ReaderPageFrameModifier, ReaderPageShellKind, readerPageAreaLength } from './ReaderPageShell';\n@Component\nexport struct ReaderPageScaffold extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        private readingUnderlayColor?: string;\n        variant?: ReaderPageShellKind;\n        pageVisible?: boolean;\n        readingContentKind?: 'text' | 'manga';\n        headerKind?: ReaderHeaderKind;\n        headerTop?: number;\n        headerInsetLeft?: number;\n        headerInsetRight?: number;\n        footerInsetLeft?: number;\n        footerInsetRight?: number;\n        footerBottom?: number;\n        frameInsetLeft?: number;\n        frameInsetRight?: number;\n        onHeaderHeightChange?: (height: number) => void;\n        onFooterHeightChange?: (height: number) => void;\n        content?: () => void;\n        header?: () => void;\n        footer?: () => void;\n        overlay?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @StorageLink('readerWindowChromeUnderlayColor')\n    private readingUnderlayColor: string = readerAppColor('app.window.background', 'day');\n    @Prop\n    variant: ReaderPageShellKind = 'standard';\n    @Prop\n    pageVisible: boolean = true;\n    @Prop\n    readingContentKind: 'text' | 'manga' = 'text';\n    @Prop\n    headerKind: ReaderHeaderKind = 'standard';\n    @Prop\n    headerTop: number = 0;\n    @Prop\n    headerInsetLeft: number = 0;\n    @Prop\n    headerInsetRight: number = 0;\n    @Prop\n    footerInsetLeft: number = 0;\n    @Prop\n    footerInsetRight: number = 0;\n    @Prop\n    footerBottom: number = 0;\n    @Prop\n    frameInsetLeft: number = 0;\n    @Prop\n    frameInsetRight: number = 0;\n    onHeaderHeightChange: (height: number) => void = (_height: number): void => { };\n    onFooterHeightChange: (height: number) => void = (_height: number): void => { };\n    @BuilderParam\n    content: () => void = this.emptySlot;\n    @BuilderParam\n    header: () => void = this.emptySlot;\n    @BuilderParam\n    footer: () => void = this.emptySlot;\n    @BuilderParam\n    overlay: () => void = this.emptySlot;\n    @Builder\n    private emptySlot() { }\n    build() {\n        .width<\n    >('100%').height<\n    >('100%')\n            .padding<\n    >({ left: this.frameInsetLeft, right: this.frameInsetRight })\n            .attributeModifier<\n    >(new ReaderPageFrameModifier(this.appThemeScheme, this.variant, this.readingUnderlayColor))\n            .expandSafeArea<\n    >(this.variant === 'reader' ? (this.readingContentKind === 'manga' ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM]) : [], this.variant === 'reader' ? (this.readingContentKind === 'manga' ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] : [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM]) : [])\n            .ignoreLayoutSafeArea<\n    >(this.variant === 'reader' && this.readingContentKind === 'manga' ? [LayoutSafeAreaType.SYSTEM] : [], this.variant === 'reader' && this.readingContentKind === 'manga' ? [LayoutSafeAreaEdge.ALL] : [])\n            .opacity<\n    >(this.pageVisible ? 1 : 0)\n            .hitTestBehavior<\n    >(this.pageVisible ? HitTestMode.Default : HitTestMode.Transparent);\n    }\n}\n"
+        "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderFixedHeaderHost } from './ReaderFixedHeaderHost';\nimport { ReaderHeaderKind, ReaderPageFrameModifier, ReaderPageShellKind, readerPageAreaLength } from './ReaderPageShell';\n@Component\nexport struct ReaderPageScaffold extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        private readingUnderlayColor?: string;\n        variant?: ReaderPageShellKind;\n        pageVisible?: boolean;\n        readingContentKind?: 'text' | 'manga';\n        headerKind?: ReaderHeaderKind;\n        headerTop?: number;\n        headerInsetLeft?: number;\n        headerInsetRight?: number;\n        footerInsetLeft?: number;\n        footerInsetRight?: number;\n        footerBottom?: number;\n        frameInsetLeft?: number;\n        frameInsetRight?: number;\n        onHeaderHeightChange?: (height: number) => void;\n        onFooterHeightChange?: (height: number) => void;\n        content?: () => void;\n        header?: () => void;\n        footer?: () => void;\n        overlayContent?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @StorageLink('readerWindowChromeUnderlayColor')\n    private readingUnderlayColor: string = readerAppColor('app.window.background', 'day');\n    @Prop\n    variant: ReaderPageShellKind = 'standard';\n    @Prop\n    pageVisible: boolean = true;\n    @Prop\n    readingContentKind: 'text' | 'manga' = 'text';\n    @Prop\n    headerKind: ReaderHeaderKind = 'standard';\n    @Prop\n    headerTop: number = 0;\n    @Prop\n    headerInsetLeft: number = 0;\n    @Prop\n    headerInsetRight: number = 0;\n    @Prop\n    footerInsetLeft: number = 0;\n    @Prop\n    footerInsetRight: number = 0;\n    @Prop\n    footerBottom: number = 0;\n    @Prop\n    frameInsetLeft: number = 0;\n    @Prop\n    frameInsetRight: number = 0;\n    onHeaderHeightChange: (height: number) => void = (_height: number): void => { };\n    onFooterHeightChange: (height: number) => void = (_height: number): void => { };\n    @BuilderParam\n    content: () => void = this.emptySlot;\n    @BuilderParam\n    header: () => void = this.emptySlot;\n    @BuilderParam\n    footer: () => void = this.emptySlot;\n    @BuilderParam\n    overlayContent: () => void = this.emptySlot;\n    @Builder\n    private emptySlot() { }\n    build() {\n        .width<\n    >('100%').height<\n    >('100%')\n            .padding<\n    >({ left: this.frameInsetLeft, right: this.frameInsetRight })\n            .attributeModifier<\n    >(new ReaderPageFrameModifier(this.appThemeScheme, this.variant, this.readingUnderlayColor))\n            .expandSafeArea<\n    >(this.variant === 'reader' ? (this.readingContentKind === 'manga' ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM]) : [], this.variant === 'reader' ? (this.readingContentKind === 'manga' ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] : [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM]) : [])\n            .ignoreLayoutSafeArea<\n    >(this.variant === 'reader' && this.readingContentKind === 'manga' ? [LayoutSafeAreaType.SYSTEM] : [], this.variant === 'reader' && this.readingContentKind === 'manga' ? [LayoutSafeAreaEdge.ALL] : [])\n            .opacity<\n    >(this.pageVisible ? 1 : 0)\n            .hitTestBehavior<\n    >(this.pageVisible ? HitTestMode.Default : HitTestMode.Transparent);\n    }\n}\n"
       },
       "specSources": [
         {
@@ -7713,7 +7713,7 @@
             "content",
             "header",
             "footer",
-            "overlay",
+            "overlayContent",
             "footerBottom",
             "onHeaderHeightChange",
             "onFooterHeightChange"
@@ -7736,7 +7736,7 @@
             "content",
             "header",
             "footer",
-            "overlay"
+            "overlayContent"
           ]
         },
         {
@@ -7752,7 +7752,7 @@
             "content",
             "header",
             "onHeaderHeightChange",
-            "overlay"
+            "overlayContent"
           ]
         },
         {
@@ -7769,7 +7769,7 @@
             "content",
             "header",
             "footer",
-            "overlay",
+            "overlayContent",
             "onHeaderHeightChange"
           ]
         },
@@ -7784,7 +7784,7 @@
             "pageVisible",
             "readingContentKind",
             "content",
-            "overlay"
+            "overlayContent"
           ]
         },
         {
@@ -7798,7 +7798,7 @@
             "content",
             "header",
             "footer",
-            "overlay",
+            "overlayContent",
             "onHeaderHeightChange",
             "onFooterHeightChange"
           ]
@@ -8088,7 +8088,7 @@
                 ]
               },
               {
-                "name": "overlay",
+                "name": "overlayContent",
                 "type": "() => void",
                 "decorators": [
                   "@BuilderParam"
@@ -8131,7 +8131,7 @@
             ]
           }
         ],
-        "implementation": "import { ReaderPageScaffold } from './ReaderPageScaffold';\nimport { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';\nimport { SurfaceHorizontalFrame } from './SurfaceHorizontalGeometry';\nimport { ReaderStandardPageVariant, readerStandardPageSpec, readerStandardPageContentFrame, readerPageAreaLength, readerPageContentStartInset, readerStandardPageContentEndInset, readerStandardPageFooterBottom } from './ReaderPageShell';\n@Component\nexport struct ReaderStandardPage extends   {\n    constructor(?: {\n        private readerWindowMetricsRevision?: number;\n        variant?: ReaderStandardPageVariant;\n        private headerHeight?: number;\n        private footerHeight?: number;\n        private viewportWidth?: number;\n        scroller?: Scroller;\n        content?: () => void;\n        header?: () => void;\n        footer?: () => void;\n        overlay?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerWindowMetricsRevision')\n    private readerWindowMetricsRevision: number = 0;\n    @Prop\n    variant: ReaderStandardPageVariant = 'management';\n    @State\n    private headerHeight: number = readerPageContentStartInset();\n    @State\n    private footerHeight: number = 0;\n    @State\n    private viewportWidth: number = 0;\n    scroller: Scroller = new Scroller();\n    @BuilderParam\n    content: () => void = this.emptySlot;\n    @BuilderParam\n    header: () => void = this.emptySlot;\n    @BuilderParam\n    footer: () => void = this.emptySlot;\n    @BuilderParam\n    overlay: () => void = this.emptySlot;\n    @Builder\n    private emptySlot() { }\n    build() {\n        ReaderPageScaffold({ variant: 'standard', headerKind: this.variant === 'settingsHome' ? 'home' : 'standard',\n            content: (): void => { this.scrollContent(); },\n            header: (): void => { this.header(); }, footer: (): void => { this.footer(); }, overlay: (): void => { this.overlay(); },\n            footerBottom: readerStandardPageFooterBottom(this.variant, ReaderWindowCoordinator.metrics()),\n            onHeaderHeightChange: (height: number): void => { if (height > 0 && Math.abs(height - this.headerHeight) > .1)\n                this.headerHeight = height; },\n            onFooterHeightChange: (height: number): void => { if (Math.abs(height - this.footerHeight) > .1)\n                this.footerHeight = height; },\n        }).onAreaChange((_old: Area, next: Area): void => {\n            const width = readerPageAreaLength(next.width);\n            if (Number.isFinite(width) && width > 0 && Math.abs(width - this.viewportWidth) > .1)\n                this.viewportWidth = width;\n        });\n    }\n    @Builder\n    private scrollContent() {\n        .width<\n    >('100%').height<\n    >('100%').align<\n    >(Alignment.TopStart).scrollBar<\n    >(BarState.Off);\n    }\n    private contentFrame(): SurfaceHorizontalFrame {\n        if (this.readerWindowMetricsRevision < 0)\n            return new SurfaceHorizontalFrame(0, 0, 0);\n        const metrics = ReaderWindowCoordinator.metrics();\n        return readerStandardPageContentFrame(this.variant, metrics, this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width);\n    }\n}\n"
+        "implementation": "import { ReaderPageScaffold } from './ReaderPageScaffold';\nimport { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';\nimport { SurfaceHorizontalFrame } from './SurfaceHorizontalGeometry';\nimport { ReaderStandardPageVariant, readerStandardPageSpec, readerStandardPageContentFrame, readerPageAreaLength, readerPageContentStartInset, readerStandardPageContentEndInset, readerStandardPageFooterBottom } from './ReaderPageShell';\n@Component\nexport struct ReaderStandardPage extends   {\n    constructor(?: {\n        private readerWindowMetricsRevision?: number;\n        variant?: ReaderStandardPageVariant;\n        private headerHeight?: number;\n        private footerHeight?: number;\n        private viewportWidth?: number;\n        scroller?: Scroller;\n        content?: () => void;\n        header?: () => void;\n        footer?: () => void;\n        overlayContent?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerWindowMetricsRevision')\n    private readerWindowMetricsRevision: number = 0;\n    @Prop\n    variant: ReaderStandardPageVariant = 'management';\n    @State\n    private headerHeight: number = readerPageContentStartInset();\n    @State\n    private footerHeight: number = 0;\n    @State\n    private viewportWidth: number = 0;\n    scroller: Scroller = new Scroller();\n    @BuilderParam\n    content: () => void = this.emptySlot;\n    @BuilderParam\n    header: () => void = this.emptySlot;\n    @BuilderParam\n    footer: () => void = this.emptySlot;\n    @BuilderParam\n    overlayContent: () => void = this.emptySlot;\n    @Builder\n    private emptySlot() { }\n    build() {\n        ReaderPageScaffold({ variant: 'standard', headerKind: this.variant === 'settingsHome' ? 'home' : 'standard',\n            content: (): void => { this.scrollContent(); },\n            header: (): void => { this.header(); }, footer: (): void => { this.footer(); }, overlayContent: (): void => { this.overlayContent(); },\n            footerBottom: readerStandardPageFooterBottom(this.variant, ReaderWindowCoordinator.metrics()),\n            onHeaderHeightChange: (height: number): void => { if (height > 0 && Math.abs(height - this.headerHeight) > .1)\n                this.headerHeight = height; },\n            onFooterHeightChange: (height: number): void => { if (Math.abs(height - this.footerHeight) > .1)\n                this.footerHeight = height; },\n        }).onAreaChange((_old: Area, next: Area): void => {\n            const width = readerPageAreaLength(next.width);\n            if (Number.isFinite(width) && width > 0 && Math.abs(width - this.viewportWidth) > .1)\n                this.viewportWidth = width;\n        });\n    }\n    @Builder\n    private scrollContent() {\n        .width<\n    >('100%').height<\n    >('100%').align<\n    >(Alignment.TopStart).scrollBar<\n    >(BarState.Off);\n    }\n    private contentFrame(): SurfaceHorizontalFrame {\n        if (this.readerWindowMetricsRevision < 0)\n            return new SurfaceHorizontalFrame(0, 0, 0);\n        const metrics = ReaderWindowCoordinator.metrics();\n        return readerStandardPageContentFrame(this.variant, metrics, this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width);\n    }\n}\n"
       },
       "specSources": [
         {
@@ -8362,7 +8362,7 @@
             "content",
             "header",
             "footer",
-            "overlay"
+            "overlayContent"
           ]
         },
         {
@@ -8375,7 +8375,7 @@
             "scroller",
             "content",
             "header",
-            "overlay"
+            "overlayContent"
           ]
         },
         {

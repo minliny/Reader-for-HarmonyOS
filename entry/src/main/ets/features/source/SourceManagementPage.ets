@@ -195,7 +195,7 @@ export struct SourceManagementPage {
       content: (): void => { this.pageContent(); },
       header: (): void => { this.backBar(); },
       footer: (): void => { this.pageFooter(); },
-      overlay: (): void => { this.groupOverlay(); },
+      overlayContent: (): void => { this.groupOverlay(); },
       onHeaderHeightChange: (height: number): void => {
         if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageHeaderHeight) > 0.1) {
           this.pageHeaderHeight = height;

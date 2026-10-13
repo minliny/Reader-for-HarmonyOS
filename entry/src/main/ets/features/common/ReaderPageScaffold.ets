@@ -27,7 +27,7 @@ export struct ReaderPageScaffold {
   @BuilderParam content: () => void = this.emptySlot;
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam footer: () => void = this.emptySlot;
-  @BuilderParam overlay: () => void = this.emptySlot;
+  @BuilderParam overlayContent: () => void = this.emptySlot;
   @Builder private emptySlot() {}
 
   build() {
@@ -48,7 +48,7 @@ export struct ReaderPageScaffold {
             if (Number.isFinite(height) && height >= 0) this.onFooterHeightChange(height);
           });
       }.width('100%').height('100%').zIndex(20).hitTestBehavior(HitTestMode.Transparent);
-      Stack({ alignContent: Alignment.TopStart }) { this.overlay(); }
+      Stack({ alignContent: Alignment.TopStart }) { this.overlayContent(); }
         .width('100%').height('100%').zIndex(30).hitTestBehavior(HitTestMode.Transparent);
     }.width('100%').height('100%')
       .padding({ left: this.frameInsetLeft, right: this.frameInsetRight })

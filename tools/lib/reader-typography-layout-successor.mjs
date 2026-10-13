@@ -115,7 +115,7 @@ export function proveBookshelfTypographyRail(pageSource, previous, readSource = 
   for (const [key, value] of [['activeTab', "'bookshelf'"], ['showTabletRail', '!this.showBottomNav()'], ['railVariant', "'bookshelf'"]])
     assert.equal(prop(hosts[0], key)?.getText(owner.tree), value, 'exact bookshelf wide rail binding ' + key);
   const shellSource = readSource(rail.shellPath);
-  proveTypographyLayoutBinding(shellSource, rail.shellPath, { method: 'build', component: 'ReaderPageScaffold', variant: 'mainTab', slot: 'overlay', builder: 'mainOverlays', edges: [] });
+  proveTypographyLayoutBinding(shellSource, rail.shellPath, { method: 'build', component: 'ReaderPageScaffold', variant: 'mainTab', slot: 'overlayContent', builder: 'mainOverlays', edges: [] });
   const shell = methodOf(shellSource, rail.shellPath, 'mainOverlays'), bars = calls(shell.method, shell.tree, 'MainTabBar');
   assert.equal(bars.length, 1, 'one exact shared vertical rail actor');
   assert.equal(prop(bars[0], 'vertical')?.getText(shell.tree), 'true', 'actual bookshelf delegate is vertical');

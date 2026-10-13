@@ -81,11 +81,12 @@ export struct DiscoverPage {
       activeTab: 'discover', headerKind: 'home',
       onMainTab: (key: string): void => this.onMainTab(key),
       header: (): void => { this.homeTopBar(); },
+      content: (): void => { this.discoverContent(); },
       onHeaderHeightChange: (height: number): void => {
         if (Number.isFinite(height) && height > 0 && Math.abs(height - this.fixedHeaderHeight) > .1)
           this.fixedHeaderHeight = height;
       },
-    }) { this.discoverContent(); }
+    });
   }
 
   @Builder

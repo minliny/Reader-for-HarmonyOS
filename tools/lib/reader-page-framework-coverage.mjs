@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { readerPageBuilderSlots } from './reader-page-builder-slots.mjs';
 
 const sdk = process.env.READER_ETS_LOADER_ROOT ??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -19,7 +20,8 @@ export function verifyReaderPageFrameworkCoverage(root, contract,
     .filter(file => file.endsWith('.ets'));
   const trees = new Map(), declarations = new Map(), imports = new Map(), graph = new Map(), hosts = new Map();
   for (const file of sources) {
-    const tree = ts.createSourceFile(file, readSource(file), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+    const source=readSource(file);
+    const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
     assert.deepEqual(tree.parseDiagnostics, [], `${file}: page-contract SDK AST`);
     trees.set(file, tree);
     const localImports = new Map(); imports.set(file, localImports);
@@ -31,6 +33,7 @@ export function verifyReaderPageFrameworkCoverage(root, contract,
             name: element.propertyName?.text ?? element.name.text });
       }
       if (!ts.isStructDeclaration(statement)) continue;
+      readerPageBuilderSlots(source,statement.name.text);
       for (const member of statement.members.filter(ts.isMethodDeclaration))
         declarations.set(`${file}#${statement.name.text}#${member.name.getText(tree)}`, { file, tree, owner: statement.name.text, member });
     }
@@ -60,7 +63,7 @@ export function verifyReaderPageFrameworkCoverage(root, contract,
       if (['ReaderPageScaffold', 'ReaderStandardPage', 'ReaderFixedHeaderHost', 'MainTabShell'].includes(name)) {
         const props = node.arguments[0];
         if (props && ts.isObjectLiteralExpression(props)) for (const prop of props.properties) {
-          if (!['header', 'content', 'footer', 'overlay'].includes(prop.name?.getText(declaration.tree)) ||
+          if (!['header', 'content', 'footer', 'overlayContent'].includes(prop.name?.getText(declaration.tree)) ||
             !ts.isArrowFunction(prop.initializer)) continue;
           walk(prop.initializer.body, child => {
             if (!ts.isCallExpression(child) || !ts.isIdentifier(child.expression)) return;

@@ -80,3 +80,11 @@ VM 只读预检已确认既有 Mate 80 Pro 实例路径与当前进程一致、g
 响应式门禁保留原八种宽度、720vp 上限、19vp 边距及全宽分支；新增十个实际 standard variant caller→StandardPage→Scaffold 的数值/vp、对称/非对称安全区回放，保留各页原 Scroller。搜索进度和失败控制沿实际 compound header 查找，停止/重试/出版 fence 及 1000 条引用复用断言保留。
 
 这些针对性结果仍不替代第四轮全量与 HAP。后续结果绑定本次冻结提交及私有 `.reader-local/ui-framework/hap-build-r4.log`、不可变 manifest、部署回执和 VM 原始取证。
+
+## 第四轮全量通过与完整编译缺陷
+
+冻结提交 `aa3eeac2` 的第四轮规范流水线完整执行 675 项合同，675 PASS、0 FAIL、unrun 为空，其中 470 项为 integration，约 514 秒。合同报告为 `/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-contract-run-HdpjWD/results.json`。随后真实 ArkTS 编译失败，未发布 HAP、manifest，也未安装候选包；合同通过不能替代完整编译。
+
+完整编译明确定位两类生产接口缺陷：Scaffold、StandardPage、MainTabShell 的 `@BuilderParam overlay` 与 ArkUI `CustomComponent.overlay` 基类方法同名；Discover/RSS 调用 MainTabShell 时仍使用只允许单 Builder 槽的尾随 lambda。修复限定到三个公共声明及精确实际调用点：业务叠层槽更名为 `overlayContent`，两页显式传入原内容 Builder。业务状态、native overlay API、Scroller、安全区和路由对象不变。
+
+测试登记随实际公共接口精确迁移，历史 witness、预算及业务负控保留。公共槽位检查从已安装 SDK 的 COMMON_ATTRS 读取基类方法名，三组恢复旧 `overlay` 槽的负控必须拒绝。第五轮仍须完整执行规范合同、ArkTS、签名、发布与产物核验；其结果存入私有 `.reader-local/ui-framework/hap-build-r5.log` 及后续绑定证据。
