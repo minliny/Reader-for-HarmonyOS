@@ -440,7 +440,7 @@ export struct SearchPage {
           if (Math.abs(height - this.fixedHeaderHeight) > .1) this.fixedHeaderHeight = height;
         }
       },
-      overlay: (): void => { this.searchActivity(); },
+      overlayContent: (): void => { this.searchActivity(); },
     });
   }
 

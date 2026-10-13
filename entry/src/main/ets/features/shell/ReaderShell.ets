@@ -167,7 +167,7 @@ export struct ReaderShell {
   build() {
     ReaderPageScaffold({ variant: 'reader', headerKind: 'reader', pageVisible: this.visible, readingContentKind: this.contentKind,
       content: (): void => { this.readingContent(); },
-      overlay: (): void => { this.readingOverlay(); },
+      overlayContent: (): void => { this.readingOverlay(); },
     });
   }
 

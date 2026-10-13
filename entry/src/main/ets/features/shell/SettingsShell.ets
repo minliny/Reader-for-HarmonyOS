@@ -38,7 +38,7 @@ export struct SettingsShell {
         content: (): void => { this.homeContent(); },
         header: (): void => { this.homeTopBar(); },
         footer: (): void => { this.homeNavigation(); },
-        overlay: (): void => { this.pageOverlay(); },
+        overlayContent: (): void => { this.pageOverlay(); },
       }).onAreaChange((_old: Area, next: Area): void => this.reportOverlayOrigin(next));
     } else {
       ReaderStandardPage({
@@ -46,7 +46,7 @@ export struct SettingsShell {
         scroller: this.generalScroller,
         content: (): void => { this.generalContent(); },
         header: (): void => { this.generalTopBar(); },
-        overlay: (): void => { this.pageOverlay(); },
+        overlayContent: (): void => { this.pageOverlay(); },
       }).onAreaChange((_old: Area, next: Area): void => this.reportOverlayOrigin(next));
     }
   }

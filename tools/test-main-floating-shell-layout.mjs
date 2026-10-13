@@ -87,7 +87,7 @@ const verifyScroll = (owner, top, bottom) => {
 // pixel layout and gesture dispatch remain separate evidence layers.
 for (const bottomNav of [false, true]) {
   const tabCalls = [];
-  const shell = probe('shell/MainTabShell.ets', ['navigationGeneration', 'mounted', 'requestMainTab', 'aboutToAppear', 'aboutToDisappear', 'content', 'header', 'overlay', 'emptySlot', 'headerKind', 'headerTop', 'headerInsetLeft', 'headerInsetRight', 'bottomNavigation', 'mainOverlays', 'build'], {
+  const shell = probe('shell/MainTabShell.ets', ['navigationGeneration', 'mounted', 'requestMainTab', 'aboutToAppear', 'aboutToDisappear', 'content', 'header', 'overlayContent', 'emptySlot', 'headerKind', 'headerTop', 'headerInsetLeft', 'headerInsetRight', 'bottomNavigation', 'mainOverlays', 'build'], {
     activeTab: 'bookshelf', showTabletRail: false, showBottomNav: bottomNav, content() {}, onMainTab(key, generation) { tabCalls.push([key, generation]); },
   });
   shell.aboutToAppear(); shell.initialRender();

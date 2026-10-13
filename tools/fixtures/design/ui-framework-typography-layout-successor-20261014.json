@@ -185,7 +185,7 @@
             "method": "build",
             "component": "ReaderPageScaffold",
             "variant": "search",
-            "slot": "overlay",
+            "slot": "overlayContent",
             "builder": "searchActivity",
             "edges": []
           }

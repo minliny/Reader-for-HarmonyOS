@@ -17,13 +17,13 @@ export struct ReaderStandardPage {
   @BuilderParam content: () => void = this.emptySlot;
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam footer: () => void = this.emptySlot;
-  @BuilderParam overlay: () => void = this.emptySlot;
+  @BuilderParam overlayContent: () => void = this.emptySlot;
   @Builder private emptySlot() {}
 
   build() {
     ReaderPageScaffold({ variant: 'standard', headerKind: this.variant === 'settingsHome' ? 'home' : 'standard',
       content: (): void => { this.scrollContent(); },
-      header: (): void => { this.header(); }, footer: (): void => { this.footer(); }, overlay: (): void => { this.overlay(); },
+      header: (): void => { this.header(); }, footer: (): void => { this.footer(); }, overlayContent: (): void => { this.overlayContent(); },
       footerBottom: readerStandardPageFooterBottom(this.variant, ReaderWindowCoordinator.metrics()),
       onHeaderHeightChange: (height: number): void => { if (height > 0 && Math.abs(height - this.headerHeight) > .1) this.headerHeight = height; },
       onFooterHeightChange: (height: number): void => { if (Math.abs(height - this.footerHeight) > .1) this.footerHeight = height; },

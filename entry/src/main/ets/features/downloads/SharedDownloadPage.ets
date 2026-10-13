@@ -148,7 +148,7 @@ export struct SharedDownloadPage {
       content: (): void => { this.pageContent(); },
       header: (): void => { this.fixedHeader(); },
       footer: (): void => { this.fixedDock(); },
-      overlay: (): void => { this.pageOverlays(); },
+      overlayContent: (): void => { this.pageOverlays(); },
     }).onAreaChange((_old: Area, area: Area): void => {
       const height = readerPageAreaLength(area.height);
       if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageHeight) > 0.5) this.pageHeight = height;

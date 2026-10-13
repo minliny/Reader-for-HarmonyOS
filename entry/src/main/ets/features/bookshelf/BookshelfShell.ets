@@ -126,7 +126,7 @@ export struct BookshelfShell {
       onMainTab: (key: string, generation?: number): void => this.requestMainTab(key, generation ?? this.navigationGeneration),
       content: (): void => { this.content(); },
       header: (): void => { this.shellHeader(); },
-      overlay: (): void => { this.shellOverlay(); },
+      overlayContent: (): void => { this.shellOverlay(); },
       onHeaderHeightChange: (height: number): void => {
         const totalHeight = height;
         if (Number.isFinite(totalHeight) && totalHeight > 0) {

@@ -61,7 +61,7 @@ const { Component } = createReaderBuilderProbe(standard, boundedMembers(standard
 }, controls.hooks);
 const allNodes = owner => [...(owner.nodes?.values() ?? []), ...[...(owner.children?.values() ?? [])].flatMap(allNodes)];
 for (const variant of ['rssFeed', 'rssDetail', 'rssManagement']) {
-  const owner = new Component(undefined, { variant, content() {}, header() {}, footer() {}, overlay() {} });
+  const owner = new Component(undefined, { variant, content() {}, header() {}, footer() {}, overlayContent() {} });
   owner.initialRender();
   const viewport = allNodes(owner).find(node => node.type === 'Scroll');
   const body = allNodes(owner).find(node => node.type === 'Column' && node.padding?.top === 66);

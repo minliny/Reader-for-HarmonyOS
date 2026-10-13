@@ -113,11 +113,12 @@ export struct RssPage {
       showTabletRail: this.isWideViewport(),
       onMainTab: (key: string): void => this.onMainTab(key),
       header: (): void => { this.rssHeader(); },
+      content: (): void => { this.rssContent(); },
       onHeaderHeightChange: (height: number): void => {
         if (Number.isFinite(height) && height > 0 && Math.abs(height - this.fixedHeaderHeight) > .1)
           this.fixedHeaderHeight = height;
       },
-    }) { this.rssContent(); }
+    });
   }
 
   @Builder

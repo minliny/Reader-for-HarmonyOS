@@ -140,7 +140,7 @@ const actualHeader = createReaderBuilderProbe(actualHeaderSource, boundedMembers
 }, actualIcons.hooks);
 dependencies.AppTopBar = actualHeader.Component;
 const actualMainSource = read('features/shell/MainTabShell.ets');
-syntax.builderParamObjectCollection.set('MainTabShell', new Set(['content', 'header', 'overlay']));
+syntax.builderParamObjectCollection.set('MainTabShell', new Set(['content', 'header', 'overlayContent']));
 let shellWidth = 365;
 const shellMetrics = () => new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,shellWidth,844));
 const mainBarSource = read('features/shell/MainTabBar.ets');

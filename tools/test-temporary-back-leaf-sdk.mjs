@@ -41,7 +41,7 @@ function harness(){
   p.hooks.lifecycleChildren=true;
   for(const [name,path,slot] of [['MainTabShell','features/shell/MainTabShell','content'],['AppTopBar','features/common/AppTopBar','trailing'],['ReaderIconButton','features/common/ReaderIconButton'],['ReaderSelect','features/common/ReaderSelect']]){
     const source=read(path);p.hooks.childSources[name]=source;
-    if(slot)syntax.builderParamObjectCollection.set(name,new Set(name==='MainTabShell'?['content','header','overlay']:[slot]));
+    if(slot)syntax.builderParamObjectCollection.set(name,new Set(name==='MainTabShell'?['content','header','overlayContent']:[slot]));
     const NativeChild=class {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}};
     if(name==='MainTabShell'){
       // Back ownership remains in the actual Shell's named slots. Only tab

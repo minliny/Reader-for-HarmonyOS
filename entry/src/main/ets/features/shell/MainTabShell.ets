@@ -31,7 +31,7 @@ export struct MainTabShell {
   onHeaderHeightChange: (height: number) => void = (_height: number): void => {};
   @BuilderParam content: () => void;
   @BuilderParam header: () => void = this.emptySlot;
-  @BuilderParam overlay: () => void = this.emptySlot;
+  @BuilderParam overlayContent: () => void = this.emptySlot;
   @Builder private emptySlot() {}
 
   aboutToAppear(): void { this.mounted = true; }
@@ -48,7 +48,7 @@ export struct MainTabShell {
       content: (): void => { this.content(); },
       header: (): void => { this.header(); },
       footer: (): void => { this.bottomNavigation(); },
-      overlay: (): void => { this.mainOverlays(); },
+      overlayContent: (): void => { this.mainOverlays(); },
       onHeaderHeightChange: (height: number): void => this.onHeaderHeightChange(height + this.headerTop),
     });
   }
@@ -70,7 +70,7 @@ export struct MainTabShell {
           .position({ x: this.railLeft(), y: this.railTop() });
       }, (generation: number): string => generation.toString());
     }
-    this.overlay();
+    this.overlayContent();
   }
 
   private railLeft(): number {
