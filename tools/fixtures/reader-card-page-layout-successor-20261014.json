@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "previousFixture": "tools/fixtures/reader-card-ui-baseline.json",
+  "previousFixtureSha256": "559725ee084ba8d025a55ca2743d36893847ee1e89e7adfd2473d9e288148ff5",
+  "page": "entry/src/main/ets/features/sync/SyncPage.ets",
+  "previousPageSha256": "1930cd8aa937a04e29093b45fb9096a1148e75b7d2915c01e4714d355e7c0ced",
+  "previousLayoutMethods": ["build", "contentFrame", "bottomContentInset"],
+  "currentLayoutMethods": {
+    "build": "e46bbc6d27e58ac1cdf4efc3ef81e3b834ac5ed4931bed564d55ca6dc95ca027",
+    "pageContent": "aad156586b9fe63d999a15ba235b3cf75fd3abe79b87e902a56a2aeba1c7394d",
+    "contentFrame": "f9dd00c01ba79546d160526eb83a82e50773feb527576a0943a52e204a5da71f"
+  },
+  "host": "ReaderStandardPage",
+  "variant": "sync",
+  "slots": { "header": "backBar", "content": "pageContent" },
+  "sections": ["webdavSection", "manualActionsSection", "autoBackupSection", "historySection"]
+}

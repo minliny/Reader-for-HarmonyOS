@@ -1,3 +1,4 @@
+import { readerPageAreaLength } from '../common/ReaderPageShell';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../common/ReaderFontFamilies';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryFooterStacked } from './MangaDirectoryVisual';
@@ -64,7 +65,7 @@ export struct MangaDirectoryCurrentFooter {
       .border({ width: visual.borderWidth, color: mangaDirectoryColor('line', this.scheme) }).borderRadius(visual.footerRadius)
       .accessibilityText('当前阅读位置')
       .onAreaChange((_old: Area, area: Area): void => {
-        const width = Number(area.width), height = Number(area.height);
+        const width = readerPageAreaLength(area.width), height = readerPageAreaLength(area.height);
         if (Number.isFinite(width) && width > 0 && Math.abs(width - this.measuredWidth) > .1) this.measuredWidth = width;
         if (Number.isFinite(height) && height > 0) this.onHeightChanged(height);
       });

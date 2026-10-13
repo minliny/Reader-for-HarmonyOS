@@ -1,4 +1,5 @@
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import { readerPageAreaLength } from '../common/ReaderPageShell';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryColor, mangaDirectoryContentTop, mangaDirectoryPositionStacked } from '../manga/MangaDirectoryVisual';
 import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_INHERITED_BODY, TYPE_APP_SECTION_LABEL, TYPE_BOOK_DETAIL_ACTION, TYPE_BOOK_DETAIL_AUTHOR, TYPE_BOOK_DETAIL_DESCRIPTION, TYPE_BOOK_DETAIL_EMPTY, TYPE_BOOK_DETAIL_META, TYPE_BOOK_DETAIL_SOURCE_ACTION, TYPE_BOOK_DETAIL_TITLE, TYPE_BOOK_DIRECTORY_ENTRY } from '../common/ReaderTypography';
 import { bookAuthorLabel } from '../common/BookAuthorMetadata';
@@ -145,7 +146,7 @@ export struct LocalBookDetail {
       footer: (): void => { this.actionArea(); },
     })
       .onAreaChange((_old: Area, area: Area): void => {
-        const width = Number(area.width);
+        const width = readerPageAreaLength(area.width);
         if (Number.isFinite(width) && width > 0) {
           const wasNarrow = this.viewportWidth > 0 && this.viewportWidth <= 340;
           this.viewportWidth = width;
@@ -611,7 +612,7 @@ export struct LocalBookDetail {
       .shadow({ radius: this.book.contentKind === 'manga' ? visual.shadowRadius : this.appThemeScheme === 'night' ? 0 : 18,
         color: this.book.contentKind === 'manga' ? mangaDirectoryColor('shadow', this.appThemeScheme) : '#14000000', offsetY: 5 })
       .onAreaChange((_old: Area, area: Area): void => {
-        const height = Number(area.height);
+        const height = readerPageAreaLength(area.height);
         if (this.book.contentKind === 'manga' && Number.isFinite(height) && height > 0 && Math.abs(height - this.mangaDockMeasuredHeight) > .1)
           this.mangaDockMeasuredHeight = height;
       });

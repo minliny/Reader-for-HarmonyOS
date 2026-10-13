@@ -3,6 +3,7 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { motionAnimateParam } from '../common/MotionSpec';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PopupSurfaceSpec, resolvePopupSpec } from '../common/ReaderSurfaceSpecs';
+import { readerPageAreaLength } from '../common/ReaderPageShell';
 
 const SURFACE_ASSET_WIDTH = 232;
 const SURFACE_ASSET_HEIGHT = 268;
@@ -128,8 +129,8 @@ export struct BookshelfMoreMenu {
     .width('100%')
     .height('100%')
     .onAreaChange((_oldValue: Area, area: Area): void => {
-      this.overlayWidth = Math.max(0, Number(area.width));
-      this.overlayHeight = Math.max(0, Number(area.height));
+      this.overlayWidth = Math.max(0, readerPageAreaLength(area.width));
+      this.overlayHeight = Math.max(0, readerPageAreaLength(area.height));
     })
     .zIndex(20);
   }

@@ -126,6 +126,35 @@ for(const [searching,stopped,expected]of[
  const notice=p.current.orderedNodes(p.owners.current).filter(n=>n.type==='Text'&&n.create===expected);
  assert.equal(notice.length,1,'actual filtered empty notice distinguishes running, stopped and completed searches');
 }
+function checkSearchArea(candidate=readFileSync(new URL('../'+files.search.path,import.meta.url),'utf8')){
+ const controls=tailControls(),names=['initialContent','resultsContent','resultStats',...searchActionMethods];
+ const Component=compileTailConsumer(candidate,names,{...controls.dependencies,...searchScopeDependencies(candidate)},controls.hooks).Component;
+ for(const unit of[false,true]){
+  const history=seedTailOwner(new Component(undefined,{}));history.initialContent();
+  const host=controls.orderedNodes(history).find(node=>node.type==='Column'&&typeof node.onAreaChange==='function');assert.ok(host);
+  const keyword=[...history.children.values()].find(child=>child.specId==='search-history-keyword');assert.ok(keyword);
+  host.onAreaChange({}, {width:unit?'226vp':226});
+  assert.equal(history.historyWidth,190,'actual narrow search history Area receipt deducts only the authored 36vp sides');
+  history.replay();controls.properties.flush();
+  assert.equal(history.children.get(keyword.id),keyword,'history width measurement retains its actual shared chip actor');
+  assert.equal(keyword.availableWidth,190);
+  const results=seedTailOwner(new Component(undefined,{}),{kind:'results'});results.resultStats();results.resultsContent();
+  const stats=controls.orderedNodes(results).find(node=>node.type==='Row'&&typeof node.onAreaChange==='function');assert.ok(stats);
+  const list=controls.orderedNodes(results).find(node=>node.type==='List'),scroller=results.resultScroller;assert.ok(list);
+  stats.onAreaChange({}, {height:unit?'65vp':65});
+  assert.equal(results.resultStatsHeight,65,'actual search statistics Area receipt updates measured fixed-header clearance');
+  results.replay();controls.properties.flush();
+  assert.equal(results.nodes.get(list.id),list,'statistics measurement retains the native results List');
+  assert.equal(list.create.scroller,scroller);assert.equal(results.resultScroller,scroller);
+  assert.equal(list.contentStartOffset,results.searchHeaderHeight()+65,'retained result list clears the actual measured statistics height');
+ }
+}
+checkSearchArea();
+for(const expression of['readerPageAreaLength(next.width)','readerPageAreaLength(next.height)']){
+ const original=readFileSync(new URL('../'+files.search.path,import.meta.url),'utf8'),candidate=original.replace(expression,expression.replace('readerPageAreaLength','Number'));
+ assert.notEqual(candidate,original);
+ assert.throws(()=>checkSearchArea(candidate),/narrow search history Area receipt|search statistics Area receipt/,'restoring Number(Area) rejects vp history/statistics receipts');
+}
 // True common/finite propagation: a single finite height change reaches both
 // phone and wide production consumers without affecting the other variant.
 {

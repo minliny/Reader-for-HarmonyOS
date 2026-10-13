@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 const file=new URL('../entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets',import.meta.url);
 const source=readFileSync(file,'utf8');
 const specSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets',import.meta.url),'utf8');
@@ -45,6 +46,32 @@ assert.equal(nodes().find(n=>n.type==='Text'&&n.create==='正在自动检查').c
 owner.backgroundUpdateRunning=false;owner.appThemeScheme='night';replay();assert.equal(text().create,'检查更新');
 const icon=nodes().find(n=>n.type==='Image'&&String(n.create).includes('settings_gen_refresh'));assert.equal(icon.create,'app.media.settings_gen_refresh_theme_night');
 updateRow.onClick();updateRow.onClick();assert.equal(calls,1,'exactly once dispatch before the menu closes');
+function measuredMenu(definition=source) {
+ const surface=actionMenuProbe();
+ const {owner:actual}=createReaderBuilderProbe(definition,boundedMembers(definition),
+  {...surface.properties.sdk,...surface.dependencies,LineJoinStyle:{Round:'LineJoinStyle.Round'},
+   registerReaderFonts(){},uiContext:{animateTo:(_params,callback)=>callback()}},
+  {...surface.properties.hooks,...surface.hooks});
+ Object.assign(actual,{anchorRight:355,anchorBottom:52,reduceMotion:true,mounted:true});actual.initialRender();
+ const area=[...actual.nodes.values()].find(node=>node.type==='Stack'&&node.onAreaChange);
+ assert.ok(area,'actual More overlay root owns native viewport measurement');
+ return {actual,area,surface};
+}
+{
+ const {actual,area,surface}=measuredMenu(),actor=[...actual.children.values()][0];
+ for(const viewport of [{width:365,height:650},{width:'365vp',height:'650vp'}]) {
+  area.onAreaChange({},viewport);actual.replay();surface.properties.flush();
+  assert.deepEqual([actual.overlayWidth,actual.overlayHeight],[365,650]);
+  assert.ok(actual.menuX()>=0&&actual.menuX()+actual.menuWidth()<=365);
+  assert.equal([...actual.children.values()][0],actor,'unit measurement retains the actual shared menu actor');
+ }
+}
+{
+ const broken=source.replaceAll('readerPageAreaLength(area.','Number(area.');assert.notEqual(broken,source);
+ const {actual,area}=measuredMenu(broken);area.onAreaChange({}, {width:'365vp',height:'650vp'});
+ assert.ok(Number.isNaN(actual.overlayWidth)&&Number.isNaN(actual.overlayHeight),
+  'Number mutation reproduces invalid vp viewport in the actual native callback');
+}
 // Actual Index readiness -> shared menu admission is exercised by the SDK shell-state test.
 await import('./test-bookshelf-shell-states.mjs');
 console.log('PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update');

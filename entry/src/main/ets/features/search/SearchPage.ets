@@ -59,7 +59,7 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
-import { readerPageContentStartInset } from '../common/ReaderPageShell';
+import { readerPageAreaLength, readerPageContentStartInset } from '../common/ReaderPageShell';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 
 export type {
@@ -794,7 +794,7 @@ export struct SearchPage {
     })
     // Only constrain long chip width; history admission never depends on measurement.
     .onAreaChange((_old: Area, next: Area): void => {
-      const outerWidth = Number(next.width);
+      const outerWidth = readerPageAreaLength(next.width);
       if (!Number.isFinite(outerWidth)) return;
       const width = Math.max(0, outerWidth - (this.isTablet ? 40 : 36));
       if (Math.abs(width - this.historyWidth) > .1) {
@@ -1018,7 +1018,7 @@ export struct SearchPage {
     .alignItems(VerticalAlign.Center)
     .hitTestBehavior(HitTestMode.Transparent)
     .onAreaChange((_old: Area, next: Area): void => {
-      const height = Number(next.height);
+      const height = readerPageAreaLength(next.height);
       if (Number.isFinite(height) && height > 0 && Math.abs(height - this.resultStatsHeight) > .1) {
         this.resultStatsHeight = height;
       }

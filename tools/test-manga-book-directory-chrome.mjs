@@ -4,6 +4,8 @@ import { createHash } from 'node:crypto';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import * as geometryApi from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { mangaDirectoryPresentation } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
 import * as directoryVisual from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
@@ -233,7 +235,7 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
         'narrow large-type footer reserves a full-width title lane instead of a zero-width horizontal slot');
       assert.ok(!footerNodes.some(node => node.type === 'Row' && node.layoutWeight === 1));
     } else assert.ok(footerNodes.some(node => node.type === 'Row' && node.layoutWeight === 1));
-    footerSurface.onAreaChange({}, { width: contentWidth, height: footerHeight + 5 }); properties.flush();
+    footerSurface.onAreaChange({}, { width: `${contentWidth}vp`, height: `${footerHeight + 5}vp` }); properties.flush();
     near(navigation.params.listPaddingBottom, safeBottom + footerHeight + 5 + 16,
       'actual footer measurement replaces estimates in Core/list/grid bottom clearance');
     const toolbar = nodes.find(node => node.type === 'Column' && node.onAreaChange);
@@ -247,7 +249,7 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     assert.equal([...owner.children.values()].find(child => child.params?.chapterEntries), navigation);
     assert.equal(navigation.params.chapterEntries, targetEntries, 'scroll retains the admitted canonical target array and native navigation owner');
     const measuredHeight = 34 * scale * 2 + 4 + 17 * scale + 20 + (44 + 20 * (scale - 1)) + toolHeight + 6 + 12;
-    toolbar.onAreaChange({}, { height: measuredHeight }); properties.flush();
+    toolbar.onAreaChange({}, { height: `${measuredHeight}vp` }); properties.flush();
     near(navigation.params.listPaddingTop, initialContentTop + measuredHeight,
       'title wrapping and larger type increase actual list/grid clearance');
     near(toolbar.position.y, initialContentTop - 96.5, 'measurement preserves the live scroll offset');
@@ -274,6 +276,8 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
 }
 checkFullChrome();
 for (const [label, candidate, headerCandidate, footerCandidate = footerSource] of [
+  ['lost native vp toolbar metrics', pageSource.replaceAll('readerPageAreaLength(area.height)', 'Number(area.height)'), headerSource],
+  ['lost native vp dock metrics', pageSource, headerSource, footerSource.replaceAll('readerPageAreaLength(area.', 'Number(area.')],
   ['unobserved measurement', pageSource.replace('@State private mangaToolsHeight:', 'private mangaToolsHeight:'), headerSource],
   ['fixed toolbar during catalog scroll', pageSource.replace(' - this.mangaScrollOffset', ''), headerSource],
   ['fixed height wrapped tool labels', pageSource.replaceAll('.constraintSize({ minHeight: this.mangaToolHeight() })', '.height(this.mangaToolHeight())'), headerSource],
@@ -288,7 +292,7 @@ for (const [label, candidate, headerCandidate, footerCandidate = footerSource] o
   assert.ok(candidate !== pageSource || headerCandidate !== headerSource || footerCandidate !== footerSource, label);
   assert.throws(() => checkFullChrome(candidate, headerCandidate, false, footerCandidate), assert.AssertionError, `reject ${label}`);
 }
-console.log('PASS actual SDK manga full chrome: real search/header/footer children, day/night palette and static650 with exact native weight arguments, header16/content20, natural long-title and tool-label wrap in short windows, measured175px base tools, scroll-coupled chrome with retained canonical targets, font scales1–3.2 and narrow stacked footer; ten old-rule negative controls rejected; legacy search variants retained. Native layout/pixels remain a compositor gate.');
+console.log('PASS actual SDK manga full chrome: real search/header/footer children, day/night palette and static650 with exact native weight arguments, header16/content20, natural long-title and tool-label wrap in short windows, measured175px base tools, scroll-coupled chrome with retained canonical targets, font scales1–3.2 and narrow stacked footer; twelve typography/measurement negative controls rejected; legacy search variants retained. Native layout/pixels remain a compositor gate.');
 
 // The platform supplies actual area/Scroller values. This scoped SDK probe
 // proves the production placement requests and retained navigation identity;
@@ -377,6 +381,50 @@ function checkFullAdaptive(candidate = pageSource) {
     }
   }
 }
+function checkVpHost(candidate=pageSource) {
+  const properties=createArkUIPropertyRuntimeProbe();
+  const metrics=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,1280,800),undefined,new metricsApi.ReaderInsetsVp(32,54,24,34));
+  metrics.systemFontScale=3.2;
+  const deps={...fonts,...directoryVisual,...metricsApi,...geometryApi,...properties.sdk,TOK_CONTENT_MAX_W_TABLET:720,
+    ReaderWindowCoordinator:{metrics:()=>metrics},LengthMetrics:{vp:value=>({value})}};
+  const Footer=createReaderBuilderProbe(footerSource,footerNames,deps,properties.hooks).Component;
+  const {owner}=createReaderBuilderProbe(candidate,[...pageNames,'viewportWidth','contentFrame','contentKind','onMangaKindChanged'],{
+    ...deps,ReaderSearchField:Child,ReaderDirectoryNavigationSurface:Child,ReaderMangaDownloadPopup:Child,
+    PageBackBar:Child,MangaDirectoryCurrentFooter:Footer},
+    {...properties.hooks,mountChildren:true,childSources:{MangaDirectoryCurrentFooter:footerSource,
+      ReaderDirectoryNavigationSurface:read('features/reading/ReaderDirectoryNavigationSurface')}});
+  const scroller={};
+  Object.assign(owner,{appThemeScheme:'night',contentKind:'manga',admittedIdentity:'s\0b',admittedEntries:rows,
+    mangaPresentation:mangaDirectoryPresentation(rows),bookTitle:'复杂长标题',sourceId:'s',bookId:'b',currentChapterIndex:17,
+    currentPageOrdinal:3,currentPageTotal:24,searchDraft:'',searchQuery:'',ascending:true,readerWindowMetricsRevision:0,
+    viewportWidth:0,mangaViewportHeight:800,mangaToolsHeight:175,listScroller:scroller,rulesRevision:0,locateCurrentRevision:0,
+    navigationInteracted:false,mangaDownloadEnabled:false,topInset:()=>54,prepareMangaLayout(){},identity:()=> 's\0b'});
+  owner.mangaPage();
+  const nav=[...owner.children.values()].find(child=>child.params?.chapterEntries),targets=nav.params.chapterEntries;
+  const hostArea=[...owner.nodes.values()].find(node=>node.type==='__Common__'&&node.onAreaChange),frame=pageFrame(owner);
+  assert.ok(hostArea&&frame.nodes,'actual SDK exposes the public manga host Area wrapper');
+  hostArea.onAreaChange({}, {width:'320vp',height:'480vp'});properties.flush();
+  assert.equal(owner.viewportWidth,320,'vp measured width replaces the much wider physical window');
+  assert.equal(owner.mangaViewportHeight,480,'vp measured height replaces the 800vp physical window');
+  assert.deepEqual(owner.contentFrame(),new geometryApi.SurfaceHorizontalFrame(32,24,264));
+  assert.equal(nav.params.mangaCatalogNarrow,true,'the actual narrow class follows host width, not device width');
+  assert.equal(owner.mangaFlowFooter(),true,'short host activates the actual finite footer-flow predicate');
+  near(nav.params.listPaddingBottom,50,'flow footer releases only its existing dock budget');
+  const toolbar=[...owner.nodes.values()].find(node=>node.type==='Column'&&node.onAreaChange);
+  toolbar.onAreaChange({}, {height:'453vp'});properties.flush();
+  near(nav.params.listPaddingTop,632.6,'vp toolbar area contributes its actual natural height');
+  const footer=[...owner.children.values()].find(child=>child instanceof Footer);
+  const dock=[...footer.nodes.values()].find(node=>node.accessibilityText==='当前阅读位置');
+  dock.onAreaChange({}, {width:'264vp',height:'201vp'});properties.flush();
+  assert.equal(footer.measuredWidth,264);assert.equal(owner.mangaFooterMeasured,201,'actual dock vp height reaches the page owner');
+  for(const invalid of ['invalid',0,-1,NaN,Infinity])hostArea.onAreaChange({}, {width:invalid,height:invalid});
+  properties.flush();assert.equal(owner.viewportWidth,320);assert.equal(owner.mangaViewportHeight,480);
+  assert.equal([...owner.children.values()].find(child=>child.params?.chapterEntries),nav);
+  assert.equal(nav.params.chapterEntries,targets);assert.equal(nav.params.scroller,scroller,'vp measurement keeps navigation/Scroller/canonical targets');
+}
+checkVpHost();
+const rawArea=pageSource.replaceAll('readerPageAreaLength(', 'Number(');
+assert.notEqual(rawArea,pageSource);assert.throws(()=>checkVpHost(rawArea),assert.AssertionError,'raw Number parsing cannot pass the actual SDK vp-host fixture');
 checkFullAdaptive();
 for (const [label, candidate] of [
   ['fixed footer in short window', pageSource.replace('return mangaDirectoryFullFlowFooter(height,', 'return false && mangaDirectoryFullFlowFooter(height,')],

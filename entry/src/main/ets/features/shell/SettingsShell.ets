@@ -1,4 +1,5 @@
 import { ReaderStandardPage } from '../common/ReaderStandardPage';
+import { readerPageAreaLength } from '../common/ReaderPageShell';
 import { MainTabBar } from './MainTabBar';
 import { PageBackBar } from '../common/PageBackBar';
 import { AppTopBar } from '../common/AppTopBar';
@@ -76,7 +77,7 @@ export struct SettingsShell {
 
   private reportOverlayOrigin(area: Area): void {
     // Area.globalPosition 已是 vp 单位，不能再 px2vp。
-    this.onOverlayOriginChange(Number(area.globalPosition.x), Number(area.globalPosition.y));
+    this.onOverlayOriginChange(readerPageAreaLength(area.globalPosition.x), readerPageAreaLength(area.globalPosition.y));
   }
 
   private onMainTab(key: string): void {

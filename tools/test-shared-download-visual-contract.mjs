@@ -427,6 +427,74 @@ assert.equal(longRow.bookContentHeights, contentMap, 'unchanged natural content 
 content.onAreaChange({ height: 134 }, { height: 70 });
 assert.equal(longRow.bookProgressSpacer(longBook.key), 7, 'the min-height spacer recovers after content shrinks');
 
+function checkDownloadArea(candidate = source) {
+  const Component = candidate === source ? probe.Component : createReaderBuilderProbe(candidate, methods, probeDependencies, probeHooks).Component;
+  for (const unit of [false, true]) {
+    const length = value => unit ? `${value}vp` : value;
+    const page = owner('day', { fontsReady: true }, Component); page.initialRender();
+    const list = find(page, node => node.type === 'List', 'actual download list before Area measurements');
+    const scroller = page.listScroller;
+    const host = [...page.nodes.values()].find(node => node.type === '__Common__' && typeof node.onAreaChange === 'function');
+    assert.ok(host, 'the actual public download host owns its viewport Area callback');
+    host.onAreaChange({}, { height: length(720) });
+    assert.equal(page.pageHeight, 720, 'download Area viewport accepts numeric and vp receipts');
+    const header = find(page, node => node.constraintSize?.minHeight === 52 && typeof node.onAreaChange === 'function', 'actual header measurement');
+    header.onAreaChange({}, { height: length(70) });
+    assert.equal(page.headerMeasuredHeight, 70, 'download Area header accepts numeric and vp receipts');
+    const storage = find(page, node => node.type === 'Row' && node.constraintSize === undefined && node.borderRadius === visual.DOWNLOAD_VISUAL.dockRadius && typeof node.onAreaChange === 'function', 'actual storage dock measurement');
+    storage.onAreaChange({}, { height: length(111) });
+    assert.equal(page.dockMeasuredHeight, 111, 'download Area storage dock accepts numeric and vp receipts');
+    page.replay(); propertyRuntime.flush();
+    assert.equal(page.nodes.get(list.id), list, 'download Area measurements retain the native book List');
+    assert.equal(list.create.scroller, scroller); assert.equal(page.listScroller, scroller);
+    assert.equal(list.padding.top, page.contentTop()); assert.equal(list.padding.bottom, page.contentBottom(visual.DOWNLOAD_VISUAL.contentBottom));
+
+    const selection = owner('day', { managing: true }, Component); selection.selectionDock();
+    const selectedDock = find(selection, node => node.type === 'Column' && node.borderRadius === visual.DOWNLOAD_VISUAL.dockRadius && typeof node.onAreaChange === 'function', 'actual selection dock measurement');
+    selectedDock.onAreaChange({}, { height: length(123) });
+    assert.equal(selection.dockMeasuredHeight, 123, 'download Area selection dock accepts numeric and vp receipts');
+    const row = owner('day', {}, Component); row.bookRow(() => book, false);
+    const copy = find(row, node => node.type === 'Column' && node.layoutWeight === 1 && typeof node.onAreaChange === 'function', 'actual book copy measurement');
+    copy.onAreaChange({}, { height: length(137) });
+    assert.equal(row.bookCopyHeights.get(book.key), 137, 'download Area book copy accepts numeric and vp receipts');
+    const content = find(row, node => node.type === 'Column' && node.layoutWeight === undefined && typeof node.onAreaChange === 'function', 'actual natural book text measurement');
+    content.onAreaChange({}, { height: length(134) });
+    assert.equal(row.bookContentHeights.get(book.key), 134, 'download Area book content accepts numeric and vp receipts');
+
+    for (const sheet of ['settings', 'filter']) {
+      const panel = owner('day', { sheet, pageHeight: 720 }, Component); panel.sheetContent(false);
+      const scroll = find(panel, node => node.type === 'Scroll', 'actual panel body Scroll');
+      const title = find(panel, node => node.type === 'Row' && node.constraintSize?.minHeight === visual.DOWNLOAD_VISUAL.sheetTitleHeight && typeof node.onAreaChange === 'function', 'actual sheet title measurement');
+      title.onAreaChange({}, { height: length(83) });
+      assert.equal(panel.sheetTitleMeasuredHeight, 83, 'download Area sheet title accepts numeric and vp receipts');
+      const footer = find(panel, node => node.type === 'Row' && node.constraintSize === undefined && typeof node.onAreaChange === 'function', 'actual sheet footer measurement');
+      footer.onAreaChange({}, { height: length(115) });
+      assert.equal(panel.sheetFooterMeasuredHeight, 115, `download Area ${sheet} footer accepts numeric and vp receipts`);
+      panel.replay(); propertyRuntime.flush();
+      assert.equal(panel.nodes.get(scroll.id), scroll, 'sheet Area receipts retain the native body Scroll');
+      assert.equal(scroll.constraintSize.maxHeight, panel.sheetBodyMaxHeight());
+    }
+    const dialog = owner('day', { confirmation: 'cancel', pageHeight: 720 }, Component); dialog.confirmationContent(false);
+    const actions = find(dialog, node => node.type === 'Row' && typeof node.onAreaChange === 'function', 'actual confirmation action measurement');
+    actions.onAreaChange({}, { height: length(91) });
+    assert.equal(dialog.dialogActionsMeasuredHeight, 91, 'download Area confirmation actions accept numeric and vp receipts');
+  }
+}
+checkDownloadArea();
+const areaConversions = [];
+function collectAreaConversions(node) {
+  if (ts.isCallExpression(node) && node.expression.getText(tree) === 'readerPageAreaLength') areaConversions.push(node);
+  ts.forEachChild(node, collectAreaConversions);
+}
+collectAreaConversions(page);
+assert.equal(areaConversions.length, 10, 'all ten authored download Area conversion sites are covered by actual SDK measurements');
+for (const conversion of areaConversions) {
+  const changed = source.slice(0, conversion.expression.getStart(tree)) + 'Number' + source.slice(conversion.expression.end);
+  assert.notEqual(changed, source);
+  assert.throws(() => checkDownloadArea(changed), /download Area .*accepts? numeric and vp receipts/,
+    'each individual legacy Number(Area) conversion fails the same real SDK receipt contract');
+}
+
 // Font I/O is the isolated boundary; the page's real promise callbacks and
 // retirement methods decide whether a receipt may publish readiness.
 const microtasks = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };

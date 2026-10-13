@@ -158,7 +158,7 @@ syntax.propCollection.set('ReaderSearchField', new Set([...searchSource.matchAll
 const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
 const popupSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderMangaDownloadPopup.ets', import.meta.url), 'utf8');
 const Footer = createReaderBuilderProbe(footerSource, boundedMembers(footerSource), { ...deps, ...searchProperties.sdk }, searchProperties.hooks).Component;
-const builderNames = ['standardContent', 'standardHeader', 'standardToolbar', 'fontPreparationContent', 'mangaContent', 'mangaHeader', 'mangaFixedFooter', 'build', 'recoveryContent', 'supportsCurrentDirectoryView', 'standardPage', 'mangaPage', 'mangaToolbar', 'mangaCurrentFooter',
+const builderNames = ['viewportWidth', 'standardContent', 'standardHeader', 'standardToolbar', 'fontPreparationContent', 'mangaContent', 'mangaHeader', 'mangaFixedFooter', 'build', 'recoveryContent', 'supportsCurrentDirectoryView', 'standardPage', 'mangaPage', 'mangaToolbar', 'mangaCurrentFooter',
   'mangaFlatList', 'mangaFlatRow', 'mangaEmptyState', 'mangaDownloadMenuButton', 'selectMangaEntry', 'flatList', 'chapterRow'];
 const actualChrome = { ...searchProperties.sdk, MangaDirectoryCurrentFooter: Footer, ReaderMangaDownloadPopup: Child };
 const chromeHooks = { ...searchProperties.hooks, childSources: { MangaDirectoryCurrentFooter: footerSource,
@@ -217,6 +217,38 @@ const chromeHooks = { ...searchProperties.hooks, childSources: { MangaDirectoryC
   const standardPageSource = source.slice(source.indexOf('private standardPage'), source.indexOf('private mangaPage'));
   assert.doesNotMatch(standardPageSource, /Text\('(?:书签|当前章节|收起)'\)/,
     'standalone catalog keeps manga-only current chapter footer out of the text branch');
+}
+// Physical window size is not the host size. Exercise the actual public
+// frame wrapper and HeaderHost with the vp-string Area values ArkUI supports.
+{
+  const previousMetrics = metrics;
+  metrics = { ...previousMetrics, windowRect: { width: 1280, height: 800 },
+    systemInsets: { left: 32, right: 24, top: 48, bottom: 34 }, cutoutInsets: {}, gestureInsets: {} };
+  const result=fixture(); result.page.viewportWidth=0; result.page.aboutToAppear(); flush();
+  const {owner}=createReaderBuilderProbe(source,builderNames,{...deps,...actualChrome,ReaderSearchField:SearchField,
+    ReaderDirectoryRecoverySurface:Child,ReaderDirectoryRules:Child,PageBackBar:Child,ReaderDirectoryToolbar:Child,ReaderDirectoryList:Child,
+    ReaderDirectoryNavigationSurface:Child,ReaderDirectoryChapterRow:Child},chromeHooks);
+  Object.assign(owner,result.page);
+  for(const name of methods.filter(name=>name!=='supportsCurrentDirectoryView'))owner[name]=Page.prototype[name].bind(owner);
+  owner.initialRender();
+  const actors=current=>[current,...[...(current.children?.values()??[])].flatMap(actors)];
+  const frame=actors(owner).find(actor=>actor.params?.variant==='directory');
+  const hostArea=[...owner.nodes.values()].find(node=>node.type==='__Common__'&&node.onAreaChange);
+  const nav=[...owner.children.values()].find(child=>child.params?.chapterEntries),scroller=nav.params.scroller,targets=nav.params.chapterEntries;
+  assert.ok(frame?.nodes&&hostArea,'actual SDK mounts the public directory host and its measurement wrapper');
+  hostArea.onAreaChange({}, {width:'365vp'}); searchProperties.flush();
+  assert.equal(owner.viewportWidth,365);
+  assert.deepEqual(owner.contentFrame(),new SurfaceHorizontalFrame(32,24,309),'narrow measured host overrides the 1280vp physical window and retains asymmetric safety');
+  const header=actors(frame).find(actor=>actor.kind==='standard'&&typeof actor.onHeightChange==='function');
+  const mask=[...header.nodes.values()].find(node=>node.type==='Column'&&node.backgroundColor&&node.onAreaChange);
+  assert.ok(mask,'actual public HeaderHost owns the opaque measured mask');
+  mask.onAreaChange({}, {height:'132vp'}); searchProperties.flush();
+  assert.equal(nav.params.contentStartInset,137,'the composite measured title/tools height propagates to the retained directory');
+  for(const width of ['invalid',0,-1,NaN,Infinity])hostArea.onAreaChange({}, {width});
+  searchProperties.flush();assert.equal(owner.viewportWidth,365,'invalid Area values preserve the last admitted host width');
+  assert.equal([...owner.children.values()].find(child=>child.params?.chapterEntries),nav,'measurement preserves the directory actor');
+  assert.equal(nav.params.scroller,scroller);assert.equal(nav.params.chapterEntries,targets,'measurement cannot rebuild canonical targets');
+  owner.aboutToDisappear();metrics=previousMetrics;
 }
 {const p=fixture().page;const getter=deps.ReaderRuntimeOwner.current;deps.ReaderRuntimeOwner.current=()=>{throw Error('ReaderRuntimeOwner must be installed by EntryAbility');};assert.equal(p.supportsCurrentDirectoryView(),false);deps.ReaderRuntimeOwner.current=()=>({supportsCoreCapability(){throw Error('provider failure');}});assert.throws(()=>p.supportsCurrentDirectoryView(),/provider failure/,'identity adaptation cannot swallow platform/business failure');deps.ReaderRuntimeOwner.current=getter;}
 console.log('PH119 standalone BookDirectoryPage actual methods and SDK Builder: PASS');

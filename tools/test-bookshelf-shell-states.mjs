@@ -244,6 +244,11 @@ check('More retains measured global-to-local anchor, live progress and guarded c
   assert.ok(nodesOf(header, 'Stack').some(node => node.width === 44 && node.onClick), 'Search remains a separate native header action');
   assert.match(owner.observers[target.id + 1].toString(), /new ReaderIconButton\(/, 'wrapper/child adjacency is the actual SDK emission');
   target.onAreaChange({}, {width:44,height:44,globalPosition:{x:311,y:47}});
+  assert.deepEqual([owner.moreAnchorRight, owner.moreAnchorBottom], [355,91], 'numeric More anchor retains its original geometry');
+  area.onAreaChange({}, {width:'365vp',globalPosition:{x:'10vp',y:'39vp'}});
+  target.onAreaChange({}, {width:'44vp',height:'44vp',globalPosition:{x:'311vp',y:'47vp'}});
+  assert.deepEqual([owner.viewportWidth, owner.overlayOriginX, owner.overlayOriginY, owner.moreAnchorRight, owner.moreAnchorBottom],
+    [365,10,39,355,91], 'actual SDK More and overlay area callbacks preserve vp dimensions and coordinates');
   owner.updateRunning = true; owner.updateProgressDone = 4; owner.updateProgressTotal = 9; owner.reduceMotion = true;
   owner.replay();
   assert.deepEqual([more.params.anchorRight,more.params.anchorBottom], [345,52]);

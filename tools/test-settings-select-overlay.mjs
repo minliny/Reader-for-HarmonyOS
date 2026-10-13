@@ -16,7 +16,7 @@ assert.match(page, /import \{ SettingsSelectOverlay, type SettingsSelectField \}
 assert.match(page, /\['简体中文', '繁體中文', 'English', '日本語', '한국어'\]/,
   'language spelling must follow the explicit Figma documentation');
 assert.match(page,
-  /right: Number\(newValue\.globalPosition\.x\) \+ Number\(newValue\.width\)[\s\S]*bottom: Number\(newValue\.globalPosition\.y\) \+ Number\(newValue\.height\)/,
+  /right: readerPageAreaLength\(newValue\.globalPosition\.x\) \+ readerPageAreaLength\(newValue\.width\)[\s\S]*bottom: readerPageAreaLength\(newValue\.globalPosition\.y\) \+ readerPageAreaLength\(newValue\.height\)/,
   'Tablet positioning must derive the live trigger right/bottom anchor');
 assert.match(page,
   /SettingsSelectOverlay\(\{[\s\S]*isTablet: this\.isTablet[\s\S]*anchorRight: this\.anchorRight - this\.originX[\s\S]*anchorBottom: this\.anchorBottom - this\.originY/);

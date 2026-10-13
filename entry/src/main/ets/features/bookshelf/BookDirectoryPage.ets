@@ -35,7 +35,7 @@ import { mangaDirectoryEntryRows, type MangaDirectoryLayoutRow } from '../manga/
 import { MangaDirectoryEntryRow } from '../manga/MangaDirectoryEntryRow';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SERIF_SC_BOLD } from '../common/ReaderFontFamilies';
-import { readerPageContentStartInset } from '../common/ReaderPageShell';
+import { readerPageAreaLength, readerPageContentStartInset } from '../common/ReaderPageShell';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 
 /** Detail-owned catalog. Reuses the control's toolbar/rows, never its sheet or reading session. */
@@ -180,7 +180,7 @@ export struct BookDirectoryPage {
           this.standardHeaderHeight = height;
       },
     }).onAreaChange((_oldValue: Area, newValue: Area): void => {
-      const width = Number(newValue.width);
+      const width = readerPageAreaLength(newValue.width);
       if (Number.isFinite(width) && width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
         this.viewportWidth = width;
       }
@@ -295,8 +295,8 @@ export struct BookDirectoryPage {
       footer: (): void => { this.mangaFixedFooter(); },
     })
       .onAreaChange((_old: Area, area: Area): void => {
-        const width = Number(area.width);
-        const height = Number(area.height);
+        const width = readerPageAreaLength(area.width);
+        const height = readerPageAreaLength(area.height);
         if (Number.isFinite(height) && height > 0) this.mangaViewportHeight = height;
         if (Number.isFinite(width) && width > 0) {
           const previousWidth = this.viewportWidth;
@@ -401,7 +401,7 @@ export struct BookDirectoryPage {
     }.width(this.contentFrame().width).alignItems(HorizontalAlign.Start)
       .position({ x: this.contentFrame().left, y: this.topInset() + mangaDirectoryContentTop(this.mangaFontScale()) - this.mangaScrollOffset })
       .onAreaChange((_old: Area, area: Area): void => {
-        const height = Number(area.height);
+        const height = readerPageAreaLength(area.height);
         if (Number.isFinite(height) && height > 0 && Math.abs(height - this.mangaToolsHeight) > .1) this.mangaToolsHeight = height;
       });
   }
