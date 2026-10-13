@@ -2,13 +2,14 @@ import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { MainTabShell } from '../shell/MainTabShell';
+import { ReaderFixedHeaderHost } from '../common/ReaderFixedHeaderHost';
 import { AppTopBar } from '../common/AppTopBar';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { BookshelfMoreMenu } from './BookshelfMoreMenu';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../common/ReaderWindowMetrics';
-import { READER_FLOATING_TOP_BAR_HEIGHT } from '../common/ReaderFloatingBarMetrics';
+import { readerPageInitialHeaderHeight } from '../common/ReaderPageShell';
 
 export const BOOKSHELF_WIDE_BREAKPOINT = 600;
 let bookshelfTemporaryGeneration: number = 0;
@@ -41,6 +42,8 @@ export struct BookshelfShell {
   onCheckUpdatesRequested: () => void = (): void => {};
   onMainTab: (key: string) => void = (_key: string): void => {};
   @BuilderParam content: () => void;
+  onHeaderHeightChange: (height: number) => void = (_height: number): void => {};
+  @State private headerHeight: number = readerPageInitialHeaderHeight('bookshelf');
   @State private viewportWidth: number = 0;
   @State private moreMenuVisible: boolean = false;
   private moreSelectionId: string = '';
@@ -115,81 +118,75 @@ export struct BookshelfShell {
 
   build() {
     MainTabShell({
-      activeTab: 'bookshelf',
-      showBottomNav: this.showBottomNav(),
+      activeTab: 'bookshelf', headerKind: 'floating',
+      showBottomNav: this.showBottomNav(), showTabletRail: !this.showBottomNav(), railVariant: 'bookshelf',
+      headerTop: 8,
+      headerInsetLeft: Math.max(16, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics())),
+      headerInsetRight: Math.max(16, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())),
       onMainTab: (key: string): void => this.onMainTab(key),
-    }) {
-      this.shellContent();
-    }
+      content: (): void => { this.content(); },
+      header: (): void => { this.shellHeader(); },
+      overlay: (): void => { this.shellOverlay(); },
+      onHeaderHeightChange: (height: number): void => {
+        const totalHeight = height;
+        if (Number.isFinite(totalHeight) && totalHeight > 0) {
+          if (Math.abs(totalHeight - this.headerHeight) > .1) this.headerHeight = totalHeight;
+          this.onHeaderHeightChange(totalHeight);
+        }
+      },
+    })
+      .onAreaChange((_oldValue: Area, newValue: Area): void => {
+        const width = this.numericAreaLength(newValue.width);
+        if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+          this.viewportWidth = width;
+        }
+        this.overlayOriginX = Number(newValue.globalPosition.x);
+        this.overlayOriginY = Number(newValue.globalPosition.y);
+      });
   }
 
   @Builder
-  private shellContent() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Stack({ alignContent: Alignment.TopStart }) {
-        if (this.recovery.visible) {
-          Column() {
-            this.recoveryNoticeContent(this.recovery, false);
-            Stack() { this.content(); }.width('100%').layoutWeight(1);
-          }.width('100%').height('100%').padding({ top: READER_FLOATING_TOP_BAR_HEIGHT });
-        } else if (this.readRecovery?.visible === true) {
-          Column() {
-            this.recoveryNoticeContent(this.readRecovery!, true);
-            Stack() { this.content(); }.width('100%').layoutWeight(1);
-          }.width('100%').height('100%').padding({ top: READER_FLOATING_TOP_BAR_HEIGHT });
-        } else {
-          this.content();
-        }
+  private shellHeader() {
+    Column() {
+      this.topBar();
+      if (this.recovery.visible) {
+        ReaderFixedHeaderHost({ kind: 'standard',
+          content: (): void => { this.recoveryNoticeContent(this.recovery, false); } });
+      } else if (this.readRecovery?.visible === true) {
+        ReaderFixedHeaderHost({ kind: 'standard',
+          content: (): void => { this.recoveryNoticeContent(this.readRecovery!, true); } });
       }
-      .width('100%')
-      .height('100%');
+    }.width('100%');
+  }
 
-      Row() {
-        this.topBar();
-      }
-      .width('100%')
-      .height(60)
-      .padding({ left: Math.max(16, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics())),
-        right: Math.max(16, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())), top: 8 })
-      .hitTestBehavior(HitTestMode.Transparent);
-
-      if (this.moreMenuVisible) {
-        BookshelfMoreMenu({
-          anchorRight: this.moreAnchorRight - this.overlayOriginX,
-          anchorBottom: this.moreAnchorBottom - this.overlayOriginY,
-          reduceMotion: this.reduceMotion,
-          canCheckUpdates: this.canCheckUpdates,
-          updateRunning: this.updateRunning,
-          backgroundUpdateRunning: this.backgroundUpdateRunning,
-          updateProgressDone: this.updateProgressDone,
-          updateProgressTotal: this.updateProgressTotal,
-          onCheckUpdates: this.moreIntentAction(this.moreSelectionId, (): void => this.requestCheckUpdates()),
-          onBatchManage: this.moreIntentAction(this.moreSelectionId, (): void => {
-            this.dismissMoreMenu();
-            this.onBatchManageRequested();
-          }),
-          onLocalImport: this.moreIntentAction(this.moreSelectionId, (): void => {
-            this.dismissMoreMenu();
-            this.onImportRequested();
-          }),
-          onBookshelfSettings: this.moreIntentAction(this.moreSelectionId, (): void => {
-            this.dismissMoreMenu();
-            this.onBookshelfSettingsRequested();
-          }),
-          onDismiss: this.moreIntentAction(this.moreSelectionId, (): void => this.dismissMoreMenu()),
-        });
-      }
+  @Builder
+  private shellOverlay() {
+    if (this.moreMenuVisible) {
+      BookshelfMoreMenu({
+        anchorRight: this.moreAnchorRight - this.overlayOriginX,
+        anchorBottom: this.moreAnchorBottom - this.overlayOriginY,
+        reduceMotion: this.reduceMotion,
+        canCheckUpdates: this.canCheckUpdates,
+        updateRunning: this.updateRunning,
+        backgroundUpdateRunning: this.backgroundUpdateRunning,
+        updateProgressDone: this.updateProgressDone,
+        updateProgressTotal: this.updateProgressTotal,
+        onCheckUpdates: this.moreIntentAction(this.moreSelectionId, (): void => this.requestCheckUpdates()),
+        onBatchManage: this.moreIntentAction(this.moreSelectionId, (): void => {
+          this.dismissMoreMenu();
+          this.onBatchManageRequested();
+        }),
+        onLocalImport: this.moreIntentAction(this.moreSelectionId, (): void => {
+          this.dismissMoreMenu();
+          this.onImportRequested();
+        }),
+        onBookshelfSettings: this.moreIntentAction(this.moreSelectionId, (): void => {
+          this.dismissMoreMenu();
+          this.onBookshelfSettingsRequested();
+        }),
+        onDismiss: this.moreIntentAction(this.moreSelectionId, (): void => this.dismissMoreMenu()),
+      });
     }
-    .width('100%')
-    .height('100%')
-    .onAreaChange((_oldValue: Area, newValue: Area): void => {
-      const width = this.numericAreaLength(newValue.width);
-      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-        this.viewportWidth = width;
-      }
-      this.overlayOriginX = Number(newValue.globalPosition.x);
-      this.overlayOriginY = Number(newValue.globalPosition.y);
-    });
   }
 
   @Builder

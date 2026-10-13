@@ -55,6 +55,7 @@ export struct MainTabBar {
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop current: string = 'bookshelf';
   @Prop vertical: boolean = false;
+  @Prop railVariant: 'standard' | 'bookshelf' = 'standard';
   onSelect: (key: string) => void = (_key: string): void => {};
   onCurrentTap: (key: string) => void = (_key: string): void => {};
 
@@ -164,7 +165,7 @@ export struct MainTabBar {
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
-    .borderRadius(25)
+    .borderRadius(this.railVariant === 'bookshelf' ? 24 : 25)
     .accessibilityText(`${tab.label}${active ? '，已选中' : ''}`)
     .onClick((): void => {
       if (!active) {
@@ -181,6 +182,12 @@ export struct MainTabBar {
     // Active glyphs retain onPrimary on the dark App action fill; only the
     // inactive muted outline changes to the Night palette.
     const night = this.appThemeScheme === 'night';
+    if (this.vertical && this.railVariant === 'bookshelf') {
+      if (key === 'bookshelf') return 'bookshelf_library';
+      if (key === 'discover') return night ? 'bookshelf_compass_theme_night' : 'bookshelf_compass';
+      if (key === 'rss') return night ? 'bookshelf_rss_theme_night' : 'bookshelf_rss';
+      return night ? 'bookshelf_settings_theme_night' : 'bookshelf_settings';
+    }
     if (key === 'bookshelf') {
       return active ? 'bookshelf_library_active' :
         (night ? 'bookshelf_library_outline_theme_night' : 'bookshelf_library_outline');

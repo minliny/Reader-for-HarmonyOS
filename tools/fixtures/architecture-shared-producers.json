@@ -2494,7 +2494,7 @@
         },
         {
           "file": "features/search/SearchPage.ets",
-          "method": "features/search/SearchPage.ets#SearchPage#resultsContent",
+          "method": "features/search/SearchPage.ets#SearchPage#resultStats",
           "component": "ReaderButton",
           "specId": "'search-retry-status'",
           "keys": [
@@ -2507,7 +2507,7 @@
         },
         {
           "file": "features/search/SearchPage.ets",
-          "method": "features/search/SearchPage.ets#SearchPage#resultsContent",
+          "method": "features/search/SearchPage.ets#SearchPage#resultStats",
           "component": "ReaderButton",
           "specId": "'search-retry-progress'",
           "keys": [
@@ -3149,6 +3149,7 @@
             "specId",
             "scheme",
             "text",
+            "isEditable",
             "placeholder",
             "onTextChange"
           ]
@@ -3162,6 +3163,7 @@
             "specId",
             "scheme",
             "text",
+            "isEditable",
             "onTextChange"
           ]
         },
@@ -4811,7 +4813,7 @@
       "consumers": [
         {
           "file": "features/rss/RssSubscriptionEditorPage.ets",
-          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#pageContent",
           "component": "ReaderToggle",
           "specId": "'standard-toggle'",
           "keys": [
@@ -4825,7 +4827,7 @@
         },
         {
           "file": "features/rss/RssSubscriptionEditorPage.ets",
-          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#pageContent",
           "component": "ReaderToggle",
           "specId": "'standard-toggle'",
           "keys": [
@@ -7207,6 +7209,1197 @@
         "tools/test-manga-directory-quick-panel-sdk.mjs",
         "tools/test-manga-book-directory-chrome.mjs"
       ]
+    },
+    {
+      "id": "shared-ReaderPageScaffold",
+      "component": "ReaderPageScaffold",
+      "file": "entry/src/main/ets/features/common/ReaderPageScaffold.ets",
+      "specPolicy": "Finite page/header host owning only native frame, common geometry and actual BuilderParam slots. No typography/control style bag or business state; finite category policy is the actual bounded spec source.",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderPageScaffold",
+            "publicFields": [
+              {
+                "name": "variant",
+                "type": "ReaderPageShellKind",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "pageVisible",
+                "type": "boolean",
+                "decorators": [
+                  "// Hidden reading sessions still receive real layout and retain their actors.\n@Prop"
+                ]
+              },
+              {
+                "name": "headerKind",
+                "type": "ReaderHeaderKind",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "headerTop",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "headerInsetLeft",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "headerInsetRight",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "footerInsetLeft",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "footerInsetRight",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "footerBottom",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "frameInsetLeft",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "frameInsetRight",
+                "type": "number",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onHeaderHeightChange",
+                "type": "(height: number) => void",
+                "decorators": []
+              },
+              {
+                "name": "onFooterHeightChange",
+                "type": "(height: number) => void",
+                "decorators": []
+              },
+              {
+                "name": "content",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "header",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "footer",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "overlay",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "opacity",
+            "args": [
+              "this.pageVisible ? 1 : 0"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: this.frameInsetLeft, right: this.frameInsetRight }"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "margin",
+            "args": [
+              "{ top: this.headerTop }"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: this.headerInsetLeft, right: this.headerInsetRight }"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "margin",
+            "args": [
+              "{ bottom: this.footerBottom }"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "padding",
+            "args": [
+              "{ left: this.footerInsetLeft, right: this.footerInsetRight }"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "height",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderPageScaffold",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          }
+        ],
+        "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderFixedHeaderHost } from './ReaderFixedHeaderHost';\nimport { ReaderHeaderKind, ReaderPageFrameModifier, ReaderPageShellKind, readerPageAreaLength } from './ReaderPageShell';\n@Component\nexport struct ReaderPageScaffold extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        private readingUnderlayColor?: string;\n        variant?: ReaderPageShellKind;\n        pageVisible?: boolean;\n        headerKind?: ReaderHeaderKind;\n        headerTop?: number;\n        headerInsetLeft?: number;\n        headerInsetRight?: number;\n        footerInsetLeft?: number;\n        footerInsetRight?: number;\n        footerBottom?: number;\n        frameInsetLeft?: number;\n        frameInsetRight?: number;\n        onHeaderHeightChange?: (height: number) => void;\n        onFooterHeightChange?: (height: number) => void;\n        content?: () => void;\n        header?: () => void;\n        footer?: () => void;\n        overlay?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @StorageLink('readerWindowChromeUnderlayColor')\n    private readingUnderlayColor: string = readerAppColor('app.window.background', 'day');\n    @Prop\n    variant: ReaderPageShellKind = 'standard';\n    @Prop\n    pageVisible: boolean = true;\n    @Prop\n    headerKind: ReaderHeaderKind = 'standard';\n    @Prop\n    headerTop: number = 0;\n    @Prop\n    headerInsetLeft: number = 0;\n    @Prop\n    headerInsetRight: number = 0;\n    @Prop\n    footerInsetLeft: number = 0;\n    @Prop\n    footerInsetRight: number = 0;\n    @Prop\n    footerBottom: number = 0;\n    @Prop\n    frameInsetLeft: number = 0;\n    @Prop\n    frameInsetRight: number = 0;\n    onHeaderHeightChange: (height: number) => void = (_height: number): void => { };\n    onFooterHeightChange: (height: number) => void = (_height: number): void => { };\n    @BuilderParam\n    content: () => void = this.emptySlot;\n    @BuilderParam\n    header: () => void = this.emptySlot;\n    @BuilderParam\n    footer: () => void = this.emptySlot;\n    @BuilderParam\n    overlay: () => void = this.emptySlot;\n    @Builder\n    private emptySlot() { }\n    build() {\n        .width<\n    >('100%').height<\n    >('100%')\n            .padding<\n    >({ left: this.frameInsetLeft, right: this.frameInsetRight })\n            .attributeModifier<\n    >(new ReaderPageFrameModifier(this.appThemeScheme, this.variant, this.readingUnderlayColor))\n            .opacity<\n    >(this.pageVisible ? 1 : 0)\n            .hitTestBehavior<\n    >(this.pageVisible ? HitTestMode.Default : HitTestMode.Transparent);\n    }\n}\n"
+      },
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/common/ReaderPageShell.ts",
+          "shape": {
+            "types": [
+              {
+                "name": "ReaderPageShellKind",
+                "type": "'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader'"
+              },
+              {
+                "name": "ReaderHeaderKind",
+                "type": "'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader'"
+              },
+              {
+                "name": "ReaderHeaderSurface",
+                "type": "'solid' | 'transparent'"
+              },
+              {
+                "name": "ReaderStandardPageVariant",
+                "type": "'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral'"
+              }
+            ],
+            "declarations": [
+              {
+                "name": "ReaderStandardPageSpec",
+                "publicFields": [
+                  {
+                    "name": "space",
+                    "type": "number",
+                    "decorators": []
+                  },
+                  {
+                    "name": "maxWidth",
+                    "type": "number",
+                    "decorators": []
+                  },
+                  {
+                    "name": "minimumBottom",
+                    "type": "number",
+                    "decorators": []
+                  }
+                ]
+              },
+              {
+                "name": "ReaderPageFrameModifier",
+                "publicFields": []
+              },
+              {
+                "name": "ReaderHeaderFrameModifier",
+                "publicFields": []
+              }
+            ],
+            "styles": [
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "this.readingUnderlayColor.length > 0 ? this.readingUnderlayColor : Color.Transparent"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "false"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "true"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "mangaDirectoryColor('paper', this.scheme)"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "readerAppColor(this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : this.kind === 'directory' ? 'app.window.background' : 'TOK_PAPER', this.scheme)"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "Color.Transparent"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "false"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "true"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "readerAppColor(this.kind === 'standard' || this.kind === 'directoryTools' ? 'TOK_SURFACE_SOLID' : this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : 'TOK_PAPER', this.scheme)"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "Color.Transparent"
+                ]
+              }
+            ],
+            "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { mangaDirectoryColor } from '../manga/MangaDirectoryVisual';\nimport { ReaderWindowMetricsSnapshot, readerVisualSafeLeft, readerVisualSafeRight } from './ReaderWindowMetrics';\nimport { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from './SurfaceHorizontalGeometry';\nimport { readerFloatingBarBottomInset, readerFloatingTabContentInset } from './ReaderFloatingBarMetrics';\nexport type ReaderPageShellKind = 'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader';\nexport type ReaderHeaderKind = 'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader';\nexport type ReaderHeaderSurface = 'solid' | 'transparent';\nexport type ReaderStandardPageVariant = 'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral';\nexport class ReaderStandardPageSpec {\n    space: number;\n    maxWidth: number;\n    minimumBottom: number;\n    constructor(space: number, maxWidth: number, minimumBottom: number) {\n        this.space = space;\n        this.maxWidth = maxWidth;\n        this.minimumBottom = minimumBottom;\n    }\n}\nexport function readerStandardPageSpec(variant: ReaderStandardPageVariant): ReaderStandardPageSpec {\n    switch (variant) {\n        case 'settings': return new ReaderStandardPageSpec(0, 720, 16);\n        case 'rssManagement': return new ReaderStandardPageSpec(0, 720, 24);\n        case 'rssFeed': return new ReaderStandardPageSpec(8, 720, 24);\n        case 'rssDetail': return new ReaderStandardPageSpec(12, 720, 8);\n        case 'sync': return new ReaderStandardPageSpec(16, 720, 18);\n        case 'sourceManagement': return new ReaderStandardPageSpec(8, 720, 12);\n        case 'settingsHome':\n        case 'settingsGeneral': return new ReaderStandardPageSpec(12, 720, 12);\n        case 'management':\n        case 'tools':\n        case 'rssEditor': return new ReaderStandardPageSpec(16, Number.MAX_SAFE_INTEGER, 16);\n        default: throw new Error('Unknown Reader standard page variant');\n    }\n}\nexport function readerPageContentStartInset(headerHeight: number = 58, toolsHeight: number = 0, gap: number = 0): number {\n    return Math.max(0, headerHeight) + Math.max(0, toolsHeight) + Math.max(0, gap);\n}\nexport function readerPageAreaLength(value: Length): number {\n    return typeof value === 'number' ? value : typeof value === 'string' ? Number.parseFloat(value) : Number.NaN;\n}\nexport function readerPageInitialHeaderHeight(kind: 'standard' | 'home' | 'bookshelf'): number {\n    switch (kind) {\n        case 'bookshelf': return 60;\n        case 'standard':\n        case 'home': return 58;\n        default: throw new Error('Unknown Reader initial header kind');\n    }\n}\nexport function readerStandardPageContentFrame(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot, width: number): SurfaceHorizontalFrame {\n    return resolveHorizontalFrame(width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics), new SurfaceWidthSpec(readerStandardPageSpec(variant).maxWidth, 19, 19));\n}\nexport function readerStandardPageFooterBottom(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot): number {\n    return variant === 'rssDetail' ? Math.max(0, readerFloatingBarBottomInset(metrics, 8) - 8) : 0;\n}\nexport function readerStandardPageContentEndInset(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot, footerHeight: number = 0): number {\n    if (variant === 'settingsHome')\n        return readerFloatingTabContentInset(metrics);\n    if (variant === 'rssDetail')\n        return Math.max(62, footerHeight) + readerStandardPageFooterBottom(variant, metrics);\n    return readerFloatingBarBottomInset(metrics, readerStandardPageSpec(variant).minimumBottom);\n}\nexport class ReaderPageFrameModifier implements AttributeModifier<CommonAttribute> {\n    private readonly scheme: string;\n    private readonly kind: ReaderPageShellKind;\n    private readonly readingUnderlayColor: string;\n    constructor(scheme: string, kind: ReaderPageShellKind = 'standard', readingUnderlayColor: string = '') {\n        this.scheme = scheme;\n        this.kind = kind;\n        this.readingUnderlayColor = readingUnderlayColor;\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (this.kind === 'reader') {\n            instance.clip(false).backgroundColor(this.readingUnderlayColor.length > 0 ? this.readingUnderlayColor : Color.Transparent).zIndex(0);\n            return;\n        }\n        instance.clip(true).zIndex(0);\n        if (this.kind === 'mangaDirectory' || this.kind === 'mangaDetail') {\n            instance.backgroundColor(mangaDirectoryColor('paper', this.scheme));\n        }\n        else {\n            instance.backgroundColor(readerAppColor(this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : this.kind === 'directory' ? 'app.window.background' : 'TOK_PAPER', this.scheme));\n        }\n    }\n}\nexport class ReaderHeaderFrameModifier implements AttributeModifier<CommonAttribute> {\n    private readonly kind: ReaderHeaderKind;\n    private readonly surface: ReaderHeaderSurface;\n    private readonly scheme: string;\n    constructor(kind: ReaderHeaderKind, surface: ReaderHeaderSurface, scheme: string) {\n        this.kind = kind;\n        this.surface = surface;\n        this.scheme = scheme;\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (this.kind === 'floating' || this.kind === 'mangaDirectory' || this.kind === 'reader') {\n            instance.clip(false).backgroundColor(Color.Transparent).zIndex(10);\n            return;\n        }\n        instance.clip(true).zIndex(10);\n        if (this.surface === 'solid')\n            instance.backgroundColor(readerAppColor(this.kind === 'standard' || this.kind === 'directoryTools' ? 'TOK_SURFACE_SOLID' : this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : 'TOK_PAPER', this.scheme));\n        else\n            instance.backgroundColor(Color.Transparent);\n    }\n}\n"
+          }
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "content"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#standardPage",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "content",
+            "header",
+            "onHeaderHeightChange"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#mangaPage",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "headerTop",
+            "headerInsetLeft",
+            "headerInsetRight",
+            "footerInsetLeft",
+            "footerInsetRight",
+            "footerBottom",
+            "content",
+            "header",
+            "footer"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfMultiSelectPage.ets",
+          "method": "features/bookshelf/BookshelfMultiSelectPage.ets#BookshelfMultiSelectPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "content",
+            "header",
+            "onHeaderHeightChange",
+            "footer"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalBookDetail.ets",
+          "method": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "content"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalBookDetail.ets",
+          "method": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#detailPage",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "headerTop",
+            "headerInsetLeft",
+            "headerInsetRight",
+            "footerBottom",
+            "content",
+            "header",
+            "footer"
+          ]
+        },
+        {
+          "file": "features/common/ReaderStandardPage.ets",
+          "method": "features/common/ReaderStandardPage.ets#ReaderStandardPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "content",
+            "header",
+            "footer",
+            "overlay",
+            "footerBottom",
+            "onHeaderHeightChange",
+            "onFooterHeightChange"
+          ]
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "headerTop",
+            "headerInsetLeft",
+            "headerInsetRight",
+            "footerInsetLeft",
+            "footerInsetRight",
+            "footerBottom",
+            "content",
+            "header",
+            "footer",
+            "overlay"
+          ]
+        },
+        {
+          "file": "features/search/SearchPage.ets",
+          "method": "features/search/SearchPage.ets#SearchPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "frameInsetLeft",
+            "frameInsetRight",
+            "content",
+            "header",
+            "onHeaderHeightChange",
+            "overlay"
+          ]
+        },
+        {
+          "file": "features/shell/MainTabShell.ets",
+          "method": "features/shell/MainTabShell.ets#MainTabShell#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "headerTop",
+            "headerInsetLeft",
+            "headerInsetRight",
+            "content",
+            "header",
+            "footer",
+            "overlay",
+            "onHeaderHeightChange"
+          ]
+        },
+        {
+          "file": "features/shell/ReaderShell.ets",
+          "method": "features/shell/ReaderShell.ets#ReaderShell#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "pageVisible",
+            "content",
+            "overlay"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "variant",
+            "headerKind",
+            "content",
+            "header",
+            "footer",
+            "overlay",
+            "onHeaderHeightChange",
+            "onFooterHeightChange"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "docs/architecture/ui-page-framework-20261014.md",
+        "tools/fixtures/reader-page-framework-coverage.json"
+      ],
+      "sdkProofs": [
+        "tools/test-reader-page-header-contract.mjs"
+      ]
+    },
+    {
+      "id": "shared-ReaderFixedHeaderHost",
+      "component": "ReaderFixedHeaderHost",
+      "file": "entry/src/main/ets/features/common/ReaderFixedHeaderHost.ets",
+      "specPolicy": "Finite page/header host owning only native frame, common geometry and actual BuilderParam slots. No typography/control style bag or business state; finite category policy is the actual bounded spec source.",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderFixedHeaderHost",
+            "publicFields": [
+              {
+                "name": "kind",
+                "type": "ReaderHeaderKind",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "surface",
+                "type": "ReaderHeaderSurface",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "onHeightChange",
+                "type": "(height: number) => void",
+                "decorators": []
+              },
+              {
+                "name": "content",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderFixedHeaderHost",
+            "method": "build",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          }
+        ],
+        "implementation": "import { ReaderHeaderFrameModifier, ReaderHeaderKind, ReaderHeaderSurface, readerPageAreaLength } from './ReaderPageShell';\n@Component\nexport struct ReaderFixedHeaderHost extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        kind?: ReaderHeaderKind;\n        surface?: ReaderHeaderSurface;\n        onHeightChange?: (height: number) => void;\n        content?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    kind: ReaderHeaderKind = 'standard';\n    @Prop\n    surface: ReaderHeaderSurface = 'solid';\n    onHeightChange: (height: number) => void = (_height: number): void => { };\n    @BuilderParam\n    content: () => void = this.emptySlot;\n    @Builder\n    private emptySlot() { }\n    build() {\n            .width<\n    >('100%')\n            .attributeModifier<\n    >(new ReaderHeaderFrameModifier(this.kind, this.surface, this.appThemeScheme))\n            .hitTestBehavior<\n    >(HitTestMode.Transparent)\n            .onAreaChange<\n    >((_old: Area, next: Area): void => {\n            const height = readerPageAreaLength(next.height);\n            if (Number.isFinite(height) && height >= 0)\n                this.onHeightChange(height);\n        });\n    }\n}\n"
+      },
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/common/ReaderPageShell.ts",
+          "shape": {
+            "types": [
+              {
+                "name": "ReaderPageShellKind",
+                "type": "'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader'"
+              },
+              {
+                "name": "ReaderHeaderKind",
+                "type": "'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader'"
+              },
+              {
+                "name": "ReaderHeaderSurface",
+                "type": "'solid' | 'transparent'"
+              },
+              {
+                "name": "ReaderStandardPageVariant",
+                "type": "'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral'"
+              }
+            ],
+            "declarations": [
+              {
+                "name": "ReaderStandardPageSpec",
+                "publicFields": [
+                  {
+                    "name": "space",
+                    "type": "number",
+                    "decorators": []
+                  },
+                  {
+                    "name": "maxWidth",
+                    "type": "number",
+                    "decorators": []
+                  },
+                  {
+                    "name": "minimumBottom",
+                    "type": "number",
+                    "decorators": []
+                  }
+                ]
+              },
+              {
+                "name": "ReaderPageFrameModifier",
+                "publicFields": []
+              },
+              {
+                "name": "ReaderHeaderFrameModifier",
+                "publicFields": []
+              }
+            ],
+            "styles": [
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "this.readingUnderlayColor.length > 0 ? this.readingUnderlayColor : Color.Transparent"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "false"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "true"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "mangaDirectoryColor('paper', this.scheme)"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "readerAppColor(this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : this.kind === 'directory' ? 'app.window.background' : 'TOK_PAPER', this.scheme)"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "Color.Transparent"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "false"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "true"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "readerAppColor(this.kind === 'standard' || this.kind === 'directoryTools' ? 'TOK_SURFACE_SOLID' : this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : 'TOK_PAPER', this.scheme)"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "Color.Transparent"
+                ]
+              }
+            ],
+            "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { mangaDirectoryColor } from '../manga/MangaDirectoryVisual';\nimport { ReaderWindowMetricsSnapshot, readerVisualSafeLeft, readerVisualSafeRight } from './ReaderWindowMetrics';\nimport { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from './SurfaceHorizontalGeometry';\nimport { readerFloatingBarBottomInset, readerFloatingTabContentInset } from './ReaderFloatingBarMetrics';\nexport type ReaderPageShellKind = 'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader';\nexport type ReaderHeaderKind = 'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader';\nexport type ReaderHeaderSurface = 'solid' | 'transparent';\nexport type ReaderStandardPageVariant = 'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral';\nexport class ReaderStandardPageSpec {\n    space: number;\n    maxWidth: number;\n    minimumBottom: number;\n    constructor(space: number, maxWidth: number, minimumBottom: number) {\n        this.space = space;\n        this.maxWidth = maxWidth;\n        this.minimumBottom = minimumBottom;\n    }\n}\nexport function readerStandardPageSpec(variant: ReaderStandardPageVariant): ReaderStandardPageSpec {\n    switch (variant) {\n        case 'settings': return new ReaderStandardPageSpec(0, 720, 16);\n        case 'rssManagement': return new ReaderStandardPageSpec(0, 720, 24);\n        case 'rssFeed': return new ReaderStandardPageSpec(8, 720, 24);\n        case 'rssDetail': return new ReaderStandardPageSpec(12, 720, 8);\n        case 'sync': return new ReaderStandardPageSpec(16, 720, 18);\n        case 'sourceManagement': return new ReaderStandardPageSpec(8, 720, 12);\n        case 'settingsHome':\n        case 'settingsGeneral': return new ReaderStandardPageSpec(12, 720, 12);\n        case 'management':\n        case 'tools':\n        case 'rssEditor': return new ReaderStandardPageSpec(16, Number.MAX_SAFE_INTEGER, 16);\n        default: throw new Error('Unknown Reader standard page variant');\n    }\n}\nexport function readerPageContentStartInset(headerHeight: number = 58, toolsHeight: number = 0, gap: number = 0): number {\n    return Math.max(0, headerHeight) + Math.max(0, toolsHeight) + Math.max(0, gap);\n}\nexport function readerPageAreaLength(value: Length): number {\n    return typeof value === 'number' ? value : typeof value === 'string' ? Number.parseFloat(value) : Number.NaN;\n}\nexport function readerPageInitialHeaderHeight(kind: 'standard' | 'home' | 'bookshelf'): number {\n    switch (kind) {\n        case 'bookshelf': return 60;\n        case 'standard':\n        case 'home': return 58;\n        default: throw new Error('Unknown Reader initial header kind');\n    }\n}\nexport function readerStandardPageContentFrame(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot, width: number): SurfaceHorizontalFrame {\n    return resolveHorizontalFrame(width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics), new SurfaceWidthSpec(readerStandardPageSpec(variant).maxWidth, 19, 19));\n}\nexport function readerStandardPageFooterBottom(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot): number {\n    return variant === 'rssDetail' ? Math.max(0, readerFloatingBarBottomInset(metrics, 8) - 8) : 0;\n}\nexport function readerStandardPageContentEndInset(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot, footerHeight: number = 0): number {\n    if (variant === 'settingsHome')\n        return readerFloatingTabContentInset(metrics);\n    if (variant === 'rssDetail')\n        return Math.max(62, footerHeight) + readerStandardPageFooterBottom(variant, metrics);\n    return readerFloatingBarBottomInset(metrics, readerStandardPageSpec(variant).minimumBottom);\n}\nexport class ReaderPageFrameModifier implements AttributeModifier<CommonAttribute> {\n    private readonly scheme: string;\n    private readonly kind: ReaderPageShellKind;\n    private readonly readingUnderlayColor: string;\n    constructor(scheme: string, kind: ReaderPageShellKind = 'standard', readingUnderlayColor: string = '') {\n        this.scheme = scheme;\n        this.kind = kind;\n        this.readingUnderlayColor = readingUnderlayColor;\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (this.kind === 'reader') {\n            instance.clip(false).backgroundColor(this.readingUnderlayColor.length > 0 ? this.readingUnderlayColor : Color.Transparent).zIndex(0);\n            return;\n        }\n        instance.clip(true).zIndex(0);\n        if (this.kind === 'mangaDirectory' || this.kind === 'mangaDetail') {\n            instance.backgroundColor(mangaDirectoryColor('paper', this.scheme));\n        }\n        else {\n            instance.backgroundColor(readerAppColor(this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : this.kind === 'directory' ? 'app.window.background' : 'TOK_PAPER', this.scheme));\n        }\n    }\n}\nexport class ReaderHeaderFrameModifier implements AttributeModifier<CommonAttribute> {\n    private readonly kind: ReaderHeaderKind;\n    private readonly surface: ReaderHeaderSurface;\n    private readonly scheme: string;\n    constructor(kind: ReaderHeaderKind, surface: ReaderHeaderSurface, scheme: string) {\n        this.kind = kind;\n        this.surface = surface;\n        this.scheme = scheme;\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (this.kind === 'floating' || this.kind === 'mangaDirectory' || this.kind === 'reader') {\n            instance.clip(false).backgroundColor(Color.Transparent).zIndex(10);\n            return;\n        }\n        instance.clip(true).zIndex(10);\n        if (this.surface === 'solid')\n            instance.backgroundColor(readerAppColor(this.kind === 'standard' || this.kind === 'directoryTools' ? 'TOK_SURFACE_SOLID' : this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : 'TOK_PAPER', this.scheme));\n        else\n            instance.backgroundColor(Color.Transparent);\n    }\n}\n"
+          }
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfShell.ets",
+          "method": "features/bookshelf/BookshelfShell.ets#BookshelfShell#shellHeader",
+          "component": "ReaderFixedHeaderHost",
+          "specId": null,
+          "keys": [
+            "kind",
+            "content"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfShell.ets",
+          "method": "features/bookshelf/BookshelfShell.ets#BookshelfShell#shellHeader",
+          "component": "ReaderFixedHeaderHost",
+          "specId": null,
+          "keys": [
+            "kind",
+            "content"
+          ]
+        },
+        {
+          "file": "features/common/ReaderPageScaffold.ets",
+          "method": "features/common/ReaderPageScaffold.ets#ReaderPageScaffold#build",
+          "component": "ReaderFixedHeaderHost",
+          "specId": null,
+          "keys": [
+            "kind",
+            "content",
+            "onHeightChange"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "docs/architecture/ui-page-framework-20261014.md",
+        "tools/fixtures/reader-page-framework-coverage.json"
+      ],
+      "sdkProofs": [
+        "tools/test-reader-page-header-contract.mjs"
+      ]
+    },
+    {
+      "id": "shared-ReaderStandardPage",
+      "component": "ReaderStandardPage",
+      "file": "entry/src/main/ets/features/common/ReaderStandardPage.ets",
+      "specPolicy": "Finite page/header host owning only native frame, common geometry and actual BuilderParam slots. No typography/control style bag or business state; finite category policy is the actual bounded spec source.",
+      "shape": {
+        "types": [],
+        "declarations": [
+          {
+            "name": "ReaderStandardPage",
+            "publicFields": [
+              {
+                "name": "variant",
+                "type": "ReaderStandardPageVariant",
+                "decorators": [
+                  "@Prop"
+                ]
+              },
+              {
+                "name": "scroller",
+                "type": "Scroller",
+                "decorators": []
+              },
+              {
+                "name": "content",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "header",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "footer",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              },
+              {
+                "name": "overlay",
+                "type": "() => void",
+                "decorators": [
+                  "@BuilderParam"
+                ]
+              }
+            ]
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderStandardPage",
+            "method": "scrollContent",
+            "property": "height",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderStandardPage",
+            "method": "scrollContent",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          },
+          {
+            "owner": "ReaderStandardPage",
+            "method": "scrollContent",
+            "property": "padding",
+            "args": [
+              "{ left: this.contentFrame().left, right: this.contentFrame().right,\n    top: readerPageContentStartInset(this.headerHeight, 0, 8),\n    bottom: readerStandardPageContentEndInset(this.variant, ReaderWindowCoordinator.metrics(), this.footerHeight) }"
+            ]
+          },
+          {
+            "owner": "ReaderStandardPage",
+            "method": "scrollContent",
+            "property": "width",
+            "args": [
+              "'100%'"
+            ]
+          }
+        ],
+        "implementation": "import { ReaderPageScaffold } from './ReaderPageScaffold';\nimport { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';\nimport { SurfaceHorizontalFrame } from './SurfaceHorizontalGeometry';\nimport { ReaderStandardPageVariant, readerStandardPageSpec, readerStandardPageContentFrame, readerPageAreaLength, readerPageContentStartInset, readerStandardPageContentEndInset, readerStandardPageFooterBottom } from './ReaderPageShell';\n@Component\nexport struct ReaderStandardPage extends   {\n    constructor(?: {\n        private readerWindowMetricsRevision?: number;\n        variant?: ReaderStandardPageVariant;\n        private headerHeight?: number;\n        private footerHeight?: number;\n        private viewportWidth?: number;\n        scroller?: Scroller;\n        content?: () => void;\n        header?: () => void;\n        footer?: () => void;\n        overlay?: () => void;\n    }, ?: ) { }\n    @StorageLink('readerWindowMetricsRevision')\n    private readerWindowMetricsRevision: number = 0;\n    @Prop\n    variant: ReaderStandardPageVariant = 'management';\n    @State\n    private headerHeight: number = readerPageContentStartInset();\n    @State\n    private footerHeight: number = 0;\n    @State\n    private viewportWidth: number = 0;\n    scroller: Scroller = new Scroller();\n    @BuilderParam\n    content: () => void = this.emptySlot;\n    @BuilderParam\n    header: () => void = this.emptySlot;\n    @BuilderParam\n    footer: () => void = this.emptySlot;\n    @BuilderParam\n    overlay: () => void = this.emptySlot;\n    @Builder\n    private emptySlot() { }\n    build() {\n        ReaderPageScaffold({ variant: 'standard', headerKind: this.variant === 'settingsHome' ? 'home' : 'standard',\n            content: (): void => { this.scrollContent(); },\n            header: (): void => { this.header(); }, footer: (): void => { this.footer(); }, overlay: (): void => { this.overlay(); },\n            footerBottom: readerStandardPageFooterBottom(this.variant, ReaderWindowCoordinator.metrics()),\n            onHeaderHeightChange: (height: number): void => { if (height > 0 && Math.abs(height - this.headerHeight) > .1)\n                this.headerHeight = height; },\n            onFooterHeightChange: (height: number): void => { if (Math.abs(height - this.footerHeight) > .1)\n                this.footerHeight = height; },\n        }).onAreaChange((_old: Area, next: Area): void => {\n            const width = readerPageAreaLength(next.width);\n            if (Number.isFinite(width) && width > 0 && Math.abs(width - this.viewportWidth) > .1)\n                this.viewportWidth = width;\n        });\n    }\n    @Builder\n    private scrollContent() {\n        .width<\n    >('100%').height<\n    >('100%').align<\n    >(Alignment.TopStart).scrollBar<\n    >(BarState.Off);\n    }\n    private contentFrame(): SurfaceHorizontalFrame {\n        if (this.readerWindowMetricsRevision < 0)\n            return new SurfaceHorizontalFrame(0, 0, 0);\n        const metrics = ReaderWindowCoordinator.metrics();\n        return readerStandardPageContentFrame(this.variant, metrics, this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width);\n    }\n}\n"
+      },
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/common/ReaderPageShell.ts",
+          "shape": {
+            "types": [
+              {
+                "name": "ReaderPageShellKind",
+                "type": "'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader'"
+              },
+              {
+                "name": "ReaderHeaderKind",
+                "type": "'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader'"
+              },
+              {
+                "name": "ReaderHeaderSurface",
+                "type": "'solid' | 'transparent'"
+              },
+              {
+                "name": "ReaderStandardPageVariant",
+                "type": "'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral'"
+              }
+            ],
+            "declarations": [
+              {
+                "name": "ReaderStandardPageSpec",
+                "publicFields": [
+                  {
+                    "name": "space",
+                    "type": "number",
+                    "decorators": []
+                  },
+                  {
+                    "name": "maxWidth",
+                    "type": "number",
+                    "decorators": []
+                  },
+                  {
+                    "name": "minimumBottom",
+                    "type": "number",
+                    "decorators": []
+                  }
+                ]
+              },
+              {
+                "name": "ReaderPageFrameModifier",
+                "publicFields": []
+              },
+              {
+                "name": "ReaderHeaderFrameModifier",
+                "publicFields": []
+              }
+            ],
+            "styles": [
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "this.readingUnderlayColor.length > 0 ? this.readingUnderlayColor : Color.Transparent"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "false"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "true"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "mangaDirectoryColor('paper', this.scheme)"
+                ]
+              },
+              {
+                "owner": "ReaderPageFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "readerAppColor(this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : this.kind === 'directory' ? 'app.window.background' : 'TOK_PAPER', this.scheme)"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "Color.Transparent"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "false"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "clip",
+                "args": [
+                  "true"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "readerAppColor(this.kind === 'standard' || this.kind === 'directoryTools' ? 'TOK_SURFACE_SOLID' : this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : 'TOK_PAPER', this.scheme)"
+                ]
+              },
+              {
+                "owner": "ReaderHeaderFrameModifier",
+                "method": "applyNormalAttribute",
+                "property": "backgroundColor",
+                "args": [
+                  "Color.Transparent"
+                ]
+              }
+            ],
+            "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { mangaDirectoryColor } from '../manga/MangaDirectoryVisual';\nimport { ReaderWindowMetricsSnapshot, readerVisualSafeLeft, readerVisualSafeRight } from './ReaderWindowMetrics';\nimport { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from './SurfaceHorizontalGeometry';\nimport { readerFloatingBarBottomInset, readerFloatingTabContentInset } from './ReaderFloatingBarMetrics';\nexport type ReaderPageShellKind = 'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader';\nexport type ReaderHeaderKind = 'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader';\nexport type ReaderHeaderSurface = 'solid' | 'transparent';\nexport type ReaderStandardPageVariant = 'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral';\nexport class ReaderStandardPageSpec {\n    space: number;\n    maxWidth: number;\n    minimumBottom: number;\n    constructor(space: number, maxWidth: number, minimumBottom: number) {\n        this.space = space;\n        this.maxWidth = maxWidth;\n        this.minimumBottom = minimumBottom;\n    }\n}\nexport function readerStandardPageSpec(variant: ReaderStandardPageVariant): ReaderStandardPageSpec {\n    switch (variant) {\n        case 'settings': return new ReaderStandardPageSpec(0, 720, 16);\n        case 'rssManagement': return new ReaderStandardPageSpec(0, 720, 24);\n        case 'rssFeed': return new ReaderStandardPageSpec(8, 720, 24);\n        case 'rssDetail': return new ReaderStandardPageSpec(12, 720, 8);\n        case 'sync': return new ReaderStandardPageSpec(16, 720, 18);\n        case 'sourceManagement': return new ReaderStandardPageSpec(8, 720, 12);\n        case 'settingsHome':\n        case 'settingsGeneral': return new ReaderStandardPageSpec(12, 720, 12);\n        case 'management':\n        case 'tools':\n        case 'rssEditor': return new ReaderStandardPageSpec(16, Number.MAX_SAFE_INTEGER, 16);\n        default: throw new Error('Unknown Reader standard page variant');\n    }\n}\nexport function readerPageContentStartInset(headerHeight: number = 58, toolsHeight: number = 0, gap: number = 0): number {\n    return Math.max(0, headerHeight) + Math.max(0, toolsHeight) + Math.max(0, gap);\n}\nexport function readerPageAreaLength(value: Length): number {\n    return typeof value === 'number' ? value : typeof value === 'string' ? Number.parseFloat(value) : Number.NaN;\n}\nexport function readerPageInitialHeaderHeight(kind: 'standard' | 'home' | 'bookshelf'): number {\n    switch (kind) {\n        case 'bookshelf': return 60;\n        case 'standard':\n        case 'home': return 58;\n        default: throw new Error('Unknown Reader initial header kind');\n    }\n}\nexport function readerStandardPageContentFrame(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot, width: number): SurfaceHorizontalFrame {\n    return resolveHorizontalFrame(width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics), new SurfaceWidthSpec(readerStandardPageSpec(variant).maxWidth, 19, 19));\n}\nexport function readerStandardPageFooterBottom(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot): number {\n    return variant === 'rssDetail' ? Math.max(0, readerFloatingBarBottomInset(metrics, 8) - 8) : 0;\n}\nexport function readerStandardPageContentEndInset(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot, footerHeight: number = 0): number {\n    if (variant === 'settingsHome')\n        return readerFloatingTabContentInset(metrics);\n    if (variant === 'rssDetail')\n        return Math.max(62, footerHeight) + readerStandardPageFooterBottom(variant, metrics);\n    return readerFloatingBarBottomInset(metrics, readerStandardPageSpec(variant).minimumBottom);\n}\nexport class ReaderPageFrameModifier implements AttributeModifier<CommonAttribute> {\n    private readonly scheme: string;\n    private readonly kind: ReaderPageShellKind;\n    private readonly readingUnderlayColor: string;\n    constructor(scheme: string, kind: ReaderPageShellKind = 'standard', readingUnderlayColor: string = '') {\n        this.scheme = scheme;\n        this.kind = kind;\n        this.readingUnderlayColor = readingUnderlayColor;\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (this.kind === 'reader') {\n            instance.clip(false).backgroundColor(this.readingUnderlayColor.length > 0 ? this.readingUnderlayColor : Color.Transparent).zIndex(0);\n            return;\n        }\n        instance.clip(true).zIndex(0);\n        if (this.kind === 'mangaDirectory' || this.kind === 'mangaDetail') {\n            instance.backgroundColor(mangaDirectoryColor('paper', this.scheme));\n        }\n        else {\n            instance.backgroundColor(readerAppColor(this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : this.kind === 'directory' ? 'app.window.background' : 'TOK_PAPER', this.scheme));\n        }\n    }\n}\nexport class ReaderHeaderFrameModifier implements AttributeModifier<CommonAttribute> {\n    private readonly kind: ReaderHeaderKind;\n    private readonly surface: ReaderHeaderSurface;\n    private readonly scheme: string;\n    constructor(kind: ReaderHeaderKind, surface: ReaderHeaderSurface, scheme: string) {\n        this.kind = kind;\n        this.surface = surface;\n        this.scheme = scheme;\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (this.kind === 'floating' || this.kind === 'mangaDirectory' || this.kind === 'reader') {\n            instance.clip(false).backgroundColor(Color.Transparent).zIndex(10);\n            return;\n        }\n        instance.clip(true).zIndex(10);\n        if (this.surface === 'solid')\n            instance.backgroundColor(readerAppColor(this.kind === 'standard' || this.kind === 'directoryTools' ? 'TOK_SURFACE_SOLID' : this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : 'TOK_PAPER', this.scheme));\n        else\n            instance.backgroundColor(Color.Transparent);\n    }\n}\n"
+          }
+        }
+      ],
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/rss/RssEntryDetailPage.ets",
+          "method": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "footer"
+          ]
+        },
+        {
+          "file": "features/rss/RssSourceFeedPage.ets",
+          "method": "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionEditorPage.ets",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionManagementPage.ets",
+          "method": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "scroller"
+          ]
+        },
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/shell/SettingsShell.ets",
+          "method": "features/shell/SettingsShell.ets#SettingsShell#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "scroller",
+            "content",
+            "header",
+            "footer",
+            "overlay"
+          ]
+        },
+        {
+          "file": "features/shell/SettingsShell.ets",
+          "method": "features/shell/SettingsShell.ets#SettingsShell#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "scroller",
+            "content",
+            "header",
+            "overlay"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        }
+      ],
+      "removalProofs": [
+        "docs/architecture/ui-page-framework-20261014.md",
+        "tools/fixtures/reader-page-framework-coverage.json"
+      ],
+      "sdkProofs": [
+        "tools/test-reader-page-header-contract.mjs"
+      ]
     }
   ],
   "legacyBusinessRowsSha256": "fe09e5d8e92fa0dcd2e7bc47571f500b3f47673331c303f7d48832c4db4e7f3c",
@@ -7493,5 +8686,152 @@
       "entry/src/main/ets/features/search/SearchPage.ets",
       "entry/src/main/ets/features/source/SourceSwitchWindow.ets"
     ]
-  }
+  },
+  "boundedSpecs": [
+    {
+      "id": "shared-ReaderPageShellPolicy",
+      "file": "entry/src/main/ets/features/common/ReaderPageShell.ts",
+      "counts": {
+        "backgroundColor": 6
+      },
+      "shape": {
+        "types": [
+          {
+            "name": "ReaderPageShellKind",
+            "type": "'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader'"
+          },
+          {
+            "name": "ReaderHeaderKind",
+            "type": "'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader'"
+          },
+          {
+            "name": "ReaderHeaderSurface",
+            "type": "'solid' | 'transparent'"
+          },
+          {
+            "name": "ReaderStandardPageVariant",
+            "type": "'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral'"
+          }
+        ],
+        "declarations": [
+          {
+            "name": "ReaderStandardPageSpec",
+            "publicFields": [
+              {
+                "name": "space",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "maxWidth",
+                "type": "number",
+                "decorators": []
+              },
+              {
+                "name": "minimumBottom",
+                "type": "number",
+                "decorators": []
+              }
+            ]
+          },
+          {
+            "name": "ReaderPageFrameModifier",
+            "publicFields": []
+          },
+          {
+            "name": "ReaderHeaderFrameModifier",
+            "publicFields": []
+          }
+        ],
+        "styles": [
+          {
+            "owner": "ReaderPageFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "this.readingUnderlayColor.length > 0 ? this.readingUnderlayColor : Color.Transparent"
+            ]
+          },
+          {
+            "owner": "ReaderPageFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "clip",
+            "args": [
+              "false"
+            ]
+          },
+          {
+            "owner": "ReaderPageFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "clip",
+            "args": [
+              "true"
+            ]
+          },
+          {
+            "owner": "ReaderPageFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "mangaDirectoryColor('paper', this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderPageFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : this.kind === 'directory' ? 'app.window.background' : 'TOK_PAPER', this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderHeaderFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "Color.Transparent"
+            ]
+          },
+          {
+            "owner": "ReaderHeaderFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "clip",
+            "args": [
+              "false"
+            ]
+          },
+          {
+            "owner": "ReaderHeaderFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "clip",
+            "args": [
+              "true"
+            ]
+          },
+          {
+            "owner": "ReaderHeaderFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "readerAppColor(this.kind === 'standard' || this.kind === 'directoryTools' ? 'TOK_SURFACE_SOLID' : this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : 'TOK_PAPER', this.scheme)"
+            ]
+          },
+          {
+            "owner": "ReaderHeaderFrameModifier",
+            "method": "applyNormalAttribute",
+            "property": "backgroundColor",
+            "args": [
+              "Color.Transparent"
+            ]
+          }
+        ],
+        "implementation": "import { readerAppColor } from './ReaderThemeRegistry';\nimport { mangaDirectoryColor } from '../manga/MangaDirectoryVisual';\nimport { ReaderWindowMetricsSnapshot, readerVisualSafeLeft, readerVisualSafeRight } from './ReaderWindowMetrics';\nimport { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from './SurfaceHorizontalGeometry';\nimport { readerFloatingBarBottomInset, readerFloatingTabContentInset } from './ReaderFloatingBarMetrics';\nexport type ReaderPageShellKind = 'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader';\nexport type ReaderHeaderKind = 'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader';\nexport type ReaderHeaderSurface = 'solid' | 'transparent';\nexport type ReaderStandardPageVariant = 'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral';\nexport class ReaderStandardPageSpec {\n    space: number;\n    maxWidth: number;\n    minimumBottom: number;\n    constructor(space: number, maxWidth: number, minimumBottom: number) {\n        this.space = space;\n        this.maxWidth = maxWidth;\n        this.minimumBottom = minimumBottom;\n    }\n}\nexport function readerStandardPageSpec(variant: ReaderStandardPageVariant): ReaderStandardPageSpec {\n    switch (variant) {\n        case 'settings': return new ReaderStandardPageSpec(0, 720, 16);\n        case 'rssManagement': return new ReaderStandardPageSpec(0, 720, 24);\n        case 'rssFeed': return new ReaderStandardPageSpec(8, 720, 24);\n        case 'rssDetail': return new ReaderStandardPageSpec(12, 720, 8);\n        case 'sync': return new ReaderStandardPageSpec(16, 720, 18);\n        case 'sourceManagement': return new ReaderStandardPageSpec(8, 720, 12);\n        case 'settingsHome':\n        case 'settingsGeneral': return new ReaderStandardPageSpec(12, 720, 12);\n        case 'management':\n        case 'tools':\n        case 'rssEditor': return new ReaderStandardPageSpec(16, Number.MAX_SAFE_INTEGER, 16);\n        default: throw new Error('Unknown Reader standard page variant');\n    }\n}\nexport function readerPageContentStartInset(headerHeight: number = 58, toolsHeight: number = 0, gap: number = 0): number {\n    return Math.max(0, headerHeight) + Math.max(0, toolsHeight) + Math.max(0, gap);\n}\nexport function readerPageAreaLength(value: Length): number {\n    return typeof value === 'number' ? value : typeof value === 'string' ? Number.parseFloat(value) : Number.NaN;\n}\nexport function readerPageInitialHeaderHeight(kind: 'standard' | 'home' | 'bookshelf'): number {\n    switch (kind) {\n        case 'bookshelf': return 60;\n        case 'standard':\n        case 'home': return 58;\n        default: throw new Error('Unknown Reader initial header kind');\n    }\n}\nexport function readerStandardPageContentFrame(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot, width: number): SurfaceHorizontalFrame {\n    return resolveHorizontalFrame(width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics), new SurfaceWidthSpec(readerStandardPageSpec(variant).maxWidth, 19, 19));\n}\nexport function readerStandardPageFooterBottom(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot): number {\n    return variant === 'rssDetail' ? Math.max(0, readerFloatingBarBottomInset(metrics, 8) - 8) : 0;\n}\nexport function readerStandardPageContentEndInset(variant: ReaderStandardPageVariant, metrics: ReaderWindowMetricsSnapshot, footerHeight: number = 0): number {\n    if (variant === 'settingsHome')\n        return readerFloatingTabContentInset(metrics);\n    if (variant === 'rssDetail')\n        return Math.max(62, footerHeight) + readerStandardPageFooterBottom(variant, metrics);\n    return readerFloatingBarBottomInset(metrics, readerStandardPageSpec(variant).minimumBottom);\n}\nexport class ReaderPageFrameModifier implements AttributeModifier<CommonAttribute> {\n    private readonly scheme: string;\n    private readonly kind: ReaderPageShellKind;\n    private readonly readingUnderlayColor: string;\n    constructor(scheme: string, kind: ReaderPageShellKind = 'standard', readingUnderlayColor: string = '') {\n        this.scheme = scheme;\n        this.kind = kind;\n        this.readingUnderlayColor = readingUnderlayColor;\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (this.kind === 'reader') {\n            instance.clip(false).backgroundColor(this.readingUnderlayColor.length > 0 ? this.readingUnderlayColor : Color.Transparent).zIndex(0);\n            return;\n        }\n        instance.clip(true).zIndex(0);\n        if (this.kind === 'mangaDirectory' || this.kind === 'mangaDetail') {\n            instance.backgroundColor(mangaDirectoryColor('paper', this.scheme));\n        }\n        else {\n            instance.backgroundColor(readerAppColor(this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : this.kind === 'directory' ? 'app.window.background' : 'TOK_PAPER', this.scheme));\n        }\n    }\n}\nexport class ReaderHeaderFrameModifier implements AttributeModifier<CommonAttribute> {\n    private readonly kind: ReaderHeaderKind;\n    private readonly surface: ReaderHeaderSurface;\n    private readonly scheme: string;\n    constructor(kind: ReaderHeaderKind, surface: ReaderHeaderSurface, scheme: string) {\n        this.kind = kind;\n        this.surface = surface;\n        this.scheme = scheme;\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        if (this.kind === 'floating' || this.kind === 'mangaDirectory' || this.kind === 'reader') {\n            instance.clip(false).backgroundColor(Color.Transparent).zIndex(10);\n            return;\n        }\n        instance.clip(true).zIndex(10);\n        if (this.surface === 'solid')\n            instance.backgroundColor(readerAppColor(this.kind === 'standard' || this.kind === 'directoryTools' ? 'TOK_SURFACE_SOLID' : this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : 'TOK_PAPER', this.scheme));\n        else\n            instance.backgroundColor(Color.Transparent);\n    }\n}\n"
+      },
+      "specPolicy": "Finite named page/header categories, actual opaque paint and measured local inset/side/footer policy; actual ReaderPageShell module is recursively SDK-emitted through six exact real TS dependencies.",
+      "sdkProofs": [
+        "tools/test-reader-page-header-contract.mjs",
+        "docs/architecture/ui-page-framework-20261014.md"
+      ]
+    }
+  ]
 }

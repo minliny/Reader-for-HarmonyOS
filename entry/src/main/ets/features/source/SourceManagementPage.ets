@@ -1,3 +1,5 @@
+import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import { readerPageContentStartInset, readerStandardPageContentFrame } from '../common/ReaderPageShell';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
@@ -31,24 +33,16 @@ import { ReaderSelectPanel } from '../common/ReaderSelectPanel';
 import { StatusBadge } from '../common/StatusBadge';
 import {
   SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
-import {
-  readerVisualSafeLeft,
-  readerVisualSafeRight,
-} from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER_W,
   TOK_CARD_BG,
-  TOK_CONTENT_MAX_W_TABLET,
   TOK_INK,
   TOK_MUTED,
   TOK_ON_PRIMARY,
   TOK_PAPER,
   TOK_PRIMARY_DARK,
   TOK_ROW_DIVIDER,
-  TOK_SCREEN_INSET,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_MD,
   TOK_SPACE_SM,
@@ -135,6 +129,8 @@ export struct SourceManagementPage {
   @State private originX: number = 0;
   @State private originY: number = 0;
   @State private viewportWidth: number = 0;
+  @State private pageHeaderHeight: number = 0;
+  @State private pageFooterHeight: number = 0;
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -193,13 +189,31 @@ export struct SourceManagementPage {
   }
 
   build() {
-    // 根 Stack = 下拉面板 overlay 宿主: 展开面板必须挂在全高容器才可点 (ArkUI 命中测试
-    // 裁到父边界, 固定高行内面板下层选项不可点)。
-    Stack({ alignContent: Alignment.TopStart }) {
-      Column() { this.sourceList(); }
+    ReaderPageScaffold({
+      variant: 'standard',
+      headerKind: 'standard',
+      content: (): void => { this.pageContent(); },
+      header: (): void => { this.backBar(); },
+      footer: (): void => { this.pageFooter(); },
+      overlay: (): void => { this.groupOverlay(); },
+      onHeaderHeightChange: (height: number): void => {
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageHeaderHeight) > 0.1) {
+          this.pageHeaderHeight = height;
+        }
+      },
+      onFooterHeightChange: (height: number): void => {
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageFooterHeight) > 0.1) {
+          this.pageFooterHeight = height;
+        }
+      },
+    });
+  }
+
+  @Builder
+  private pageContent() {
+    Column() { this.sourceList(); }
       .width('100%')
       .height('100%')
-      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
       .onAreaChange((_oldValue: Area, newValue: Area): void => {
         // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。
         this.originX = Number(newValue.globalPosition.x);
@@ -209,35 +223,35 @@ export struct SourceManagementPage {
           this.viewportWidth = width;
         }
       });
+  }
 
-      Row() { this.backBar(); }
-        .width('100%').height(58).hitTestBehavior(HitTestMode.Transparent);
-      Column() { this.bottomActionBar(); }
-        .width('100%').height(44 + TOK_SPACE_SM + this.actionBottomInset())
-        .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-        .position({ bottom: 0, left: 0 }).hitTestBehavior(HitTestMode.Transparent);
+  @Builder
+  private pageFooter() {
+    Column() { this.bottomActionBar(); }
+      .width('100%').height(44 + TOK_SPACE_SM + this.actionBottomInset())
+      .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
+      .hitTestBehavior(HitTestMode.Transparent);
+  }
 
-      if (this.groupOpen) {
-        Row().width('100%').height('100%').backgroundColor(Color.Transparent)
-          .onClick(this.groupCloseAction(this.groupSelectionId));
-        ReaderSelectPanel({
-          value: this.groupValue,
-          options: this.groupOptions(),
-          variant: 'sourceGroup',
-          controlWidth: this.groupSelectWidth(),
-          reduceMotion: this.reduceMotion,
-          closing: this.groupClosing,
-          selectionId: this.groupSelectionId,
-          x: this.groupX - this.originX,
-          y: this.groupY - this.originY,
-          onCommit: (opt: string, identity: string): void => this.commitGroupSelection(opt, identity),
-          onDismiss: (identity: string): void => this.dismissGroupSelection(identity),
-        });
-      }
+  @Builder
+  private groupOverlay() {
+    if (this.groupOpen) {
+      Row().width('100%').height('100%').backgroundColor(Color.Transparent)
+        .onClick(this.groupCloseAction(this.groupSelectionId));
+      ReaderSelectPanel({
+        value: this.groupValue,
+        options: this.groupOptions(),
+        variant: 'sourceGroup',
+        controlWidth: this.groupSelectWidth(),
+        reduceMotion: this.reduceMotion,
+        closing: this.groupClosing,
+        selectionId: this.groupSelectionId,
+        x: this.groupX - this.originX,
+        y: this.groupY - this.originY,
+        onCommit: (opt: string, identity: string): void => this.commitGroupSelection(opt, identity),
+        onDismiss: (identity: string): void => this.dismissGroupSelection(identity),
+      });
     }
-    .width('100%')
-    .height('100%')
-    .clip(true);
   }
 
   @Builder
@@ -494,8 +508,8 @@ export struct SourceManagementPage {
     .width('100%')
     .height('100%')
     .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-    .contentStartOffset(58)
-    .contentEndOffset(44 + TOK_SPACE_SM + this.actionBottomInset())
+    .contentStartOffset(this.pageHeaderHeight > 0 ? this.pageHeaderHeight : readerPageContentStartInset())
+    .contentEndOffset(this.pageFooterHeight > 0 ? this.pageFooterHeight : 44 + TOK_SPACE_SM + this.actionBottomInset())
     .scrollBar(BarState.Off);
   }
 
@@ -728,12 +742,7 @@ export struct SourceManagementPage {
     }
     const metrics = ReaderWindowCoordinator.metrics();
     const containerWidth = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
-    return resolveHorizontalFrame(
-      containerWidth,
-      readerVisualSafeLeft(metrics),
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
+    return readerStandardPageContentFrame('sourceManagement', metrics, containerWidth);
   }
 
   private filterControlWidth(): number {

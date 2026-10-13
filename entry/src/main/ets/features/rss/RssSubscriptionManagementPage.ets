@@ -1,3 +1,4 @@
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity } from './RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
@@ -5,39 +6,22 @@ import type { RssSubscriptionManagementItem } from './RssPresentationContract';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_SOURCE_MANAGEMENT_META, TYPE_SOURCE_MANAGEMENT_TITLE } from '../common/ReaderTypography';
-import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderToggle } from '../common/ReaderToggle';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOperationFacts';
 import type { RssSubscription } from './RssGateway';
 import type { RssManagementOperationProjection } from './RssOrchestrator';
 import {
-  SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
-} from '../common/SurfaceHorizontalGeometry';
-import {
-  readerVisualSafeLeft,
-  readerVisualSafeRight,
-} from '../common/ReaderWindowMetrics';
-import {
   TOK_BORDER_W,
   TOK_CARD_BG_HI,
-  TOK_CONTENT_MAX_W_TABLET,
-  TOK_DANGER,
   TOK_INK,
   TOK_MUTED,
-  TOK_PAPER,
   TOK_PRIMARY_BG,
-  TOK_PRIMARY_DARK,
   TOK_PRIMARY_SOFT,
   TOK_ROW_DIVIDER,
-  TOK_SCREEN_INSET,
   TOK_SPACE_CONTROL_INLINE,
-  TOK_SPACE_LG,
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL_SOFT,
 } from '../common/ReaderTokens';
@@ -55,7 +39,6 @@ export type { RssSubscriptionManagementItem } from './RssPresentationContract';
 export struct RssSubscriptionManagementPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop items: RssSubscriptionManagementItem[];
   @Prop isTablet: boolean;
   /** Optional route identity: expands the matching row without mutating it. */
@@ -93,36 +76,22 @@ export struct RssSubscriptionManagementPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
+    ReaderStandardPage({
+      variant: 'rssManagement',
+      header: (): void => { this.backBar(); },
+      content: (): void => { this.pageContent(); },
+      scroller: this.pageScroller,
+    });
+  }
 
-      Scroll(this.pageScroller) {
-        Column() {
-          this.stats();
-          this.operationFeedback();
-          this.subscriptionList();
-        }
-        .width('100%')
-        .constraintSize({ maxWidth: this.contentFrame().width })
-        .padding({ top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() })
-        .alignItems(HorizontalAlign.Start);
-      }
-      .width('100%')
-      .height('100%')
-      .align(Alignment.Top)
-      .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-      .scrollBar(BarState.Off);
-      this.backBar();
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+  @Builder
+  private pageContent() {
+    this.stats();
+    this.operationFeedback();
+    this.subscriptionList();
   }
 
 
-  private bottomContentInset(): number {
-    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_LG;
-    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_LG);
-  }
   @Builder
   private backBar() {
     PageBackBar({
@@ -401,16 +370,5 @@ export struct RssSubscriptionManagementPage {
     return this.items.length - this.enabledCount();
   }
 
-  private contentFrame(): SurfaceHorizontalFrame {
-    if (this.readerWindowMetricsRevision < 0) {
-      return new SurfaceHorizontalFrame(0, 0, 0);
-    }
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(
-      metrics.windowRect.width,
-      readerVisualSafeLeft(metrics),
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
-  }
+
 }

@@ -1,10 +1,11 @@
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
+import { readerStandardPageContentFrame } from '../common/ReaderPageShell';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { TYPE_APP_COMPACT_BADGE, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_LOADING_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_LABEL, TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_STATUS, TYPE_SECTION_HEADING, TYPE_SYNC_BACKUP_ACTION, TYPE_SYNC_CONFLICT_META, TYPE_SYNC_HISTORY_STATUS, TYPE_SYNC_INPUT, TYPE_SYNC_MUTED_HEADING, TYPE_SYNC_ROW_LABEL } from '../common/ReaderTypography';
-import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   type SyncHistoryEntry,
@@ -18,32 +19,17 @@ import { PageBackBar } from '../common/PageBackBar';
 import { ReaderCard } from '../common/ReaderCard';
 import {
   SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
-import {
-  readerVisualSafeLeft,
-  readerVisualSafeRight,
-} from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
-  TOK_CONTENT_MAX_W_TABLET,
-  TOK_CONTROL_INK,
-  TOK_FIELD_SURFACE,
-  TOK_GREEN,
   TOK_INK,
   TOK_MUTED,
-  TOK_ON_PRIMARY,
-  TOK_PAPER,
-  TOK_PRIMARY_DARK,
   TOK_READ_PRIMARY,
-  TOK_SCREEN_INSET,
   TOK_SETTING_ICON_BG,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_LG,
-  TOK_SPACE_MD,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL_SOFT,
@@ -100,45 +86,28 @@ export struct SyncPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Scroll() {
-        Column({ space: TOK_SPACE_MD }) {
-          this.webdavSection();
-          this.manualActionsSection();
-          this.autoBackupSection();
-          this.historySection();
+    ReaderStandardPage({
+      variant: 'sync',
+      header: (): void => { this.backBar(); },
+      content: (): void => { this.pageContent(); },
+    })
+      .onAreaChange((_oldValue: Area, newValue: Area): void => {
+        const width = this.numericAreaLength(newValue.width);
+        if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+          this.viewportWidth = width;
         }
-        .width('100%')
-        .padding({
-          left: this.contentFrame().left,
-          right: this.contentFrame().right,
-          top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
-          bottom: this.bottomContentInset(),
-        });
-      }
-      .height('100%')
-      .width('100%')
-      .align(Alignment.TopStart)
-      .scrollBar(BarState.Off);
-      this.backBar();
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-    .clip(true)
-    .onAreaChange((_oldValue: Area, newValue: Area): void => {
-      const width = this.numericAreaLength(newValue.width);
-      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-        this.viewportWidth = width;
-      }
-    });
+      });
+  }
+
+  @Builder
+  private pageContent() {
+    this.webdavSection();
+    this.manualActionsSection();
+    this.autoBackupSection();
+    this.historySection();
   }
 
 
-  private bottomContentInset(): number {
-    if (this.readerWindowMetricsRevision < 0) return 18;
-    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), 18);
-  }
   @Builder
   private backBar() {
     PageBackBar({
@@ -568,12 +537,7 @@ export struct SyncPage {
     }
     const metrics = ReaderWindowCoordinator.metrics();
     const containerWidth = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
-    return resolveHorizontalFrame(
-      containerWidth,
-      readerVisualSafeLeft(metrics),
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
+    return readerStandardPageContentFrame('sync', metrics, containerWidth);
   }
 
   private numericAreaLength(value: Length): number {

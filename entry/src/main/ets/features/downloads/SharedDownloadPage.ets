@@ -1,3 +1,4 @@
+import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 import { prepareSharedDownloadFonts } from '../common/ReaderFonts';
 import { DOWNLOAD_VISUAL, downloadVisualColor, downloadOverlayChromeStyle, sharedDownloadSheetMaxHeight, sharedDownloadContentInsets } from '../common/SharedDownloadVisualSpec';
 import {
@@ -139,41 +140,50 @@ export struct SharedDownloadPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      if (!this.fontsReady) {
-        Column() {
-          if (this.fontsFailed) { this.notice((): string => '阅读字体暂不可用', true); }
-        }.width('100%').padding({ left: this.leftInset(), right: this.rightInset(), top: this.contentTop() });
-      } else if (this.detail() !== undefined) {
-        this.chapterPage(this.bookGetter(this.detail() as DownloadBookView));
-      } else {
-        this.bookPage();
-      }
-      if (this.fontsReady && !this.mainChromeOverflow()) {
-        Column() { this.topBar(); }.width('100%').padding({ left: this.leftInset(), right: this.rightInset() })
-          .position({ x: 0, y: this.headerTop() });
-      }
-      if (this.fontsReady && !this.mainChromeOverflow()) {
+    ReaderPageScaffold({
+      variant: 'download', headerKind: 'floating',
+      headerTop: this.headerTop(), headerInsetLeft: this.leftInset(), headerInsetRight: this.rightInset(),
+      footerInsetLeft: this.leftInset(), footerInsetRight: this.rightInset(), footerBottom: this.bottomInset(),
+      content: (): void => { this.pageContent(); },
+      header: (): void => { this.fixedHeader(); },
+      footer: (): void => { this.fixedDock(); },
+      overlay: (): void => { this.pageOverlays(); },
+    }).onAreaChange((_old: Area, area: Area): void => {
+      const height = Number(area.height);
+      if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageHeight) > 0.5) this.pageHeight = height;
+    });
+  }
+
+  @Builder
+  private pageContent() {
+    if (!this.fontsReady) {
       Column() {
-        Blank().layoutWeight(1);
-        if (!this.fontsReady) {
-          Blank();
-        } else if (this.managing || this.detail() !== undefined) {
-          this.selectionDock();
-        } else {
-          this.storageDock();
-        }
-      }.width('100%').height('100%').padding({
-        left: this.leftInset(), right: this.rightInset(), bottom: this.bottomInset(),
-      }).hitTestBehavior(HitTestMode.Transparent);
-      }
-      if (this.sheet.length > 0) { this.sheetOverlay(); }
-      if (this.confirmation.length > 0) { this.confirmationOverlay(); }
-    }.width('100%').height('100%').backgroundColor(downloadVisualColor('paper', this.appThemeScheme))
-      .onAreaChange((_old: Area, area: Area): void => {
-        const height = Number(area.height);
-        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageHeight) > 0.5) this.pageHeight = height;
-      });
+        if (this.fontsFailed) { this.notice((): string => '阅读字体暂不可用', true); }
+      }.width('100%').padding({ left: this.leftInset(), right: this.rightInset(), top: this.contentTop() });
+    } else if (this.detail() !== undefined) {
+      this.chapterPage(this.bookGetter(this.detail() as DownloadBookView));
+    } else {
+      this.bookPage();
+    }
+  }
+
+  @Builder
+  private fixedHeader() {
+    if (this.fontsReady && !this.mainChromeOverflow()) { this.topBar(); }
+  }
+
+  @Builder
+  private fixedDock() {
+    if (this.fontsReady && !this.mainChromeOverflow()) {
+      if (this.managing || this.detail() !== undefined) { this.selectionDock(); }
+      else { this.storageDock(); }
+    }
+  }
+
+  @Builder
+  private pageOverlays() {
+    if (this.sheet.length > 0) { this.sheetOverlay(); }
+    if (this.confirmation.length > 0) { this.confirmationOverlay(); }
   }
 
   @Builder

@@ -1,3 +1,4 @@
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
@@ -7,39 +8,21 @@ import { projectOperationFacts, type OperationFacts } from '../../app/ReaderOper
 import type { RssSourceSnapshot } from './RssOrchestrator';
 import type { RssRouteOperationProjection } from './RssRouteOperationHost';
 import { TYPE_APP_SMALL_ACTION, TYPE_RSS_ENTRY_DESCRIPTION, TYPE_RSS_ENTRY_TITLE, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_SECTION_HEADING, TYPE_RSS_SOURCE_TITLE } from '../common/ReaderTypography';
-import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   type RssItem,
   type RssSubscription,
 } from './RssGateway';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
-  SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
-} from '../common/SurfaceHorizontalGeometry';
-import {
-  readerVisualSafeLeft,
-  readerVisualSafeRight,
-} from '../common/ReaderWindowMetrics';
-import {
   TOK_BORDER_W,
   TOK_CARD_BG_HI,
-  TOK_CONTENT_MAX_W_TABLET,
-  TOK_GREEN,
   TOK_INK,
   TOK_MUTED,
-  TOK_PAPER,
   TOK_PRIMARY_BG,
-  TOK_PRIMARY_DARK,
-  TOK_PRIMARY_SOFT,
   TOK_ROW_DIVIDER,
-  TOK_SCREEN_INSET,
   TOK_SPACE_CONTROL_INLINE,
-  TOK_SPACE_LG,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
@@ -53,7 +36,6 @@ import {
 export struct RssSourceFeedPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop subscription: RssSubscription;
   @Prop items: RssItem[];
   @Prop isTablet: boolean;
@@ -70,54 +52,36 @@ export struct RssSourceFeedPage {
   onRefresh: () => void = (): void => {};
   onEditSource: () => void = (): void => {};
   onSourceOperations: () => void = (): void => {};
-  @State private viewportWidth: number = 0;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-
-      Scroll() {
-        Column({ space: TOK_SPACE_XS }) {
-          this.operationFeedback();
-          this.sourceCard();
-          this.sourceActions();
-          this.entrySectionHeader();
-          if (this.items.length > 0) {
-            this.entryList();
-          }
-        }
-        .width(this.contentFrame().width)
-        .padding({ top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() });
-      }
-      .height('100%')
-      .width('100%')
-      .scrollBar(BarState.Off)
-      .align(Alignment.Top)
-      .padding({ left: this.contentFrame().left, right: this.contentFrame().right });
-      PageBackBar({
-        title: '全部条目',
-        onBack: (): void => this.onBack(),
-      });
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-    .onAreaChange((_oldValue: Area, newValue: Area): void => {
-      const width = this.numericAreaLength(newValue.width);
-      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-        this.viewportWidth = width;
-      }
+    ReaderStandardPage({
+      variant: 'rssFeed',
+      header: (): void => { this.pageHeader(); },
+      content: (): void => { this.pageContent(); },
     });
   }
 
-
-  private bottomContentInset(): number {
-    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_LG;
-    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_LG);
+  @Builder
+  private pageHeader() {
+    PageBackBar({ title: '全部条目', onBack: (): void => this.onBack() });
   }
+
+  @Builder
+  private pageContent() {
+    this.operationFeedback();
+    this.sourceCard();
+    this.sourceActions();
+    this.entrySectionHeader();
+    if (this.items.length > 0) {
+      this.entryList();
+    }
+  }
+
+
   @Builder
   private operationFeedback() {
     RssOriginalRecoverySurface({ original: this.original, presentationIdentity: this.presentationIdentity, scope: 'feed',
@@ -330,28 +294,4 @@ export struct RssSourceFeedPage {
     return parts.join(' · ');
   }
 
-  private contentFrame(): SurfaceHorizontalFrame {
-    if (this.readerWindowMetricsRevision < 0) {
-      return new SurfaceHorizontalFrame(0, 0, 0);
-    }
-    const metrics = ReaderWindowCoordinator.metrics();
-    const containerWidth = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
-    return resolveHorizontalFrame(
-      containerWidth,
-      readerVisualSafeLeft(metrics),
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
-  }
-
-  private numericAreaLength(value: Length): number {
-    if (typeof value === 'number') {
-      return Number.isFinite(value) ? value : 0;
-    }
-    if (typeof value === 'string') {
-      const parsed = Number.parseFloat(value);
-      return Number.isFinite(parsed) ? parsed : 0;
-    }
-    return 0;
-  }
 }

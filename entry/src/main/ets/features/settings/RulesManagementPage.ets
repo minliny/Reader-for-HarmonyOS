@@ -1,34 +1,19 @@
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_CAPTION, TYPE_FORM_STATUS, TYPE_RULES_COMPACT_ACTION, TYPE_RULES_ENTITY_TITLE, TYPE_RULES_INHERITED_DESCRIPTION, TYPE_RULES_INHERITED_NOTE } from '../common/ReaderTypography';
-import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { registerReaderFonts } from '../common/ReaderFonts';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { PageBackBar } from '../common/PageBackBar';
 import { ReaderToggle } from '../common/ReaderToggle';
-import {
-  SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
-} from '../common/SurfaceHorizontalGeometry';
-import {
-  readerVisualSafeLeft,
-  readerVisualSafeRight,
-} from '../common/ReaderWindowMetrics';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_INK,
   TOK_MUTED,
-  TOK_ON_PRIMARY,
-  TOK_PAPER,
-  TOK_PRIMARY_DARK,
-  TOK_SCREEN_INSET,
-  TOK_SPACE_MD,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL_SOFT,
@@ -58,7 +43,6 @@ import {
 export struct RulesManagementPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: RulesManagementSnapshot = EMPTY_RULES_MANAGEMENT_SNAPSHOT;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onBack: () => void = (): void => {};
@@ -109,41 +93,30 @@ export struct RulesManagementPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Scroll() {
-        Column({ space: TOK_SPACE_MD }) {
-          this.statusCard();
-          this.recoveryAction();
-          this.bundleCard();
-          this.replaceCard();
-          this.txtTocCard();
-          this.dictCard();
-          this.subscriptionCard();
-        }
-        .width('100%')
-        .padding({
-          left: this.contentFrame().left,
-          right: this.contentFrame().right,
-          top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
-          bottom: this.bottomContentInset(),
-        });
-      }
-      .height('100%')
-      .width('100%')
-      .align(Alignment.TopStart)
-      .scrollBar(BarState.Off);
-      PageBackBar({ title: '规则实体管理', onBack: (): void => this.onBack() });
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+    ReaderStandardPage({
+      variant: 'management',
+      header: (): void => { this.pageHeader(); },
+      content: (): void => { this.pageContent(); },
+    });
+  }
+
+  @Builder
+  private pageHeader() {
+    PageBackBar({ title: '规则实体管理', onBack: (): void => this.onBack() });
+  }
+
+  @Builder
+  private pageContent() {
+    this.statusCard();
+    this.recoveryAction();
+    this.bundleCard();
+    this.replaceCard();
+    this.txtTocCard();
+    this.dictCard();
+    this.subscriptionCard();
   }
 
 
-  private bottomContentInset(): number {
-    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;
-    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_MD);
-  }
   @Builder
   private recoveryAction() {
     if (this.recovery().canRetry) {
@@ -432,16 +405,5 @@ export struct RulesManagementPage {
     return Number.isSafeInteger(parsed) ? parsed : 0;
   }
 
-  private contentFrame(): SurfaceHorizontalFrame {
-    if (this.readerWindowMetricsRevision < 0) {
-      return new SurfaceHorizontalFrame(0, 0, 0);
-    }
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(
-      metrics.windowRect.width,
-      readerVisualSafeLeft(metrics),
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(metrics.windowRect.width, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
-  }
+
 }

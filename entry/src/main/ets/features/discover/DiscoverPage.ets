@@ -11,9 +11,9 @@ import { readerAppColor } from '../common/ReaderThemeRegistry';
 // Icons: existing media only (no new SVG assets).
 
 import { MainTabShell } from '../shell/MainTabShell';
+import { readerPageContentStartInset } from '../common/ReaderPageShell';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
-  READER_FLOATING_TOP_BAR_HEIGHT,
   readerFloatingTabContentInset,
 } from '../common/ReaderFloatingBarMetrics';
 import { ReaderIconButton } from '../common/ReaderIconButton';
@@ -59,6 +59,7 @@ export struct DiscoverPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @State private fixedHeaderHeight: number = readerPageContentStartInset();
   @Prop presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
@@ -77,26 +78,14 @@ export struct DiscoverPage {
 
   build() {
     MainTabShell({
-      activeTab: 'discover',
+      activeTab: 'discover', headerKind: 'home',
       onMainTab: (key: string): void => this.onMainTab(key),
-    }) {
-      this.discoverTabContent();
-    }
-  }
-
-  @Builder
-  private discoverTabContent() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      this.discoverContent();
-      Row() {
-        this.homeTopBar();
-      }
-      .width('100%')
-      .height(READER_FLOATING_TOP_BAR_HEIGHT)
-      .hitTestBehavior(HitTestMode.Transparent);
-    }
-    .width('100%')
-    .height('100%');
+      header: (): void => { this.homeTopBar(); },
+      onHeaderHeightChange: (height: number): void => {
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.fixedHeaderHeight) > .1)
+          this.fixedHeaderHeight = height;
+      },
+    }) { this.discoverContent(); }
   }
 
   @Builder
@@ -125,7 +114,7 @@ export struct DiscoverPage {
       }
       .width('100%')
       .constraintSize({ maxWidth: this.contentFrame().width })
-      .padding({ top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() });
+      .padding({ top: this.fixedHeaderHeight + TOK_SPACE_XS, bottom: this.bottomContentInset() });
     }
     .height('100%')
     .width('100%')

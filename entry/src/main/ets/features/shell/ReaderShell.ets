@@ -1,3 +1,4 @@
+import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 import curves from '@ohos.curves';
 import { SOURCE_SWITCH_VISUAL } from '../source/SourceSwitchVisual';
 import type { SourceSwitchCompletionPresentation } from '../source/SourceSwitchCompletionPresentation';
@@ -164,7 +165,19 @@ export struct ReaderShell {
   onRollbackSourceSwitch: (scopeId?: number) => void = (): void => {};
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
+    ReaderPageScaffold({ variant: 'reader', headerKind: 'reader', pageVisible: this.visible,
+      content: (): void => { this.readingContent(); },
+      overlay: (): void => { this.readingOverlay(); },
+    })
+    .expandSafeArea(this.contentKind === 'manga' ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
+      this.contentKind === 'manga' ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
+        [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+    .ignoreLayoutSafeArea(this.contentKind === 'manga' ? [LayoutSafeAreaType.SYSTEM] : [],
+      this.contentKind === 'manga' ? [LayoutSafeAreaEdge.ALL] : []);
+  }
+
+  @Builder
+  private readingContent() {
       // This stable nested layer prevents the reader component from being
       // remounted when sibling overlays appear.  Opacity 0 still receives the
       // true viewport/layout pass; `Visibility` would make the TextController
@@ -290,6 +303,10 @@ export struct ReaderShell {
       // input shield over Local Book Detail.
       .hitTestBehavior(HitTestMode.Transparent);
 
+  }
+
+  @Builder
+  private readingOverlay() {
       if (this.route === 'directory') {
         if (this.contentKind === 'manga') {
           BookDirectoryPage({
@@ -348,21 +365,6 @@ export struct ReaderShell {
         this.sourceSwitchOverlayContent();
       }
       this.overlayStatusBarUnderlay();
-    }
-    .width('100%')
-    .height('100%')
-    .expandSafeArea(this.contentKind === 'manga' ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
-      this.contentKind === 'manga' ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
-        [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
-    .ignoreLayoutSafeArea(this.contentKind === 'manga' ? [LayoutSafeAreaType.SYSTEM] : [],
-      this.contentKind === 'manga' ? [LayoutSafeAreaEdge.ALL] : [])
-    // Keep the route opaque while the reading owner measures and admits its
-    // first physical page. Without a shell-owned underlay, the route switch
-    // can expose the Index/window background for a few frames before
-    // ReadingSurface mounts its paper composition.
-    .backgroundColor(this.chromeUnderlayColor)
-    .opacity(this.visible ? 1 : 0)
-    .hitTestBehavior(this.visible ? HitTestMode.Default : HitTestMode.Transparent);
   }
 
   @Builder

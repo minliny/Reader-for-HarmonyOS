@@ -28,6 +28,7 @@ import { errorMessageOf } from '../app/ErrorMessage';
 import { readingOfflineFailureHint } from '../features/reading/ReadingOfflineFailurePresentation';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerContentSafeTop } from '../features/common/ReaderWindowMetrics';
+import { readerPageInitialHeaderHeight } from '../features/common/ReaderPageShell';
 import type {
   ShelfBook,
   BookshelfState,
@@ -353,6 +354,7 @@ struct Index {
   @State private editingShelfGroupPresentation: number = 0;
   private bookshelfSettingsReturnRoute: 'bookshelf' | 'settings' = 'bookshelf';
   @State private shelfBooks: ShelfBook[] = [];
+  @State private shelfHeaderHeight: number = readerPageInitialHeaderHeight('bookshelf');
   /**
    * A confirmed detail-page shelf write can complete while the detail route is
    * still mounted.  Keep its identity until the bookshelf route performs a
@@ -908,6 +910,7 @@ struct Index {
     mounting: number = this.detailShelfAdmissionMount) {
     if (this.isBookshelfVisualAdmitted) {
       BookshelfPage({
+        headerClearance: this.shelfHeaderHeight + 14,
         navigationGeneration: this.navigationGeneration,
         viewState: this.bookshelfViewState,
         books: this.shelfBooks,
@@ -957,6 +960,10 @@ struct Index {
   private bookshelfShellContent(owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner,
     navigation: number = this.navigationGeneration, mounting: number = this.detailShelfAdmissionMount) {
     BookshelfShell({
+      onHeaderHeightChange: (height: number): void => {
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.shelfHeaderHeight) > .1)
+          this.shelfHeaderHeight = height;
+      },
       navigationGeneration: this.navigationGeneration,
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string, generation?: number): void => {
         if (generation !== undefined) this.registerTemporaryBackBridge('bookshelf', generation, owner, handler, identity);

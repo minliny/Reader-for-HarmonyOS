@@ -15,8 +15,8 @@ for(const novelFile of ['entry/src/main/ets/features/source/SourceSwitchWindow.e
  const missingWitness=structuredClone(baseline);delete missingWitness.uiPolicies.find(row=>row.file===novelFile).visualSuccessorContract;
  assert.throws(()=>verifyArchitectureRegistration(inventory,missingWitness,contract,root),/binds exact witness/,'new selected actor keeps an explicit finite successor contract');
 }
-assert.equal(result.budgetRows,93,'original retained business budgets');assert.equal(result.transferredBudgetRows,7);assert.equal(result.historicalBudgetRows,100,'93 + seven exact reversible approved transfers preserve all original100');assert.equal(result.producers,16);
-assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup','MangaDirectoryEntryRow','MangaDirectoryCurrentFooter'].sort(),'only exact finite shared producers gain owner treatment');
+assert.equal(result.budgetRows,93,'original retained business budgets');assert.equal(result.transferredBudgetRows,7);assert.equal(result.historicalBudgetRows,100,'93 + seven exact reversible approved transfers preserve all original100');assert.equal(result.producers,19);
+assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup','MangaDirectoryEntryRow','MangaDirectoryCurrentFooter','ReaderPageScaffold','ReaderFixedHeaderHost','ReaderStandardPage'].sort(),'only exact finite shared producers gain owner treatment');
 const mangaRowPath='entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets',mangaRowSource=readFileSync(mangaRowPath,'utf8');
 const mangaRowProducer=contract.producers.find(row=>row.component==='MangaDirectoryEntryRow');
 assert.deepEqual(mangaRowProducer.consumers.map(edge=>edge.file).sort(),['features/bookshelf/BookDirectoryPage.ets','features/bookshelf/LocalBookDetail.ets','features/manga/MangaReadingDirectoryFallback.ets'].sort());
@@ -160,3 +160,36 @@ for(const {row:site,element:originalCall} of iconSites){
 }
 const iconPath='entry/src/main/ets/features/common/ReaderIconButton.ets',iconSource=readFileSync(iconPath,'utf8');
 assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file===iconPath?iconSource.replace('.width(resolveReaderIconButtonSpec(this.specId).boxSize)','.width(99)'):readFileSync(file,'utf8')),/finite shared physical inputs/,'same-count literal icon geometry rejected');
+
+// New page ownership remains finite: these three exact native hosts and one
+// exact policy module are qualified without raising any old business budget.
+for (const component of ['ReaderPageScaffold','ReaderFixedHeaderHost','ReaderStandardPage']) {
+ const originalSite=inventory.rows.flatMap(row=>row.elements.map(element=>({row,element}))).find(site=>site.element.kind===component);
+ assert.ok(originalSite, 'actual shared page consumer '+component);
+ const index=originalSite.row.elements.indexOf(originalSite.element);
+ for (const property of ['padding','backgroundColor','width']) {
+  const bad=structuredClone(inventory);
+  bad.rows.find(row=>row.file===originalSite.row.file).elements[index].modifiers.push({property,args:['99']});
+  assert.throws(()=>verifyArchitectureRegistration(bad,baseline,contract,root), /caller privately overrides shared appearance/,
+    'new shared page cannot gain caller-owned '+property);
+ }
+ const badInput=structuredClone(inventory);
+ badInput.rows.find(row=>row.file===originalSite.row.file).elements[index].args[0]=originalSite.element.args[0].replace('{','{ fontSize: 99,');
+ assert.throws(()=>verifyArchitectureRegistration(badInput,baseline,contract,root), /illegal shared input/,
+   'new shared page exposes facts/slots, never a free typography style bag');
+}
+const pagePolicyPath='entry/src/main/ets/features/common/ReaderPageShell.ts';
+const pagePolicy=readFileSync(pagePolicyPath,'utf8');
+const lostMask=pagePolicy.replace("if (this.surface === 'solid')", 'if (false)');
+assert.notEqual(lostMask,pagePolicy);
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file===pagePolicyPath?lostMask:readFileSync(file,'utf8')),
+ /finite page policy implementation/, 'same-count policy can never declare solid without performing its actual paint');
+const raisedPolicy=structuredClone(baseline);
+raisedPolicy.sharedOwners.find(row=>row.file===pagePolicyPath).counts.backgroundColor++;
+assert.throws(()=>verifyArchitectureRegistration(inventory,raisedPolicy,contract,root), /finite page policy cannot gain/,
+ 'finite page policy cannot inflate its physical style budget');
+const privatePolicy=structuredClone(contract);
+privatePolicy.boundedSpecs[0].file='entry/src/main/ets/features/common/PrivatePagePolicy.ts';
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,privatePolicy,root), /only the exact finite page-shell/,
+ 'a new common-path TypeScript policy does not inherit an exemption');
+console.log('PASS exact page hosts and actual bounded policy; caller geometry/style bags, missing solid paint, raised policy budget and arbitrary spec exemptions rejected.');

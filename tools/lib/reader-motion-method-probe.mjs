@@ -18,6 +18,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
+import { actualReaderPageShell } from './reader-page-shell-runtime-probe.mjs';
 import { runtimeOwnerIdentityProbe } from './reader-runtime-admission-probe.mjs';
 // Execute the pure production Host unchanged; its ArkTS-relative imports do
 // not resolve in Node, so only import bindings are supplied by this probe.
@@ -74,13 +75,8 @@ const ParagraphRange = new Function(stripTypeScriptTypes(paragraphRangeSource).r
 export function productionMotionMethods(file, names, dependencies = {}) {
   const fixtureRuntime = { captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {} };
   dependencies = { ...mangaDirectoryAdaptiveDependencies, bookshelfSourceDisplayName, ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, prepareMangaSheetFonts: async () => true, readingChapterLayoutMap, prepareReadingChapterLayoutMap, prepareReadingParagraphUtf16Ranges, readingParagraphBoundaryMode, ParagraphRange, hasKnownReadingImageGeometry, errorMessageOf,
-    // Isolated method probes evaluate selected production Builders without
-    // importing the complete ArkUI module graph. Keep the shared page-shell
-    // helpers available through the same explicit platform seam as the
-    // native Builder probe.
-    ReaderHeaderFrameModifier: class { constructor(kind) { this.kind = kind; } applyNormalAttribute(instance) { instance.clip(true).zIndex(this.kind === 'directoryTools' ? 1 : 10); } },
-    ReaderPageFrameModifier: class { applyNormalAttribute(instance) { instance.clip(true).zIndex(0); } },
-    readerPageContentStartInset: (headerHeight = 58, toolsHeight = 0, gap = 0) => Math.max(0, headerHeight) + Math.max(0, toolsHeight) + Math.max(0, gap),
+    // Execute the current complete page-shell policy through its finite import seam.
+    ...actualReaderPageShell(),
     ...readerTypographyRoles, readerRuleMutationEffects, RssPresentationProjection, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource, ReaderReadingRecordHost, ReadingRecordRecoveryError,
     hilog: { error() {} }, ReaderRuntimeOwner: runtimeOwnerIdentityProbe(() => fixtureRuntime), ...dependencies };
   // Older fixtures inject current() as the instance-storage seam. Keep their
@@ -121,7 +117,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   let expanded;
   do {
     expanded = false;
-    for (const helper of [...mangaDirectoryAdaptiveMembers, 'directoryCurrentPagePosition', 'directoryCurrentIndex', 'directoryEntries', 'directoryFontScale', 'directoryToolHeight', 'directoryInitialWidth', 'directoryHeaderChrome', 'directoryQuickHeight', 'reopenChangedChapter','retryLabel','notifyPublishedRows','rowRenderKey','isPrimaryErrorRow','primaryErrorRowKey','rowHasError','requestedLast','performPanelAction','closePanel','invalidatePanelMotion','openPanel','dismissPanelKeyboard','preparePanelFonts','settlePanel','panelTravel','panelWidth','panelHeight','widePanel','clearMangaSourceSwitchSelection','waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'prepareChapterMeasurementProjection', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireSourceManagementPresentation', 'retireSettingsPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'retireBookshelfCatalogPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey', 'cancelSourceSwitchCompletion', 'finishSourceSwitchReveal', 'sourceSwitchCompletionKey']) {
+    for (const helper of [...mangaDirectoryAdaptiveMembers, 'searchContentStartInset', 'searchHeaderLayoutKey', 'directoryCurrentPagePosition', 'directoryCurrentIndex', 'directoryEntries', 'directoryFontScale', 'directoryToolHeight', 'directoryInitialWidth', 'directoryHeaderChrome', 'directoryQuickHeight', 'reopenChangedChapter','retryLabel','notifyPublishedRows','rowRenderKey','isPrimaryErrorRow','primaryErrorRowKey','rowHasError','requestedLast','performPanelAction','closePanel','invalidatePanelMotion','openPanel','dismissPanelKeyboard','preparePanelFonts','settlePanel','panelTravel','panelWidth','panelHeight','widePanel','clearMangaSourceSwitchSelection','waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'prepareChapterMeasurementProjection', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireSourceManagementPresentation', 'retireSettingsPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'retireBookshelfCatalogPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey', 'cancelSourceSwitchCompletion', 'finishSourceSwitchReveal', 'sourceSwitchCompletionKey']) {
     if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
       (capturedOwnerFields.includes(`this.${helper}(`) || type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`)))) { names.push(helper); expanded = true; }
     }
@@ -142,6 +138,10 @@ export function productionMotionMethods(file, names, dependencies = {}) {
     for (const decorator of ts.getAllDecorators(member)) text = text.replace(decorator.getText(tree), '');
     return text.trim();
   };
+  const pageChromeFields = type.name?.getText(tree) === 'SearchPage' && names.includes('searchContentStartInset')
+    ? ['fixedHeaderHeight', 'fixedHeaderLayoutKey'].filter(name => !names.includes(name))
+      .map(name => ordinaryField(type.members.find(member => member.name?.getText(tree) === name))).join('\n')
+    : '';
   const panelFields = names.some(name => mangaPanelHelpers.includes(name)) && type.name?.getText(tree) === 'MangaReadingSurface'
     ? [...mangaDirectoryAdaptiveFields, 'isReaderIdentityCurrent', 'panel', 'panelOffset', 'panelScrimOpacity', 'panelPhase', 'panelGeneration', 'panelActionGeneration',
       'panelCloseTask', 'panelCloseResolve', 'panelFontsReady', 'panelFontGeneration', 'reduceMotion', 'directoryOpenRevision', 'directoryCurrentChapterIndex']
@@ -173,7 +173,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
     paragraphLayout = new ReaderParagraphLayoutOwner(); physicalPagination = new ReaderPhysicalPaginationOwner();
     progressProducers = new ReaderProgressProducerHost();
     nativeAlertOwner = new ReaderNativeAlertOwner();
-    nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${fields ?? ''} ${panelFields} ${completionFields} ${chromePorts} ${capturedOwnerFields} ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
+    nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${fields ?? ''} ${pageChromeFields} ${panelFields} ${completionFields} ${chromePorts} ${capturedOwnerFields} ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
   // Existing probes describe pre-refactor component fields. Route those fixture
   // assignments to the real production owners; no production struct accessors
   // or duplicated batching/index-admission algorithm is introduced.

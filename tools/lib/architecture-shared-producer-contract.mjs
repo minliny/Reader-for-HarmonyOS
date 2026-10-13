@@ -96,7 +96,12 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
  const origins=legacyBudgetOriginFacts(baseline,contract,readSource);
  assert.equal(createHash('sha256').update(JSON.stringify(baseline.rows)).digest('hex'),contract.legacyBusinessRowsSha256,'legacy100 private budgets cannot be silently raised');
  const producerFiles=new Set(contract.producers.map(p=>p.file));
- const legacyOwners=baseline.sharedOwners.filter(r=>!producerFiles.has(r.file));
+ const boundedSpecs=contract.boundedSpecs??[];
+ assert.deepEqual(boundedSpecs.map(spec=>[spec.id,spec.file]),[
+  ['shared-ReaderPageShellPolicy','entry/src/main/ets/features/common/ReaderPageShell.ts'],
+ ],'only the exact finite page-shell TypeScript policy gains spec ownership');
+ const specFiles=new Set(boundedSpecs.map(spec=>spec.file));
+ const legacyOwners=baseline.sharedOwners.filter(r=>!producerFiles.has(r.file)&&!specFiles.has(r.file));
  assert.equal(createHash('sha256').update(JSON.stringify(legacyOwners)).digest('hex'),contract.legacySharedOwnersSha256,'shared owner must be an exact legacy owner or a finite producer contract');
  const registry=[...baseline.rows,...(baseline.sharedOwners??[]),...(baseline.uiPolicies??[])];
  assert.equal(new Set(registry.map(r=>r.file)).size,registry.length,'one bounded policy per file');
@@ -104,6 +109,14 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
  const registered=new Set(registry.map(r=>relative(r.file)));
  for(const row of inventory.rows.filter(r=>r.elements.length))assert.ok(registered.has(row.file),'unregistered actual UI file: '+row.file);
  for(const row of baseline.uiPolicies??[]){assert.ok(row.reason?.length>20&&row.owner?.length>0&&row.kind?.length>0,'outside100 needs actual owner/reason');assert.ok(inventory.rows.some(r=>r.file===relative(row.file)&&r.elements.length),'orphan UI policy '+row.file);}
+ for(const spec of boundedSpecs){
+  const registration=baseline.sharedOwners.find(row=>row.file===spec.file);
+  assert.equal(registration?.contractId,spec.id,'finite page policy binds exact contract');
+  assert.deepEqual(registration.counts,spec.counts,'finite page policy cannot gain an arbitrary style budget');
+  assert.ok(spec.specPolicy?.length>20&&spec.sdkProofs?.length>0,'finite page policy requires its production SDK proof');
+  for(const proof of spec.sdkProofs)assert.ok(readSource(proof).length>0,'actual finite page-policy proof');
+  assert.deepEqual(sharedProducerShape(readSource(spec.file),spec.file),spec.shape,'finite page policy implementation/surface/inset contract changed');
+ }
  // Both content kinds share the selected novel drawer. The finite successor
  // removes only retired manga backgrounds and preserves preparation cancel.
  // Historical approvals stay immutable; every actual background is witnessed.
@@ -161,7 +174,7 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
   const edges=producerConsumerEdges(inventory,producer.component);assert.ok(edges.length>0,'shared producer must be consumed');
   assert.deepEqual(edges.map(({keys,...e})=>e),producer.consumers.map(({keys,...e})=>e),'actual producer/consumer/spec edges changed: '+producer.id);
   for(const e of edges)for(const key of e.keys)assert.ok(publicFields.has(key),'illegal shared input '+producer.id+':'+key);
-  for(const row of inventory.rows)for(const e of row.elements.filter(e=>e.kind===producer.component))assert.equal(e.modifiers.some(m=>(['ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup'].includes(producer.component)?physical:appearance).has(m.property)),false,'caller privately overrides shared appearance '+row.file+':'+e.line);
+  for(const row of inventory.rows)for(const e of row.elements.filter(e=>e.kind===producer.component))assert.equal(e.modifiers.some(m=>(['ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup','ReaderPageScaffold','ReaderFixedHeaderHost','ReaderStandardPage'].includes(producer.component)?physical:appearance).has(m.property)),false,'caller privately overrides shared appearance '+row.file+':'+e.line);
   // A finite domain wrapper must also prove its actual child delegation;
   // registering five incoming callers alone cannot prove shared rendering.
   for(const delegate of producer.delegates??[]){

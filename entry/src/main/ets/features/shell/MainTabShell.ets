@@ -1,73 +1,62 @@
-import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { MainTabBar } from './MainTabBar';
-import { TOK_PAPER } from '../common/ReaderTokens';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   readerInteractiveSafeBottom,
   readerInteractiveSafeLeft,
   readerVisualSafeTop,
 } from '../common/ReaderWindowMetrics';
-import { ReaderPageFrameModifier } from '../common/ReaderPageShell';
+import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
+import type { ReaderHeaderKind } from '../common/ReaderPageShell';
 
 
 // MainTabShell —— 主页面(书架/发现/RSS/设置)公共骨架 (FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §七)。
-// 页面背景 + 内容区 + 响应式主导航。主页面只提供 content + activeTab + onMainTab，
-// Phone 的 BottomNav 覆盖全高内容；首尾避让由页面滚动内容持有，透明宿主不拦截空白。
+// 根背景、固定顶栏与叠层由 ReaderPageScaffold 持有；本壳仅组合主导航和页面槽。
+// 顶栏总高度通过共享回调传回滚动内容，导航透明宿主不拦截空白。
 // 完成 Tablet 版式的页面可启用共享左侧导航轨道。状态栏 padding
 // 与安全区仍由 Index 根 Stack 统一处理，避免双 padding。
 @Component
 export struct MainTabShell {
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop activeTab: string = 'bookshelf';
   @Prop showBottomNav: boolean = true;
   @Prop showTabletRail: boolean = false;
+  @Prop railVariant: 'standard' | 'bookshelf' = 'standard';
   onMainTab: (key: string) => void = (_key: string): void => {};
+  @Prop headerKind: ReaderHeaderKind = 'home';
+  @Prop headerTop: number = 0;
+  @Prop headerInsetLeft: number = 0;
+  @Prop headerInsetRight: number = 0;
+  onHeaderHeightChange: (height: number) => void = (_height: number): void => {};
   @BuilderParam content: () => void;
+  @BuilderParam header: () => void = this.emptySlot;
+  @BuilderParam overlay: () => void = this.emptySlot;
+  @Builder private emptySlot() {}
 
   build() {
-    if (this.showTabletRail) {
-      Stack({ alignContent: Alignment.Start }) {
-        Stack({ alignContent: Alignment.TopStart }) {
-          this.content();
-        }
-        .width('100%')
-        .height('100%');
+    ReaderPageScaffold({ variant: 'mainTab', headerKind: this.headerKind,
+      headerTop: this.headerTop, headerInsetLeft: this.headerInsetLeft, headerInsetRight: this.headerInsetRight,
+      content: (): void => { this.content(); },
+      header: (): void => { this.header(); },
+      footer: (): void => { this.bottomNavigation(); },
+      overlay: (): void => { this.mainOverlays(); },
+      onHeaderHeightChange: (height: number): void => this.onHeaderHeightChange(height + this.headerTop),
+    });
+  }
 
-        MainTabBar({
-          current: this.activeTab,
-          vertical: true,
-          onSelect: (key: string): void => this.onMainTab(key),
-        })
-          .position({ x: this.railLeft(), y: this.railTop() });
-      }
-      .width('100%')
-      .height('100%')
-      .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
-    } else {
-      Stack({ alignContent: Alignment.Bottom }) {
-        Stack({ alignContent: Alignment.TopStart }) {
-          this.content();
-        }
-        .height('100%')
-        .width('100%');
-
-        if (this.showBottomNav) {
-          Stack({ alignContent: Alignment.Bottom }) {
-            MainTabBar({ current: this.activeTab, onSelect: (key: string): void => this.onMainTab(key) });
-          }
-          .width('100%')
-          .height('100%')
-          .hitTestBehavior(HitTestMode.Transparent);
-        }
-      }
-      .width('100%')
-      .height('100%')
-      .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+  @Builder
+  private bottomNavigation() {
+    if (this.showBottomNav && !this.showTabletRail) {
+      MainTabBar({ current: this.activeTab, onSelect: (key: string): void => this.onMainTab(key) });
     }
+  }
+
+  @Builder
+  private mainOverlays() {
+    if (this.showTabletRail) {
+      MainTabBar({ current: this.activeTab, vertical: true, railVariant: this.railVariant, onSelect: (key: string): void => this.onMainTab(key) })
+        .position({ x: this.railLeft(), y: this.railTop() });
+    }
+    this.overlay();
   }
 
   private railLeft(): number {

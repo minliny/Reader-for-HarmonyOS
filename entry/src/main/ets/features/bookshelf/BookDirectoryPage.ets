@@ -35,7 +35,8 @@ import { mangaDirectoryEntryRows, type MangaDirectoryLayoutRow } from '../manga/
 import { MangaDirectoryEntryRow } from '../manga/MangaDirectoryEntryRow';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SERIF_SC_BOLD } from '../common/ReaderFontFamilies';
-import { ReaderHeaderFrameModifier, ReaderPageFrameModifier, readerPageContentStartInset } from '../common/ReaderPageShell';
+import { readerPageContentStartInset } from '../common/ReaderPageShell';
+import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 
 /** Detail-owned catalog. Reuses the control's toolbar/rows, never its sheet or reading session. */
 @Component
@@ -87,7 +88,7 @@ export struct BookDirectoryPage {
   @State private projectedEntries: LocalReadingTocEntry[] = [];
   @State private viewportWidth: number = 0;
   @State private mangaViewportHeight: number = 0;
-  @State private toolsHeight: number = 51;
+  @State private standardHeaderHeight: number = readerPageContentStartInset() + 51;
   @State private mangaToolsHeight: number = 175;
   @State private mangaFooterMeasured: number = 0;
   @State private mangaScrollOffset: number = 0;
@@ -151,13 +152,8 @@ export struct BookDirectoryPage {
     if (this.contentKind === 'manga') {
       if (this.mangaFontsReady) { this.mangaPage(); }
       else {
-        Column({ space: 12 }) {
-          if (this.mangaFontsFailed) {
-            Text('目录暂时无法显示').fontSize(TYPE_FORM_STATE_BODY.fontSizeFp);
-            Button('重试').onClick((): void => this.prepareMangaPageFonts());
-          }
-        }.width('100%').height('100%').justifyContent(FlexAlign.Center)
-          .backgroundColor(mangaDirectoryColor('paper', this.appThemeScheme));
+        ReaderPageScaffold({ variant: 'mangaDirectory', headerKind: 'mangaDirectory',
+          content: (): void => { this.fontPreparationContent(); } });
       }
     } else {
       this.standardPage();
@@ -165,107 +161,25 @@ export struct BookDirectoryPage {
   }
 
   @Builder
+  private fontPreparationContent() {
+    Column({ space: 12 }) {
+      if (this.mangaFontsFailed) {
+        Text('目录暂时无法显示').fontSize(TYPE_FORM_STATE_BODY.fontSizeFp);
+        Button('重试').onClick((): void => this.prepareMangaPageFonts());
+      }
+    }.width('100%').height('100%').justifyContent(FlexAlign.Center);
+  }
+
+  @Builder
   private standardPage() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Column() {
-      if (this.supportsDirectoryRules() && this.supportsCurrentDirectoryView()) {
-        Button(this.rulesExpanded ? '收起层级规则' : '本书目录层级规则').onClick((): void => { this.rulesExpanded = !this.rulesExpanded; });
-        if (this.rulesExpanded) { ReaderDirectoryRules({ bookId: this.bookId, onApplied: (): void => { this.rulesRevision += 1; } }); }
-      }
-        ReaderDirectoryToolbar({
-          text: this.searchDraft,
-          placeholder: '搜索章节名称',
-          ascending: this.ascending,
-          showChapterTools: true,
-          onTextChange: (value: string): void => { this.searchDraft = value; },
-          onSearch: (): void => this.applySearch(),
-          onTop: (): void => this.scrollToEdge(Edge.Top),
-          onBottom: (): void => this.scrollToEdge(Edge.Bottom),
-          onToggleSort: (): void => this.toggleSort(),
-        });
-        this.recoveryContent();
-        Text('').width('100%').height(1)
-          .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
-      }
-      .width(this.contentFrame().width)
-      .position({ x: this.contentFrame().left, y: 58 })
-      .zIndex(1)
-      // The toolbar is fixed above the directory surface. Keep its own
-      // opaque layer so rows cannot bleed through while the list scrolls.
-      .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
-      .clip(true)
-      .attributeModifier(new ReaderHeaderFrameModifier('directoryTools', 'solid', this.appThemeScheme))
-      .hitTestBehavior(HitTestMode.Transparent)
-      .onAreaChange((_old: Area, next: Area): void => {
-        const height = Number(next.height);
-        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.toolsHeight) > .1) {
-          this.toolsHeight = height;
-        }
-      });
-        Stack({ alignContent: Alignment.TopStart }) {
-          // Only a different book replaces the List. Filtering, sorting and
-          // projection refreshes keep its native owner and use original indexes.
-          ForEach([this.admittedIdentity], (identity: string) => {
-            if (this.sourceId.length > 0) {
-              ReaderDirectoryNavigationSurface({
-                sourceId: this.sourceId, bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
-                currentChapterIndex: this.currentChapterIndex, openRevision: `${identity}:${this.rulesRevision}`,
-                interacted: this.navigationInteracted,
-                rowHeight: 40, listPaddingX: 10, listPaddingY: 0,
-                contentStartInset: readerPageContentStartInset(58, this.toolsHeight, 5), contentEndInset: this.bottomInset() + 5,
-                edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
-                chapterEntries: this.admittedEntries,
-                chapterDownloadEnabled: this.sourceId !== 'local' && this.directoryRecovery.offlineBlocked !== true,
-                chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
-                fallbackBuilder: (): void => { this.flatList(identity); },
-                onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
-                  if (this.mounted && identity === this.admittedIdentity && identity === this.identity())
-                    this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
-                },
-                onFirstLayout: (): void => this.onListFirstLayout(identity),
-                onUserScrollIntent: (): void => this.onListUserScroll(),
-                onClearSearch: (): void => { this.searchDraft = ''; this.applySearch(); },
-          onTreeStateChange: (active: boolean): void => {
-                  this.navigationActive = active;
-                  this.listReady = false;
-                },
-                onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
-                onDownloadChapter: (chapterIndex: number): void => {
-                  if (this.mounted && identity === this.admittedIdentity && identity === this.identity())
-                    if (this.directoryRecovery.offlineBlocked !== true) this.onDownloadChapter(chapterIndex);
-                },
-                onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-                  this.onCreateChapterStartBookmark(request),
-              }).width('100%').height('100%');
-            } else {
-              this.flatList(identity);
-            }
-          }, (identity: string): string => identity);
-          if (this.projectedEntries.length === 0 && !this.navigationActive) {
-            Column({ space: 10 }) {
-              Text(this.emptyMessage())
-                .width('100%')
-                .fontFamily(TYPE_FORM_STATE_BODY.fontFamily as string).fontSize(TYPE_FORM_STATE_BODY.fontSizeFp)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .textAlign(TextAlign.Center);
-              if (this.catalogRetryVisible()) {
-                ReaderRecoveryAction({ label: '重试加载目录', generation: this.projectionGeneration,
-                  actionEnabled: this.mounted, onReconcile: (): void => this.onRetryCatalog() });
-              }
-            }
-              .width('100%').height('100%')
-              .justifyContent(FlexAlign.Center)
-              .padding({ left: 20, right: 20, top: 58 + this.toolsHeight, bottom: this.bottomInset() + 20 });
-          }
-        }.height('100%').width(this.contentFrame().width)
-          .margin({ left: this.contentFrame().left, right: this.contentFrame().right });
-      Row() { PageBackBar({ title: '目录', onBack: (): void => this.onBack() }); }
-        .width('100%').height(58).zIndex(2).hitTestBehavior(HitTestMode.Transparent);
-    }
-    .width('100%').height('100%')
-    .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme))
-    .backgroundColor(readerAppColor('app.window.background', this.appThemeScheme))
-    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+    ReaderPageScaffold({ variant: 'directory', headerKind: 'standard',
+      content: (): void => { this.standardContent(); },
+      header: (): void => { this.standardHeader(); },
+      onHeaderHeightChange: (height: number): void => {
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.standardHeaderHeight) > .1)
+          this.standardHeaderHeight = height;
+      },
+    }).onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = Number(newValue.width);
       if (Number.isFinite(width) && width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
         this.viewportWidth = width;
@@ -274,7 +188,128 @@ export struct BookDirectoryPage {
   }
 
   @Builder
+  private standardHeader() {
+    Column() {
+      PageBackBar({ title: '目录', onBack: (): void => this.onBack() });
+      this.standardToolbar();
+    }.width('100%');
+  }
+
+  @Builder
+  private standardToolbar() {
+    Column() {
+      if (this.supportsDirectoryRules() && this.supportsCurrentDirectoryView()) {
+        Button(this.rulesExpanded ? '收起层级规则' : '本书目录层级规则').onClick((): void => { this.rulesExpanded = !this.rulesExpanded; });
+        if (this.rulesExpanded) { ReaderDirectoryRules({ bookId: this.bookId, onApplied: (): void => { this.rulesRevision += 1; } }); }
+      }
+      ReaderDirectoryToolbar({
+        text: this.searchDraft,
+        placeholder: '搜索章节名称',
+        ascending: this.ascending,
+        showChapterTools: true,
+        onTextChange: (value: string): void => { this.searchDraft = value; },
+        onSearch: (): void => this.applySearch(),
+        onTop: (): void => this.scrollToEdge(Edge.Top),
+        onBottom: (): void => this.scrollToEdge(Edge.Bottom),
+        onToggleSort: (): void => this.toggleSort(),
+      });
+      this.recoveryContent();
+      Text('').width('100%').height(1)
+        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
+    }
+    .width(this.contentFrame().width)
+    .margin({ left: this.contentFrame().left, right: this.contentFrame().right })
+    .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  @Builder
+  private standardContent() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      // Only a different book replaces the List. Filtering, sorting and
+      // projection refreshes keep its native owner and use original indexes.
+      ForEach([this.admittedIdentity], (identity: string) => {
+        if (this.sourceId.length > 0) {
+          ReaderDirectoryNavigationSurface({
+            sourceId: this.sourceId, bookId: this.bookId, query: this.searchQuery, ascending: this.ascending,
+            currentChapterIndex: this.currentChapterIndex, openRevision: `${identity}:${this.rulesRevision}`,
+            interacted: this.navigationInteracted,
+            rowHeight: 40, listPaddingX: 10, listPaddingY: 0,
+            contentStartInset: this.standardHeaderHeight + 5, contentEndInset: this.bottomInset() + 5,
+            edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
+            chapterEntries: this.admittedEntries,
+            chapterDownloadEnabled: this.sourceId !== 'local' && this.directoryRecovery.offlineBlocked !== true,
+            chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+            fallbackBuilder: (): void => { this.flatList(identity); },
+            onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
+              if (this.mounted && identity === this.admittedIdentity && identity === this.identity())
+                this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
+            },
+            onFirstLayout: (): void => this.onListFirstLayout(identity),
+            onUserScrollIntent: (): void => this.onListUserScroll(),
+            onClearSearch: (): void => { this.searchDraft = ''; this.applySearch(); },
+            onTreeStateChange: (active: boolean): void => {
+              this.navigationActive = active;
+              this.listReady = false;
+            },
+            onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+            onDownloadChapter: (chapterIndex: number): void => {
+              if (this.mounted && identity === this.admittedIdentity && identity === this.identity())
+                if (this.directoryRecovery.offlineBlocked !== true) this.onDownloadChapter(chapterIndex);
+            },
+            onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+              this.onCreateChapterStartBookmark(request),
+          }).width('100%').height('100%');
+        } else {
+          this.flatList(identity);
+        }
+      }, (identity: string): string => identity);
+      if (this.projectedEntries.length === 0 && !this.navigationActive) {
+        Column({ space: 10 }) {
+          Text(this.emptyMessage())
+            .width('100%')
+            .fontFamily(TYPE_FORM_STATE_BODY.fontFamily as string).fontSize(TYPE_FORM_STATE_BODY.fontSizeFp)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .textAlign(TextAlign.Center);
+          if (this.catalogRetryVisible()) {
+            ReaderRecoveryAction({ label: '重试加载目录', generation: this.projectionGeneration,
+              actionEnabled: this.mounted, onReconcile: (): void => this.onRetryCatalog() });
+          }
+        }
+          .width('100%').height('100%')
+          .justifyContent(FlexAlign.Center)
+          .padding({ left: 20, right: 20, top: this.standardHeaderHeight, bottom: this.bottomInset() + 20 });
+      }
+    }.height('100%').width(this.contentFrame().width)
+      .margin({ left: this.contentFrame().left, right: this.contentFrame().right });
+  }
+
+  @Builder
   private mangaPage() {
+    ReaderPageScaffold({ variant: 'mangaDirectory', headerKind: 'mangaDirectory',
+      headerTop: this.topInset() + visual.headerSafeGap,
+      headerInsetLeft: this.headerFrame().left, headerInsetRight: this.headerFrame().right,
+      footerInsetLeft: this.contentFrame().left, footerInsetRight: this.contentFrame().right,
+      footerBottom: this.mangaBottomInset() + this.mangaFooterBottomOffset(),
+      content: (): void => { this.mangaContent(); },
+      header: (): void => { this.mangaHeader(); },
+      footer: (): void => { this.mangaFixedFooter(); },
+    })
+      .onAreaChange((_old: Area, area: Area): void => {
+        const width = Number(area.width);
+        const height = Number(area.height);
+        if (Number.isFinite(height) && height > 0) this.mangaViewportHeight = height;
+        if (Number.isFinite(width) && width > 0) {
+          const previousWidth = this.viewportWidth;
+          this.viewportWidth = width;
+          if (Math.abs(previousWidth - width) > .1) { this.mangaFooterMeasured = 0; this.prepareMangaLayout(); }
+        }
+      });
+  }
+
+  @Builder
+  private mangaContent() {
+    // The summary/tools track the directory scroll offset inside the body;
+    // the fixed header and current-chapter dock are owned by the scaffold.
     Stack({ alignContent: Alignment.Top }) {
       ForEach([this.admittedIdentity], (identity: string) => {
         ReaderDirectoryNavigationSurface({
@@ -305,34 +340,23 @@ export struct BookDirectoryPage {
           onUserScrollIntent: (): void => this.onListUserScroll(),
           onScrollOffset: (offset: number): void => this.onMangaScrollOffset(offset),
           onClearSearch: (): void => { this.searchDraft = ''; this.applySearch(); },
-          onTreeStateChange: (active: boolean): void => { this.navigationActive = active; this.listReady = false; },
+                onTreeStateChange: (active: boolean): void => { this.navigationActive = active; this.listReady = false; },
         }).width('100%').height('100%');
       }, (identity: string): string => identity);
       this.mangaToolbar();
-      Row() {
-        PageBackBar({ title: '章节目录', floating: true, centered: true, variant: 'mangaDirectory',
-          backIcon: this.appThemeScheme === 'night' ? $r('app.media.manga_directory_back_theme_night') : $r('app.media.manga_directory_back'), onBack: (): void => this.onBack(),
-          trailing: (): void => { this.mangaDownloadMenuButton(); } });
-      }.width('100%').padding({ left: this.headerFrame().left, right: this.headerFrame().right, top: this.topInset() + visual.headerSafeGap })
-        .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
-      if (!this.mangaFlowFooter()) {
-        Stack({ alignContent: Alignment.Bottom }) {
-          Row() { this.mangaCurrentFooter(); }.width(this.contentFrame().width)
-            .margin({ left: this.contentFrame().left, right: this.contentFrame().right, bottom: this.mangaBottomInset() + this.mangaFooterBottomOffset() });
-        }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent);
-      }
-    }.width('100%').height('100%')
-      .backgroundColor(mangaDirectoryColor('paper', this.appThemeScheme))
-      .onAreaChange((_old: Area, area: Area): void => {
-        const width = Number(area.width);
-        const height = Number(area.height);
-        if (Number.isFinite(height) && height > 0) this.mangaViewportHeight = height;
-        if (Number.isFinite(width) && width > 0) {
-          const previousWidth = this.viewportWidth;
-          this.viewportWidth = width;
-          if (Math.abs(previousWidth - width) > .1) { this.mangaFooterMeasured = 0; this.prepareMangaLayout(); }
-        }
-      });
+    }.width('100%').height('100%');
+  }
+
+  @Builder
+  private mangaHeader() {
+    PageBackBar({ title: '章节目录', floating: true, centered: true, variant: 'mangaDirectory',
+      backIcon: this.appThemeScheme === 'night' ? $r('app.media.manga_directory_back_theme_night') : $r('app.media.manga_directory_back'), onBack: (): void => this.onBack(),
+      trailing: (): void => { this.mangaDownloadMenuButton(); } });
+  }
+
+  @Builder
+  private mangaFixedFooter() {
+    if (!this.mangaFlowFooter()) { this.mangaCurrentFooter(); }
   }
 
   @Builder
@@ -668,7 +692,7 @@ export struct BookDirectoryPage {
       rowHeight: 40,
       listPaddingX: 10,
       listPaddingY: 0,
-      contentStartInset: 58 + this.toolsHeight + 5,
+      contentStartInset: this.standardHeaderHeight + 5,
       contentEndInset: this.bottomInset() + 5,
       edgeEffectMode: EdgeEffect.Spring,
       scroller: this.listScroller,

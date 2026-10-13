@@ -1,7 +1,7 @@
 import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { resolve } from 'node:path';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
@@ -9,6 +9,9 @@ import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { isReaderMainTabEnabled } from '../entry/src/main/ets/app/ReaderProductScope.ts';
+import * as geometryApi from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
+import { readerFloatingTabBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
 import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const root = resolve(import.meta.dirname, '..');
@@ -36,6 +39,7 @@ for (const m of index.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) builder
 for (const [name, file, slot] of [
   ['BookshelfShell', 'features/bookshelf/BookshelfShell.ets', 'content'],
   ['MainTabShell', 'features/shell/MainTabShell.ets', 'content'],
+  ['MainTabBar', 'features/shell/MainTabBar.ets'],
   ['AppTopBar', 'features/common/AppTopBar.ets', 'trailing'],
   ['ReaderIconButton', 'features/common/ReaderIconButton.ets'],
   ['ReaderRecoveryNotice', 'features/common/ReaderRecoveryNotice.ets'],
@@ -58,7 +62,7 @@ function indexFixture(state, source = 'online') {
   });
   Object.assign(owner, { route: 'bookshelf', isBookshelfVisualAdmitted: state === 'populated',
     isCoreShelfEmpty: state === 'empty', bookshelfLoadFailed: state === 'failure',
-    appThemeScheme: 'day', settingsSnapshot: { reduceMotion: false }, shelfProjectionRevision: '',
+    shelfHeaderHeight: 60, appThemeScheme: 'day', settingsSnapshot: { reduceMotion: false }, shelfProjectionRevision: '',
     shelfBooks: [{ sourceId: source }], readingSessionActive: false, readerOwnsWindowEdges: () => false,
     shelfRecovery: () => ({message:'',visible:false,canRetry:false,generation:0}),
     shelfReadRecovery: () => ({message:'',visible:false,canRetry:false,generation:0}),
@@ -80,7 +84,8 @@ for (const state of ['loading', 'empty', 'populated', 'failure']) {
   });
 }
 const childOf = (owner, name) => [...owner.children.values()].filter(child => child instanceof dependencies[name]);
-const nodesOf = (owner, type) => [...owner.nodes.values()].filter(node => node.type === type);
+const actors = owner => [owner, ...[...(owner.children?.values() ?? [])].flatMap(actors)];
+const nodesOf = (owner, type) => actors(owner).flatMap(actor => [...(actor.nodes?.values() ?? [])]).filter(node => node.type === type);
 for (const state of ['loading', 'empty', 'populated', 'failure']) {
   check(`Index ${state} real slot admits only its Core readiness content and live actions`, () => {
     const owner = indexFixture(state);
@@ -91,6 +96,12 @@ for (const state of ['loading', 'empty', 'populated', 'failure']) {
     assert.equal(body.length, 1);
     assert.equal(shell.params.populated, state === 'populated');
     assert.equal(shell.params.canCheckUpdates, state === 'populated');
+    if (state === 'populated') {
+      assert.equal(body[0].params.headerClearance, 74, 'initial measured header plus approved list gap');
+      shell.params.onHeaderHeightChange(92); owner.replayOnly([body[0].id]);
+      assert.equal(body[0].params.headerClearance, 106, 'the actual Index callback forwards changed shared header height to the retained shelf');
+      assert.equal(childOf(owner, expected)[0], body[0], 'header measurement keeps the existing shelf actor');
+    }
     if (state === 'failure' || state === 'loading') {
       assert.equal(body[0].params.failed, state === 'failure');
       body[0].params.onRetry(); assert.deepEqual(owner.calls, ['refreshBookshelf']); owner.calls = [];
@@ -128,9 +139,29 @@ const actualHeader = createReaderBuilderProbe(actualHeaderSource, boundedMembers
   ReaderWindowCoordinator: { metrics: metricsApi.createDefaultReaderWindowMetrics },
 }, actualIcons.hooks);
 dependencies.AppTopBar = actualHeader.Component;
+const actualMainSource = read('features/shell/MainTabShell.ets');
+syntax.builderParamObjectCollection.set('MainTabShell', new Set(['content', 'header', 'overlay']));
+let shellWidth = 365;
+const shellMetrics = () => new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,shellWidth,844));
+const mainBarSource = read('features/shell/MainTabBar.ets');
+const tabConfiguration = mainBarSource.match(/const ALL_MAIN_TABS:[\s\S]*?;\s*export const MAIN_TABS:[\s\S]*?;/)[0];
+const MAIN_TABS = new Function('isReaderMainTabEnabled', stripTypeScriptTypes(tabConfiguration).replace(/\bexport /g, '') + '; return MAIN_TABS;')(isReaderMainTabEnabled);
+dependencies.MainTabBar = createReaderBuilderProbe(mainBarSource, boundedMembers(mainBarSource), {
+  ...actualIcons.dependencies, ...readerFoundationTokens, ...readerTypographyRoles, ...fontFamilies,
+  ...metricsApi, ...geometryApi, MAIN_TABS, readerFloatingTabBottomInset, registerReaderShelfFonts() {},
+  ReaderWindowCoordinator: { metrics: shellMetrics },
+}, actualIcons.hooks).Component;
+const actualMain = createReaderBuilderProbe(actualMainSource, boundedMembers(actualMainSource), {
+  ...dependencies, ...actualIcons.dependencies, ...metricsApi, ReaderWindowCoordinator: { metrics: shellMetrics },
+}, { ...actualIcons.hooks, childSources: { ...actualIcons.hooks.childSources, AppTopBar: actualHeaderSource } });
+dependencies.MainTabShell = class extends actualMain.Component {
+  constructor(owner, params, storage, id, ...rest) { super(owner, params, storage, id, ...rest); this.params = { ...params }; }
+  updateStateVars(params) { super.updateStateVars(params); Object.assign(this.params, params); }
+};
 const iconHit = actor => actualIcons.nodes(actor).find(node => node.type === 'Stack' && node.onClick);
 function shellFixture({ populated = false, width = 365, menu = false } = {}) {
-  const { owner } = createReaderBuilderProbe(shellSource, ['content','mounted','temporaryBackIdentity','temporaryBackGeneration','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellContent','recoveryNoticeContent','topBar','requestCheckUpdates','showBottomNav','numericAreaLength'], {
+  shellWidth = width;
+  const { owner } = createReaderBuilderProbe(shellSource, ['content','mounted','temporaryBackIdentity','temporaryBackGeneration','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellHeader','shellOverlay','onHeaderHeightChange','headerHeight','recoveryNoticeContent','topBar','requestCheckUpdates','showBottomNav','numericAreaLength'], {
     ...dependencies, ...actualIcons.dependencies, ...metricsApi, bookshelfTemporaryGeneration:0,registerReaderShelfFonts(){}, BOOKSHELF_WIDE_BREAKPOINT: 600, READER_FLOATING_TOP_BAR_HEIGHT: 58,
     ReaderWindowCoordinator: { metrics: () => new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,width,844)) },
   }, { ...actualIcons.hooks, childSources: { ...actualIcons.hooks.childSources, AppTopBar: actualHeaderSource } });
@@ -139,14 +170,14 @@ function shellFixture({ populated = false, width = 365, menu = false } = {}) {
     recovery: {message:'',visible:false,canRetry:false,generation:0},
     moreMenuVisible: false, moreAnchorRight: 0, moreAnchorBottom: 0, overlayOriginX: 0, overlayOriginY: 0,
     canCheckUpdates: populated, updateRunning: false, backgroundUpdateRunning: false, updateProgressDone: 0, updateProgressTotal: 0,
-    reduceMotion: false, content: () => { contentCalls++; }, calls: [] });
+    reduceMotion: false, onHeaderHeightChange: height => owner.reportedHeaderHeight = height, content: () => { contentCalls++; }, calls: [] });
   for (const action of ['onSearchRequested','onImportRequested','onBatchManageRequested','onBookshelfSettingsRequested','onCheckUpdatesRequested','onMainTab']) {
     owner[action] = (key) => owner.calls.push(key ? `${action}:${key}` : action);
   }
   owner.aboutToAppear();
   if(menu)owner.moreOpenAction(owner.temporaryBackIdentity)();
   owner.initialRender();
-  const nav = childOf(owner, 'MainTabShell')[0]; nav.params.content();
+  const nav = childOf(owner, 'MainTabShell')[0];
   const header = childOf(owner, 'AppTopBar')[0];
   assert.equal(contentCalls, 1); assert.equal(header.title, '书架'); assert.equal(header.divider, false);
   assert.deepEqual([header.floating, header.centered, header.showLeadingSearch], [true, true, true]);
@@ -174,8 +205,12 @@ check('one shell keeps title/actions/nav actors through day-night and populated 
   assert.equal(owner.moreMenuVisible, false); iconHit(buttons[0]).onClick(); assert.equal(owner.moreMenuVisible, true);
   nav.params.onMainTab('settings'); assert.deepEqual(owner.calls, ['onSearchRequested','onMainTab:settings']);
   assert.ok(nodesOf(owner, 'Stack').some(node => node.height === '100%' && node.width === '100%'), 'content retains its full viewport under the floating header');
-  assert.ok(nodesOf(owner, 'Row').some(node => node.height === 60 && node.hitTestBehavior === 'HitTestMode.Transparent'),
-    'the floating header does not turn its empty area into a scroll shield');
+  assert.ok(nodesOf(owner, 'Column').some(node => node.zIndex === 10 && node.margin?.top === 8 && node.hitTestBehavior === 'HitTestMode.Transparent'),
+    'the public header host retains the 8vp top gap and transparent empty area');
+  assert.ok(nodesOf(header, 'Row').some(node => node.height === 52), 'the approved 52vp floating capsule plus 8vp gap retains the 60vp header geometry');
+  const measuredHeader = actors(nav).find(actor => typeof actor.onHeightChange === 'function');
+  assert.ok(measuredHeader, 'actual public fixed header actor owns the measurement');
+  measuredHeader.onHeightChange(52); assert.equal(owner.reportedHeaderHeight, 60, 'public shell adds the top gap once');
 });
 check('shell navigation keeps phone fallback and existing populated tablet rail threshold', () => {
   for (const populated of [false, true]) for (const width of [365,599,600,800]) {
@@ -183,14 +218,14 @@ check('shell navigation keeps phone fallback and existing populated tablet rail 
     assert.equal(nav.params.showBottomNav, !populated || width < 600);
   }
   const { owner, nav } = shellFixture({populated:true});
-  nodesOf(owner, 'Stack').find(node => node.onAreaChange).onAreaChange({}, { width: '800vp', globalPosition: { x: 0, y: 39 } });
+  [...owner.nodes.values()].find(node => node.type === '__Common__' && node.onAreaChange).onAreaChange({}, { width: '800vp', globalPosition: { x: 0, y: 39 } });
   owner.replay(); assert.equal(nav.params.showBottomNav, false);
   owner.populated = false; owner.replay(); assert.equal(nav.params.showBottomNav, true);
 });
 check('More retains measured global-to-local anchor, live progress and guarded callbacks', () => {
   const { owner } = shellFixture({populated:true,menu:true});
   const more = childOf(owner, 'BookshelfMoreMenu')[0];
-  const area = nodesOf(owner, 'Stack').find(node => node.onAreaChange);
+  const area = [...owner.nodes.values()].find(node => node.type === '__Common__' && node.onAreaChange);
   area.onAreaChange({}, {width:365,globalPosition:{x:10,y:39}});
   const moreActor = childOf(owner, 'ReaderIconButton').find(child => child.accessibilityLabel === '更多');
   assert.ok(moreActor, 'actual shared More child owns the accessible name');
@@ -216,10 +251,10 @@ check('More retains measured global-to-local anchor, live progress and guarded c
   assert.equal(owner.moreMenuVisible,false);
   owner.canCheckUpdates = false; more.params.onCheckUpdates(); assert.equal(owner.calls.length,1);
   for (const [action,callback] of [['onBatchManage','onBatchManageRequested'],['onLocalImport','onImportRequested'],['onBookshelfSettings','onBookshelfSettingsRequested']]) {
-    owner.moreOpenAction(owner.temporaryBackIdentity)(); owner.shellContent();
+    owner.moreOpenAction(owner.temporaryBackIdentity)(); owner.shellOverlay();
     childOf(owner,'BookshelfMoreMenu').at(-1).params[action](); assert.equal(owner.moreMenuVisible,false); assert.equal(owner.calls.at(-1),callback);
   }
-  owner.moreOpenAction(owner.temporaryBackIdentity)(); owner.shellContent();
+  owner.moreOpenAction(owner.temporaryBackIdentity)(); owner.shellOverlay();
   childOf(owner,'BookshelfMoreMenu').at(-1).params.onDismiss(); assert.equal(owner.moreMenuVisible,false);
 });
 for (const failed of [false,true]) check(`status ${failed ? 'failure' : 'loading'} actual content preserves retry/spinner and live theme`, () => {

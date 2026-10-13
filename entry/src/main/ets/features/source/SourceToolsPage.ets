@@ -1,12 +1,11 @@
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderInlineSelect } from '../common/ReaderInlineSelect';
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../app/ReaderNativeAlertOwner';
-import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { PageBackBar } from '../common/PageBackBar';
 import {
@@ -26,23 +25,12 @@ import {
   TYPE_SOURCE_TOOLS_URL,
 } from '../common/ReaderTypography';
 import {
-  SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
-} from '../common/SurfaceHorizontalGeometry';
-import { readerVisualSafeLeft, readerVisualSafeRight } from '../common/ReaderWindowMetrics';
-import {
   TOK_BORDER,
   TOK_BORDER_W,
   TOK_CARD_BG,
   TOK_INK,
   TOK_MUTED,
-  TOK_ON_PRIMARY,
-  TOK_PAPER,
   TOK_PRIMARY_DARK,
-  TOK_SCREEN_INSET,
-  TOK_SPACE_CONTROL_INLINE,
-  TOK_SPACE_MD,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
   TOK_SURFACE_PANEL_SOFT,
@@ -179,7 +167,6 @@ class SourceDebugLogDataSource implements IDataSource {
 export struct SourceToolsPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
@@ -230,59 +217,48 @@ export struct SourceToolsPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Scroll() {
-        Column({ space: TOK_SPACE_MD }) {
-          this.statusCard();
-          this.recoveryAction();
-          this.exportCard();
-          // V1 @Builder parameters are captured when the builder subtree is
-          // mounted. Rebuild only this small controls card when its primitive
-          // inputs change so enabled guards and selected IDs never remain at
-          // the initial loading snapshot. The 1,777-row LazyForEach below is
-          // deliberately outside this keyed subtree.
-          ForEach([this.batchControlsRenderKey()], (_key: string) => {
-            this.batchCard();
-          }, (key: string): string => `source-batch-controls:${key}`);
-          if (this.snapshot.batchCheck.phase !== 'idle') {
-            // The progress card has the same V1 builder-capture boundary.
-            // Its compact subtree is keyed independently so every source
-            // completion updates counters/current item/results without
-            // remounting the source catalog.
-            ForEach([this.batchProgressRenderKey()], (_key: string) => {
-              this.batchCheckCard();
-            }, (key: string): string => `source-batch-progress:${key}`);
-          }
-          this.sourceCard();
-          if (this.snapshot.editorSourceId.length > 0) {
-            this.editorCard();
-          }
-          this.debugCard();
-        }
-        .width('100%')
-        .padding({
-          left: this.contentFrame().left,
-          right: this.contentFrame().right,
-          top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
-          bottom: this.bottomContentInset(),
-        });
-      }
-      .height('100%')
-      .width('100%')
-      .align(Alignment.TopStart)
-      .scrollBar(BarState.Off);
-      PageBackBar({ title: '批量管理与书源工具', onBack: (): void => this.onBack() });
+    ReaderStandardPage({
+      variant: 'tools',
+      header: (): void => { this.pageHeader(); },
+      content: (): void => { this.pageContent(); },
+    });
+  }
+
+  @Builder
+  private pageHeader() {
+    PageBackBar({ title: '批量管理与书源工具', onBack: (): void => this.onBack() });
+  }
+
+  @Builder
+  private pageContent() {
+    this.statusCard();
+    this.recoveryAction();
+    this.exportCard();
+    // V1 @Builder parameters are captured when the builder subtree is
+    // mounted. Rebuild only this small controls card when its primitive
+    // inputs change so enabled guards and selected IDs never remain at
+    // the initial loading snapshot. The 1,777-row LazyForEach below is
+    // deliberately outside this keyed subtree.
+    ForEach([this.batchControlsRenderKey()], (_key: string) => {
+      this.batchCard();
+    }, (key: string): string => `source-batch-controls:${key}`);
+    if (this.snapshot.batchCheck.phase !== 'idle') {
+      // The progress card has the same V1 builder-capture boundary.
+      // Its compact subtree is keyed independently so every source
+      // completion updates counters/current item/results without
+      // remounting the source catalog.
+      ForEach([this.batchProgressRenderKey()], (_key: string) => {
+        this.batchCheckCard();
+      }, (key: string): string => `source-batch-progress:${key}`);
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+    this.sourceCard();
+    if (this.snapshot.editorSourceId.length > 0) {
+      this.editorCard();
+    }
+    this.debugCard();
   }
 
 
-  private bottomContentInset(): number {
-    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;
-    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_MD);
-  }
   @Builder
   private batchCard() {
     Column({ space: TOK_SPACE_SM }) {
@@ -755,18 +731,6 @@ export struct SourceToolsPage {
       sourceRevision === this.snapshot.sourceListRevision && selectionRevision === this.snapshot.selectionRevision);
   }
 
-  private contentFrame(): SurfaceHorizontalFrame {
-    if (this.readerWindowMetricsRevision < 0) {
-      return new SurfaceHorizontalFrame(0, 0, 0);
-    }
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(
-      metrics.windowRect.width,
-      readerVisualSafeLeft(metrics),
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(metrics.windowRect.width, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
-  }
 
   private onSnapshotChanged(): void {
     this.syncListDataSources();

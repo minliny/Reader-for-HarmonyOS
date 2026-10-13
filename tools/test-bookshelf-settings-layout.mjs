@@ -34,7 +34,7 @@ const deps = { readerRecoveryView,ReaderRecoveryNotice:Notice, PageBackBar: Head
   readerVisualSafeLeft, readerVisualSafeRight, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   TOK_CONTENT_MAX_W_TABLET: 720, TOK_SCREEN_INSET: 19, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16,
   READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset, TYPE_PAGE_TITLE };
-const methods = ['build','settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery', 'modeOption', 'bottomContentInset'];
+const methods = ['build','settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery', 'modeOption', 'pageContent', 'pageHeader'];
 if (source.includes('private contentFrame(')) methods.push('contentFrame');
 const { Component } = createReaderBuilderProbe(source, methods, deps,
   { onObserverEnter(owner, id) { activeOwner = owner; activeId = id; } });
@@ -62,8 +62,12 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
   const headerRow = headerNodes.find(node => node.type === 'Row');
   assert.equal(headerRow.height, 58); assert.equal(headerRow.width, '100%');
   assert.deepEqual(headerRow.padding, { left: Math.max(20, left), right: Math.max(20, right) });
-  const nodes = [...owner.nodes.values()];
-  const root = nodes[0]; assert.equal(root.padding, undefined, 'host alone consumes vertical safe areas');
+  const actors = current => [current, ...[...(current.children?.values() ?? [])].flatMap(actors)];
+  const nodes = actors(owner).flatMap(current => [...(current.nodes?.values() ?? [])]);
+  const root = nodes.find(node => node.type === 'Stack' && node.backgroundColor);
+  assert.ok(root, 'the actual public scaffold paints the page');
+  assert.equal(root.padding?.top, undefined, 'host alone consumes the top safe area');
+  assert.equal(root.padding?.bottom, undefined, 'host alone consumes the bottom safe area');
   assert.equal(root.type, 'Stack');
   const scroll = nodes.find(node => node.type === 'Scroll');
   assert.ok(scroll); assert.equal(scroll.layoutWeight, undefined); assert.equal(scroll.align, 'Alignment.TopStart');
@@ -76,7 +80,10 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
   for (const label of ['封面', '列表']) nodes.find(node => node.type === 'Text' && node.create === label).onClick();
   assert.deepEqual(selections, ['cover', 'list']);
   for (const scheme of ['night', 'day']) {
-    owner.appThemeScheme = scheme; owner.replay(); header.appThemeScheme = scheme; header.replay();
+    // StorageLink delivery is the platform seam: deliver one global scheme to
+    // every retained public frame actor, then execute its real SDK observers.
+    for (const actor of actors(owner)) { actor.appThemeScheme = scheme; actor.replay?.(); }
+    header.appThemeScheme = scheme; header.replay();
     assert.equal(title.fontColor, readerAppColor('TOK_INK', scheme));
     assert.equal(root.backgroundColor, readerAppColor('TOK_PAPER', scheme));
     assert.equal(nodes.find(node => node.type === 'Text' && node.create === '封面').fontColor,

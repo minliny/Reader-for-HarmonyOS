@@ -14,12 +14,11 @@ import {
 } from './RssGateway';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
-  READER_FLOATING_TOP_BAR_HEIGHT,
   readerFloatingBarBottomInset,
   readerFloatingTabContentInset,
 } from '../common/ReaderFloatingBarMetrics';
 import { MainTabShell } from '../shell/MainTabShell';
-import { ReaderHeaderFrameModifier, readerPageContentStartInset } from '../common/ReaderPageShell';
+import { readerPageContentStartInset } from '../common/ReaderPageShell';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import { StatusBadge } from '../common/StatusBadge';
@@ -64,7 +63,7 @@ export type { RssFeedPresentation, RssRefreshingPresentation, RssEmptyUnreadPres
 const STATUS_PAUSED_OPACITY = 0.62;
 const RSS_WIDE_BREAKPOINT = 600;
 const RSS_TABLET_RAIL_WIDTH = 100;
-const RSS_FLOATING_HEADER_HEIGHT = READER_FLOATING_TOP_BAR_HEIGHT + 44 + 30 + TOK_SPACE_XS * 2;
+const RSS_FLOATING_HEADER_HEIGHT = readerPageContentStartInset() + 44 + 30 + TOK_SPACE_XS * 2;
 
 /**
  * Figma-backed RSS page (`10 · Reference · RSS` `F2 · Canonical · RSS`).
@@ -101,6 +100,7 @@ export struct RssPage {
   @State private filterValue: string = '全部';
   @State private filterOpen: boolean = false;
   @State private viewportWidth: number = 0;
+  @State private fixedHeaderHeight: number = RSS_FLOATING_HEADER_HEIGHT;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -108,50 +108,52 @@ export struct RssPage {
 
   build() {
     MainTabShell({
-      activeTab: 'rss',
+      activeTab: 'rss', headerKind: 'rss',
       showBottomNav: !this.isWideViewport(),
       showTabletRail: this.isWideViewport(),
       onMainTab: (key: string): void => this.onMainTab(key),
-    }) {
-      Row() {
-        if (this.isWideViewport()) {
-          Blank().width(RSS_TABLET_RAIL_WIDTH);
-        }
+      header: (): void => { this.rssHeader(); },
+      onHeaderHeightChange: (height: number): void => {
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.fixedHeaderHeight) > .1)
+          this.fixedHeaderHeight = height;
+      },
+    }) { this.rssContent(); }
+  }
 
-        Stack({ alignContent: Alignment.TopStart }) {
-          if (this.presentation.kind === 'feed') {
-            this.feedScroll(this.presentation.subscriptions, this.presentation.recentUnread, false);
-          } else if (this.presentation.kind === 'refreshing') {
-            this.feedScroll(this.presentation.subscriptions, this.presentation.recentUnread, true);
-          } else if (this.presentation.kind === 'emptyUnread') {
-            this.emptyUnreadScroll(this.presentation.subscriptions);
-          } else {
-            this.errorContent(this.presentation.failedSources);
-          }
-
-          Column() {
-            this.topBar();
-            this.searchBar();
-            this.statusTabs();
-          }
-          .width('100%')
-          .height(RSS_FLOATING_HEADER_HEIGHT)
-          .alignItems(HorizontalAlign.Start)
-          .attributeModifier(new ReaderHeaderFrameModifier('rss', 'solid', this.appThemeScheme))
-          .hitTestBehavior(HitTestMode.Transparent);
+  @Builder
+  private rssContent() {
+    Row() {
+      if (this.isWideViewport()) { Blank().width(RSS_TABLET_RAIL_WIDTH); }
+      Stack({ alignContent: Alignment.TopStart }) {
+        if (this.presentation.kind === 'feed') {
+          this.feedScroll(this.presentation.subscriptions, this.presentation.recentUnread, false);
+        } else if (this.presentation.kind === 'refreshing') {
+          this.feedScroll(this.presentation.subscriptions, this.presentation.recentUnread, true);
+        } else if (this.presentation.kind === 'emptyUnread') {
+          this.emptyUnreadScroll(this.presentation.subscriptions);
+        } else {
+          this.errorContent(this.presentation.failedSources);
         }
-        .layoutWeight(1)
-        .height('100%');
-      }
-      .width('100%')
-      .height('100%')
+      }.layoutWeight(1).height('100%');
+    }.width('100%').height('100%')
       .onAreaChange((_oldValue: Area, newValue: Area): void => {
         const width = this.numericAreaLength(newValue.width);
         if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
           this.viewportWidth = width;
         }
       });
-    }
+  }
+
+  @Builder
+  private rssHeader() {
+    Row() {
+      if (this.isWideViewport()) { Blank().width(RSS_TABLET_RAIL_WIDTH); }
+      Column() {
+        this.topBar();
+        this.searchBar();
+        this.statusTabs();
+      }.layoutWeight(1).height(RSS_FLOATING_HEADER_HEIGHT).alignItems(HorizontalAlign.Start);
+    }.width('100%');
   }
 
   // 页私有 (不用 AppTopBar): Figma 2305:29 容器 justify-end → 刷新/管理胶囊簇靠右,
@@ -303,7 +305,7 @@ export struct RssPage {
         this.recentUnreadSection(subscriptions, recentUnread);
       }
       .width(this.contentFrame().width)
-      .padding({ top: RSS_FLOATING_HEADER_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() });
+      .padding({ top: this.fixedHeaderHeight + TOK_SPACE_XS, bottom: this.bottomContentInset() });
     }
     .width('100%')
     .height('100%')
@@ -614,7 +616,7 @@ export struct RssPage {
         this.emptyUnreadSection();
       }
       .width(this.contentFrame().width)
-      .padding({ top: RSS_FLOATING_HEADER_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() });
+      .padding({ top: this.fixedHeaderHeight + TOK_SPACE_XS, bottom: this.bottomContentInset() });
     }
     .width('100%')
     .height('100%')
@@ -652,7 +654,7 @@ export struct RssPage {
       }
       .width('100%')
       .padding({
-        top: RSS_FLOATING_HEADER_HEIGHT + TOK_SPACE_XS,
+        top: this.fixedHeaderHeight + TOK_SPACE_XS,
         bottom: this.bottomContentInset(),
         left: this.contentFrame().left,
         right: this.contentFrame().right,

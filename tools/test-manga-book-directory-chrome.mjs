@@ -98,6 +98,12 @@ const footerNames = ['build', 'label', 'chapter', 'page', 'footerFontScale', 'st
   'pagePosition', 'scheme', 'availableWidth', 'onHeightChanged', 'measuredWidth'];
 const near = (actual, expected, message) => assert.ok(Number.isFinite(actual) && Math.abs(actual - expected) < 1e-9,
   message ?? `expected ${actual} to equal ${expected} within floating-point arithmetic precision`);
+const pageFrame = owner => {
+  const frame = [...owner.children.values()].find(child => child.params?.variant === 'mangaDirectory' &&
+    child.params?.headerKind === 'mangaDirectory');
+  assert.ok(frame?.nodes, 'manga directory mounts the actual SDK public page scaffold');
+  return frame;
+};
 
 function checkFullChrome(candidate = pageSource, headerCandidate = headerSource, exhaustive = true, footerCandidate = footerSource) {
   const cases = exhaustive ? [0, 24, 48].flatMap(safeTop => [12, 34].flatMap(safeBottom =>
@@ -192,9 +198,14 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     assert.equal(headerBar.height, headerHeight); assert.equal(headerBar.backgroundColor, palette.surface);
     assert.deepEqual(headerBar.border, { width: 1, color: palette.line });
     assert.deepEqual(headerBar.padding, { left: 3, right: 3 });
-    const headerWrapper = nodes.find(node => node.type === 'Row' && node.padding?.top === safeTop + 8);
-    assert.deepEqual(headerWrapper.padding, { left: 16, right: 16, top: safeTop + 8 },
+    const frameNodes = [...pageFrame(owner).nodes.values()];
+    const headerWrapper = frameNodes.find(node => node.type === 'Column' && node.zIndex === 10);
+    assert.deepEqual(headerWrapper.padding, { left: 16, right: 16 },
       'header uses 16px edges while summary/catalog content uses 20px edges');
+    assert.deepEqual(headerWrapper.margin, { top: safeTop + 8 }, 'public header preserves the original safe-top offset');
+    const footerWrapper = frameNodes.find(node => node.type === 'Column' && node.margin?.bottom === safeBottom + 8);
+    assert.ok(footerWrapper, 'the public fixed-footer slot preserves the original bottom offset');
+    assert.deepEqual(footerWrapper.padding, { left: 20, right: 20 }, 'the footer retains the catalog content frame');
     assert.equal(owner.headerFrame().width, contentWidth + 8, 'SurfaceHorizontalFrame constructor preserves width and right offset');
     const navigation = children.find(child => child.params?.chapterEntries);
     const initialContentTop = safeTop + headerHeight + 28;
@@ -310,8 +321,19 @@ function checkFullAdaptive(candidate = pageSource) {
     const toolbar = [...owner.nodes.values()].find(node => node.type === 'Column' && node.onAreaChange);
     const flow = height === 480;
     assert.equal(owner.mangaFlowFooter(), flow, 'short clear band selects the shared finite flow predicate');
-    assert.equal([...owner.nodes.values()].some(node => node.type === 'Stack' && node.create?.alignContent === 'Alignment.Bottom'), !flow,
-      'actual initial SDK Builder omits the fixed bottom overlay only in flow mode');
+    const frame = pageFrame(owner);
+    const fixedFooterHost = [...frame.nodes.values()].find(node => node.type === 'Stack' &&
+      node.create?.alignContent === 'Alignment.Bottom');
+    assert.ok(fixedFooterHost, 'the shared fixed-footer host remains a stable full-height slot');
+    assert.equal(fixedFooterHost.zIndex, 20);
+    assert.equal([...owner.children.values()].filter(child => child.availableWidth === 280).length, 1,
+      'the actual footer producer mounts once in either the fixed or flowing slot');
+    if (flow) {
+      const footerCount = owner.children.size;
+      frame.footer();
+      assert.equal(owner.children.size, footerCount,
+        'the actual public footer Builder emits no fixed footer content when its producer flows inside the catalog');
+    }
     assert.equal([...owner.nodes.values()].some(node => node.type === 'Row' && node.margin?.top === 8), flow,
       'flow moves the current footer down to the safe-area edge and keeps the released list space');
     assert.ok(footer?.nodes); assert.equal(footer.title, '48'); assert.equal(footer.pagePosition, '4 / 24 页'); assert.equal(footer.scheme, scheme);
