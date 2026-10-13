@@ -998,7 +998,8 @@ struct Index {
       onBookshelfSettingsRequested: (): void => this.openBookshelfSettings(),
       onBatchManageRequested: (): void => this.openBookshelfMultiSelect(),
       onCheckUpdatesRequested: (): void => this.startManualBookshelfUpdate(),
-      onMainTab: (key: string): void => {
+      onMainTab: (key: string, presentedNavigation?: number): void => {
+        if (!this.isCurrentBookshelfPresentation(presentedNavigation ?? navigation, owner, mounting)) return;
         if (key === 'discover') this.openDiscover();
         else if (key === 'rss') this.openRss();
         else if (key === 'settings') this.openSettings();

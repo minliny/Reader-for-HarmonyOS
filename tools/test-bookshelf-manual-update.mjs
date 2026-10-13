@@ -78,6 +78,18 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
 const sdkRequire = createRequire(import.meta.url), sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 sdkRequire(sdkRoot + '/lib/validate_ui_syntax.js').builderParamObjectCollection.set('BookshelfShell', new Set(['content']));
 sdkRequire(sdkRoot + '/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('bookshelfContent');
+function actualFeedbackShell(composition, shellSource, props) {
+ const mainSource=ets('features/shell/MainTabShell.ets'),barSource=ets('features/shell/MainTabBar.ets');
+ Object.assign(composition.childSources,{MainTabShell:mainSource,MainTabBar:barSource,BookshelfMoreMenu:ets('features/bookshelf/BookshelfMoreMenu.ets')});
+ const platform={...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics},MainTabBar:Child};
+ const MainTabShell=createReaderBuilderProbe(mainSource,boundedMembers(mainSource),{...composition.deps,...platform},composition.hooks).Component;
+ const shell=composition.consumer(shellSource,['build','shellHeader','shellOverlay','headerHeight','onHeaderHeightChange','showBottomNav','numericAreaLength','recovery','readRecovery','populated','reduceMotion','onReconcile','onRetryRead','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','onTemporaryBackBridge','temporaryBackGeneration','temporaryBackIdentity','mounted','moreMenuVisible','dismissMoreMenu','requestMainTab','content','recoveryNoticeContent'],
+  {MainTabShell,BookshelfMoreMenu:Child,bookshelfTemporaryGeneration:0,BOOKSHELF_WIDE_BREAKPOINT:600,...platform},props);
+ Object.assign(shell,{topBar(){},content(){},moreMenuVisible:false});shell.initialRender();
+ assert.ok(composition.nodes(shell).some(node=>node.type==='Stack'&&node.backgroundColor),'the production Scaffold owns the page surface');
+ assert.ok(composition.nodes(shell).some(node=>node.type==='Column'&&node.backgroundColor&&node.onAreaChange),'the recovery notice is protected by an actual opaque fixed header host');
+ return shell;
+}
 function actualRecovery(f) {
  const shellSource=ets('features/bookshelf/BookshelfShell.ets'),composition=boundedSurfaceSdk();
  for(const member of shellSource.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g))sdkRequire(sdkRoot+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add(member[1]);
@@ -93,8 +105,7 @@ function actualRecovery(f) {
  parent.isCurrentBookshelfPresentation=f.page.isCurrentBookshelfPresentation.bind(f.page);
  parent.bookshelfShellContent();const props=[...parent.children.values()][0].params;
  composition.childSources.BookshelfMoreMenu=ets('features/bookshelf/BookshelfMoreMenu.ets');
- const shell=composition.consumer(shellSource,['shellContent','content','recoveryNoticeContent'],{BookshelfMoreMenu:Child,READER_FLOATING_TOP_BAR_HEIGHT:58,...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics}});
- Object.assign(shell,props,{topBar(){},content(){},moreMenuVisible:false});shell.shellContent();
+ const shell=actualFeedbackShell(composition,shellSource,props);
  const notice=composition.walk(shell).find(owner=>owner instanceof composition.deps.ReaderRecoveryNotice);
  assert.ok(notice,'real Shell -> shared RecoveryNotice consumes the catalog facts');
  const action=composition.nodes(shell).find(node=>node.height===36&&node.onClick);
@@ -374,8 +385,7 @@ await check('actual SDK retained Shell nav update rotates only result Notice wit
   f.failProjection(true);f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
   const old=actualRecovery(f),text=ets('features/bookshelf/BookshelfShell.ets'),sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
   sdk.childSources.BookshelfMoreMenu=ets('features/bookshelf/BookshelfMoreMenu.ets');
-  const shell=sdk.consumer(text,['recovery','readRecovery','populated','reduceMotion','onReconcile','onRetryRead','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','onTemporaryBackBridge','temporaryBackGeneration','temporaryBackIdentity','mounted','moreMenuVisible','dismissMoreMenu','shellContent','content','recoveryNoticeContent'],{BookshelfMoreMenu:Child,bookshelfTemporaryGeneration:0,READER_FLOATING_TOP_BAR_HEIGHT:58,...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics}},old.props);
-  shell.content=()=>{};shell.topBar=()=>{};shell.shellContent();
+  const shell=actualFeedbackShell(sdk,text,old.props);
   const oldAction=sdk.nodes(shell).find(node=>node.height===36&&node.onClick),oldNotice=sdk.walk(shell).find(node=>node instanceof sdk.deps.ReaderRecoveryNotice);
   const oldPhysical=oldAction.onClick,oldHandler=oldNotice.onReconcile,sequence=f.page.bookshelfCatalogFacts.generation;
   f.page.navigationGeneration++;f.page.getBookshelfCatalogOwner();const current=actualRecovery(f);shell.updateStateVars(current.props);sdk.properties.flush();

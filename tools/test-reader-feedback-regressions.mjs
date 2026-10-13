@@ -9,6 +9,7 @@ import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeR
 import {sharedActionFeedbackReset} from './lib/shared-action-feedback-state-probe.mjs';
 import {SOURCE_SWITCH_VISUAL} from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
+import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
 import {ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 registerHooks({resolve(specifier, context, next) {
   try { return next(specifier, context); }
@@ -20,6 +21,9 @@ const {readerFloatingTabContentInset, readerFloatingTabBottomInset, READER_FLOAT
 const read = (relative) => themeDayDesignSource(readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8'));
 const tabs = read('entry/src/main/ets/features/shell/MainTabBar.ets');
 const settingsShell = read('entry/src/main/ets/features/shell/SettingsShell.ets');
+const standardPage = read('entry/src/main/ets/features/common/ReaderStandardPage.ets');
+const mainShell = read('entry/src/main/ets/features/shell/MainTabShell.ets');
+const bookshelfShell = read('entry/src/main/ets/features/bookshelf/BookshelfShell.ets');
 const settingsPage = read('entry/src/main/ets/features/settings/SettingsPage.ets');
 const shelf = read('entry/src/main/ets/features/bookshelf/BookshelfPage.ets');
 const search = read('entry/src/main/ets/features/search/SearchPage.ets');
@@ -45,8 +49,10 @@ assert.match(tabs,
   'active bottom and rail tabs route the current-tab action without changing navigation');
 assert.match(settingsShell, /private readonly homeScroller: Scroller = new Scroller\(\);/,
   'SettingsShell owns the home scroll controller');
-assert.match(settingsShell, /Scroll\(this\.homeScroller\)/,
-  'Settings home binds the scroll controller used by the current-tab action');
+assert.match(settingsShell, /variant: 'settingsHome',[\s\S]*scroller: this\.homeScroller/,
+  'Settings home delegates its original current-tab scroll controller to the public page');
+assert.match(standardPage, /Scroll\(this\.scroller\)/,
+  'the actual public page binds the caller-owned scroll controller');
 assert.match(settingsShell,
   /onCurrentTap: \(_key: string\): void => this\.scrollHomeToTop\(\)/,
   'Settings home forwards the active-tab tap to its scroll owner');
@@ -55,8 +61,14 @@ assert.match(settingsShell,
   'current-tab scrolling is gated by the persisted setting and home section');
 assert.match(settingsPage, /tapBottomScrollTop: this\.tapBottomScrollTopValue,/,
   'SettingsPage passes the confirmed tap-to-top setting to the shell');
-assert.match(shelf, /private tabletNavigation\(\)[\s\S]*\.width\(82\)\s*\.height\(332\)/,
-  'Bookshelf tablet rail must match the shared Figma height');
+assert.match(bookshelfShell, /MainTabShell\(\{[\s\S]*railVariant: 'bookshelf'/,
+  'Bookshelf delegates the preserved rail appearance to an explicit public variant');
+assert.match(mainShell, /MainTabBar\(\{[^}]*vertical: true, railVariant: this\.railVariant/,
+  'the actual main shell forwards the finite rail variant to the one navigation actor');
+assert.match(tabs, /\.borderRadius\(this\.railVariant === 'bookshelf' \? 24 : 25\)/,
+  'the shared actor preserves the original bookshelf selection radius');
+assert.doesNotMatch(shelf, /private tabletNavigation(?:Item)?\(/,
+  'bookshelf content no longer owns a parallel private navigation rail');
 
 assert.match(search, /ReaderSearchField\(\{[\s\S]*variant: 'bookPage'[\s\S]*mode: 'submit'/,
   'book search must use the shared field with its explicit page variant');
@@ -118,12 +130,14 @@ let shelfMetrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 390, 8
 const builderMethods = createRequire(import.meta.url)(`${process.env.READER_ETS_LOADER_ROOT ??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader'}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 for (const name of ['continueReadingCard', 'sectionAction', 'filterRow', 'projectionRow']) builderMethods.add(name);
+const shelfProperties = createArkUIPropertyRuntimeProbe();
 const {owner: shelfLayout} = createReaderBuilderProbe(shelf,
-  ['bookshelfList', 'isWideViewport', 'effectiveViewportWidth'], {
+  ['bookshelfList', 'isWideViewport', 'effectiveViewportWidth', 'headerClearance'], {
+    ...shelfProperties.sdk,
     BOOKSHELF_WIDE_BREAKPOINT: shelfBreakpoint,
     ReaderWindowCoordinator: {metrics: () => shelfMetrics}, readerFloatingTabContentInset,
     LazyForEach: {create() {}, pop() {}},
-  });
+  }, shelfProperties.hooks);
 Object.assign(shelfLayout, {readerWindowMetricsRevision: 0, viewportWidth: 0,
   continueReading: undefined, filterRowVisible: false, viewModeError: '', visibleBookCount: 1,
   rowDataSource: {totalCount: () => 0}, shelfContentWidth: () => 300,
@@ -158,8 +172,10 @@ assert.match(tabs, /\.height\(68\)/, 'the live phone navigation retains the heig
 assert.match(tabs, /\.margin\(\{ bottom: this\.bottomInset\(\) \}\)/);
 assert.match(tabs, /return readerFloatingTabBottomInset\(ReaderWindowCoordinator\.metrics\(\)\);/,
   'the actual tab shares the same live safe-bottom projection as the shelf');
-assert.match(shelf, /if \(this\.isWideViewport\(\)\) \{[\s\S]*?this\.tabletContent\(\);[\s\S]*?this\.tabletNavigation\(\);/,
-  'wide shelf renders its actual tablet content with the approved left rail');
+assert.match(shelf, /if \(this\.isWideViewport\(\)\) \{[\s\S]*?this\.tabletContent\(\);/,
+  'wide shelf renders its actual tablet content');
+assert.match(mainShell, /if \(this\.showTabletRail\) \{[\s\S]*?MainTabBar\(\{[^}]*vertical: true/,
+  'the actual public shell owns the approved left rail as a separate overlay');
 assert.match(read('entry/src/main/ets/features/bookshelf/BookshelfShell.ets'), /showBottomNav: this\.showBottomNav\(\),/,
   'the mounted shell consumes the live layout decision verified above');
 assert.doesNotMatch(shelf, /\.padding\(\{ top: TOK_SPACE_XS, bottom: TOK_SPACE_MD \}\)/,

@@ -40,7 +40,7 @@ export struct BookshelfShell {
   onBatchManageRequested: () => void = (): void => {};
   onBookshelfSettingsRequested: () => void = (): void => {};
   onCheckUpdatesRequested: () => void = (): void => {};
-  onMainTab: (key: string) => void = (_key: string): void => {};
+  onMainTab: (key: string, presentedNavigation?: number) => void = (_key: string): void => {};
   @BuilderParam content: () => void;
   onHeaderHeightChange: (height: number) => void = (_height: number): void => {};
   @State private headerHeight: number = readerPageInitialHeaderHeight('bookshelf');
@@ -118,12 +118,12 @@ export struct BookshelfShell {
 
   build() {
     MainTabShell({
-      activeTab: 'bookshelf', headerKind: 'floating',
+      activeTab: 'bookshelf', headerKind: 'floating', navigationGeneration: this.navigationGeneration,
       showBottomNav: this.showBottomNav(), showTabletRail: !this.showBottomNav(), railVariant: 'bookshelf',
       headerTop: 8,
       headerInsetLeft: Math.max(16, readerInteractiveSafeLeft(ReaderWindowCoordinator.metrics())),
       headerInsetRight: Math.max(16, readerInteractiveSafeRight(ReaderWindowCoordinator.metrics())),
-      onMainTab: (key: string): void => this.onMainTab(key),
+      onMainTab: (key: string, generation?: number): void => this.requestMainTab(key, generation ?? this.navigationGeneration),
       content: (): void => { this.content(); },
       header: (): void => { this.shellHeader(); },
       overlay: (): void => { this.shellOverlay(); },
@@ -230,6 +230,11 @@ export struct BookshelfShell {
           });
       }
     }, (generation: number): string => generation.toString());
+  }
+
+  private requestMainTab(key: string, generation: number): void {
+    if (!this.mounted || generation !== this.navigationGeneration) return;
+    this.onMainTab(key, generation);
   }
 
   private requestCheckUpdates(): void {

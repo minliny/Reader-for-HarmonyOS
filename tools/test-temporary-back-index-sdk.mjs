@@ -74,7 +74,7 @@ for(const layer of ['delete','json','source-switch','import','group','busy-group
 }
 {
   const x=fixture('bookshelf'),o=x.f.o,first=x.index.temporaryBackLease,firstId=o.temporaryBackIdentity;
-  o.content=()=>{};o.shellContent();o.topBar();[...o.children.values()].find(c=>c instanceof x.h.p.deps.AppTopBar).params.trailing();
+  o.content=()=>{};o.initialRender();[...o.children.values()].find(c=>c instanceof x.h.p.deps.AppTopBar).params.trailing();
   const children=[...o.children.values()],oldTrigger=children.filter(c=>c instanceof x.h.p.deps.ReaderIconButton).at(-1);const oldAction=oldTrigger.params.onTap;
   x.open();x.index.nextNavigationGeneration();assert.equal(x.index.temporaryBackLease,undefined);
   const p=x.props();o.updateStateVars(p);x.h.p.properties.flush();

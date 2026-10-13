@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { auditTypographyConsumers } from './reader-typography-consumer-audit.mjs';
 import { foundationTypographyCarrier } from './foundation-typography-carrier-probe.mjs';
 import { boundedTypographyCarrier } from './bounded-typography-carrier-probe.mjs';
+import { typographyLayoutMethod } from './reader-typography-layout-successor.mjs';
 const require = createRequire(import.meta.url);
 const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`);
@@ -12,6 +13,7 @@ const registry = JSON.parse(readFileSync(new URL('../fixtures/design/typography-
 assert.equal(registry.schemaVersion, 1);
 const successor = (file, expected) => registry.entries.find(entry => entry.origin.path === file && entry.origin.method === expected.method && entry.origin.kind === expected.kind && entry.origin.text === expected.text);
 function methodOf(source, file, name) {
+  name = typographyLayoutMethod(file, name, source);
   const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, `${file}: real SDK AST for carrier successor`);
   const declaration = tree.statements.find(node => node.members?.some(member => member.name?.text === 'build'));
@@ -43,7 +45,7 @@ export function typographyCarrierMethod(file, expected, pageSource) {
     }
     return entry.target.method;
   }
-  return expected.method;
+  return typographyLayoutMethod(file, expected.method, pageSource);
 }
 /** Two actual page Texts became one shared native carrier. The origin method,
  * finite child binding and tuple must exist in the real SDK AST. No baseline

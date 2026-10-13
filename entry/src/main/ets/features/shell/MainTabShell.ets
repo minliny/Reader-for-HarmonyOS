@@ -21,7 +21,9 @@ export struct MainTabShell {
   @Prop showBottomNav: boolean = true;
   @Prop showTabletRail: boolean = false;
   @Prop railVariant: 'standard' | 'bookshelf' = 'standard';
-  onMainTab: (key: string) => void = (_key: string): void => {};
+  @Prop navigationGeneration: number = 0;
+  private mounted: boolean = false;
+  onMainTab: (key: string, presentedGeneration?: number) => void = (_key: string): void => {};
   @Prop headerKind: ReaderHeaderKind = 'home';
   @Prop headerTop: number = 0;
   @Prop headerInsetLeft: number = 0;
@@ -31,6 +33,14 @@ export struct MainTabShell {
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam overlay: () => void = this.emptySlot;
   @Builder private emptySlot() {}
+
+  aboutToAppear(): void { this.mounted = true; }
+  aboutToDisappear(): void { this.mounted = false; }
+
+  private requestMainTab(key: string, presentedGeneration: number): void {
+    if (!this.mounted || presentedGeneration !== this.navigationGeneration) return;
+    this.onMainTab(key, presentedGeneration);
+  }
 
   build() {
     ReaderPageScaffold({ variant: 'mainTab', headerKind: this.headerKind,
@@ -46,15 +56,19 @@ export struct MainTabShell {
   @Builder
   private bottomNavigation() {
     if (this.showBottomNav && !this.showTabletRail) {
-      MainTabBar({ current: this.activeTab, onSelect: (key: string): void => this.onMainTab(key) });
+      ForEach([this.navigationGeneration], (generation: number) => {
+        MainTabBar({ current: this.activeTab, onSelect: (key: string): void => this.requestMainTab(key, generation) });
+      }, (generation: number): string => generation.toString());
     }
   }
 
   @Builder
   private mainOverlays() {
     if (this.showTabletRail) {
-      MainTabBar({ current: this.activeTab, vertical: true, railVariant: this.railVariant, onSelect: (key: string): void => this.onMainTab(key) })
-        .position({ x: this.railLeft(), y: this.railTop() });
+      ForEach([this.navigationGeneration], (generation: number) => {
+        MainTabBar({ current: this.activeTab, vertical: true, railVariant: this.railVariant, onSelect: (key: string): void => this.requestMainTab(key, generation) })
+          .position({ x: this.railLeft(), y: this.railTop() });
+      }, (generation: number): string => generation.toString());
     }
     this.overlay();
   }

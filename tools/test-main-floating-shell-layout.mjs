@@ -86,10 +86,11 @@ const verifyScroll = (owner, top, bottom) => {
 // Actual SDK-emitted Builder/native attribute calls are checked here; native
 // pixel layout and gesture dispatch remain separate evidence layers.
 for (const bottomNav of [false, true]) {
-  const shell = probe('shell/MainTabShell.ets', ['content', 'header', 'overlay', 'emptySlot', 'headerKind', 'headerTop', 'headerInsetLeft', 'headerInsetRight', 'bottomNavigation', 'mainOverlays', 'build'], {
-    activeTab: 'bookshelf', showTabletRail: false, showBottomNav: bottomNav, content() {}, onMainTab() {},
+  const tabCalls = [];
+  const shell = probe('shell/MainTabShell.ets', ['navigationGeneration', 'mounted', 'requestMainTab', 'aboutToAppear', 'aboutToDisappear', 'content', 'header', 'overlay', 'emptySlot', 'headerKind', 'headerTop', 'headerInsetLeft', 'headerInsetRight', 'bottomNavigation', 'mainOverlays', 'build'], {
+    activeTab: 'bookshelf', showTabletRail: false, showBottomNav: bottomNav, content() {}, onMainTab(key, generation) { tabCalls.push([key, generation]); },
   });
-  shell.initialRender();
+  shell.aboutToAppear(); shell.initialRender();
   assert.ok(nodes(shell, 'Column').every(node => node.layoutWeight === undefined), 'shared chrome hosts do not subtract space from the full-height body');
   assert.ok(nodes(shell, 'Stack').every(node => node.height === '100%'));
   if (bottomNav) {
@@ -99,6 +100,10 @@ for (const bottomNav of [false, true]) {
     assert.ok(nodes(shell, 'Stack').some(node => node.backgroundColor === readerAppColor('TOK_PAPER', 'day')), 'public page root retains the approved opaque paper');
     assert.equal(overlay.hitTestBehavior, 'HitTestMode.Transparent');
     assert.equal(overlay.backgroundColor, undefined);
+    const tab = [...shell.children.values()].find(child => child.params?.onSelect);
+    tab.params.onSelect('settings'); assert.deepEqual(tabCalls, [['settings', 0]], 'actual shared navigation method admits the mounted generation');
+    shell.aboutToDisappear(); tab.params.onSelect('settings');
+    assert.deepEqual(tabCalls, [['settings', 0]], 'retired public navigation refuses its retained callback');
   }
 }
 

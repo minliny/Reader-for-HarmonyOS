@@ -18,19 +18,43 @@ function searchScopeDependencies(source){
   return[name,declaration.initializer.text];
  }));
 }
+function resultsHeaderProducer(source){
+ const tree=ts.createSourceFile('SearchPage.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,opts),component=tree.statements.find(n=>n.members&&n.members.some(m=>m.name?.text==='build'));
+ const build=component.members.find(m=>m.name?.text==='build'),header=component.members.find(m=>m.name?.text==='searchHeader');
+ let scaffoldHeader,statsCall;
+ function visit(node){
+  if(ts.isCallExpression(node)&&node.expression.getText(tree)==='ReaderPageScaffold')scaffoldHeader=node.arguments[0]?.properties?.find(p=>p.name?.getText(tree)==='header');
+  ts.forEachChild(node,visit);
+ }
+ visit(build);
+ assert.ok(scaffoldHeader,'search result typography must remain connected to the actual public header slot');
+ assert.equal(scaffoldHeader.initializer.body.statements.length,1);
+ assert.equal(scaffoldHeader.initializer.body.statements[0].expression.getText(tree),'this.searchHeader()','actual public header invokes the production search header builder');
+ function findStats(node){
+  if(ts.isIfStatement(node)&&node.expression.getText(tree)==="this.presentation.kind === 'results'"){
+   const statements=node.thenStatement.statements;
+   if(statements?.length===1&&statements[0].expression?.getText(tree)==='this.resultStats()')statsCall=statements[0].expression;
+  }
+  ts.forEachChild(node,findStats);
+ }
+ findStats(header);
+ assert.ok(statsCall,'the actual results header owns the unchanged statistics builder');
+ return statsCall.expression.name.text;
+}
 function setup(file,method,{scheme='day',tablet=false,busy=false,selected=true,canRetry=true}={}){
  const old=tailControls(),current=tailControls(),source=readFileSync(new URL('../'+file.path,import.meta.url),'utf8');
  const scope=file.path.includes('/search/')?searchScopeDependencies(source):{};
  const required=file.path.includes('/search/')?searchActionMethods:file.path.includes('/sync/')?['canMutate']:['currentFilterText','kindTitles'];
  const frozen='@Component struct OriginalActionFamily{\n'+file.methods.join('\n')+'\n'+members(source,required.filter(n=>!file.names.includes(n))).join('\n')+'\nbuild(){Column(){}}\n}';
- const names=[...new Set([method,...required])];const owners={old:compileTailConsumer(frozen,names,{...old.dependencies,...scope},old.hooks).owner,current:compileTailConsumer(source,names,{...current.dependencies,...scope},current.hooks).owner},calls={old:[],current:[]};
+ const names=[...new Set([method,...required])],headerProducer=method==='resultsContent'?resultsHeaderProducer(source):undefined;
+ const owners={old:compileTailConsumer(frozen,names,{...old.dependencies,...scope},old.hooks).owner,current:compileTailConsumer(source,[...names,...(headerProducer?[headerProducer]:[])],{...current.dependencies,...scope},current.hooks).owner},calls={old:[],current:[]};
  for(const[side,owner]of Object.entries(owners)){
   seedTailOwner(owner,{scheme,tablet,busy,kind:method==='searchBar'&&busy?'loading':method==='resultsContent'?'results':method==='emptyContent'?'empty':method==='errorContent'?'error':'initial',operation:{canRetry,canCancel:busy}});
   if(method==='groupScopeChip'){owner.presentation={kind:'initial',history:[]};owner.selectedGroupName=selected?'在线':'本地';}
   if(file.path.includes('/discover/'))owner.presentation={kind:'ready',kinds:[{title:'分类一'},{title:'分类二'}],activeKindIndex:selected?0:1,filter:'最新'};
   for(const name of['onSearch','onStop','onBack','onRetry','onManageSources','onClearHistory','onRetryHistory','onTriggerBackup','onRefresh','onSelectKind'])owner[name]=(...args)=>calls[side].push([name,...args]);
  }
- return{file,source,old,current,owners,calls,method};
+ return{file,source,old,current,owners,calls,method,headerProducer};
 }
 function clickByLabel(shared,owner,label){
  const own=[...owner.nodes.values()],text=own.find(n=>n.type==='Text'&&n.create===label);
@@ -38,8 +62,20 @@ function clickByLabel(shared,owner,label){
  for(const child of owner.children.values()){const candidate=clickByLabel(shared,child,label);if(candidate)return candidate;}
  if(text){const ordered=shared.orderedNodes(owner),index=ordered.indexOf(text);return ordered.slice(0,index).reverse().find(n=>typeof n.onClick==='function');}
 }
-function render(p,args=[]){for(const owner of Object.values(p.owners))owner[p.method](...args);}
+function render(p,args=[]){
+ p.owners.old[p.method](...args);
+ // The same production statistics producer now lives in the fixed header.
+ // Render its registered SDK builder before the body, preserving the original
+ // five text actors and owner callbacks rather than deleting their comparisons.
+ if(p.headerProducer)p.owners.current[p.headerProducer]();
+ p.owners.current[p.method](...args);
+}
 const files=Object.fromEntries(baseline.files.map(f=>[f.path.includes('/search/')?'search':f.path.includes('/discover/')?'discover':'sync',f]));
+{
+ const source=readFileSync(new URL('../'+files.search.path,import.meta.url),'utf8');
+ assert.throws(()=>resultsHeaderProducer(source.replace('header: (): void => { this.searchHeader(); }','header: (): void => { this.stateContent(); }')),/actual public header invokes/,'a body builder cannot silently replace the retained statistics header producer');
+ assert.throws(()=>resultsHeaderProducer(source.replace("if (this.presentation.kind === 'results') { this.resultStats(); }","if (this.presentation.kind === 'empty') { this.resultStats(); }")),/actual results header owns/,'statistics must remain admitted by the actual results state');
+}
 let cases=0;
 for(const scheme of['day','night'])for(const fileKey of['search','discover','sync'])for(const method of files[fileKey].names){
  const variants=method==='searchBar'?[{tablet:false,busy:false},{tablet:false,busy:true},{tablet:true,busy:false},{tablet:true,busy:true}]:method==='groupScopeChip'?[{selected:false},{selected:true}]:method==='resultsContent'?[{canRetry:false},{canRetry:true}]:method==='emptyState'?[{busy:false},{busy:true}]:[{}];
