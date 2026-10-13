@@ -59,7 +59,8 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
-import { ReaderHeaderFrameModifier, ReaderPageFrameModifier, readerPageContentStartInset } from '../common/ReaderPageShell';
+import { readerPageContentStartInset } from '../common/ReaderPageShell';
+import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 
 export type {
   SearchInitialPresentation,
@@ -331,6 +332,8 @@ export struct SearchPage {
   @Prop reduceMotion: boolean = false;
   @State private historyWidth: number = 0;
   @State private resultStatsHeight: number = 28.5;
+  @State private fixedHeaderHeight: number = 0;
+  @State private fixedHeaderLayoutKey: string = '';
   @State private spinnerRunKey: number = 0;
   onBack: () => void = (): void => {};
   /**
@@ -426,25 +429,40 @@ export struct SearchPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Bottom }) {
-      Stack({ alignContent: Alignment.TopStart }) { this.stateContent(); }
-        .width('100%').height('100%');
+    ReaderPageScaffold({
+      variant: 'search', headerKind: 'search',
+      frameInsetLeft: this.contentFrame().left, frameInsetRight: this.contentFrame().right,
+      content: (): void => { this.stateContent(); },
+      header: (): void => { this.searchHeader(); },
+      onHeaderHeightChange: (height: number): void => {
+        if (Number.isFinite(height) && height > 0) {
+          this.fixedHeaderLayoutKey = this.searchHeaderLayoutKey();
+          if (Math.abs(height - this.fixedHeaderHeight) > .1) this.fixedHeaderHeight = height;
+        }
+      },
+      overlay: (): void => { this.searchActivity(); },
+    });
+  }
+
+  @Builder
+  private searchHeader() {
+    Column() {
       Column() {
         this.searchBar();
         if (this.presentation.kind === 'results' || this.presentation.kind === 'empty') {
           this.groupScopeRow();
           this.contentTypeRow();
         }
-      }.width('100%').height(this.searchHeaderHeight())
-        // Search filters are a fixed header over the result surface. The
-        // explicit paper layer prevents result cards from showing through
-        // the filter rows while the list is moving underneath.
-        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-        .position({ top: 0, left: 0 }).zIndex(10).clip(true)
-        .attributeModifier(new ReaderHeaderFrameModifier('search', 'solid', this.appThemeScheme))
-        .hitTestBehavior(HitTestMode.Transparent);
-      // Stable actor anchored to the whole safe viewport, outside changing
-      // source/category/result rows. Caption keeps its lane during streaming.
+      }.width('100%').height(this.searchHeaderHeight());
+      if (this.presentation.kind === 'results') { this.resultStats(); }
+    }.width('100%');
+  }
+
+  @Builder
+  private searchActivity() {
+    // The activity actor stays anchored to the safe viewport independently
+    // from streaming result/filter rows.
+    Stack({ alignContent: Alignment.Bottom }) {
       Column({ space: 18 }) {
         SearchSpinner({ active: this.isSweeping(), runKey: this.spinnerRunKey,
           reduceMotion: this.reduceMotion, diameter: 36 });
@@ -455,11 +473,7 @@ export struct SearchPage {
       }.width('100%').margin({ bottom: 48 })
         .visibility(this.isSweeping() ? Visibility.Visible : Visibility.Hidden)
         .hitTestBehavior(HitTestMode.None);
-    }
-    .width('100%').height('100%')
-    .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-    .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme))
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+    }.width('100%').height('100%').hitTestBehavior(HitTestMode.None);
   }
 
   private searchHeaderHeight(): number {
@@ -470,6 +484,16 @@ export struct SearchPage {
     // omitting the second row lets them cover the content-type chips.
     const filterRows = groups ? (this.groupNames().length > 0 ? 2 : 1) : 0;
     return (this.isTablet ? 56 : 52) + filterRows * 41.5;
+  }
+
+  private searchHeaderLayoutKey(): string {
+    return `${this.searchHeaderHeight()}:${this.presentation.kind === 'results' ? 'stats' : 'plain'}`;
+  }
+
+  private searchContentStartInset(): number {
+    if (this.fixedHeaderHeight > 0 && this.fixedHeaderLayoutKey === this.searchHeaderLayoutKey())
+      return this.fixedHeaderHeight;
+    return readerPageContentStartInset(this.searchHeaderHeight(), this.presentation.kind === 'results' ? this.resultStatsHeight : 0);
   }
 
   private searchBottomInset(minimum: number = 20): number {
@@ -678,7 +702,7 @@ export struct SearchPage {
   private stateContent() {
     if (this.presentation.kind === 'initial') {
       Scroll() {
-        Column() { this.initialContent(); }.width('100%').padding({ top: this.searchHeaderHeight() });
+        Column() { this.initialContent(); }.width('100%').padding({ top: this.searchContentStartInset() });
       }.width('100%').height('100%')
         .align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'loading') {
@@ -690,14 +714,14 @@ export struct SearchPage {
         Column() {
           this.sourceRequiredContent(this.sourceRequiredReason());
           this.initialContent();
-        }.width('100%').padding({ top: this.searchHeaderHeight() });
+        }.width('100%').padding({ top: this.searchContentStartInset() });
       }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'sourceLoadError') {
       Scroll() {
         Column() {
           this.sourceLoadErrorContent();
           this.initialContent();
-        }.width('100%').padding({ top: this.searchHeaderHeight() });
+        }.width('100%').padding({ top: this.searchContentStartInset() });
       }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
     } else if (this.presentation.kind === 'empty') {
       this.emptyContent(this.presentation.keyword, this.presentation.searchedSourceCount);
@@ -920,91 +944,94 @@ export struct SearchPage {
     this.publishVisibleGroups();
   }
 
+  @Builder
+  private resultStats() {
+    Row() {
+      Text('找到 ')
+        .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+        .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+        .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      Text(`${this.visibleGroups.length}`)
+        .fontFamily(TYPE_SEARCH_RESULT_COUNT.fontFamily)
+        .fontWeight(TYPE_SEARCH_RESULT_COUNT.fontWeight)
+        .fontSize(TYPE_SEARCH_RESULT_COUNT.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_RESULT_COUNT.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
+      Text(' 本相关书籍')
+        .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+        .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+        .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      // Reads the presentation directly (not a builder param) so the
+      // minimal-update re-render tracks it exactly like the search/stop
+      // pill does: the sweep counter must update live per source landing.
+      if (this.presentation.kind === 'results') {
+        if (this.presentation.localSearchFailed || this.presentation.sourceListFailed) {
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-status', label: this.partialSearchFailure(),
+            actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+        }
+        if (this.operation()?.fact === 'cancelled' || this.presentation.stopped === true) {
+          // ACQ-02: a stopped sweep keeps its partial results; the header
+          // states how far the interrupted sweep got so partials never read
+          // as a complete verdict.
+          Text(` · 已停止,已搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源`)
+            .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+            .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+            .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+        } else if (this.isSweeping()) {
+          Text(` · 正在搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源,已返回 ${this.visibleGroups.length} 个`)
+            .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
+            .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
+            .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
+            .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
+        if (this.presentation.failedSourceCount > 0) {
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-progress',
+            label: ` · 失败 ${this.presentation.failedSourceCount} 个书源${!this.presentation.searching || this.presentation.completedSourceCount === this.presentation.totalSourceCount ? '，重试' : ''}`,
+            actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
+        }
+        if ((this.presentation.skippedSourceCount ?? 0) > 0) {
+          Text(` · 跳过 ${this.presentation.skippedSourceCount} 个近期不可用书源，重试`)
+            .fontFamily('ReaderInter')
+            .fontWeight(FontWeight.Regular)
+            .fontSize(11)
+            .lineHeight(16.5)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .onClick((): void => this.onRetry());
+        }
+      }
+    }
+    .width(this.contentFrame().width)
+    .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
+    .alignItems(VerticalAlign.Center)
+    .hitTestBehavior(HitTestMode.Transparent)
+    .onAreaChange((_old: Area, next: Area): void => {
+      const height = Number(next.height);
+      if (Number.isFinite(height) && height > 0 && Math.abs(height - this.resultStatsHeight) > .1) {
+        this.resultStatsHeight = height;
+      }
+    });
+  }
+
   // ArkUI does not track mutable @Builder value parameters. Read state at
   // the consuming nodes so category changes and stop both update in place.
   @Builder
   private resultsContent() {
     Stack({ alignContent: Alignment.Bottom }) {
       Stack({ alignContent: Alignment.TopStart }) {
-        Row() {
-          Text('找到 ')
-            .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
-            .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
-            .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-          Text(`${this.visibleGroups.length}`)
-            .fontFamily(TYPE_SEARCH_RESULT_COUNT.fontFamily)
-            .fontWeight(TYPE_SEARCH_RESULT_COUNT.fontWeight)
-            .fontSize(TYPE_SEARCH_RESULT_COUNT.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_RESULT_COUNT.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
-          Text(' 本相关书籍')
-            .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
-            .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
-            .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-          // Reads the presentation directly (not a builder param) so the
-          // minimal-update re-render tracks it exactly like the search/stop
-          // pill does: the sweep counter must update live per source landing.
-          if (this.presentation.kind === 'results') {
-            if (this.presentation.localSearchFailed || this.presentation.sourceListFailed) {
-              ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-status', label: this.partialSearchFailure(),
-                actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
-            }
-            if (this.operation()?.fact === 'cancelled' || this.presentation.stopped === true) {
-              // ACQ-02: a stopped sweep keeps its partial results; the header
-              // states how far the interrupted sweep got so partials never read
-              // as a complete verdict.
-              Text(` · 已停止,已搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源`)
-                .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
-                .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
-                .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
-                .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis });
-            } else if (this.isSweeping()) {
-              Text(` · 正在搜索 ${this.presentation.completedSourceCount}/${this.presentation.totalSourceCount} 个书源,已返回 ${this.visibleGroups.length} 个`)
-                .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
-                .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
-                .fontSize(TYPE_SEARCH_PROGRESS_META.fontSizeFp)
-                .lineHeight(TYPE_SEARCH_PROGRESS_META.lineHeightFp as number)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis });
-            }
-            if (this.presentation.failedSourceCount > 0) {
-              ReaderButton({ scheme: this.appThemeScheme, specId: 'search-retry-progress',
-                label: ` · 失败 ${this.presentation.failedSourceCount} 个书源${!this.presentation.searching || this.presentation.completedSourceCount === this.presentation.totalSourceCount ? '，重试' : ''}`,
-                actionEnabled: this.operation()?.canRetry !== false, onAction: (): void => this.retryOperation() });
-            }
-            if ((this.presentation.skippedSourceCount ?? 0) > 0) {
-              Text(` · 跳过 ${this.presentation.skippedSourceCount} 个近期不可用书源，重试`)
-                .fontFamily('ReaderInter')
-                .fontWeight(FontWeight.Regular)
-                .fontSize(11)
-                .lineHeight(16.5)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .onClick((): void => this.onRetry());
-            }
-          }
-        }
-        .width(this.contentFrame().width)
-        .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
-        .alignItems(VerticalAlign.Center)
-        .position({ x: 0, y: this.searchHeaderHeight() })
-        .zIndex(1)
-        .hitTestBehavior(HitTestMode.Transparent)
-        .onAreaChange((_old: Area, next: Area): void => {
-          const height = Number(next.height);
-          if (Number.isFinite(height) && height > 0 && Math.abs(height - this.resultStatsHeight) > .1) {
-            this.resultStatsHeight = height;
-          }
-        });
+
 
         if (this.visibleGroups.length === 0) {
           Text(this.filteredEmptyMessage())
@@ -1023,7 +1050,7 @@ export struct SearchPage {
         }
         .width('100%')
         .height('100%')
-        .contentStartOffset(this.searchHeaderHeight() + this.resultStatsHeight)
+        .contentStartOffset(this.searchContentStartInset())
         .contentEndOffset(this.searchBottomInset())
         .scrollBar(BarState.Off)
         .maintainVisibleContentPosition(true)
@@ -1172,7 +1199,7 @@ export struct SearchPage {
           const rect = this.resultScroller.getItemRect(actual);
           if (!Number.isFinite(rect.y) || !Number.isFinite(rect.height) || rect.height <= 0) throw new Error('anchor not laid out');
           const offset = Math.max(1 - rect.height,
-            Math.min(this.searchHeaderHeight() + this.resultStatsHeight, this.restoreItemY));
+            Math.min(this.searchContentStartInset(), this.restoreItemY));
           this.resultScroller.scrollBy(0, rect.y - offset);
           this.viewState.anchorKey = anchorKey;
           this.viewState.anchorIndex = actual;
@@ -1291,7 +1318,7 @@ export struct SearchPage {
         .alignSelf(ItemAlign.Center);
       }
       .width('100%')
-      .padding({ top: this.searchHeaderHeight() + 50, bottom: this.searchBottomInset(40) });
+      .padding({ top: this.searchContentStartInset() + 50, bottom: this.searchBottomInset(40) });
     }
     .width('100%')
     .height('100%')
@@ -1446,7 +1473,7 @@ export struct SearchPage {
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
-    .padding({ top: this.searchHeaderHeight() + 96, bottom: this.searchBottomInset(40) });
+    .padding({ top: this.searchContentStartInset() + 96, bottom: this.searchBottomInset(40) });
     }.width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
   }
 

@@ -85,8 +85,9 @@ deps.ReaderMangaDownloadPopup = Child;
 const hooks = { ...properties.hooks, childSources: { MangaDirectoryCurrentFooter: footerSource,
   ReaderMangaDownloadPopup: popupSource }, mountChildren: true };
 const nodes = owner => [...owner.nodes.values()];
+const allNodes = owner => [...(owner.nodes?.values() ?? []), ...[...(owner.children?.values() ?? [])].flatMap(allNodes)];
 function fixture(key, names, values = {}) {
-  const selected = key === 'search' ? [...names, 'operation', 'retryOperation', 'filteredEmptyMessage'] : key === 'source' ? [...names, 'recovery'] : names;
+  const selected = key === 'search' ? [...names, 'operation', 'retryOperation', 'filteredEmptyMessage', 'searchHeader', 'resultStats', 'searchActivity'] : key === 'source' ? [...names, 'recovery'] : key === 'directory' ? [...names, 'standardContent', 'standardHeader', 'standardToolbar'] : names;
   const { owner } = createReaderBuilderProbe(sources[key], selected, deps, hooks);
   for (const match of sources[key].matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) {
     if (typeof owner[match[1]] !== 'function') owner[match[1]] = () => {};
@@ -120,12 +121,14 @@ for (const isTablet of [false, true]) {
   const headerHeight = (isTablet ? 56 : 52) + 2 * 41.5;
   assert.equal(list.contentStartOffset, headerHeight + 28.5);
   assert.equal(list.contentEndOffset, 34);
-  const header = nodes(owner).find(n => n.type === 'Column' && n.height === headerHeight && n.position?.top === 0);
-  assert.ok(header, 'header is explicitly anchored to the parent Stack top');
+  const header = allNodes(owner).find(n => n.type === 'Column' && n.zIndex === 10 && n.onAreaChange);
+  assert.ok(header, 'compound search/filter/statistics mount the actual common fixed-header host');
   assert.equal(header.hitTestBehavior, 'HitTestMode.Transparent');
-  const stats = nodes(owner).find(n => n.type === 'Row' && n.zIndex === 1);
-  assert.deepEqual(stats.position, { x: 0, y: headerHeight }, 'stats use the already padded content rail coordinates');
-  assert.equal(stats.hitTestBehavior, 'HitTestMode.Transparent');
+  assert.match(header.backgroundColor, /^#FF/, 'the entire compound header masks scrolling rows');
+  const stats = nodes(owner).find(n => n.type === 'Row' && n.onAreaChange);
+  assert.ok(stats, 'statistics remain in the actual compound header content');
+  assert.equal(stats.position, undefined, 'statistics flow with filters inside the shared measured header');
+  assert.equal(stats.zIndex, undefined, 'statistics do not create a private overlay layer');
   stats.onAreaChange({}, { height: 52 });
   owner.replayOnly([list.id]);
   assert.equal(list.contentStartOffset, headerHeight + 52, 'measured multiline statistics update the retained List clearance');
@@ -160,8 +163,10 @@ for (const sourceCount of [0, 2]) {
   const list = fullList(owner);
   assert.equal(list.contentStartOffset, 58);
   assert.equal(list.contentEndOffset, 44 + tokens.TOK_SPACE_SM + 34);
-  const footer = nodes(owner).find(n => n.type === 'Column' && n.position?.bottom === 0);
-  assert.ok(footer, 'source actions are explicitly anchored to the parent Stack bottom');
+  const footer = nodes(owner).find(n => n.type === 'Column' && n.height === 44 + tokens.TOK_SPACE_SM + 34);
+  const footerLayer = allNodes(owner).find(n => n.type === 'Stack' && n.zIndex === 20);
+  assert.ok(footer && footerLayer, 'source actions use the shared frame bottom layer');
+  assert.equal(footerLayer.create.alignContent, 'Alignment.Bottom');
   assert.deepEqual(footer.padding, { left: 42, right: 18 }, 'footer keeps asymmetric safe edges aligned with the List');
   assert.equal(footer.hitTestBehavior, 'HitTestMode.Transparent');
   assert.equal(nodes(owner).filter(n => n.type === 'ListItem').length, sourceCount === 0 ? 2 : sourceCount + 1,
@@ -184,10 +189,10 @@ const multiList = fullList(multi);
 assert.equal(multiList.contentStartOffset, 70);
 assert.equal(multiList.contentEndOffset, 12 + 22 + 6 + 13.31 + 34 + 20);
 const remove = nodes(multi).find(n => n.borderRadius?.topLeft === 24);
-const removeHost = nodes(multi).find(n => n.type === 'Column' && n.position?.bottom === 0);
+const removeHost = allNodes(multi).find(n => n.type === 'Column' && n.onAreaChange && n.margin?.bottom === 0);
 assert.ok(removeHost);
 assert.equal(removeHost.height, undefined, 'the footer can grow naturally with scaled or wrapped labels');
-assert.equal(removeHost.hitTestBehavior, 'HitTestMode.Transparent');
+assert.equal(allNodes(multi).find(n => n.type === 'Stack' && n.zIndex === 20).hitTestBehavior, 'HitTestMode.Transparent');
 remove.onAreaChange({}, { height: 116 });
 multi.replayOnly([multiList.id]);
 assert.equal(multiList.contentEndOffset, 136, 'measured footer height updates clearance without shrinking the List');
@@ -207,16 +212,19 @@ tree.params.fallbackBuilder();
 const flat = [...directory.children.values()].find(child => child.params.entries);
 assert.equal(flat.params.contentStartInset, 114);
 assert.equal(flat.params.contentEndInset, 39);
-const tools = nodes(directory).find(n => n.type === 'Column' && n.zIndex === 1);
-assert.deepEqual(tools.position, { x: 42, y: 58 });
-assert.equal(tools.margin, undefined, 'absolute tools position applies the rail inset only once');
+const tools = nodes(directory).find(n => n.type === 'Column' && n.margin?.left === 42 && n.margin?.right === 18);
+assert.ok(tools, 'toolbar remains a real bounded business slot inside the common header');
+assert.equal(tools.position, undefined, 'toolbar flows after the title under the one shared header mask');
 assert.equal(tools.hitTestBehavior, 'HitTestMode.Transparent');
-tools.onAreaChange({}, { height: 210 });
+const directoryHeader = allNodes(directory).find(n => n.type === 'Column' && n.zIndex === 10 && n.onAreaChange);
+assert.ok(directoryHeader);
+assert.match(directoryHeader.backgroundColor, /^#FF/, 'title and expanded tools share one opaque header mask');
+directoryHeader.onAreaChange({}, { height: '268vp' });
 directory.replayOnly([tree.id, flat.id]);
 assert.equal(tree.params.contentStartInset, 273);
-assert.equal(flat.params.contentStartInset, 273, 'expanding tools updates both tree and fallback Lists');
-tools.onAreaChange({}, { height: 0 });
-assert.equal(directory.toolsHeight, 210, 'a transient zero layout cannot erase the tool clearance');
+assert.equal(flat.params.contentStartInset, 273, 'expanded title/tools measurement updates both retained tree and fallback Lists');
+directoryHeader.onAreaChange({}, { height: 0 });
+assert.equal(directory.standardHeaderHeight, 268, 'transient zero layout cannot erase the measured whole-header clearance');
 
 function nativeDirectoryFixture(key, values = {}) {
   const empty = emptyMangaGridState();
@@ -297,7 +305,7 @@ for (const [safeTop, safeBottom] of [[0, 0], [48, 34], [10, 80]]) {
   const flatChild = [...catalog.children.values()].find(child => child.params?.entries);
   assert.ok(flatChild, 'the actual manga fallback publishes its natural-row List');
   const toolbar = nodes(catalog).find(node => node.type === 'Column' && node.position?.y === safeTop + 80 && typeof node.onAreaChange === 'function');
-  const footer = nodes(catalog).find(node => node.type === 'Row' && node.margin?.bottom !== undefined);
+  const footer = allNodes(catalog).find(node => node.type === 'Column' && node.margin?.bottom === safeBottom + 8);
   const actualFooter = [...catalog.children.values()].find(child => child.nodes && child.availableWidth === 330);
   assert.ok(actualFooter, 'the real shared footer supplies the full catalog clearance contract');
   assert.equal(nodes(actualFooter).find(node => node.accessibilityText === '当前阅读位置').constraintSize.minHeight, 48);

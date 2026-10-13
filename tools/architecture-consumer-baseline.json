@@ -812,6 +812,28 @@
       "contractId": "shared-ReaderInlineSelect",
       "reason": "One bounded secondary-page selector host delegates trigger and panel rendering to the existing ReaderSelect family and keeps popup lifetime identity scoped.",
       "proof": "tools/test-shared-download-ui-sdk.mjs"
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderPageShell.ts",
+      "contractId": "shared-ReaderPageShellPolicy",
+      "counts": {
+        "backgroundColor": 6
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderPageScaffold.ets",
+      "contractId": "shared-ReaderPageScaffold",
+      "counts": {}
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderFixedHeaderHost.ets",
+      "contractId": "shared-ReaderFixedHeaderHost",
+      "counts": {}
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderStandardPage.ets",
+      "contractId": "shared-ReaderStandardPage",
+      "counts": {}
     }
   ],
   "uiPolicies": [

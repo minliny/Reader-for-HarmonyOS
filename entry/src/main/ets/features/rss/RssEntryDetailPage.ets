@@ -1,3 +1,5 @@
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
+import { readerStandardPageContentFrame } from '../common/ReaderPageShell';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
@@ -14,37 +16,19 @@ import {
   type RssSubscription,
 } from './RssGateway';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
-import {
-  READER_FLOATING_TOP_BAR_HEIGHT,
-  readerFloatingBarBottomInset,
-} from '../common/ReaderFloatingBarMetrics';
 import { PageBackBar } from '../common/PageBackBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
 } from '../common/SurfaceHorizontalGeometry';
 import {
-  readerVisualSafeLeft,
-  readerVisualSafeRight,
-} from '../common/ReaderWindowMetrics';
-import {
   TOK_BORDER_W,
-  TOK_CARD_BG,
   TOK_CARD_BG_HI,
-  TOK_CONTENT_MAX_W_TABLET,
-  TOK_GREEN,
   TOK_INK,
   TOK_MUTED,
-  TOK_ON_PRIMARY,
-  TOK_PAPER,
   TOK_PRIMARY_BG,
-  TOK_PRIMARY_DARK,
   TOK_PRIMARY_SOFT,
-  TOK_SCREEN_INSET,
   TOK_SPACE_CONTROL_INLINE,
-  TOK_SPACE_LG,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
@@ -86,50 +70,32 @@ export struct RssEntryDetailPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Scroll() {
-        Column({ space: TOK_SPACE_SM }) {
-          this.operationFeedback();
-          this.sourceCard();
-          this.summaryCard();
-          this.entryActions();
-          if (this.summaryParagraphs().length > 0) {
-            this.summaryBodyCard();
-          }
-          if (this.item.link !== undefined && this.item.link !== '') {
-            this.originalLinkCard();
-          }
+    ReaderStandardPage({
+      variant: 'rssDetail',
+      header: (): void => { this.backBar(); },
+      content: (): void => { this.pageContent(); },
+      footer: (): void => { this.bottomActions(); },
+    })
+      .onAreaChange((_oldValue: Area, newValue: Area): void => {
+        const width = this.numericAreaLength(newValue.width);
+        if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
+          this.viewportWidth = width;
         }
-        .width(this.contentFrame().width)
-        .padding({
-          top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
-          bottom: RSS_DETAIL_ACTION_AREA_HEIGHT + this.actionAreaBottomOffset(),
-        });
-      }
-      .height('100%')
-      .width('100%')
-      .scrollBar(BarState.Off)
-      .align(Alignment.Top)
-      .padding({ left: this.contentFrame().left, right: this.contentFrame().right });
+      });
+  }
 
-      this.backBar();
-      Stack({ alignContent: Alignment.Bottom }) {
-        this.bottomActions();
-      }
-      .width('100%')
-      .height('100%')
-      .padding({ bottom: this.actionAreaBottomOffset() })
-      .hitTestBehavior(HitTestMode.Transparent);
+  @Builder
+  private pageContent() {
+    this.operationFeedback();
+    this.sourceCard();
+    this.summaryCard();
+    this.entryActions();
+    if (this.summaryParagraphs().length > 0) {
+      this.summaryBodyCard();
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-    .onAreaChange((_oldValue: Area, newValue: Area): void => {
-      const width = this.numericAreaLength(newValue.width);
-      if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
-        this.viewportWidth = width;
-      }
-    });
+    if (this.item.link !== undefined && this.item.link !== '') {
+      this.originalLinkCard();
+    }
   }
 
   @Builder
@@ -368,11 +334,6 @@ export struct RssEntryDetailPage {
     .hitTestBehavior(HitTestMode.Transparent);
   }
 
-  private actionAreaBottomOffset(): number {
-    if (this.readerWindowMetricsRevision < 0) return 0;
-    return Math.max(0, readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_XS) - TOK_SPACE_XS);
-  }
-
   private summaryParagraphs(): string[] {
     if (this.item.description === undefined || this.item.description.trim().length === 0) {
       return [];
@@ -411,12 +372,7 @@ export struct RssEntryDetailPage {
     }
     const metrics = ReaderWindowCoordinator.metrics();
     const containerWidth = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
-    return resolveHorizontalFrame(
-      containerWidth,
-      readerVisualSafeLeft(metrics),
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
+    return readerStandardPageContentFrame('rssDetail', metrics, containerWidth);
   }
 
   private numericAreaLength(value: Length): number {

@@ -11,7 +11,6 @@ import {
 } from './ReaderWindowMetrics';
 import { TYPE_APP_HOME_TITLE } from './ReaderTypography';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from './ReaderFontFamilies.ts';
-import { ReaderHeaderFrameModifier } from './ReaderPageShell';
 
 // AppTopBar —— 首页顶部标题栏统一组件 (Figma HomeTopBar): 58 高、左右 20 + 顶部 6
 // 内边距、29px 思源宋体粗题 + 可选尾部槽。收敛 Bookshelf/Discover/Settings 三页
@@ -102,8 +101,6 @@ export struct AppTopBar {
     .shadow(this.floating ? { radius: 18,
       color: readerAppColor('app.BookshelfPage.projectionBookCoverLayer.color.1A594632', this.appThemeScheme),
       offsetX: 0, offsetY: 5 } : { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
-    .attributeModifier(new ReaderHeaderFrameModifier(this.floating ? 'floating' : 'home',
-      this.surface, this.appThemeScheme))
     .hitTestBehavior(HitTestMode.Transparent);
   }
 

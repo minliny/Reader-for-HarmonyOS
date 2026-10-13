@@ -1,11 +1,10 @@
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
-import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import {
   TYPE_SHELF_MANAGEMENT_BODY,
@@ -21,23 +20,10 @@ import {
   TYPE_SHELF_MANAGEMENT_STATUS,
 } from '../common/ReaderTypography';
 import {
-  SurfaceHorizontalFrame,
-  SurfaceWidthSpec,
-  resolveHorizontalFrame,
-} from '../common/SurfaceHorizontalGeometry';
-import {
-  readerVisualSafeLeft,
-  readerVisualSafeRight,
-} from '../common/ReaderWindowMetrics';
-import {
   TOK_BORDER,
   TOK_BORDER_W,
   TOK_INK,
   TOK_MUTED,
-  TOK_ON_PRIMARY,
-  TOK_PAPER,
-  TOK_PRIMARY_DARK,
-  TOK_SCREEN_INSET,
   TOK_SPACE_MD,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
@@ -55,7 +41,6 @@ import {
 export struct BookshelfManagementPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop snapshot: BookshelfManagementSnapshot = EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
@@ -76,48 +61,37 @@ export struct BookshelfManagementPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Scroll() {
-        Column({ space: TOK_SPACE_MD }) {
-          this.statusCard();
-          this.recoveryAction();
-          this.statisticsCard();
-          this.groupEditorCard();
-          this.groupsCard();
-          this.assignmentCard();
-          this.recordsCard();
-          Text('在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中。数据直接存取 Core 书架。')
-            .width('100%')
-            .fontFamily(TYPE_SHELF_MANAGEMENT_NOTE.fontFamily)
-            .fontWeight(TYPE_SHELF_MANAGEMENT_NOTE.fontWeight)
-            .fontSize(TYPE_SHELF_MANAGEMENT_NOTE.fontSizeFp)
-            .lineHeight(TYPE_SHELF_MANAGEMENT_NOTE.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-        }
-        .width('100%')
-        .padding({
-          left: this.contentFrame().left,
-          right: this.contentFrame().right,
-          top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS,
-          bottom: this.bottomContentInset(),
-        });
-      }
-      .height('100%')
+    ReaderStandardPage({
+      variant: 'management',
+      header: (): void => { this.pageHeader(); },
+      content: (): void => { this.pageContent(); },
+    });
+  }
+
+  @Builder
+  private pageHeader() {
+    PageBackBar({ title: '书架数据管理', onBack: (): void => this.onBack() });
+  }
+
+  @Builder
+  private pageContent() {
+    this.statusCard();
+    this.recoveryAction();
+    this.statisticsCard();
+    this.groupEditorCard();
+    this.groupsCard();
+    this.assignmentCard();
+    this.recordsCard();
+    Text('在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中。数据直接存取 Core 书架。')
       .width('100%')
-      .align(Alignment.TopStart)
-      .scrollBar(BarState.Off);
-      PageBackBar({ title: '书架数据管理', onBack: (): void => this.onBack() });
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+      .fontFamily(TYPE_SHELF_MANAGEMENT_NOTE.fontFamily)
+      .fontWeight(TYPE_SHELF_MANAGEMENT_NOTE.fontWeight)
+      .fontSize(TYPE_SHELF_MANAGEMENT_NOTE.fontSizeFp)
+      .lineHeight(TYPE_SHELF_MANAGEMENT_NOTE.lineHeightFp as number)
+      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
   }
 
 
-  private bottomContentInset(): number {
-    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;
-    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_MD);
-  }
   @Builder
   private recoveryAction() {
     ForEach(this.recoveryIdentities(), (identity: string) => {
@@ -400,18 +374,6 @@ export struct BookshelfManagementPage {
     return book.sourceId === this.snapshot.selectedSourceId && book.bookId === this.snapshot.selectedBookId;
   }
 
-  private contentFrame(): SurfaceHorizontalFrame {
-    if (this.readerWindowMetricsRevision < 0) {
-      return new SurfaceHorizontalFrame(0, 0, 0);
-    }
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(
-      metrics.windowRect.width,
-      readerVisualSafeLeft(metrics),
-      readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(metrics.windowRect.width, TOK_SCREEN_INSET, TOK_SCREEN_INSET),
-    );
-  }
 
   private formatDuration(milliseconds: number): string {
     if (milliseconds <= 0) return '0 分钟';

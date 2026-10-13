@@ -158,7 +158,7 @@ syntax.propCollection.set('ReaderSearchField', new Set([...searchSource.matchAll
 const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
 const popupSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderMangaDownloadPopup.ets', import.meta.url), 'utf8');
 const Footer = createReaderBuilderProbe(footerSource, boundedMembers(footerSource), { ...deps, ...searchProperties.sdk }, searchProperties.hooks).Component;
-const builderNames = ['build', 'recoveryContent', 'supportsCurrentDirectoryView', 'standardPage', 'mangaPage', 'mangaToolbar', 'mangaCurrentFooter',
+const builderNames = ['standardContent', 'standardHeader', 'standardToolbar', 'fontPreparationContent', 'mangaContent', 'mangaHeader', 'mangaFixedFooter', 'build', 'recoveryContent', 'supportsCurrentDirectoryView', 'standardPage', 'mangaPage', 'mangaToolbar', 'mangaCurrentFooter',
   'mangaFlatList', 'mangaFlatRow', 'mangaEmptyState', 'mangaDownloadMenuButton', 'selectMangaEntry', 'flatList', 'chapterRow'];
 const actualChrome = { ...searchProperties.sdk, MangaDirectoryCurrentFooter: Footer, ReaderMangaDownloadPopup: Child };
 const chromeHooks = { ...searchProperties.hooks, childSources: { MangaDirectoryCurrentFooter: footerSource,
@@ -236,8 +236,9 @@ console.log('PH119 standalone BookDirectoryPage actual methods and SDK Builder: 
   Object.assign(owner, result.page);
   for (const name of methods) owner[name] = Page.prototype[name].bind(owner);
   owner.initialRender();
-  const headerRows = [...owner.nodes.values()].filter(node => node.type === 'Row' && node.padding?.top !== undefined);
-  assert.equal(headerRows.length, 1);
+  const allNodes = current => [...(current.nodes?.values() ?? []), ...[...(current.children?.values() ?? [])].flatMap(allNodes)];
+  const headerRows = allNodes(owner).filter(node => node.type === 'Column' && node.zIndex === 10 && node.padding);
+  assert.equal(headerRows.length, 1, 'one actual scaffold owns the floating title placement');
   assert.equal(headerRows[0].padding.left, result.page.headerFrame().left,
     'manga floating directory header follows the real header frame rather than the wider content inset');
   assert.equal(headerRows[0].padding.right, result.page.headerFrame().right);

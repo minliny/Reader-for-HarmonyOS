@@ -27,11 +27,12 @@ for (const [file, bottom] of cases) {
   const builders = [...source.matchAll(/@Builder\s+private (\w+)\(/g)].map(match => match[1]);
   for (const name of builders) require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(name);
   const isDetail = file === 'rss/RssEntryDetailPage.ets';
-  const methods = ['build'];
+  const methods = ['build', 'pageContent'];
+  if (builders.includes('pageHeader')) methods.push('pageHeader');
+  if (source.includes('private numericAreaLength(')) methods.push('numericAreaLength');
   if (builders.includes('backBar')) methods.push('backBar');
   if (file.endsWith('RssSubscriptionEditorPage.ets')) methods.push('saveAction');
-  if (isDetail) methods.push('bottomActions', 'actionAreaBottomOffset');
-  else methods.push('bottomContentInset');
+  if (isDetail) methods.push('bottomActions');
   const controls=foundationControls(),headerSource=readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets',import.meta.url),'utf8'),toggleSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderToggle.ets',import.meta.url),'utf8');
   const hooks={...controls.hooks,childSources:{...controls.hooks.childSources,PageBackBar:headerSource,ReaderToggle:toggleSource}},platform={...controls.dependencies,...switchSpecs(),AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH'},readerInteractiveSafeLeft,readerInteractiveSafeRight,ReaderWindowCoordinator:{metrics:()=>metrics}};
   const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
@@ -46,7 +47,7 @@ for (const [file, bottom] of cases) {
   for (const [width, height, left, right] of [[365, 320, 19, 19], [390, 844, 32, 24], [1280, 800, 280, 280]]) {
     for (const safeBottom of [0, 24, 48]) {
       metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, height), undefined,
-        new ReaderInsetsVp(0, 0, 0, safeBottom));
+        new ReaderInsetsVp(left > 19 ? left : 0, 0, right > 19 ? right : 0, safeBottom));
       const frame = { width: width - left - right, left, right };
       const owner = new Component(); const calls = [];
       for (const name of builders) if (!methods.includes(name)) owner[name] = () => {};
@@ -61,9 +62,10 @@ for (const [file, bottom] of cases) {
         onEnabledCookieJarChanged: () => calls.push('cookie') });
       owner.initialRender();
       const nodes = controls.nodes(owner);
-      assert.equal(nodes[0].type, 'Stack', file);
-      assert.equal(nodes[0].create.alignContent, 'Alignment.TopStart', file);
-      assert.deepEqual([nodes[0].width, nodes[0].height], ['100%', '100%'], file);
+      const root = nodes.find(node => node.type === 'Stack' && node.backgroundColor);
+      assert.ok(root, `${file}: actual public scaffold paints the root`);
+      assert.equal(root.create.alignContent, 'Alignment.TopStart', file);
+      assert.deepEqual([root.width, root.height], ['100%', '100%'], file);
       const scroll = nodes.find(node => node.type === 'Scroll');
       assert.deepEqual([scroll.width, scroll.height, scroll.layoutWeight], ['100%', '100%', undefined], file);
       assert.equal(scroll.padding?.top, undefined, `${file}: top clearance must move with content rather than shrink the viewport`);
@@ -73,12 +75,23 @@ for (const [file, bottom] of cases) {
         `${file}: the last content stays above the current interactive safe bottom`);
       const header = [...owner.children.values()].find(child => child instanceof Header);
       assert.ok(header,'actual shared header is SDK mounted, not a shape-only child');
-      assert.ok(header.id > scroll.id, `${file}: the shared header is mounted above the full scroll`);
+      const ordered = controls.orderedNodes(owner);
+      const headerRow = [...header.nodes.values()].find(node => node.type === 'Row' && node.height === 58);
+      assert.ok(ordered.indexOf(headerRow) > ordered.indexOf(scroll), `${file}: the actual header native row is emitted after the full scroll`);
+      assert.ok(nodes.some(node => node.type === 'Column' && node.zIndex === 10 && node.hitTestBehavior === 'HitTestMode.Transparent'), `${file}: public fixed header host owns the layer above content`);
+      const measuredHost = nodes.find(node => node.type === 'Column' && node.backgroundColor && node.onAreaChange);
+      assert.ok(measuredHost, `${file}: actual public host paints and measures the fixed header`);
+      measuredHost.onAreaChange({}, { height: '96vp' }); controls.properties.flush();
+      assert.equal(content.padding.top, 104, `${file}: a taller shared header propagates to scrollable content`);
+      assert.ok(controls.nodes(owner).includes(scroll), `${file}: measured clearance preserves the existing Scroll node`);
+      measuredHost.onAreaChange({}, { height: '58vp' }); controls.properties.flush();
+      assert.equal(content.padding.top, 66, `${file}: returning to the standard height restores the approved gap`);
       [...header.nodes.values()].find(n=>n.type==='Stack'&&n.onClick).onClick(); assert.deepEqual(calls, ['back'], `${file}: return routing remains unchanged`);
       if (isDetail) {
         const footer = nodes.find(node => node.type === 'Stack' && node.create.alignContent === 'Alignment.Bottom');
         assert.deepEqual([footer.width, footer.height], ['100%', '100%']);
-        assert.deepEqual(footer.padding, { bottom: offset });
+        assert.equal(footer.padding, undefined, 'public footer viewport remains full height');
+        assert.ok(nodes.some(node => node.type === 'Column' && node.margin?.bottom === offset), 'public footer content receives the same safe-bottom offset');
         assert.equal(footer.align, undefined, 'the parent Stack owns bottom positioning');
         assert.equal(footer.hitTestBehavior, 'HitTestMode.Transparent');
         const actions = nodes.find(node => node.type === 'Row' && node.height === 62);

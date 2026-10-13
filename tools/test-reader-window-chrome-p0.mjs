@@ -41,10 +41,13 @@ const { owner: sharedShell } = createReaderBuilderProbe(mainShell, ['content','b
 });
 Object.assign(sharedShell, { appThemeScheme: 'day', showTabletRail: false, showBottomNav: false, content() {} });
 sharedShell.initialRender();
-const contentRoot = [...sharedShell.nodes.values()].find(node => node.type === 'Stack' && node.backgroundColor !== undefined);
+// The app facade delegates paint to the actual shared native frame.
+const sharedFrame = [...sharedShell.children.values()].find(child => child.variant === 'mainTab');
+assert.ok(sharedFrame, 'the app facade mounts the production page frame');
+const contentRoot = [...sharedFrame.nodes.values()].find(node => node.type === 'Stack' && node.backgroundColor !== undefined);
 assert.ok(contentRoot, 'full-size shared app shell paints beneath failure content');
 for (const scheme of ['day','night','day']) {
-  sharedShell.appThemeScheme = scheme; sharedShell.replay();
+  sharedFrame.appThemeScheme = scheme; sharedFrame.replay();
   const windowPaint = readerAppColor('app.window.background', scheme);
   assert.equal(indexPaint.call({appThemeScheme:scheme}, readerAppColor), windowPaint, 'Index root follows window chrome');
   assert.equal(contentRoot.backgroundColor, windowPaint, 'shared shelf shell, including failure, follows the same live palette');

@@ -7,7 +7,8 @@ import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerInteractiveSafeBottom } from '../common/ReaderWindowMetrics';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { NoCoverCover } from './NoCoverCover';
-import { ReaderHeaderFrameModifier, ReaderPageFrameModifier, readerPageContentStartInset } from '../common/ReaderPageShell';
+import { readerPageContentStartInset } from '../common/ReaderPageShell';
+import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 
 const WIDE_BREAKPOINT = 600;
 const PHONE_GRID_WIDTH = 351;
@@ -45,6 +46,7 @@ export struct BookshelfMultiSelectPage {
   @State private viewportWidth: number = 0;
   @State private selectedKeys: string[] = [];
   @State private removeBarHeight: number = 0;
+  @State private selectionHeaderHeight: number = readerPageContentStartInset();
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
@@ -54,49 +56,52 @@ export struct BookshelfMultiSelectPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Top }) {
-      List({ space: GRID_ROW_GAP }) {
-          Repeat(this.bookRows())
-            .each((repeatItem: RepeatItem<ShelfBook[]>) => {
-            ListItem() {
-            Row({ space: GRID_COLUMN_GAP }) {
-              ForEach(repeatItem.item, (book: ShelfBook) => {
-                if (this.isListMode()) {
-                  this.selectionListCard(book);
-                } else {
-                  this.selectionCard(book);
-                }
-              }, (book: ShelfBook): string => `bookshelf-multi-${this.bookKey(book)}`);
-            }
-            .width(this.gridWidth())
-            .alignItems(VerticalAlign.Top);
-            }
-          })
-          .key((row: ShelfBook[]): string =>
-            `bookshelf-multi-row-${row.map((book: ShelfBook): string => this.bookKey(book)).join('|')}`)
-          .virtualScroll({ reusable: true });
-      }
-      .height('100%')
-      .width('100%')
-      .contentStartOffset(readerPageContentStartInset(58, 0, 12))
-      .contentEndOffset(this.removeBarClearance() + 20)
-      .alignListItem(ListItemAlign.Center)
-      .scrollBar(BarState.Off);
-      this.selectionTopBar();
-      Column() { this.removeBar(); }
-        .width('100%')
-        .position({ bottom: 0, left: 0 }).hitTestBehavior(HitTestMode.Transparent);
-    }
-    .width('100%')
-    .height('100%')
-    .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme))
-    .backgroundColor(readerAppColor('app.BookshelfMultiSelectPage.build.backgroundColor.FFF8F4EC', this.appThemeScheme))
-    .onAreaChange((_oldValue: Area, newValue: Area): void => {
+    ReaderPageScaffold({
+      variant: 'selection', headerKind: 'selection',
+      content: (): void => { this.selectionList(); },
+      header: (): void => { this.selectionTopBar(); },
+      onHeaderHeightChange: (height: number): void => {
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.selectionHeaderHeight) > .1)
+          this.selectionHeaderHeight = height;
+      },
+      footer: (): void => { this.removeBar(); },
+    }).onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = this.numericAreaLength(newValue.width);
       if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
         this.viewportWidth = width;
       }
     });
+  }
+
+  @Builder
+  private selectionList() {
+    List({ space: GRID_ROW_GAP }) {
+        Repeat(this.bookRows())
+          .each((repeatItem: RepeatItem<ShelfBook[]>) => {
+          ListItem() {
+          Row({ space: GRID_COLUMN_GAP }) {
+            ForEach(repeatItem.item, (book: ShelfBook) => {
+              if (this.isListMode()) {
+                this.selectionListCard(book);
+              } else {
+                this.selectionCard(book);
+              }
+            }, (book: ShelfBook): string => `bookshelf-multi-${this.bookKey(book)}`);
+          }
+          .width(this.gridWidth())
+          .alignItems(VerticalAlign.Top);
+          }
+        })
+        .key((row: ShelfBook[]): string =>
+          `bookshelf-multi-row-${row.map((book: ShelfBook): string => this.bookKey(book)).join('|')}`)
+        .virtualScroll({ reusable: true });
+    }
+    .height('100%')
+    .width('100%')
+    .contentStartOffset(this.selectionHeaderHeight + 12)
+    .contentEndOffset(this.removeBarClearance() + 20)
+    .alignListItem(ListItemAlign.Center)
+    .scrollBar(BarState.Off);
   }
 
   @Builder
@@ -143,7 +148,6 @@ export struct BookshelfMultiSelectPage {
     .height(58)
     .padding({ left: 20, right: 20, top: 8, bottom: 8 })
     .alignItems(VerticalAlign.Center)
-    .attributeModifier(new ReaderHeaderFrameModifier('selection', 'solid', this.appThemeScheme))
     .hitTestBehavior(HitTestMode.Transparent);
   }
 

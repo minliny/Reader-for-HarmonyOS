@@ -2,8 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { readerContentSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft,
-  readerInteractiveSafeRight } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+  readerInteractiveSafeRight, readerVisualSafeTop } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const root = new URL('../entry/src/main/ets/features/', import.meta.url);
 const read = file => readFileSync(new URL(file, root), 'utf8');
@@ -27,7 +31,9 @@ const metrics = () => ({ windowRect: { width: windowWidth, height: 844 },
   keyboardInsets: { top: 0, left: 0, right: 0, bottom: 0 },
 });
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-const deps = { ...floating, TOK_SPACE_XS: 8, TOK_SPACE_SM: 12, TOK_SPACE_MD: 16, TOK_SPACE_LG: 24,
+const properties = createArkUIPropertyRuntimeProbe();
+const hooks = { ...properties.hooks, mountChildren: true };
+const deps = { ...properties.sdk, ...floating, ...fontFamilies, readerVisualSafeTop, readerInteractiveSafeBottom, TOK_SPACE_XS: 8, TOK_SPACE_SM: 12, TOK_SPACE_MD: 16, TOK_SPACE_LG: 24,
   BOOKSHELF_WIDE_BREAKPOINT: Number(read('bookshelf/BookshelfShell.ets').match(/export const BOOKSHELF_WIDE_BREAKPOINT = (\d+);/)[1]),
   ReaderWindowCoordinator: { metrics }, readerContentSafeTop, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   MAIN_TABS: [], RSS_FLOATING_HEADER_HEIGHT: 148, RSS_TABLET_RAIL_WIDTH: 100,
@@ -37,6 +43,7 @@ for (const [name, file, slots] of [
   ['MainTabBar', 'shell/MainTabBar.ets', []],
   ['MainTabShell', 'shell/MainTabShell.ets', ['content']],
   ['PageBackBar', 'common/PageBackBar.ets', ['trailing']],
+  ['AppTopBar', 'common/AppTopBar.ets', ['trailing']],
   ['BookshelfEmptyCard', 'bookshelf/BookshelfEmptyCard.ets', []],
   ['SearchSpinner', 'search/SearchSpinner.ets', []],
 ]) {
@@ -49,11 +56,21 @@ for (const [name, file, slots] of [
 function probe(file, members, values) {
   const source = read(file);
   for (const m of source.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) builders.add(m[1]);
-  const { owner } = createReaderBuilderProbe(source, members, deps);
+  const { owner } = createReaderBuilderProbe(source, members, deps, hooks);
   Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 0, ...values });
   return owner;
 }
-const nodes = (owner, type) => [...owner.nodes.values()].filter(node => node.type === type);
+const descendants = owner => [owner, ...[...(owner.children?.values() ?? [])].flatMap(descendants)];
+const nodes = (owner, type) => descendants(owner).flatMap(child => [...(child.nodes?.values() ?? [])]).filter(node => node.type === type);
+const replayTree = owner => { owner.replay?.(); for (const child of owner.children?.values() ?? []) replayTree(child); };
+const sharedHeader = createReaderBuilderProbe(read('common/PageBackBar.ets'), boundedMembers(read('common/PageBackBar.ets')), deps, hooks);
+deps.PageBackBar = sharedHeader.Component;
+deps.AppTopBar = createReaderBuilderProbe(read('common/AppTopBar.ets'), boundedMembers(read('common/AppTopBar.ets')), deps, hooks).Component;
+const sharedMain = createReaderBuilderProbe(read('shell/MainTabShell.ets'), boundedMembers(read('shell/MainTabShell.ets')), deps, hooks);
+deps.MainTabShell = class extends sharedMain.Component {
+  constructor(owner, params, storage, id, ...rest) { super(owner, params, storage, id, ...rest); this.params = { ...params }; }
+  updateStateVars(params) { super.updateStateVars(params); Object.assign(this.params, params); }
+};
 const verifyScroll = (owner, top, bottom) => {
   const scroll = nodes(owner, 'Scroll')[0];
   assert.equal(scroll.height, '100%', 'scroll viewport extends behind both floating bars');
@@ -69,17 +86,17 @@ const verifyScroll = (owner, top, bottom) => {
 // Actual SDK-emitted Builder/native attribute calls are checked here; native
 // pixel layout and gesture dispatch remain separate evidence layers.
 for (const bottomNav of [false, true]) {
-  const shell = probe('shell/MainTabShell.ets', ['content', 'build'], {
+  const shell = probe('shell/MainTabShell.ets', ['content', 'header', 'overlay', 'emptySlot', 'headerKind', 'headerTop', 'headerInsetLeft', 'headerInsetRight', 'bottomNavigation', 'mainOverlays', 'build'], {
     activeTab: 'bookshelf', showTabletRail: false, showBottomNav: bottomNav, content() {}, onMainTab() {},
   });
   shell.initialRender();
-  assert.equal(nodes(shell, 'Column').length, 0, 'phone shell no longer has a normal-flow navigation row');
+  assert.ok(nodes(shell, 'Column').every(node => node.layoutWeight === undefined), 'shared chrome hosts do not subtract space from the full-height body');
   assert.ok(nodes(shell, 'Stack').every(node => node.height === '100%'));
   if (bottomNav) {
     const bottoms = nodes(shell, 'Stack').filter(node => node.create.alignContent === 'Alignment.Bottom');
-    assert.equal(bottoms.length, 2, 'opaque page root and separate native navigation overlay');
-    const overlay = bottoms[1];
-    assert.ok(bottoms[0].backgroundColor, 'page root retains the approved opaque paper');
+    assert.equal(bottoms.length, 1, 'public scaffold owns one separate full-height bottom-navigation host');
+    const overlay = bottoms[0];
+    assert.ok(nodes(shell, 'Stack').some(node => node.backgroundColor === readerAppColor('TOK_PAPER', 'day')), 'public page root retains the approved opaque paper');
     assert.equal(overlay.hitTestBehavior, 'HitTestMode.Transparent');
     assert.equal(overlay.backgroundColor, undefined);
   }
@@ -102,7 +119,7 @@ for (const bottom of [0, 15, 34, 50]) {
 
 const shelf = probe('bookshelf/BookshelfPage.ets', ['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent', 'isWideViewport', 'effectiveViewportWidth'], {
   continueReading: undefined, filterRowVisible: false, viewModeError: '', visibleBookCount: 1,
-  rowDataSource: {}, shelfScroller: {}, shelfContentWidth: () => 352, viewportWidth: 0,
+  rowDataSource: {}, shelfScroller: {}, headerClearance: 74, shelfContentWidth: () => 352, viewportWidth: 0,
 });
 shelf.bookshelfList(false);
 const list = nodes(shelf, 'List')[0];
@@ -163,36 +180,38 @@ for (const section of ['home', 'general']) {
   safeBottom = 34;
   let origin;
   const settings = probe('shell/SettingsShell.ets',
-    ['homeContent', 'generalContent', 'overlayContent', 'build', 'homeBottomContentInset', 'generalBottomContentInset'], {
+    ['homeContent', 'generalContent', 'overlayContent', 'homeScroller', 'generalScroller', 'build', 'homeNavigation', 'generalTopBar', 'pageOverlay', 'reportOverlayOrigin'], {
       activeSection: section, showOverlay: false, homeContent() {}, generalContent() {}, overlayContent() {},
-      homeTopBar() {}, contentFrame: () => ({ left: 19, right: 19 }),
+      contentFrame: () => ({ left: 19, right: 19 }),
       onSectionChange() {}, onMainTab() {}, onOverlayOriginChange: (x, y) => { origin = [x, y]; },
     });
   settings.initialRender();
   const content = verifyScroll(settings, 66, section === 'home' ? 118 : 34);
   assert.ok(nodes(settings, 'Row').some(node => node.height === 58 && node.hitTestBehavior === 'HitTestMode.Transparent'));
-  assert.equal([...settings.children.values()].filter(child => child.params.current === 'settings').length, section === 'home' ? 1 : 0);
-  const rootStack = nodes(settings, 'Stack').find(node => node.onAreaChange);
+  assert.equal(descendants(settings).filter(child => child.params?.current === 'settings').length, section === 'home' ? 1 : 0);
+  const rootStack = nodes(settings, '__Common__').find(node => node.onAreaChange);
   rootStack.onAreaChange({}, { globalPosition: { x: 10, y: 39 } });
   assert.deepEqual(origin, [10, 39], 'settings select popup retains its full-height global-to-local origin');
   if (section === 'home') {
-    safeBottom = 50; settings.readerWindowMetricsRevision++; settings.replay();
+    safeBottom = 50; settings.readerWindowMetricsRevision++; replayTree(settings);
     assert.equal(content.padding.bottom, 134);
   }
 }
 
 safeBottom = 34;
-const discover = probe('discover/DiscoverPage.ets', ['discoverTabContent', 'discoverContent', 'bottomContentInset'], {
-  homeTopBar() {}, currentSourceCard() {}, categoryChips() {}, filterRow() {}, rankingHeader() {}, resultList() {}, operationFeedback() {},
+const discover = probe('discover/DiscoverPage.ets', ['build', 'homeTopBar', 'discoverContent', 'bottomContentInset'], {
+  presentation: { loading: false }, onMainTab() {}, onRefresh() {}, currentSourceCard() {}, categoryChips() {}, filterRow() {}, rankingHeader() {}, resultList() {}, operationFeedback() {},
   contentFrame: () => ({ left: 19, right: 19, width: 352 }),
 });
-discover.discoverTabContent();
+discover.initialRender();
 verifyScroll(discover, 66, 118);
-assert.ok(nodes(discover, 'Row').some(node => node.height === 58 && node.hitTestBehavior === 'HitTestMode.Transparent'));
+const discoverHeaderHost = descendants(discover).find(child => child.params?.kind === 'home');
+assert.ok(discoverHeaderHost, 'Discover title uses the actual shared fixed-header host');
+assert.equal(nodes(discoverHeaderHost, 'Column')[0].hitTestBehavior, 'HitTestMode.Transparent');
 
 for (const wide of [false, true]) for (const kind of ['feed', 'refreshing', 'emptyUnread', 'fatalError']) {
   safeBottom = 34;
-  const rss = probe('rss/RssPage.ets', ['build', 'feedScroll', 'emptyUnreadScroll', 'errorContent', 'bottomContentInset'], {
+  const rss = probe('rss/RssPage.ets', ['build', 'rssContent', 'rssHeader', 'feedScroll', 'emptyUnreadScroll', 'errorContent', 'bottomContentInset', 'numericAreaLength'], {
     presentation: { kind, subscriptions: [], recentUnread: [], failedSources: [] }, isWideViewport: () => wide,
     topBar() {}, searchBar() {}, statusTabs() {}, subscriptionSection() {}, recentUnreadSection() {},
     refreshingRow() {}, emptyUnreadSection() {}, stateCard() {}, readFeedback() {}, onMainTab() {},
@@ -202,9 +221,11 @@ for (const wide of [false, true]) for (const kind of ['feed', 'refreshing', 'emp
   const shell = [...rss.children.values()][0];
   assert.equal(shell.params.showBottomNav, !wide);
   assert.equal(shell.params.showTabletRail, wide);
-  shell.params.content();
   verifyScroll(rss, 156, wide ? 34 : 118);
-  assert.ok(nodes(rss, 'Column').some(node => node.height === 148 && node.hitTestBehavior === 'HitTestMode.Transparent'));
+  const rssHeaderHost = descendants(rss).find(child => child.params?.kind === 'rss');
+  assert.ok(rssHeaderHost, 'all RSS states mount the real shared fixed-header owner');
+  assert.equal(nodes(rssHeaderHost, 'Column')[0].hitTestBehavior, 'HitTestMode.Transparent');
+  assert.ok(nodes(rss, 'Column').some(node => node.height === 148), 'original compound RSS header geometry remains unchanged');
 }
 
 const rssHeader = probe('rss/RssPage.ets', ['topBar', 'headerLeftInset', 'headerRightInset'], {

@@ -4,6 +4,17 @@ import {MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryCon
 import {ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 let metrics;
 const {Component, Header} = localBookDetailSdk({ReaderWindowCoordinator: {metrics: () => metrics}});
+const scaffold = owner => {
+  const frame = [...owner.children.values()].find(child => child.params?.variant ===
+    (owner.book.contentKind === 'manga' ? 'mangaDetail' : 'detail'));
+  assert.ok(frame?.nodes, 'detail mounts the actual SDK public page scaffold');
+  return frame;
+};
+const fixedHeaderFrame = owner => {
+  const frame = [...scaffold(owner).nodes.values()].find(node => node.type === 'Column' && node.zIndex === 10);
+  assert.ok(frame, 'header geometry belongs to the actual shared header slot');
+  return frame;
+};
 // Execute the actual approved detail/header SDK actors. These are emitted
 // attributes and owner callbacks, not a simulation of native layout/pixels.
 for (const viewport of [320, 390, 800]) for (const count of [0, 1, 3, 20])
@@ -20,7 +31,8 @@ for (const viewport of [320, 390, 800]) for (const count of [0, 1, 3, 20])
     collapsedGroups: [], introExpanded: false, onContinue: () => calls.push('continue'),
     onRemove: identity => calls.push(['remove', identity]), onBack: () => calls.push('back')});
   owner.initialRender();
-  const nodes = [...owner.nodes.values()], root = nodes.find(node => node.type === 'Stack');
+  const nodes = [...owner.nodes.values()], frameNodes = [...scaffold(owner).nodes.values()];
+  const root = frameNodes.find(node => node.type === 'Stack');
   assert.equal(root.type, 'Stack'); assert.equal(root.create.alignContent, 'Alignment.Top');
   assert.equal(root.height, '100%'); assert.equal(root.width, '100%');
   const scroll = nodes.find(n => n.type === 'Scroll');
@@ -35,7 +47,7 @@ for (const viewport of [320, 390, 800]) for (const count of [0, 1, 3, 20])
   assert.equal(nodes.filter(n => n.type === 'Row' && n.constraintSize?.minHeight === 58).length, count,
     'the bounded preview shares the page scroll and retains every current chapter row');
   assert.equal(nodes.filter(n => n.type === 'Scroll').length, 1, 'no nested directory preview scroll');
-  const footer = nodes.find(n => n.type === 'Stack' && n.create.alignContent === 'Alignment.Bottom');
+  const footer = frameNodes.find(n => n.type === 'Stack' && n.create.alignContent === 'Alignment.Bottom');
   assert.deepEqual([footer.width, footer.height], ['100%', '100%']);
   assert.equal(footer.hitTestBehavior, 'HitTestMode.Transparent');
   assert.equal(footer.padding, undefined); assert.equal(footer.align, undefined,
@@ -43,8 +55,10 @@ for (const viewport of [320, 390, 800]) for (const count of [0, 1, 3, 20])
   const dock = nodes.find(n => n.type === 'Stack' && n.height === 68);
   assert.equal(dock.create.alignContent, 'Alignment.Center');
   assert.equal(dock.width, Math.min(680, viewport - 60)); assert.equal(dock.padding, 9);
-  assert.deepEqual(dock.margin, {bottom: safeBottom + 12});
-  assert.equal(content.padding.bottom - (dock.height + dock.margin.bottom), 24,
+  const footerFrame = frameNodes.find(n => n.type === 'Column' && n.margin?.bottom === safeBottom + 12);
+  assert.ok(footerFrame, 'the public footer slot owns the unchanged dock bottom offset');
+  assert.deepEqual(footerFrame.margin, {bottom: safeBottom + 12});
+  assert.equal(content.padding.bottom - (dock.height + footerFrame.margin.bottom), 24,
     'last content clears the actual dock and its live bottom margin with 24vp spare');
   const actions = nodes.find(n => n.type === 'Row' && n.height === 48);
   assert.equal(actions.width, '100%'); assert.equal(actions.create.space, 12);
@@ -56,16 +70,19 @@ for (const viewport of [320, 390, 800]) for (const count of [0, 1, 3, 20])
   buttons[0].onClick(); buttons[1].onClick();
   assert.deepEqual(calls, ['continue', ['remove', 'original-detail']]);
   const error = nodes.find(n => n.type === 'Text' && n.create === owner.shelfMessage);
-  assert.ok(error.id > content.id && error.id < footer.id,
+  assert.ok(error.id > content.id && error.id < dock.id,
     'shelf error remains in scroll content before the floating overlay');
   const header = [...owner.children.values()].find(c => c instanceof Header);
-  assert.ok(header.id > scroll.id && header.id < footer.id);
+  assert.ok(header.id > scroll.id && header.id < dock.id);
+  assert.ok(fixedHeaderFrame(owner).zIndex < footer.zIndex,
+    'public header/footer slots preserve the original overlay stacking order');
   assert.equal(header.floating, true); assert.equal(header.centered, true);
   const headerRow = [...header.nodes.values()].find(n => n.type === 'Row' && n.height === 52);
   assert.ok(headerRow); assert.equal(headerRow.hitTestBehavior, 'HitTestMode.Transparent');
-  const headerOwner = nodes.find(n => n.type === 'Row' && n.align === 'Alignment.Top');
-  assert.deepEqual(headerOwner.padding, {left: 16, right: 16, top: safeTop + 8});
-  assert.equal(content.padding.top - (headerOwner.padding.top + headerRow.height), 16,
+  const headerOwner = fixedHeaderFrame(owner);
+  assert.deepEqual(headerOwner.padding, {left: 16, right: 16});
+  assert.deepEqual(headerOwner.margin, {top: safeTop + 8});
+  assert.equal(content.padding.top - (headerOwner.margin.top + headerRow.height), 16,
     'first content clears the actual floating header without shrinking the viewport');
   const back = [...header.nodes.values()].find(n => n.type === 'Stack' && n.width === 44 && n.onClick);
   assert.ok(back); back.onClick(); assert.equal(calls.at(-1), 'back');
@@ -118,14 +135,15 @@ function checkHeaderFrame(candidate = localBookDetailSource) {
     const owner = new sdk.Component(undefined, {}), backCalls = [];
     admitDetail(owner, {book: {...mangaBook, contentKind}, onBack: () => backCalls.push('back')});
     owner.mangaFontsReady = true; owner.initialRender();
-    const wrapper = [...owner.nodes.values()].find(node => node.type === 'Row' && node.align === 'Alignment.Top');
+    const wrapper = fixedHeaderFrame(owner);
     const header = [...owner.children.values()].find(child => child instanceof sdk.Header);
     assert.ok(header?.nodes, 'the frame is bound to the actual shared Header child');
     if (contentKind === 'manga') {
       const frame = owner.headerFrame();
       assert.deepEqual([frame.left, frame.right, frame.width], expected,
         'manga detail uses the same content-frame expansion and 548vp demo cap');
-      assert.deepEqual(wrapper.padding, {left: expected[0], right: expected[1], top: 40});
+      assert.deepEqual(wrapper.padding, {left: expected[0], right: expected[1]});
+      assert.deepEqual(wrapper.margin, {top: 40});
       assert.equal(width - wrapper.padding.left - wrapper.padding.right, expected[2],
         'the actual wrapper paints the generated header width');
       const bar = [...header.nodes.values()].find(node => node.type === 'Row');
@@ -136,8 +154,9 @@ function checkHeaderFrame(candidate = localBookDetailSource) {
         'asymmetric safe edges remain outside the actual header action insets');
     } else {
       assert.equal(header.variant, 'standard');
-      assert.deepEqual(wrapper.padding, {left: 16 + left, right: 16 + right, top: 40},
+      assert.deepEqual(wrapper.padding, {left: 16 + left, right: 16 + right},
         'novel detail preserves its original independent header geometry');
+      assert.deepEqual(wrapper.margin, {top: 40}, 'novel header retains the original safe-top offset');
     }
     const back = [...header.nodes.values()].find(node => typeof node.onClick === 'function');
     back.onClick(); assert.deepEqual(backCalls, ['back']);

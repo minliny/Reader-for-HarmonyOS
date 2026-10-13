@@ -12,7 +12,6 @@ import {
 } from './ReaderWindowMetrics';
 import { TYPE_PAGE_TITLE } from './ReaderTypography';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_650 } from './ReaderFontFamilies.ts';
-import { ReaderHeaderFrameModifier } from './ReaderPageShell';
 
 // 二级页面统一返回栏:44×44 圆角返回钮 + 24px 思源宋体标题,58 高、20vp 内边距。
 // 曾被 Settings/SourceManagement/Sync/Rss/LocalBookDetail 各自复制实现。
@@ -87,8 +86,6 @@ export struct PageBackBar {
     .shadow(this.floating ? { radius: this.variant === 'mangaDirectory' ? visual.shadowRadius : 18,
       color: this.variant === 'mangaDirectory' ? mangaDirectoryColor('shadow', this.appThemeScheme) : readerAppColor('app.BookshelfPage.projectionBookCoverLayer.color.1A594632', this.appThemeScheme),
       offsetX: 0, offsetY: this.variant === 'mangaDirectory' ? visual.shadowOffsetY : 5 } : { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
-    .attributeModifier(new ReaderHeaderFrameModifier(this.variant === 'mangaDirectory' ? 'mangaDirectory' : this.floating ? 'floating' : 'standard',
-      this.surface, this.appThemeScheme))
     .hitTestBehavior(HitTestMode.Transparent);
   }
 

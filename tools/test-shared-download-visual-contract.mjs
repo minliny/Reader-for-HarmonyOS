@@ -536,8 +536,12 @@ find(normalDialog, node => node.type === 'Scroll' && node.constraintSize?.maxHei
 windowMetrics = originalWindowMetrics;
 const reactivePage = owner('day', { fontsReady: true, pageHeight: 800 });
 reactivePage.initialRender(); reactivePage.searchField();
-const safeFrame = find(reactivePage, node => node.type === 'Column' && node.position?.y === 10 && node.padding?.left === 16,
-  'normal floating header consumes the reactive safe frame');
+const downloadFrame = [...reactivePage.children.values()].find(child => child.params?.variant === 'download');
+assert.ok(downloadFrame?.nodes, 'downloads mounts the actual public SDK page frame');
+const safeFrame = [...downloadFrame.nodes.values()].find(node => node.type === 'Column' && node.zIndex === 10);
+assert.ok(safeFrame, 'normal floating header consumes the actual shared header slot');
+assert.deepEqual(safeFrame.margin, { top: 10 }, 'public frame preserves the approved header top offset');
+assert.deepEqual(safeFrame.padding, { left: 16, right: 16 }, 'public frame preserves the approved safe-edge insets');
 const reactiveInput = find(reactivePage, node => node.type === 'TextInput' && node.height === 42,
   'baseline editable search line box');
 const dependentIds = propertyRuntime.dependencies.get(reactivePage)?.get('readerWindowMetricsRevision');

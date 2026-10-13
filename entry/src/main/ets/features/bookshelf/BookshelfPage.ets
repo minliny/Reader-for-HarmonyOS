@@ -1,8 +1,9 @@
 import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from './BookshelfViewModeHost';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
-import { TYPE_APP_COMPACT_BADGE, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_STATE, TYPE_APP_SECTION_LABEL, TYPE_MAIN_TAB_LABEL, TYPE_SECTION_HEADING } from '../common/ReaderTypography';
+import { TYPE_APP_COMPACT_BADGE, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_STATE, TYPE_APP_SECTION_LABEL, TYPE_SECTION_HEADING } from '../common/ReaderTypography';
 import { BOOKSHELF_WIDE_BREAKPOINT } from './BookshelfShell';
+import { readerPageInitialHeaderHeight } from '../common/ReaderPageShell';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import {
   TYPE_SHELF_ACTION,
@@ -49,7 +50,6 @@ import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
 import { SheetSurfaceSpec, resolveSheetSpec } from '../common/ReaderSurfaceSpecs';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
-  READER_FLOATING_TOP_BAR_HEIGHT,
   readerFloatingBarBottomInset,
   readerFloatingTabContentInset,
 } from '../common/ReaderFloatingBarMetrics';
@@ -64,7 +64,6 @@ import {
   readerVisualSafeLeft,
   readerVisualSafeRight,
 } from '../common/ReaderWindowMetrics';
-import { isReaderProductSurfaceEnabled } from '../../app/ReaderProductScope';
 import { WebDavCredentialStore } from '../sync/WebDavCredentialStore';
 import {
   BookshelfViewMotionContract,
@@ -166,6 +165,7 @@ export struct BookshelfPage {
   @StorageLink('readerBookshelfSourceFilter') @Watch('onShelfFiltersChanged') private sourceFilter: string = 'all';
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop serverFiltered: boolean = false;
+  @Prop headerClearance: number = readerPageInitialHeaderHeight('bookshelf') + 14;
   @Prop @Watch('onShelfPresentationChanged') navigationGeneration: number = 0;
   @Prop unfilteredOnlineBooks: boolean = false;
   onNextPageRequested: (navigation?: number) => void = (): void => {};
@@ -308,7 +308,6 @@ export struct BookshelfPage {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.isWideViewport()) {
         this.tabletContent();
-        this.tabletNavigation();
       } else {
         this.phoneContent();
       }
@@ -556,7 +555,7 @@ export struct BookshelfPage {
     }
     .width(this.shelfContentWidth(isTablet))
     .height('100%')
-    .contentStartOffset(74)
+    .contentStartOffset(this.headerClearance)
     .contentEndOffset(this.isWideViewport() ? 24 : readerFloatingTabContentInset(ReaderWindowCoordinator.metrics()))
     .scrollBar(BarState.Off)
     .maintainVisibleContentPosition(true)
@@ -1168,85 +1167,6 @@ export struct BookshelfPage {
       if (start <= this.shelfHeaderItems() + 4) this.onPreviousPageRequested(navigation);
       if (start + 8 >= this.shelfHeaderItems() + this.rowDataSource.totalCount()) this.onNextPageRequested(navigation);
     };
-  }
-
-  private mainTabHandler(key: string, active: boolean): () => void {
-    const navigation = this.navigationGeneration;
-    return (): void => { if (!active && this.isShelfPresentationCurrent(navigation)) this.onMainTab(key); };
-  }
-
-  private onMainTab(key: string): void {
-    if (key === 'discover') {
-      this.onDiscoverRequested(this.navigationGeneration);
-    } else if (key === 'rss') {
-      this.onRssRequested(this.navigationGeneration);
-    } else if (key === 'settings') {
-      this.onSettingsRequested(this.navigationGeneration);
-    }
-    // 'bookshelf' is this page; MainTabBar suppresses the current tab.
-  }
-
-  @Builder
-  private tabletNavigation() {
-    Stack({ alignContent: Alignment.Start }) {
-      Column({ space: 6 }) {
-        this.tabletNavigationItem('bookshelf_library', '书架', 'bookshelf', true);
-        if (isReaderProductSurfaceEnabled('discover')) {
-          this.tabletNavigationItem('bookshelf_compass', '发现', 'discover', false);
-        }
-        if (isReaderProductSurfaceEnabled('rss')) {
-          this.tabletNavigationItem('bookshelf_rss', 'RSS', 'rss', false);
-        }
-        this.tabletNavigationItem('bookshelf_settings', '设置', 'settings', false);
-      }
-      .width(82)
-      .height(332)
-      .padding(TOK_SPACE_XS)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Center)
-      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(24);
-    }
-    .width(this.tabletRailLeft() + TABLET_RAIL_WIDTH)
-    .height('100%')
-    .padding({ left: this.tabletRailLeft() })
-    // Same placement rule as the Phone rail: do not turn its transparent
-    // full-height region into a hit-test shield over shelf content.
-    .hitTestBehavior(HitTestMode.Transparent);
-  }
-
-  @Builder
-  private tabletNavigationItem(assetName: string, label: string, navKey: string, active: boolean) {
-    Column({ space: 2 }) {
-      Stack({ alignContent: Alignment.Center }) {
-        if (assetName === 'bookshelf_library') {
-          Image($r('app.media.bookshelf_library')).width(24).height(24);
-        } else if (assetName === 'bookshelf_compass') {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_compass_theme_night') : $r('app.media.bookshelf_compass'))).width(24).height(24);
-        } else if (assetName === 'bookshelf_rss') {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_rss_theme_night') : $r('app.media.bookshelf_rss'))).width(24).height(24);
-        } else {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.bookshelf_settings_theme_night') : $r('app.media.bookshelf_settings'))).width(24).height(24);
-        }
-      }
-      .width(32)
-      .height(32);
-
-      Text(label)
-        .fontFamily(TYPE_MAIN_TAB_LABEL.fontFamily)
-        .fontWeight(TYPE_MAIN_TAB_LABEL.fontWeight)
-        .fontSize(TYPE_MAIN_TAB_LABEL.fontSizeFp)
-        .lineHeight(TYPE_MAIN_TAB_LABEL.lineHeightFp as number)
-        .fontColor(active ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme));
-    }
-    .width(66)
-    .height(58)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-    .backgroundColor(active ? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme) : Color.Transparent)
-    .borderRadius(24)
-    .onClick(this.mainTabHandler(navKey, active));
   }
 
   private onBooksChanged(): void {

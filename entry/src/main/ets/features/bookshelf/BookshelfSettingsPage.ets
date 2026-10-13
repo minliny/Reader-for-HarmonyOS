@@ -1,3 +1,4 @@
+import { ReaderStandardPage } from '../common/ReaderStandardPage';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from './BookshelfViewModeHost';
 import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
@@ -5,16 +6,17 @@ import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { readerRecoveryView } from '../../app/ReaderRecoveryProjection';
 import type { SettingsOperationProjection } from '../settings/SettingsHost';
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_LABEL, TYPE_APP_INHERITED_OPTION } from '../common/ReaderTypography';
-import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from '../common/ReaderFloatingBarMetrics';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
 import { registerReaderFonts } from '../common/ReaderFonts';
-import { readerVisualSafeLeft, readerVisualSafeRight } from '../common/ReaderWindowMetrics';
-import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../common/SurfaceHorizontalGeometry';
 import {
-  TOK_INK, TOK_MUTED, TOK_GREEN, TOK_CARD_BG, TOK_PAPER, TOK_BORDER,
-  TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SPACE_XS, TOK_SPACE_MD,
+  TOK_INK,
+  TOK_MUTED,
+  TOK_GREEN,
+  TOK_CARD_BG,
+  TOK_PAPER,
+  TOK_BORDER,
+  TOK_SPACE_MD,
 } from '../common/ReaderTokens';
 import { WebDavCredentialStore } from '../sync/WebDavCredentialStore';
 
@@ -22,7 +24,6 @@ import { WebDavCredentialStore } from '../sync/WebDavCredentialStore';
 @Component
 export struct BookshelfSettingsPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   @StorageLink('readerBookshelfViewMode') private mode: string = 'cover';
   @Prop autoCheckUpdate: boolean = true;
@@ -86,51 +87,41 @@ export struct BookshelfSettingsPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Scroll() {
-        Column() {
-          this.settingsRecovery();
-          Column({ space: TOK_SPACE_MD }) {
-            Row() {
-              Text('自动检查更新').layoutWeight(1).fontSize(TYPE_APP_INHERITED_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-              Toggle({ type: ToggleType.Switch, isOn: this.autoCheckUpdate })
-                .selectedColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).onChange((enabled: boolean): void => this.onAutoCheckUpdate(enabled));
-            }.width('100%');
-            Text('自动检查书架中书籍的最新章节').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%');
-            Row({ space: 12 }) {
-              Text('显示方式').layoutWeight(1).fontSize(TYPE_APP_INHERITED_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-              this.modeOption('cover', '封面');
-              this.modeOption('list', '列表');
-            }.width('100%');
-            if (this.error.length > 0) {
-              ReaderRecoveryNotice({ view: this.viewModeRecovery(), actionLabel: '刷新显示方式',
-                onReconcile: (generation: number): void => this.retryMode(generation) });
-            }
-          }.padding(TOK_SPACE_MD).width('100%').backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-            .border({ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(12);
-        }
-        .width('100%')
-        .padding({ left: this.contentFrame().left, right: this.contentFrame().right,
-          top: READER_FLOATING_TOP_BAR_HEIGHT + TOK_SPACE_XS, bottom: this.bottomContentInset() });
+    ReaderStandardPage({
+      variant: 'settings',
+      header: (): void => { this.pageHeader(); },
+      content: (): void => { this.pageContent(); },
+    });
+  }
+
+  @Builder
+  private pageHeader() {
+    PageBackBar({ title: '书架设置', onBack: (): void => this.onBack() });
+  }
+
+  @Builder
+  private pageContent() {
+    this.settingsRecovery();
+    Column({ space: TOK_SPACE_MD }) {
+      Row() {
+        Text('自动检查更新').layoutWeight(1).fontSize(TYPE_APP_INHERITED_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+        Toggle({ type: ToggleType.Switch, isOn: this.autoCheckUpdate })
+          .selectedColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).onChange((enabled: boolean): void => this.onAutoCheckUpdate(enabled));
+      }.width('100%');
+      Text('自动检查书架中书籍的最新章节').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%');
+      Row({ space: 12 }) {
+        Text('显示方式').layoutWeight(1).fontSize(TYPE_APP_INHERITED_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+        this.modeOption('cover', '封面');
+        this.modeOption('list', '列表');
+      }.width('100%');
+      if (this.error.length > 0) {
+        ReaderRecoveryNotice({ view: this.viewModeRecovery(), actionLabel: '刷新显示方式',
+          onReconcile: (generation: number): void => this.retryMode(generation) });
       }
-      .height('100%').width('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
-      PageBackBar({ title: '书架设置', onBack: (): void => this.onBack() });
-    }.width('100%').height('100%').backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
+    }.padding(TOK_SPACE_MD).width('100%').backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(12);
   }
 
-
-  private bottomContentInset(): number {
-    if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_MD;
-    return readerFloatingBarBottomInset(ReaderWindowCoordinator.metrics(), TOK_SPACE_MD);
-  }
-  private contentFrame(): SurfaceHorizontalFrame {
-    if (this.readerWindowMetricsRevision < 0) {
-      return new SurfaceHorizontalFrame(0, 0, 0);
-    }
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(TOK_CONTENT_MAX_W_TABLET, TOK_SCREEN_INSET, TOK_SCREEN_INSET));
-  }
 
   @Builder
   private modeOption(value: 'cover' | 'list', label: string) {

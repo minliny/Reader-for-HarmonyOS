@@ -12,10 +12,14 @@ import { foundationControls } from './reader-foundation-control-probe.mjs';
 import { switchControls } from './reader-switch-control-probe.mjs';
 import { iconButtonControls } from './reader-icon-button-probe.mjs';
 import { mangaDirectoryEntryRowSdk } from './manga-directory-entry-row-probe.mjs';
+import { actualReaderPageShell } from './reader-page-shell-runtime-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
+import { createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 export const readerBuilderSdkAvailable = existsSync(`${sdkRoot}/lib/process_component_class.js`);
+let pageFrameworkProperties;
 
 /** Run the actual SDK-emitted observer closures, mounting each Builder once.
  * This models closure lifetime, not ArkUI's dependency scheduling/native layout.
@@ -55,6 +59,65 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   assert.equal(original.parseDiagnostics.length, 0, 'production ETS parses');
   const struct = componentDeclaration(original, hooks.componentName);
   assert.ok(struct, 'production component declaration exists');
+  // Match the real SDK frontend's whole-struct Builder name collection. A
+  // focused probe may supply a pre-existing nonselected Builder seam, but its
+  // actual declared UI syntax must still be recognized by the compiler.
+  for (const member of struct.members) if (member.name && ts.getAllDecorators(member)
+    .some(decorator => decorator.getText(original) === '@Builder'))
+    require(`${sdkRoot}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(member.name.getText(original));
+  names = [...names];
+  // Main-tab migration adds real optional slots with production defaults.
+  // Preserve those declarations/initializer Builders in old partial-method
+  // probes rather than filling a fake empty callback in every consumer test.
+  if (['MainTabShell', 'SettingsShell'].includes(struct.name.getText(original))) {
+    for (const member of struct.members) {
+      const name = member.name?.getText(original);
+      if (!name || names.includes(name) || !ts.isPropertyDeclaration(member) || !member.initializer ||
+        !ts.getAllDecorators(member)
+          .some(decorator => decorator.getText(original) === '@BuilderParam')) continue;
+      names.push(name);
+      for (const match of member.initializer.getText(original).matchAll(/this\.(\w+)/g)) {
+        const builder = struct.members.find(candidate => candidate.name?.getText(original) === match[1]);
+        if (builder && !names.includes(match[1]) && ts.getAllDecorators(builder)
+          .some(decorator => decorator.getText(original) === '@Builder')) names.push(match[1]);
+      }
+    }
+  }
+  // Preserve the pre-migration selected-method probe boundary. Only newly
+  // delegated actual @Builder slots are admitted; arbitrary business methods
+  // or state fields are still supplied explicitly by the focused consumer.
+  const delegatedReferences = new Set();
+  const collectSlots = node => {
+    if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) && ts.isIdentifier(node.expression) &&
+      ['ReaderPageScaffold', 'ReaderFixedHeaderHost', 'ReaderStandardPage'].includes(node.expression.text)) {
+      for (const argument of node.arguments) for (const match of argument.getText(original).matchAll(/this\.(\w+)/g))
+        delegatedReferences.add(match[1]);
+    }
+    ts.forEachChild(node, collectSlots);
+  };
+  for (const member of struct.members.filter(member => names.includes(member.name?.getText(original)))) collectSlots(member);
+  for (const member of struct.members) {
+    const name = member.name?.getText(original);
+    if (name && !names.includes(name) && delegatedReferences.has(name) &&
+      ts.getAllDecorators(member).some(decorator => decorator.getText(original) === '@Builder')) names.push(name);
+  }
+  // These newly introduced members are the finite page-chrome measurement
+  // seam. Keep their real initializers/functions when older focused probes
+  // select pre-migration Builders; do not reconstruct inset math in fixtures.
+  const chromeMembers = new Set(['searchContentStartInset', 'fixedHeaderHeight', 'selectionHeaderHeight',
+    'standardHeaderHeight', 'pageHeaderHeight', 'pageFooterHeight', 'headerHeight', 'fixedHeaderLayoutKey', 'searchHeaderLayoutKey']);
+  let addedChrome;
+  do {
+    addedChrome = false;
+    const selected = names.map(name => struct.members.find(member => member.name?.getText(original) === name)
+      ?.getText(original) ?? '').join('\n');
+    for (const member of struct.members) {
+      const name = member.name?.getText(original);
+      if (name && chromeMembers.has(name) && !names.includes(name) && selected.includes(`this.${name}`)) {
+        names.push(name); addedChrome = true;
+      }
+    }
+  } while (addedChrome);
   const members = names.map(name => {
     const member = struct.members.find(n => n.name?.getText(original) === name);
     assert.ok(member, `production member ${name}`);
@@ -63,6 +126,45 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     }
     return member.getText(original);
   });
+  // Page migration introduces only these three finite visual hosts. Older
+  // business probes still execute their own production slots, now delegated
+  // through the actual SDK-emitted host instead of a no-op wrapper stub.
+  for (const name of ['ReaderPageScaffold', 'ReaderFixedHeaderHost', 'ReaderStandardPage']) {
+    if (!new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n'))) continue;
+    const url = new URL(`../../entry/src/main/ets/features/common/${name}.ets`, import.meta.url);
+    const definition = readFileSync(url, 'utf8'), tree = parse(definition);
+    assert.deepEqual(tree.parseDiagnostics, [], `actual ${name} parses`);
+    const declaration = componentDeclaration(tree, name);
+    const properties = declaration.members.filter(ts.isPropertyDeclaration);
+    const decorated = tag => new Set(properties.filter(member => ts.getAllDecorators(member)
+      .some(decorator => (ts.isCallExpression(decorator.expression) ? decorator.expression.expression : decorator.expression)
+        .getText(tree) === tag)).map(member => member.name.getText(tree)));
+    syntax.componentCollection.customComponents.add(name);
+    syntax.propCollection.set(name, decorated('Prop'));
+    syntax.builderParamObjectCollection.set(name, decorated('BuilderParam'));
+    syntax.propertyCollection.set(name, new Set(properties.map(member => member.name.getText(tree))));
+    syntax.regularCollection.set(name, new Set(properties.filter(member => ts.getAllDecorators(member).length === 0)
+      .map(member => member.name.getText(tree))));
+    if (dependencies[name] !== undefined) continue;
+    pageFrameworkProperties ??= createArkUIPropertyRuntimeProbe();
+    const originalHooks = hooks;
+    dependencies = { ...pageFrameworkProperties.sdk, ...dependencies };
+    hooks = { ...pageFrameworkProperties.hooks, ...originalHooks, mountChildren: true,
+      onChildUpdated(child, params) {
+        pageFrameworkProperties.flush();
+        originalHooks.onChildUpdated?.(child, params);
+      },
+    };
+    const host = createReaderBuilderProbe(definition, declaration.members.filter(member => member.name)
+      .map(member => member.name.getText(tree)), dependencies, { ...hooks, componentName: name });
+    dependencies = { ...dependencies, [name]: class extends host.Component {
+      constructor(owner, params, storage, id, ...rest) {
+        super(owner, params, storage, id, ...rest);
+        this.params = { ...params };
+      }
+      updateStateVars(params) { super.updateStateVars(params); Object.assign(this.params, params); }
+    } };
+  }
   if (dependencies.MangaDirectoryEntryRow === undefined && /\bMangaDirectoryEntryRow\s*\(/.test(members.join('\n'))) {
     const controls = mangaDirectoryEntryRowSdk();
     const originalHooks = hooks;
@@ -322,18 +424,16 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       'LineCapStyle', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
-    // Page-shell modifiers are imported TypeScript helpers in production ETS.
-    // Keep the isolated Builder probe's platform seam explicit so shared header
-    // consumers can be exercised without evaluating the whole module graph.
-    ReaderHeaderFrameModifier: class {
-      constructor(kind) { this.kind = kind; }
-      applyNormalAttribute(instance) { instance.clip(true).zIndex(this.kind === 'directoryTools' ? 1 : 10); }
-    },
-    ReaderPageFrameModifier: class {
-      applyNormalAttribute(instance) { instance.clip(true).zIndex(0); }
-    },
-    readerPageContentStartInset: (headerHeight = 58, toolsHeight = 0, gap = 0) => Math.max(0, headerHeight) + Math.max(0, toolsHeight) + Math.max(0, gap),
-    ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect: {width: 393,height:852}, interactiveSafeInsets: {top:0,left:0,right:0,bottom:0} }) },
+    // Actual production surface/inset policy, including all finite variants.
+    ...actualReaderPageShell(),
+    // Constructor identity is the native seam; movement requires an explicit
+    // focused Scroller fixture. Render probes do not simulate scroll physics.
+    Scroller: class {},
+    ReaderWindowCoordinator: { metrics: () => {
+      const metrics = createDefaultReaderWindowMetrics();
+      metrics.windowRect.width = 393; metrics.windowRect.height = 852;
+      return metrics;
+    } },
     readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
     ...dependencies };
   globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });

@@ -1,0 +1,263 @@
+{
+  "schema": 1,
+  "boundary": "All Index ReaderRoute members, including product-disabled routes; finite actual source entries and common-host delegation, not device acceptance.",
+  "routes": [
+    {
+      "route": "bookshelf",
+      "category": "mainTab",
+      "bindings": [
+        {
+          "entry": "pages/Index.ets#Index#bookshelfShellContent",
+          "hostMethod": "features/shell/MainTabShell.ets#MainTabShell#build",
+          "host": "ReaderPageScaffold",
+          "variant": "mainTab",
+          "contentEntries": [
+            "features/bookshelf/BookshelfPage.ets#BookshelfPage#build",
+            "features/bookshelf/BookshelfEmptyPage.ets#BookshelfEmptyPage#build",
+            "features/bookshelf/BookshelfStatusContent.ets#BookshelfStatusContent#build"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "discover",
+      "category": "mainTab",
+      "bindings": [
+        {
+          "entry": "features/discover/DiscoverPage.ets#DiscoverPage#build",
+          "hostMethod": "features/shell/MainTabShell.ets#MainTabShell#build",
+          "host": "ReaderPageScaffold",
+          "variant": "mainTab"
+        }
+      ]
+    },
+    {
+      "route": "rss",
+      "category": "mainTab",
+      "bindings": [
+        {
+          "entry": "features/rss/RssPage.ets#RssPage#build",
+          "hostMethod": "features/shell/MainTabShell.ets#MainTabShell#build",
+          "host": "ReaderPageScaffold",
+          "variant": "mainTab"
+        }
+      ]
+    },
+    {
+      "route": "detail",
+      "category": "detail",
+      "bindings": [
+        {
+          "entry": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#build",
+          "hostMethod": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#detailPage",
+          "host": "ReaderPageScaffold",
+          "variant": "this.book.contentKind === 'manga' ? 'mangaDetail' : 'detail'"
+        }
+      ]
+    },
+    {
+      "route": "reading",
+      "category": "reader",
+      "bindings": [
+        {
+          "entry": "features/shell/ReaderShell.ets#ReaderShell#build",
+          "hostMethod": "features/shell/ReaderShell.ets#ReaderShell#build",
+          "host": "ReaderPageScaffold",
+          "variant": "reader"
+        }
+      ]
+    },
+    {
+      "route": "directory",
+      "category": "directory",
+      "bindings": [
+        {
+          "entry": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#build",
+          "hostMethod": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#standardPage",
+          "host": "ReaderPageScaffold",
+          "variant": "directory"
+        },
+        {
+          "entry": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#build",
+          "hostMethod": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#mangaPage",
+          "host": "ReaderPageScaffold",
+          "variant": "mangaDirectory"
+        }
+      ]
+    },
+    {
+      "route": "search",
+      "category": "search",
+      "bindings": [
+        {
+          "entry": "features/search/SearchPage.ets#SearchPage#build",
+          "hostMethod": "features/search/SearchPage.ets#SearchPage#build",
+          "host": "ReaderPageScaffold",
+          "variant": "search"
+        }
+      ]
+    },
+    {
+      "route": "bookshelfMultiSelect",
+      "category": "selection",
+      "bindings": [
+        {
+          "entry": "features/bookshelf/BookshelfMultiSelectPage.ets#BookshelfMultiSelectPage#build",
+          "hostMethod": "features/bookshelf/BookshelfMultiSelectPage.ets#BookshelfMultiSelectPage#build",
+          "host": "ReaderPageScaffold",
+          "variant": "selection"
+        }
+      ]
+    },
+    {
+      "route": "downloads",
+      "category": "download",
+      "bindings": [
+        {
+          "entry": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#build",
+          "hostMethod": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#build",
+          "host": "ReaderPageScaffold",
+          "variant": "download"
+        }
+      ]
+    },
+    {
+      "route": "source",
+      "category": "management",
+      "bindings": [
+        {
+          "entry": "features/source/SourceManagementPage.ets#SourceManagementPage#build",
+          "hostMethod": "features/source/SourceManagementPage.ets#SourceManagementPage#build",
+          "host": "ReaderPageScaffold",
+          "variant": "standard"
+        }
+      ]
+    },
+    {
+      "route": "bookshelfManagement",
+      "category": "standard",
+      "bindings": [
+        {
+          "entry": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#build",
+          "hostMethod": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#build",
+          "host": "ReaderStandardPage",
+          "variant": "management"
+        }
+      ]
+    },
+    {
+      "route": "bookshelfSettings",
+      "category": "standard",
+      "bindings": [
+        {
+          "entry": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#build",
+          "hostMethod": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#build",
+          "host": "ReaderStandardPage",
+          "variant": "settings"
+        }
+      ]
+    },
+    {
+      "route": "rssSubscriptionManagement",
+      "category": "standard",
+      "bindings": [
+        {
+          "entry": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#build",
+          "hostMethod": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#build",
+          "host": "ReaderStandardPage",
+          "variant": "rssManagement"
+        }
+      ]
+    },
+    {
+      "route": "rssSubscriptionEditor",
+      "category": "standard",
+      "bindings": [
+        {
+          "entry": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
+          "hostMethod": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
+          "host": "ReaderStandardPage",
+          "variant": "rssEditor"
+        }
+      ]
+    },
+    {
+      "route": "rssSourceFeed",
+      "category": "standard",
+      "bindings": [
+        {
+          "entry": "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage#build",
+          "hostMethod": "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage#build",
+          "host": "ReaderStandardPage",
+          "variant": "rssFeed"
+        }
+      ]
+    },
+    {
+      "route": "rssEntryDetail",
+      "category": "standard",
+      "bindings": [
+        {
+          "entry": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#build",
+          "hostMethod": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#build",
+          "host": "ReaderStandardPage",
+          "variant": "rssDetail"
+        }
+      ]
+    },
+    {
+      "route": "rulesManagement",
+      "category": "standard",
+      "bindings": [
+        {
+          "entry": "features/settings/RulesManagementPage.ets#RulesManagementPage#build",
+          "hostMethod": "features/settings/RulesManagementPage.ets#RulesManagementPage#build",
+          "host": "ReaderStandardPage",
+          "variant": "management"
+        }
+      ]
+    },
+    {
+      "route": "sourceTools",
+      "category": "standard",
+      "bindings": [
+        {
+          "entry": "features/source/SourceToolsPage.ets#SourceToolsPage#build",
+          "hostMethod": "features/source/SourceToolsPage.ets#SourceToolsPage#build",
+          "host": "ReaderStandardPage",
+          "variant": "tools"
+        }
+      ]
+    },
+    {
+      "route": "sync",
+      "category": "standard",
+      "bindings": [
+        {
+          "entry": "features/sync/SyncPage.ets#SyncPage#build",
+          "hostMethod": "features/sync/SyncPage.ets#SyncPage#build",
+          "host": "ReaderStandardPage",
+          "variant": "sync"
+        }
+      ]
+    },
+    {
+      "route": "settings",
+      "category": "settings",
+      "bindings": [
+        {
+          "entry": "features/settings/SettingsPage.ets#SettingsPage#build",
+          "hostMethod": "features/shell/SettingsShell.ets#SettingsShell#build",
+          "host": "ReaderStandardPage",
+          "variant": "settingsHome"
+        },
+        {
+          "entry": "features/settings/SettingsPage.ets#SettingsPage#build",
+          "hostMethod": "features/shell/SettingsShell.ets#SettingsShell#build",
+          "host": "ReaderStandardPage",
+          "variant": "settingsGeneral"
+        }
+      ]
+    }
+  ]
+}
