@@ -2,6 +2,7 @@ import { withReaderProgressProducerFixture } from './lib/reader-progress-produce
 import assert from 'node:assert/strict';
 import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress } from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
 const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const InputClock = productionMotionMethods(new URL('ReaderPageInputClock.ts', reading), ['sample']);
 class Clock extends InputClock { constructor() { super(); Object.assign(this, { initialized:false,lastNativeMs:-1,lastReceivedMs:0,timeMs:0,nativeOffsetMs:0,rebase:false,resetVelocity:false }); } }
@@ -115,11 +116,17 @@ console.log('production continuous cold-entry projection branch observes its rea
 // The independent geometry oracle is a 4059px row with 400 scalar cells.
 // Saving/reopening a stable physical viewport must not ratchet backwards.
 const QuantizedOwner = productionMotionMethods(new URL('LocalReadingExperience.ets', reading),
-  ['onContinuousVisibleRangeChanged', 'setContinuousInitialAnchor']);
+  ['onContinuousVisibleRangeChanged', 'setContinuousInitialAnchor', 'continuousPageChromeSnapshot',
+    'pageChromeSnapshot', 'pageChromeChapterTitle', 'pageChromeProgress', 'pageChromeOrdinal', 'normalizedProgress', 'currentChapterIndex'],
+  { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress });
 const quantized = Object.assign(new QuantizedOwner(), {
   readerSettingsSnapshot: { navigationMode: 'continuous' },
   continuousFragments: [{ startScalar: 100, endScalar: 500 }],
   continuousProgressRevision: 0, chapterLayoutMap: { scalarCount: () => 1000 },
+  // This input-only fixture owns no current chapter or session capsule.
+  // Execute the actual chrome formatting dependency without native session UI.
+  readingTocEntries: () => [],
+  shouldShowSessionCapsule: () => false,
   resolveVisibleContinuousImages() {}, continuousFragmentIndexForScalar: () => 0,
 });
 for (const initialPixels of [308, 416, 1119, 1998, 3062]) {

@@ -11,6 +11,7 @@ import {
 } from './ReaderWindowMetrics';
 import { TYPE_APP_HOME_TITLE } from './ReaderTypography';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from './ReaderFontFamilies.ts';
+import { ReaderHeaderFrameModifier } from './ReaderPageShell';
 
 // AppTopBar —— 首页顶部标题栏统一组件 (Figma HomeTopBar): 58 高、左右 20 + 顶部 6
 // 内边距、29px 思源宋体粗题 + 可选尾部槽。收敛 Bookshelf/Discover/Settings 三页
@@ -26,6 +27,9 @@ export struct AppTopBar {
   /** Visible boundary for a fixed header, requested by the bookshelf review. */
   divider: boolean = false;
   @Prop floating: boolean = false;
+  /** Fixed app headers use a solid surface by default. Transparent is an
+   * explicit overlay variant and must be selected by the owning page. */
+  @Prop surface: 'solid' | 'transparent' = 'solid';
   /** Floating manga/shelf headers use a symmetric slot grid so the title is centered. */
   @Prop centered: boolean = false;
   /** The shelf header owns its search action in the leading 44vp slot. */
@@ -90,7 +94,7 @@ export struct AppTopBar {
     .height(this.floating ? 52 : 58)
     .padding({ left: this.floating ? 4 : this.leftInset(), right: this.floating ? 4 : this.rightInset(), top: this.floating ? 0 : 6 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(this.floating ? readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme) : this.divider ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent)
+    .backgroundColor(this.floating ? readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme) : this.surface === 'solid' ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent)
     .border({ width: this.floating ? 1 : { bottom: this.divider ? 1 : 0 },
       color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(this.floating ? 18 : 0)
@@ -98,6 +102,8 @@ export struct AppTopBar {
     .shadow(this.floating ? { radius: 18,
       color: readerAppColor('app.BookshelfPage.projectionBookCoverLayer.color.1A594632', this.appThemeScheme),
       offsetX: 0, offsetY: 5 } : { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
+    .attributeModifier(new ReaderHeaderFrameModifier(this.floating ? 'floating' : 'home',
+      this.surface, this.appThemeScheme))
     .hitTestBehavior(HitTestMode.Transparent);
   }
 

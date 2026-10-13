@@ -43,9 +43,11 @@ for (const scenario of ['published', 'unchanged', 'no-proof', 'other-chapter', '
     await p.reconcileFailedControlSelection(ticket, Error('repeated layout failure'));
     assert.equal(calls.filter(Array.isArray).length, 1, 'automatic rematerialization is bounded to one attempt');
     assert.equal(notices.length, 1, 'a repeated failure remains visible and manually retryable');
+    assert.equal(p.phase, 'failed', 'no remaining work may appear as indefinite loading');
   } else {
     assert.equal(opens.length, 0, `${scenario}: never guess new positions`);
     assert.equal(notices.length, scenario === 'obsolete' ? 0 : 1);
+    if(scenario!=='obsolete') assert.equal(p.phase,'failed',`${scenario}: dismissed dialog retains the error page`);
   }
 }
 console.log('PH95 production serialized recovery: publish-before-layout failure, cache-only retry, one-attempt bound, stale/missing/conflicting evidence PASS');

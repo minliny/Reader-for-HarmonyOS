@@ -12,6 +12,9 @@ const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/Reade
 const {resolveReaderReadingLayout,resolveReaderControlLayout}=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
 const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements}=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
 const file=n=>new URL('../entry/src/main/ets/'+n,import.meta.url);
+const coordinatorSource=readFileSync(file('app/ReaderWindowCoordinator.ts'),'utf8');
+assert.match(coordinatorSource,/const statusMeasurementKey = `\$\{density\}:\$\{displayInfo\.id\}:\$\{displayInfo\.rotation\}`/,
+  'hidden status measurements must survive app-window geometry changes within one display/orientation');
 const lre=file('features/reading/LocalReadingExperience.ets');
 const panel=file('features/reading/ReaderControlPanel.ets');
 const owner={};
@@ -44,7 +47,11 @@ for(const extended of [false,true])for(const scale of [1,1.5]){
  const reading=resolveReaderReadingLayout(390,844,false,metrics,extended);
  const text=new ReaderPageChromeMeasurements(200,14.4*scale,36,14.4*scale);
  const chrome=resolveReaderPageChromeLayout(reading,text);
- assert.equal((chrome.topStartY+chrome.topEndY)/2,reading.pageChromeVisualSafeTop+(48-14.4*scale)/2);
+ const lineHeight=14.4*scale,available=Math.max(0,48-lineHeight);
+ assert.equal((chrome.topStartY+chrome.topEndY)/2,reading.pageChromeVisualSafeTop+
+  Math.min(available,available/2+lineHeight*0.2),'top labels follow the measured proportional optical track');
+ assert.ok(chrome.topStartY+lineHeight<=48 && chrome.topEndY+lineHeight<=48,
+  'the complete proportional line remains within the retained status region');
  assert.ok(chrome.topStartX>=24 && chrome.topStartX<100);
  assert.ok(chrome.topEndX+Math.min(36,chrome.topEndMaxWidth)<=366);
  if(extended){assert.ok(chrome.topStartX+chrome.topStartMaxWidth<154);assert.ok(chrome.topEndX>236);}

@@ -39,7 +39,7 @@ function metrics({
 
 const phoneReading = resolveReaderReadingLayout(390, 844, false, metrics({ systemTop: 48 }));
 assert.equal(phoneReading.widthClass, 'compact');
-assert.equal(phoneReading.contentTop, 104, 'status area and equal-height information lane are reserved once before body text');
+assert.equal(phoneReading.contentTop, 56, 'metadata shares the measured status area and reserves one band before body text');
 assert.equal(phoneReading.contentLeft, 24);
 assert.equal(phoneReading.contentRight, 24);
 assert.equal(phoneReading.bodyWidth(), 342);
@@ -178,7 +178,15 @@ const immersive=resolveReaderReadingLayout(390,844,false,retained,true);
 assert.equal(immersive.pageChromeTopRegionHeight,48);assert.equal(immersive.pageChromeVisualSafeTop,0);
 assert.equal(immersive.contentTop,48+8,'measured immersive lane replaces the former fixed 72vp body top');
 const visible=resolveReaderReadingLayout(390,844,false,retained,false);
-assert.equal(visible.pageChromeVisualSafeTop,48);assert.equal(visible.contentTop,96+8);
+assert.equal(visible.pageChromeVisualSafeTop,0);assert.equal(visible.contentTop,48+8);
+const insetOnly=metrics({systemTop:36});
+insetOnly.statusBarHeight=0;
+insetOnly.statusBarRect=new ReaderRectVp(0,0,390,0);
+const insetOnlyReading=resolveReaderReadingLayout(390,844,false,insetOnly,false);
+assert.equal(insetOnlyReading.pageChromeTopRegionHeight,36,
+  'a transiently empty status rectangle still uses the live SYSTEM top inset');
+assert.equal(insetOnlyReading.contentTop,44,
+  'the body follows the recovered information lane instead of the fixed authored top');
 
 const keyboardFull = resolveReaderControlLayout(390, 844, false, metrics({ keyboardBottom: 300 }));
 const keyboardResized = resolveReaderControlLayout(390, 544, false, metrics({ keyboardBottom: 300 }));

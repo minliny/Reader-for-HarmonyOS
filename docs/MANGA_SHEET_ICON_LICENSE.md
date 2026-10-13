@@ -55,8 +55,6 @@ The manga reader sheet assets reuse the exact open-source icon components instal
 | manga_sheet_locate_theme_night.svg | ReaderIcon | #B9CEB1 | e0da325fb496669a7a2c1aa9d2ef07a13746da59b0fccb90e0fa2bbd2a581604 |
 | manga_sheet_check.svg | CheckIcon | #425D45 | 42da8e6725bb0b45bbe9e390948aab11b96a3bbe52497ae915e65b2d1c0e40d9 |
 | manga_sheet_check_theme_night.svg | CheckIcon | #B9CEB1 | 3cc4edd6372e496c902f0f537936a80f46dda0b0e068b931a8ad92911b242623 |
-| manga_sheet_vertical_accent.svg | ViewVerticalIcon | #425D45 | a5b72b6b013eb4e5d1298258fb7358cfcfc4afff347c065ee40e3e3e345b6bc9 |
-| manga_sheet_vertical_accent_theme_night.svg | ViewVerticalIcon | #B9CEB1 | 6adf7a8c578e4f4cdd34bfe3ef9ff7c1777a1c2be9187ebb32b5f7ae97976a0c |
 | manga_sheet_chevron_right.svg | ChevronRightIcon | #A39C90 | 743a5ece653975345a829062205b48bf9afb3df013053e6613cf0e82ca3f03e1 |
 | manga_sheet_chevron_right_theme_night.svg | ChevronRightIcon | #767D71 | 7988cc59a0468e898c01b87e738aa264d634d4c1e789fb2b1bf43f32461e5ac1 |
 | manga_sheet_chevron_down.svg | ChevronDownIcon | #756F69 | 5a3b143885ce029882dc32d18350635b498d1b201bef641442902be27072a351 |

@@ -189,6 +189,11 @@ const planEnd = source.indexOf('function ownerMatches(');
 assert.ok(planStart >= 0 && planEnd > planStart);
 const actualPlan = new Function('basename', 'isAbsolute', 'resolve',
   `${source.slice(planStart, planEnd)}; return operationPlan;`)(basename, isAbsolute, resolve);
+const clearPlan = actualPlan({ op: 'clearRebuildableCache', preflightConfirmed: true }, '/virtual/evidence');
+assert.deepEqual(clearPlan.args, ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', 'io.reader.minliny', '-m', 'entry',
+  '--pb', 'readerClearRebuildableCache', 'true'], 'VM cache maintenance uses the exact app-owned preserve-data Want');
+assert.throws(() => actualPlan({ op: 'clearRebuildableCache', preflightConfirmed: true, path: '/tmp/x' }, '/virtual/evidence'),
+  /unknown operation field/, 'cache maintenance cannot receive a filesystem path');
 const samplerStart = source.indexOf('    const sampledDrag = async plan => {');
 const samplerEnd = source.indexOf("    record({ event: 'ready'", samplerStart);
 assert.ok(samplerStart >= 0 && samplerEnd > samplerStart);

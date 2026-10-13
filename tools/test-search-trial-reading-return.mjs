@@ -13,6 +13,7 @@ const readingEvidence=await import('../entry/src/main/ets/features/reading/Remot
 const {captureRemotePositionContext}=await import('../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts');
 const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 import { SearchViewState } from '../entry/src/main/ets/features/search/SearchViewState.ts';
+import { readBookAuthorIdentity } from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
 
 // The acquisition boundary and Core persistence are fakes. Execute the actual
 // Index methods through the project's SDK parser, including both acquisition
@@ -36,7 +37,7 @@ const methods = ['searchJourneyActive', 'syncSearchDetailCandidates', 'knownSear
 ];
 
 function fixture({ firstFails = false, origin = 'search' } = {}) {
-  const calls = [], notices = [], rows = new Map(), gates = new Map();
+  const calls = [], notices = [], rows = new Map(), gates = new Map(), admittedCatalogs = new Map();
   const makeBook = (sourceId, bookId) => ({ sourceId, bookId, detailUrl: bookId,
     title: '鸣龙', author: '关关公子', sourceName: `${sourceId} 名称`, sourceRuleVersion: 'v1', variables: [] });
   const first = makeBook('first-source', 'first-book');
@@ -45,6 +46,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
   const key = book => `${book.sourceId}\0${book.bookId}`;
   const sessions = new Map([first, second, third].map(book => [key(book), {
     identity: { sourceId: book.sourceId, bookId: book.bookId }, book,
+    sourceVersion: 'v1', catalogVersion: 'toc-v1', contextVersion: 'context-v1',
     entries: [{ index: 0, title: '第一章', url: `${book.bookId}/chapter-1` }], acquisitionMode: 'cache',
   }]));
   const acquire = async (seed, kind) => {
@@ -52,7 +54,9 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
     const gate = gates.get(seed.sourceId);
     if (gate !== undefined) await gate.promise;
     if (firstFails && seed.sourceId === first.sourceId) throw new Error('book.toc returned no readable chapters');
-    return sessions.get(key(seed));
+    const session = sessions.get(key(seed));
+    admittedCatalogs.set(key(seed), session);
+    return session;
   };
   const loadChapter = async session => {
     calls.push(`chapter.probe:${session.identity.sourceId}`);
@@ -60,6 +64,12 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
       chapterUrl:session.entries[0].url,contentVersion:'body',content:'正文',images:[]};
   };
   const owner = { noteReadingPreparationIntent() {}, bookAcquisitions: () => ({
+    hasCurrentCatalogProjection: session => {
+      const admitted = admittedCatalogs.get(key(session.identity));
+      return admitted !== undefined && admitted.entries === session.entries &&
+        admitted.sourceVersion === session.sourceVersion && admitted.catalogVersion === session.catalogVersion &&
+        admitted.contextVersion === session.contextVersion;
+    },
     readingProjectionRevision:()=>0,sourceRegistryRevision:()=>1,subscribe:()=>()=>{}, acquireBook: seed => acquire(seed, 'switch.acquire'),
     acquireBookWithBackgroundRefresh: async seed => ({ session: await acquire(seed, 'detail.acquire') }),
     acquireCandidateGroup: async (candidates,options) => {
@@ -76,9 +86,12 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
   owner.request=async(method,p)=>{
     if(method==='bookmark.list')return{data:{bookmarks:[]}};
     if(method==='source.list')return{data:{sources:[first,second,third].map(b=>({sourceId:b.sourceId,name:b.sourceName,enabled:true,sourceVersion:'v1'}))}};
-    if(method==='search-book.related')return{data:{books:[first,second,third].map(b=>({origin:b.sourceId,bookUrl:b.bookId,name:b.title,author:b.author,time:1,relationKey:'same-book',relationRevision:'r1',sourceVersion:'v1'})),snapshotRevision:'s1',complete:true,
+    if(method==='search-book.related')return{data:{books:[first,second,third].map(b=>({origin:b.sourceId,bookUrl:b.bookId,name:b.title,author:b.author,time:1,relationKey:'same-book',relationRevision:'r1',sourceVersion:'v1',acquisition:{sourceVersion:'v1',contentKind:'text'}})),snapshotRevision:'s1',complete:true,
       sourceVersions:[first,second,third].map(b=>({sourceId:b.sourceId,sourceVersion:'v1',enabled:true}))}};
-    if(method==='change.bookSource')return{data:{candidates:[]}};
+    if(method==='book.search') {
+      assert.equal(p.page,1);
+      return{data:{sourceId:p.sourceId,sourceVersion:'v1',contentKind:'text',books:[]}};
+    }
     if(method==='source.switch.pending.list')return{data:{pending:[]}};
     if(method==='bookshelf.get')return{data:{book:rows.get(p.sourceId+'\0'+p.bookId)??null}};
     calls.push('UNEXPECTED.native.'+method);throw Error('unexpected trial native IO '+method);
@@ -90,7 +103,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
   const Entry=compileHost(undefined,{ReaderRuntimeOwner:authority,RemoteReadingFlowGateway:Remote,ReaderCoreGateway:Core,
     ReadingOfflineGateway:class {async loadDirectoryProjection(session){return session.entries;}}});
   const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
-  const Index = productionMotionMethods(source, [...new Set([...methods,...sourceSwitchMethods])], { resolveBookshelfBook,
+  const Index = productionMotionMethods(source, [...new Set([...methods,...sourceSwitchMethods])], { resolveBookshelfBook, readBookAuthorIdentity,
     ...readingEvidence,...gatewayExports,SourceSwitchHost:Source,ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION:emptyAdmission,captureRemotePositionContext,RemoteChapterCacheRefreshError, searchCandidateRank, LOCAL_SOURCE_ID: 'local', ReaderRuntimeOwner: { current: () => owner },
     RemoteReadingFlowGateway: class {
       async loadProgress() { return {kind:'missing'}; }
@@ -118,7 +131,7 @@ function fixture({ firstFails = false, origin = 'search' } = {}) {
   const orchestrator = { resume: () => calls.push('search.resume'), close: () => calls.push('search.close'),
     open: () => calls.push('UNEXPECTED.search.open'), search: () => calls.push('UNEXPECTED.search.search') };
   Object.assign(h, {
-    mountedRuntimeOwner: owner, shelfReceiptRetired: false,detailShelfAdmissionMount:1,detailReadableAdmission:()=>emptyAdmission,
+    mountedRuntimeOwner: owner, shelfReceiptRetired: false,detailShelfAdmissionMount:1,detailReadableAdmission:()=>emptyAdmission,pendingShelfReadbackKey:'',
     currentSourceSwitchTransactionId:()=>undefined, readingDetailForShelf:book=>({...book}),
     remoteSessionGeneration:0,remoteContentProbeGeneration:0,route: origin, readingOriginRoute: 'detail', detailReturnRoute: 'bookshelf',
     readingSessionActive: false, navigationGeneration: 0, shelfReadingPreparation: false,
@@ -152,7 +165,12 @@ async function pick(t,book){
   assert.equal(t.h.sourceSwitchState.kind,'candidates');
   const displayed=t.h.sourceSwitchState.candidates.find(c=>c.sourceId===book.sourceId&&c.bookUrl===book.bookId);
   assert.ok(displayed,JSON.stringify(t.h.sourceSwitchState)+' selection uses the candidate and version published by the actual owner');
+  const acquisition=`switch.acquire:${book.sourceId}`;
+  const before=t.calls.filter(value=>value===acquisition).length;
   t.h.onPickSource(displayed,t.h.sourceSwitchScopeId);
+  await settle();
+  assert.equal(t.calls.filter(value=>value===acquisition).length,before+1,
+    'late acquisition fixtures leave only after the actual owner has qualified and dispatched acquisition');
 }
 const outcomes = [];
 async function check(name, test) {
@@ -244,6 +262,21 @@ await check('search journey route guard remains active through detail, reader an
   }
   t.h.route = 'bookshelf'; assert.equal(t.h.searchJourneyActive(), false);
   t.h.route = 'reading'; t.h.searchAppForeground = false; assert.equal(t.h.searchJourneyActive(), false);
+});
+
+await check('first source-switch opening reuses only version-bound ordinary search timings', async () => {
+  const t = fixture();
+  t.h.detailReturnRoute = 'search';
+  const measuredAt = Date.now();
+  const timed = book => ({ ...book, acquisition: { schemaVersion: 2, sourceVersion: 'v1',
+    searchTiming: { kind: 'search', sourceVersion: 'v1', durationMs: 427, measuredAt } } });
+  t.h.searchDetailCandidates = [timed(t.first), { ...timed(t.second), sourceRuleVersion: 'v2' },
+    { ...timed(t.third), acquisition: { sourceVersion: 'v1', searchTiming: {
+      kind: 'search', sourceVersion: 'v1', durationMs: -1, measuredAt } } }];
+  const known = t.h.knownSearchSourceCandidates({ sourceId: t.first.sourceId, bookId: t.first.bookId });
+  assert.deepEqual([known[0].latencyMs, known[0].latencyKind, known[0].latencyMeasuredAt], [427, 'search', measuredAt]);
+  assert.equal(known[1].latencyMs, undefined, 'changed rules do not borrow timings from an old source version');
+  assert.equal(known[2].latencyMs, undefined, 'invalid persisted durations are not shown');
 });
 
 await check('first source parses: search -> preview -> reading -> detail -> exact search state', async () => {

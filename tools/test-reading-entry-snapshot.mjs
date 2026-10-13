@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import { registerHooks, stripTypeScriptTypes } from 'node:module';
+import { readFileSync } from 'node:fs';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const {readReadingEntrySnapshot}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
+const {readReadingEntrySnapshot,readPreparedReadingEntrySnapshot}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
 function fixture(){
  const calls=[];let current=true,contentCurrent=true,answer;
  const body={kind:'ready',sourceId:'s',bookId:'b',chapterIndex:40,chapterTitle:'第四章',content:'正文甲乙丙',blocks:[{kind:'text',startScalar:0,endScalar:5,text:'正文甲乙丙'}],
@@ -38,6 +39,43 @@ function fixture(){
   assert.equal((await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true)).navigation.current.level,level);
  }
  f.set({...f.body,navigation:{...f.body.navigation,current:{...f.body.navigation.current,level:0}}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/level/);
+}
+{
+ const f=fixture();
+ const mismatch={...f.body,chapterIndex:3,progressRevision:'durable-325',
+  positionScope:{...f.body.positionScope,chapterIndex:3},
+  progress:{...f.body.progress,chapterIndex:325,bodyVersion:'body-325',processingVersion:'process-325'},
+  navigation:{...f.body.navigation,current:{...f.body.navigation.current,index:3}}};
+ f.set(mismatch);
+ await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/resume chapter mismatch/,
+  'implicit resume rejects a ready chapter 3 paired with restored chapter 325');
+ f.runtime.supportsCoreCapability=()=>true;
+ f.runtime.readPreparedEntry=()=>structuredClone(mismatch);
+ assert.throws(()=>readPreparedReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true,'lineSeparated'),/resume chapter mismatch/,
+  'synchronous prepared first frame uses the same durable resume guard');
+ const selected=await readReadingEntrySnapshot(f.runtime,'s','b',3,()=>true);
+ assert.equal(selected.chapter.chapterIndex,3);assert.equal(selected.progress.progress.chapterIndex,325,
+  'explicit chapter selection keeps prior durable progress as a separate observation');
+ const preparedSelected=readPreparedReadingEntrySnapshot(f.runtime,'s','b',3,()=>true,'lineSeparated');
+ assert.equal(preparedSelected.chapter.chapterIndex,3);assert.equal(preparedSelected.progress.progress.chapterIndex,325);
+ const path=new URL('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts',import.meta.url);
+ const guarded=readFileSync(path,'utf8');
+ const guard="    if (chapterIndex === undefined && progressIndex !== index) throw new Error('reading entry resume chapter mismatch');";
+ assert.equal(guarded.split(guard).length,2,'negative control removes only the actual resume guard');
+ const mutatedUrl=path.href+'?resume-guard-removed';
+ const hook=registerHooks({load(url,context,next){
+  if(url===mutatedUrl)return{format:'module',source:stripTypeScriptTypes(guarded.replace(guard,'')),shortCircuit:true};
+  return next(url,context);
+ }});
+ try{
+  const legacy=await import(mutatedUrl);
+  const accepted=await legacy.readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);
+  assert.equal(accepted.chapter.chapterIndex,3);assert.equal(accepted.progress.progress.chapterIndex,325,
+   'removing only the production guard recreates acceptance of the inconsistent Core DTO');
+  const acceptedFirstFrame=legacy.readPreparedReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true,'lineSeparated');
+  assert.equal(acceptedFirstFrame.chapter.chapterIndex,3);assert.equal(acceptedFirstFrame.progress.progress.chapterIndex,325);
+ }finally{hook.deregister();}
+ console.log('PASS defensive implicit resume chapter/progress guard: async and prepared reject 3/325; explicit chapter 3 remains legal; guard-removal counterexample accepts the same DTO');
 }
 {
  const f=fixture();f.set({kind:'missing',sourceId:'s',bookId:'b',reason:'contentMissing'});

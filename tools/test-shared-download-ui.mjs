@@ -51,7 +51,7 @@ assert.equal(filterDownloadBooks([view, other], { ...filters, type: 'manga' })[0
 assert.equal(filterDownloadBooks([{ ...view, recentRead: 1 }, other], filters)[0].sourceId, 's2');
 assert.equal(filterDownloadBooks([{ ...view, recentRead: 1 }, other], { ...filters, direction: 'asc' })[0].sourceId, 's1');
 const target = describeDownloadReadingTarget(view, view.chapters[0]);
-assert.equal(target.wired, false);
+assert.equal(target.wired, true);
 assert.equal(target.chapterIndex, 0);
 assert.equal(target.chapterId, 'chapter:0');
 assert.match(target.description, /小说正文阅读页/);
@@ -89,42 +89,91 @@ const entry = { chapter: { chapterIndex: 1, totalPages: 1, pageStart: 0, cached:
     pages: [{ pageId, ordinal: 0, resourceRef: `manga:${pageId}` }] } },
   targetOrdinal: 0, recoveryRequired: false, progress: { token: { epoch: 1, revision: 0 }, location: null } };
 const comicCalls = [], comicParams = [], proofs = [];
+const cachedEntry = (index) => ({ ...entry, chapter: { ...entry.chapter, chapterIndex: index,
+  manifest: { ...entry.chapter.manifest, chapter: { ...entry.chapter.manifest.chapter,
+    chapterId: `chapter:${index}` } } } });
 const comicRuntime = {
-  supportsCoreCapability: name => name === 'manga.entry.v1',
+  supportsCoreCapability: capability => capability === 'manga.entry.v1',
   request: async (method, params) => {
     comicCalls.push(method);
     comicParams.push({ method, params });
-    return { data: method === 'manga.entry.get' ? { entry } : status(comic,
+    if (method === 'manga.entry.get') return { data: { entry: cachedEntry(params.chapterIndex) } };
+    return { data: status(comic,
       [row(0, 'missing', 0, { title: '第一卷', navigable: false, level: 1 }),
-        row(1, 'cached', 10, { mangaManifestVersion: 'v1' }), row(2, 'cached', 10)]) };
+        row(1, 'completed', 10, { mangaManifestVersion: 'v1' }),
+        row(2, 'cached', 10, { mangaManifestVersion: 'v1' }),
+        row(3, 'cached', 10, { mangaManifestVersion: 'v1' })]) };
   },
-  isOfflineImageChapterComplete: async identity => { proofs.push(identity); return true; },
+  isOfflineImageChapterComplete: async identity => {
+    proofs.push(identity);
+    return identity.chapterIndex !== 3;
+  },
 };
 const mangaView = await new SharedDownloadGateway(comicRuntime).load(comic, () => true);
-assert.equal(mangaView.totalChapters, 2, 'a volume heading is not a chapter/download');
-assert.equal(mangaView.downloadedChapters, 1, 'only verified full chapter images count');
+assert.equal(mangaView.totalChapters, 3, 'a volume heading is not a chapter/download');
+assert.equal(mangaView.downloadedChapters, 2, 'Host manifest and file proof supplies completed and cached manga chapter state');
 assert.equal(mangaView.bytes, undefined, 'text JSON size is not manga image disk usage');
-assert.equal(mangaView.chapters[1].mangaTotalPages, 1);
-assert.equal(mangaView.chapters[1].mangaSavedPages, 1);
 assert.equal(projection.downloadChapterDetailLabel('manga', mangaView.chapters[1]), '1 / 1 页 · 已下载');
-assert.deepEqual(comicCalls, ['cache.book.status', 'manga.entry.get']);
+assert.equal(mangaView.chapters[2].localComplete, true, 'a cached Core row with a manifest is verified by Host');
+assert.equal(mangaView.chapters[3].localComplete, false, 'a cached row with a missing image receipt remains repairable');
+assert.equal(mangaView.chapters[3].stateLabel, '待修复');
+assert.deepEqual(comicCalls, ['cache.book.status', 'manga.entry.get', 'manga.entry.get', 'manga.entry.get'], 'manga list verifies completed and cached rows');
 assert.deepEqual(comicParams, [
   { method: 'cache.book.status', params: { sourceId: comic.sourceId, bookId: comic.bookId,
     includeGlobalStats: false, includeChapterStates: true } },
   { method: 'manga.entry.get', params: { sourceId: comic.sourceId, bookId: comic.bookId, chapterIndex: 1 } },
-], 'manga joins the exact existing status and persisted-entry read contracts without acquisition parameters');
-assert.equal(proofs[0].chapterId, 'chapter:1');
-assert.equal(proofs[0].contentVersion, 'v1');
-const windowRuntime = { ...comicRuntime, request: async (method, params) => method === 'manga.entry.get' ?
-  { data: { entry: { ...entry, chapter: { ...entry.chapter, totalPages: 65 } } } } : comicRuntime.request(method, params) };
-const completeWindow = await new SharedDownloadGateway(windowRuntime).load(comic, () => true);
-assert.equal(completeWindow.chapters[1].mangaTotalPages, 65, 'entry window length is never the whole-chapter size');
-assert.equal(completeWindow.chapters[1].mangaSavedPages, 65);
-const incompleteWindow = await new SharedDownloadGateway({ ...windowRuntime, isOfflineImageChapterComplete: async () => false }).load(comic, () => true);
-assert.equal(incompleteWindow.chapters[1].mangaTotalPages, 65);
-assert.equal(incompleteWindow.chapters[1].mangaSavedPages, undefined, 'incomplete does not prove that zero images were saved');
-assert.equal(projection.downloadChapterDetailLabel('manga', incompleteWindow.chapters[1]), ' / 65 页 · 未下载');
+  { method: 'manga.entry.get', params: { sourceId: comic.sourceId, bookId: comic.bookId, chapterIndex: 2 } },
+  { method: 'manga.entry.get', params: { sourceId: comic.sourceId, bookId: comic.bookId, chapterIndex: 3 } },
+]);
+assert.deepEqual(proofs, [1, 2, 3].map(chapterIndex => ({ sourceId: comic.sourceId, bookId: comic.bookId, chapterIndex,
+  chapterId: `chapter:${chapterIndex}`, contentVersion: 'v1', mangaDecodeRevision: 'identity-v1' })));
+assert.equal(mangaView.chapters[1].mangaTotalPages, 1);
+assert.equal(mangaView.chapters[1].mangaSavedPages, 1);
+assert.equal(projection.downloadChapterDetailLabel('manga', mangaView.chapters[1]), '1 / 1 页 · 已下载');
 assert.match(describeDownloadReadingTarget(mangaView, mangaView.chapters[1]).description, /漫画图片阅读页/);
+
+// Host integrity checks are batched: Core queue completion is only a
+// candidate, while a missing page file downgrades that chapter to repairable
+// state. Four concurrent entry/file proofs bound startup work for long books.
+{
+  const batchBook = shelf('comic-source', 'batch', 'manga');
+  const batchRows = Array.from({ length: 9 }, (_, index) => row(index, 'completed', 0, {
+    url: `chapter:${index}`, mangaManifestVersion: 'v1',
+  }));
+  let activeProofs = 0, maxProofs = 0;
+  const batchCalls = [];
+  const batchRuntime = {
+    supportsCoreCapability: capability => capability === 'manga.entry.v1',
+    request: async (method, params) => {
+      batchCalls.push(method);
+      if (method === 'cache.book.status') return { data: status(batchBook, batchRows) };
+      activeProofs += 1; maxProofs = Math.max(maxProofs, activeProofs);
+      await new Promise(resolve => setTimeout(resolve, 2));
+      activeProofs -= 1;
+      const index = params.chapterIndex;
+      const batchEntry = {
+        ...entry,
+        chapter: {
+          ...entry.chapter,
+          chapterIndex: index,
+          manifest: {
+            ...entry.chapter.manifest,
+            chapter: { ...entry.chapter.manifest.chapter, sourceId: batchBook.sourceId, bookId: batchBook.bookId,
+              chapterId: `chapter:${index}` },
+          },
+        },
+      };
+      return { data: { entry: batchEntry } };
+    },
+    isOfflineImageChapterComplete: async identity => identity.chapterIndex !== 3,
+  };
+  const batchView = await new SharedDownloadGateway(batchRuntime).load(batchBook, () => true);
+  assert.equal(maxProofs, 4, 'manga Host proofs use bounded batches');
+  assert.equal(batchView.downloadedChapters, 8, 'Core completed row with a missing Host file is incomplete');
+  assert.equal(batchView.chapters[3].localComplete, false);
+  assert.match(batchView.chapters[3].stateLabel, /未下载|待修复/);
+  assert.equal(batchCalls.filter(method => method === 'manga.entry.get').length, 9);
+}
 let active = true, finish;
 const pending = new SharedDownloadGateway({ request: () => new Promise(resolve => { finish = resolve; }) }).load(novel, () => active);
 active = false; finish({ data: status(novel, [row(0)]) });
@@ -163,9 +212,9 @@ assert.equal(events[0].books[0].chapterIndices, undefined);
 owner.actionChapterIndices = [1]; owner.sendAction('deleteLocal');
 assert.equal(events[1].scope, 'chapters');
 assert.deepEqual(events[1].books[0].chapterIndices, [1]);
-assert.equal(mangaView.downloadedChapters, 1, 'presentation intent cannot fake deletion success');
+assert.equal(mangaView.downloadedChapters, 2, 'presentation intent cannot fake deletion success');
 owner.showReadTarget(mangaView, chapter);
-assert.equal(events[2].wired, false);
+assert.equal(events[2].wired, true);
 assert.equal(owner.readingBookTitle, mangaView.title);
 assert.equal(owner.readingChapterTitle, chapter.title);
 assert.equal(events[2].chapterId, chapter.chapterId, 'identity stays in the real reading target, not implementation copy');
@@ -284,4 +333,49 @@ const refreshB = host.refreshBook(publications.at(-1).books[0], () => true);
 assert.equal(loads - before, 1, 'same-book refreshes share one real read');
 const published = publications.length; host.retire(); resolveProbe(); await Promise.all([refreshA, refreshB]);
 assert.equal(publications.length, published, 'retired Host cannot overwrite the next presentation');
-console.log('PASS shared-download: real cache/body/manifest projection, unknown/partial status, filters/direction, exact unwired reading targets, scoped intents, latest scroll, single-flight and stale publication');
+
+// A download status clock is independent from readingProjectionRevision. A
+// second page mount reuses unchanged rows, while a background prefetch event
+// invalidates only the affected book and is coalesced into one 100ms patch.
+let indexedLoads = 0;
+const downloadListeners = new Set();
+const revisionOwner = {
+  readingRevision: 0, downloadRevisions: new Map(),
+  bookAcquisitions() { return {
+    readingProjectionRevision: () => revisionOwner.readingRevision,
+    downloadStatusRevision: (sourceId, bookId) => revisionOwner.downloadRevisions.get(JSON.stringify([sourceId, bookId])) ?? 0,
+    subscribeDownloadStatus: listener => { downloadListeners.add(listener); return () => downloadListeners.delete(listener); },
+  }; },
+};
+class IndexedStatusPort {
+  constructor() {}
+  async load(book) { indexedLoads++; return { ...book, projectionStatus: 'ready', chapters: [], totalChapters: 1,
+    downloadedChapters: indexedLoads > 1 && book.sourceId === 's1' ? 1 : 0, state: indexedLoads > 1 && book.sourceId === 's1' ? 'downloaded' : 'none', stateLabel: '', progressPercent: 0 }; }
+}
+const indexedExports = {};
+new Function('exports', 'BookshelfFlowGateway', 'SharedDownloadGateway', 'createDownloadBookView', hostBody)(indexedExports, ShelfPort, IndexedStatusPort, createDownloadBookView);
+const firstMount = new indexedExports.SharedDownloadHost(revisionOwner, () => {});
+await firstMount.reload(() => true);
+const firstLoadCount = indexedLoads;
+firstMount.retire();
+const secondMount = new indexedExports.SharedDownloadHost(revisionOwner, () => {});
+await secondMount.reload(() => true);
+assert.equal(indexedLoads, firstLoadCount, 'same download revision reuses the cross-page status index');
+secondMount.retire();
+const progressSnapshots = [];
+const progressHost = new indexedExports.SharedDownloadHost(revisionOwner, snapshot => progressSnapshots.push(snapshot));
+await progressHost.reload(() => true);
+const novelKey = JSON.stringify(['s1', 'same']);
+const comicKey = JSON.stringify(['comic-source', 'same']);
+const unchangedBeforeProgress = progressSnapshots.at(-1).books.find(book => book.key === comicKey);
+const beforeProgress = indexedLoads;
+revisionOwner.downloadRevisions.set(novelKey, 1);
+downloadListeners.forEach(listener => listener({ reset: false, identities: [novel, novel] }));
+await new Promise(resolve => setTimeout(resolve, 140));
+assert.equal(indexedLoads - beforeProgress, 1, 'duplicate background notifications refresh one changed book');
+assert.equal(progressSnapshots.at(-1).books.find(book => book.key === novelKey).downloadedChapters, 1,
+  'background completion publishes the refreshed chapter summary');
+assert.equal(progressSnapshots.at(-1).books.find(book => book.key === comicKey), unchangedBeforeProgress,
+  'unchanged row remains the same object');
+progressHost.retire();
+console.log('PASS shared-download: real cache/body/manifest projection, unknown/partial status, filters/direction, exact wired reading targets, scoped intents, latest scroll, single-flight and stale publication');

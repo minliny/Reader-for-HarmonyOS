@@ -67,7 +67,7 @@ assert.match(coordinator,
     ['applyReaderWindowPolicy'], { ReaderWindowCoordinator: { requestReaderWindowPolicy(value) {
       assert.equal(value, policy); writes++; return pending;
     } } });
-  const owner = Object.assign(new Owner(), { windowPolicyFor: () => policy, controlsPresentedForWindow: () => false });
+  const owner = Object.assign(new Owner(), { windowChromeActive: true, windowPolicyFor: () => policy, controlsPresentedForWindow: () => false });
   assert.equal(owner.applyReaderWindowPolicy({}), pending,
     'the settings commit path must return the coordinator promise without releasing its persistence barrier');
   assert.equal(writes, 1, 'each settings application forwards exactly one coordinator request');

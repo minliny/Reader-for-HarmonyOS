@@ -1,10 +1,12 @@
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
+import { assertSourceLoginDefault } from './source-login-default-policy.mjs';
 const root=new URL('../entry/src/main/resources/rawfile/',import.meta.url);
 const sha=text=>createHash('sha256').update(text).digest('hex');
 const document=readFileSync(new URL('reader-tested-book-source-collection.json',root),'utf8');
 const sources=JSON.parse(document), byId=new Map(sources.map(s=>[s.bookSourceUrl,s]));
+sources.forEach(assertSourceLoginDefault);
 const dir=new URL('bundled-sources/',root), check=process.argv.includes('--check');
 if(!check)mkdirSync(dir,{recursive:true});
 const outputs=new Map();

@@ -3,6 +3,7 @@
  * Shelf timestamps and remote rule variables stay in their owning gateways.
  */
 import type { MangaBookPosition } from '../manga/MangaBookPresentation';
+import type { BookAuthorIdentityProof } from '../common/BookAuthorMetadata';
 
 export type ReadingBookDetail = {
   sourceId: string;
@@ -10,6 +11,9 @@ export type ReadingBookDetail = {
   bookId: string;
   title: string;
   author: string;
+  /** Exact source-version proof; presentation must not invent author aliases. */
+  authorIdentity?: BookAuthorIdentityProof;
+  sourceVersion?: string;
   /** Core-owned source kind; local readers use it to preserve parser semantics. */
   kind?: string;
   contentKind?: 'text' | 'manga' | 'audio';

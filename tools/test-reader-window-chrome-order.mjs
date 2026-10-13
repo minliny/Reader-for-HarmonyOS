@@ -13,6 +13,9 @@ import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-prob
 import {mangaSurfaceSdkDependencies} from './lib/manga-surface-sdk-probe.mjs';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
+const controlSession=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const {readerControlHostVisible}=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
+const {createDefaultReaderSettingsSnapshot}=await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
 const require=createRequire(import.meta.url);
 const ts=require(((process.env.READER_ETS_LOADER_ROOT ?? ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader')) + '/node_modules/typescript'));
 const base=new URL('../entry/src/main/ets/',import.meta.url);
@@ -64,6 +67,7 @@ const mangaPath=new URL('features/manga/MangaReadingSurface.ets',base);
 const shellPath=new URL('features/shell/ReaderShell.ets',base);
 const mangaSource=readFileSync(mangaPath,'utf8');
 const shellSource=readFileSync(shellPath,'utf8');
+const novelSource=readFileSync(new URL('features/reading/LocalReadingExperience.ets',base),'utf8');
 const sha256=value=>createHash('sha256').update(value).digest('hex');
 const sdkEvidence={mangaSourceSHA:sha256(mangaSource),shellSourceSHA:sha256(shellSource)};
 const baselineManga=readFileSync(new URL('./fixtures/manga-system-bars-r5/MangaReadingSurface.ets',import.meta.url),'utf8');
@@ -78,6 +82,35 @@ function componentMembers(source){
  assert.deepEqual(file.parseDiagnostics,[]);
  const component=file.statements.find(n=>n.members?.some(m=>m.name?.getText(file)==='build'));
  return{file,component,names:new Set(component.members.map(m=>m.name?.getText(file)))};
+}
+// Run the actual novel @Prop/@Watch ownership edge and control-session
+// visibility projection. Only unrelated input/awake/IO callbacks are seams;
+// the native bar policy and its serialized Coordinator remain production.
+function novelSdkFixture(f,theme,extendIntoCutout,text=novelSource){
+ const properties=createArkUIPropertyRuntimeProbe();let identity=true;
+ const names=['isReaderIdentityCurrent','windowChromeActive','windowChromeOverlayActive',
+  'windowControlsPresented','readerSettingsSnapshot','latestControlVisualSession','sessionLaunch',
+  'controlsPresentedForWindow','onWindowChromeActiveChanged','applyWindowChrome',
+  'applyWindowPolicyForChromeOwner','applyReaderWindowPolicy','windowPolicyFor'];
+ const {owner,output}=createReaderBuilderProbe(text,names,{
+  ...properties.sdk,...controlSession,createDefaultReaderSettingsSnapshot,readerControlHostVisible,
+  ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,ReaderWindowPolicy:f.P,
+  readerAppearanceThemeStyle,readerAppearanceChromeTone,AppStorage:globalThis.AppStorage,
+ },{...properties.hooks,initialParams:{windowChromeActive:true,windowChromeOverlayActive:false,
+  isReaderIdentityCurrent:()=>identity}});
+ Object.assign(owner,{appearanceSnapshot:{activeTheme:theme},screenAwakeKeepScreenOn:false,ttsKeepScreenOn:false,
+  onControlInputBoundaryChanged(){},syncVolumeKeyPolicy(){}});
+ owner.readerSettingsSnapshot={...createDefaultReaderSettingsSnapshot(),extendIntoCutout};
+ if(!sdkEvidence.novelEmittedSHA)sdkEvidence.novelEmittedSHA=sha256(output);
+ return{owner,properties,setIdentity:value=>{identity=value;},
+  async controls(visible){
+   owner.latestControlVisualSession=visible?controlSession.openReaderControlSession(controlSession.createReaderControlSessionState(),0):
+    controlSession.dismissReaderControlSession(owner.latestControlVisualSession,0);
+   owner.applyWindowPolicyForChromeOwner();properties.flush();await settle();
+  },
+  async props(value){owner.updateStateVars({windowChromeActive:owner.windowChromeActive,
+   windowChromeOverlayActive:owner.windowChromeOverlayActive,...value});properties.flush();await settle();},
+ };
 }
 // Select unchanged production members; the R5 negative selects only members it
 // actually has so its failure is the observed native visibility, not missing code.
@@ -501,7 +534,7 @@ await check('showing controls retries a failed color even when visible-bar polic
  assert.equal(w.properties.navigationBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='paper').paperStart,'visible controls must not keep stale app color');
  assert.equal(w.calls.slice(before).filter(c=>c[0]==='visible').length,0,'unchanged visibility remains deduplicated');f.C.detach();
 });
-await check('actual cutout setting true to false preserves measured band across delayed show area and all eight themes',async()=>{
+await check('actual cutout setting true to false preserves immersion and measured band across control reveal in all eight themes',async()=>{
  for(const t of READER_THEME_DEFINITIONS)for(const initiallyOpen of [false,true]){
    const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
    let controls=initiallyOpen;const saved=[];
@@ -515,21 +548,57 @@ await check('actual cutout setting true to false preserves measured band across 
    assert.equal(f.C.metrics().statusBarHeight,48);
    if(!initiallyOpen)w.avoidTop={left:0,top:0,width:0,height:0}; // API ACK precedes visible-area event.
    e.commitReaderWindowSettings({...e.readerSettingsSnapshot,extendIntoCutout:false});await settle();
-   assert.equal(saved.at(-1).extendIntoCutout,false);assert.equal(w.barEnabled.status,true);
+   assert.equal(saved.at(-1).extendIntoCutout,false);assert.equal(w.barEnabled.status,initiallyOpen,
+     'cutout safety settings cannot show the system status bar during immersion');
    assert.equal(f.C.metrics().statusBarHeight,48,`${t.id}: show ACK must not erase measured band`);
    if(!initiallyOpen){
+     controls=true;await e.applyReaderWindowPolicy(e.readerSettingsSnapshot);await settle();
+     assert.equal(w.barEnabled.status,true,'only the actual control presentation reveals the system status bar');
      w.events.get('avoidAreaChange')({});assert.equal(f.C.metrics().statusBarHeight,48,'intermediate zero event during reveal');
      w.avoidTop={left:2,top:1,width:386,height:50};w.events.get('avoidAreaChange')({});
      assert.deepEqual(f.C.metrics().statusBarRect,new metrics.ReaderRectVp(2,1,386,50));
    }
    controls=false;await e.applyReaderWindowPolicy(e.readerSettingsSnapshot);
-   assert.equal(w.barEnabled.status,true,'closing controls with cutout off keeps status visible');
+   assert.equal(w.barEnabled.status,false,'closing controls restores immersion even when cutout extension is off');
    assert.equal(w.properties.statusBarColor,'#00000000');assert.equal(w.properties.statusBarContentColor,t.statusForeground);
    assert.equal(w.properties.navigationBarColor,t.statusBackground);
    w.avoidTop={left:0,top:0,width:0,height:0};w.events.get('avoidAreaChange')({});
-   assert.equal(f.C.metrics().statusBarHeight,0,'after positive reveal, a later authoritative zero can clear the band');
+   assert.equal(f.C.metrics().statusBarHeight,initiallyOpen?48:50,
+     'hidden native avoid area retains this geometry\'s measured band for the page-owned top information');
    f.C.detach();
  }
+});
+await check('actual novel SDK ownership and control sessions hide/show/hide independent of cutout, navigation and page mode',async()=>{
+ for(const extend of[false,true])for(const hideNavigationBar of[false,true])for(const mode of['none','slide','cover','simulation','continuous']){
+  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+  const n=novelSdkFixture(f,'paper',extend);
+  n.owner.readerSettingsSnapshot={...n.owner.readerSettingsSnapshot,hideNavigationBar,
+   navigationMode:mode==='continuous'?'continuous':'paged',pageTransition:mode==='continuous'?'none':mode};
+  await n.controls(false);
+  assert.equal(w.barEnabled.status,false,'the real immersive owner always hides the native status bar');
+  assert.equal(w.barEnabled.navigation,!hideNavigationBar,'navigation preference stays independent');
+  assert.equal(n.owner.windowControlsPresented,false);assert.equal(f.app.get('readerTopInfoSuppressed'),false);
+  await n.controls(true);
+  assert.equal(w.barEnabled.status,true,'the real control session exposes the native status bar');
+  assert.equal(n.owner.windowControlsPresented,true);assert.equal(f.app.get('readerTopInfoSuppressed'),true);
+  await n.controls(false);
+  assert.equal(w.barEnabled.status,false,'the real close session restores immersive status');
+  assert.equal(n.owner.windowControlsPresented,false);assert.equal(f.app.get('readerTopInfoSuppressed'),false);
+  await n.props({windowChromeActive:false});
+  assert.equal(w.barEnabled.status,true,'actual inactive @Prop/@Watch returns the native bar to App');
+  n.setIdentity(false);w.calls.length=0;await n.controls(false);
+  assert.equal(w.calls.length,0,'an obsolete reader cannot issue any native request over App');
+  f.C.detach();
+ }
+});
+await check('old cutout-dependent novel policy is rejected by the actual SDK immersive regression',async()=>{
+ const broken=novelSource.replace('!forceStatusBarVisible,','forceStatusBarVisible ? false : snapshot.extendIntoCutout,');
+ assert.notEqual(broken,novelSource,'negative control restores the actual historical production policy');
+ const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const n=novelSdkFixture(f,'paper',false,broken);await n.controls(false);
+ assert.throws(()=>assert.equal(w.barEnabled.status,false,'immersive status bar must be hidden'),/immersive status bar must be hidden/,
+  'the original setting-dependent bug must fail the same native observation');
+ f.C.detach();
 });
 await check('pending status reveal never borrows another window geometry or replacement window measurement',async()=>{
  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
@@ -569,4 +638,4 @@ await check('show superseded by hide converges and same-size rotation does not r
 for(const result of cases)console.log(JSON.stringify(result));
 console.log(JSON.stringify({sdkEvidence,cases:cases.length}));
 assert.equal(cases.filter(x=>x.status==='FAIL').length,0,'production window chrome scenarios');
-console.log('PASS actual SDK Manga/Shell Props/State Watch → production intent → actual Coordinator, authored phone mask opening/drag/closing/restore, both Area orders and font-metric retry, plus existing LRE palette/order cases and nine production counterfactuals. Native branch removal, subscriber delivery and Window promises are controlled boundaries; no device pixel, compositor, failure-frequency or native-bar acceptance claim.');
+console.log('PASS actual SDK Manga/Shell Props/State Watch → production intent → actual Coordinator, authored phone mask opening/drag/closing/restore, both Area orders and font-metric retry, plus actual novel SDK ownership/control sessions, existing LRE palette/order cases and ten production counterfactuals. Native branch removal, subscriber delivery and Window promises are controlled boundaries; no device pixel, compositor, failure-frequency or native-bar acceptance claim.');

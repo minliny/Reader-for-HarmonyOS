@@ -572,3 +572,120 @@ for (const contentKind of ['manga','audio']) {
  assert.deepEqual(reached,[],'known non-text cached/fresh entry performs no request');
 }
 console.log('PASS production outer-detail/known-cache media guard without changing bookshelf display or data');
+
+// Directory display facts are a thin Core DTO projection, online and cached.
+{
+  const metadata = { displayTitle: '１００（上）', isVip: true, isPay: false, contextTitle: '第一部 / 第二卷' };
+  const raw = { index: 0, title: '✿·１００（上）', url: '/chapter/100', level: 1, ...metadata };
+  const decoded = gateway.decodeToc([raw])[0];
+  for (const [key, value] of Object.entries(metadata)) assert.equal(decoded[key], value);
+  assert.equal(decoded.title, raw.title); assert.equal(decoded.index, 0); assert.equal(decoded.url, raw.url);
+  assert.equal(gateway.decodeToc([{ ...raw, title: '' }])[0].title, '', 'raw missing titles reach the shared display fallback');
+  for (const malformed of [{ isVip: 1 }, { isPay: 'false' }, { displayTitle: 7 }, { contextTitle: [] }]) {
+    assert.throws(() => gateway.decodeToc([{ ...raw, ...malformed }]), error =>
+      error instanceof Error && error.code === 'invalidResponse' && error.command === 'book.toc' && /directory .* invalid/.test(error.message));
+  }
+  const Local = (await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts')).LocalReadingFlowGateway;
+  const local = new Local({ async request(method, params) {
+    assert.equal(method, 'local_book.toc'); assert.equal(params.bookId, 'metadata-local');
+    return { data: { sourceId: 'local', bookId: 'metadata-local', toc: [raw] } };
+  } });
+  const localEntry = (await local.loadToc('metadata-local')).entries[0];
+  for (const [key, value] of Object.entries(metadata)) assert.equal(localEntry[key], value);
+  assert.equal(localEntry.title, raw.title); assert.equal(localEntry.downloadState, 'unknown');
+  const cachedGateway = new RemoteReadingFlowGateway({ async request(method) {
+    assert.equal(method, 'cache.book.status');
+    return { data: { sourceId: SOURCE_ID, bookId: BOOK_ID, tocAvailable: true,
+      chapters: [{ ...raw, chapterIndex: 0, navigable: true }] } };
+  } });
+  const cached = await cachedGateway.openCachedSession({ sourceId: SOURCE_ID, bookId: BOOK_ID,
+    detailUrl: BOOK_ID, title: 'Cached metadata', author: 'Author' });
+  for (const [key, value] of Object.entries(metadata)) assert.equal(cached.entries[0][key], value);
+  assert.equal(cached.entries[0].title, raw.title);
+  const malformedCache = new RemoteReadingFlowGateway({ async request(method) {
+    assert.equal(method, 'cache.book.status');
+    return { data: { sourceId: SOURCE_ID, bookId: BOOK_ID, tocAvailable: true,
+      chapters: [{ ...raw, chapterIndex: 0, navigable: true, isVip: 'true' }] } };
+  } });
+  await assert.rejects(() => malformedCache.openCachedSession({ sourceId: SOURCE_ID, bookId: BOOK_ID,
+    detailUrl: BOOK_ID, title: 'Cached metadata', author: 'Author' }), error =>
+    error.code === 'cacheDerivedCorrupt' && error.command === 'cache.book.status' &&
+    error.causeValue?.code === 'invalidResponse' && /directory isVip is invalid/.test(error.message),
+  'malformed optional cached metadata reaches the existing derived-cache corruption classification');
+}
+
+// Cold offline manga uses the real Surface method and actual catalog,
+// manifest, progress and image adapters. The Core port has no prepared entry
+// or supplied session; only canonical cached data and local pixels exist.
+{
+ const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+ const {MangaSessionGateway}=await import('../entry/src/main/ets/features/manga/MangaSessionGateway.ts');
+ const {MangaSessionController}=await import('../entry/src/main/ets/features/manga/MangaSessionController.ts');
+ const {MangaBookPresentation}=await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+ const {mangaDirectoryDisplay}=await import('../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts');
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),
+  ['open','acquireCatalog','effectiveFit','configureAdjacentChapter','directoryEntries','directoryCurrentIndex','directoryCurrentCatalogEntry','directoryCurrentTitle','adjacentChapter'],
+  {RemoteReadingFlowGateway,MangaSessionGateway,MangaBookPresentation,mangaDirectoryDisplay,AppStorage:{setOrCreate(){}}});
+ const mangaSeed={sourceId:SOURCE_ID,bookId:BOOK_ID,detailUrl:BOOK_ID,title:'Cached manga',author:'Writer',contentKind:'manga',sourceVersion:'v1'};
+ for(const scenario of ['verified','legacy','wrong-version','partial-proof','empty-proof']){
+  const requests=[],images=[],releases=[];
+  const pageId='mp1:'+'a'.repeat(64),resourceRef='manga:'+pageId;
+  const chapter={chapterIndex:0,chapterTitle:'✿·199回\n',cached:true,resources:[],manifest:{
+   chapter:{sourceId:SOURCE_ID,bookId:BOOK_ID,chapterId:'/cached/199'},sourceRuleVersion:'v1',manifestVersion:'cached-manifest',decodeRevision:'identity-v1',
+   pages:[{ordinal:0,pageId,resourceRef}]}};
+  const status={sourceId:SOURCE_ID,bookId:BOOK_ID,tocAvailable:true,continuationVariables:{},
+   ...(scenario==='legacy'?{}:scenario==='partial-proof'?{catalogVersion:'catalog',contextVersion:'context'}:
+    {sourceVersion:scenario==='wrong-version'?'v2':'v1',catalogVersion:scenario==='empty-proof'?' ':'catalog',contextVersion:'context'}),
+   chapters:[{chapterIndex:0,title:chapter.chapterTitle,url:chapter.manifest.chapter.chapterId,variables:{},navigable:true,
+    proofState:scenario==='legacy'?'legacyUnknown':'verified',level:1,displayTitle:'199回',isVip:true}]};
+  const runtime={supportsCoreCapability:capability=>['manga.entry.v1','manga.chapter.v1'].includes(capability),
+   async request(method,params={}){
+    requests.push({method,params});
+    if(method==='manga.entry.get')return{data:{entry:null}};
+    if(method==='cache.book.status'){assert.equal(params.sourceId,SOURCE_ID);assert.equal(params.bookId,BOOK_ID);return{data:status};}
+    if(method==='reading.progress.get')return{data:{token:{epoch:900,revision:0},location:null}};
+    if(method==='manga.chapter.get'){assert.equal(params.policy,'cacheOnly');assert.equal(params.chapterIndex,0);return{data:chapter};}
+    throw Error('offline catalog cannot dispatch '+method);
+   },bookAcquisitions(){throw Error('offline cannot acquire a source catalog');},
+   async loadReadingImage(...args){images.push(args);assert.equal(args[6],false,'actual image adapter has no network authority');
+    return{fileUri:'file://offline-199',width:600,height:800,revision:'cached-pixels'};},
+   releaseReadingImage:uri=>releases.push(uri)};
+  const controller=new MangaSessionController(runtime);
+  const surface=Object.assign(new Surface(),{runtime,controller,mounted:true,offline:true,sourceId:SOURCE_ID,bookId:BOOK_ID,
+   remoteBookSeed:mangaSeed,remoteSession:undefined,fitPreference:'width',horizontal:false,directoryProjection:[],
+   isReaderIdentityCurrent:()=>true,publish(){},updateViewport:async()=>{},
+   onRemoteSessionReady:value=>{surface.remoteSession=value;}});
+  await surface.open(controller);
+  assert.equal(surface.opened,true,scenario+': typed manga cold catalog reaches cached pixels without a prepared session');
+  assert.equal(surface.error??'','');assert.equal(surface.remoteSession.contentKind,'manga');
+  assert.equal(surface.remoteSession.acquisitionMode,'offline');assert.equal(surface.remoteSession.requiresContextRefresh,true);
+  assert.equal(requests.filter(row=>row.method==='cache.book.status').length,1);
+  assert.ok(requests.every(row=>['manga.entry.get','cache.book.status','reading.progress.get','manga.chapter.get'].includes(row.method)));
+  assert.ok(images.length>0);assert.ok(controller.visiblePages().some(page=>page.status==='ready'));
+  const entries=surface.directoryEntries();assert.equal(entries.length,1);assert.equal(entries[0].title,chapter.chapterTitle);
+  assert.equal(surface.directoryCurrentCatalogEntry(0).index,0);
+  assert.equal(surface.directoryCurrentTitle(),scenario==='verified'?'199回':chapter.chapterTitle);
+  assert.equal(entries[0].level,scenario==='verified'?1:undefined);assert.equal(entries[0].displayTitle,scenario==='verified'?'199回':undefined);
+  assert.equal(entries[0].isVip,scenario==='verified'?true:undefined,'unknown/old-version presentation stays a plain canonical row');
+  const oldSession=surface.remoteSession;
+  surface.remoteSession={...oldSession,identity:{sourceId:'foreign',bookId:BOOK_ID}};
+  assert.deepEqual(surface.directoryEntries(),[],'a foreign cache cannot borrow the admitted reader identity');
+  surface.remoteSession={...oldSession,entries:[{...oldSession.entries[0],url:'/different'}]};
+  assert.deepEqual(surface.directoryEntries(),[],'offline catalog must still include the current immutable manifest chapter');
+  surface.remoteSession=oldSession;
+  await controller.close();assert.ok(releases.includes('file://offline-199'));
+ }
+ const reached=[],mediaGateway=new RemoteReadingFlowGateway({async request(method){reached.push(method);return{data:{sourceId:SOURCE_ID,bookId:BOOK_ID,
+  tocAvailable:true,chapters:[{chapterIndex:0,title:'Original',url:'/cached/199',variables:{}}]}};}});
+ await assert.rejects(mediaGateway.openCachedCatalogSession(mangaSeed),error=>error.code==='nonTextChapter');
+ await assert.rejects(mediaGateway.openCachedCatalogSession({...mangaSeed,contentKind:'audio'},()=>true,false,true),error=>error.code==='nonTextChapter');
+ assert.deepEqual(reached,[],'ordinary catalog and audio admission never borrow explicit manga permission');
+ for(const contentKind of ['text','audio']){
+  const surface=Object.assign(new Surface(),{runtime:{request(){throw Error('wrong-type Surface cannot read Core');}},offline:true,
+   remoteBookSeed:{...mangaSeed,contentKind}});
+  await assert.rejects(surface.acquireCatalog(()=>true),/MANGA_SESSION_IDENTITY_MISMATCH/);
+ }
+ const novel=await mediaGateway.openCachedCatalogSession({...mangaSeed,contentKind:'text'});
+ assert.equal(novel.acquisitionMode,'offline');assert.equal(novel.entries[0].title,'Original');assert.deepEqual(reached,['cache.book.status']);
+}
+console.log('PASS real Surface + cached Gateway offline typed manga: cold/no-prepared/no-session, local pixels, missing/version-mismatched proof conservative directory, exact manifest identity, no source/network RPC, ordinary novel/audio isolation');

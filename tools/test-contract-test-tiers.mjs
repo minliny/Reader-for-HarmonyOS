@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, copyFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runContracts, runContractsBounded, contractTests } from './run-contract-tests.mjs';
+import { runContracts, runContractsBounded, contractTests, MAX_CONTRACT_TIMEOUT_MS } from './run-contract-tests.mjs';
 
 contractTests(fileURLToPath(new URL('..', import.meta.url)), 'full');
 
@@ -34,6 +35,43 @@ try {
   assert.deepEqual(completed.results.map(row => row.name).sort(), ['test-fail.mjs', 'test-pass.mjs']);
   assert.ok(completed.results.every(row => row.status === 0 && row.timedOut === false && row.termination.length === 0));
 
+  // Scope is an explicit subset of the same complete, classified inventory.
+  // Execute the real CLI against a fixture whose omitted child would fail.
+  manifest.scopes = { 'manga-image-cache': ['test-pass.mjs'] }; save();
+  writeFileSync(join(root, 'tools/test-fail.mjs'), 'process.exit(7)');
+  assert.deepEqual(contractTests(root, 'full', 'manga-image-cache').selected, ['test-pass.mjs']);
+  assert.deepEqual(contractTests(root, 'full', 'manga-image-cache').omitted, ['test-fail.mjs']);
+  assert.equal(contractTests(root, 'full').selected.length, 2, 'default full never inherits the scope');
+  assert.throws(() => contractTests(root, 'full', 'unknown'), /unknown contract scope/);
+  assert.throws(() => contractTests(root, 'source', 'manga-image-cache'), /source tier/);
+  manifest.scopes['manga-image-cache'] = []; save();
+  assert.throws(() => contractTests(root, 'full'), /empty contract scope/);
+  manifest.scopes['manga-image-cache'] = ['test-pass.mjs', 'test-pass.mjs']; save();
+  assert.throws(() => contractTests(root, 'full'), /duplicate scope test/);
+  manifest.scopes['manga-image-cache'] = ['test-not-declared.mjs']; save();
+  assert.throws(() => contractTests(root, 'full'), /unclassified scope test/);
+  manifest.scopes['manga-image-cache'] = ['test-pass.mjs']; save();
+  writeFileSync(join(root, 'tools/test-new.mjs'), 'process.exit(0)');
+  assert.throws(() => contractTests(root, 'full', 'manga-image-cache'), /every discovered test/);
+  rmSync(join(root, 'tools/test-new.mjs'));
+  const fixtureRunner = join(root, 'tools/run-contract-tests.mjs');
+  copyFileSync(new URL('./run-contract-tests.mjs', import.meta.url), fixtureRunner);
+  const resultsFile = join(root, 'cli-results.json');
+  const cli = spawnSync(process.execPath, [fixtureRunner, '--scope', 'manga-image-cache', '--results-file', resultsFile,
+    '--test-timeout-ms', '2000'], { encoding: 'utf8', timeout: 5000 });
+  assert.equal(cli.status, 0, cli.stderr); assert.match(cli.stdout, /full suite NOT_RUN/);
+  const cliReport = JSON.parse(readFileSync(resultsFile, 'utf8'));
+  assert.deepEqual(cliReport.selected, ['test-pass.mjs']); assert.deepEqual(cliReport.omitted, ['test-fail.mjs']);
+  assert.equal(cliReport.results.length, 1); assert.equal(cliReport.results[0].status, 0);
+  assert.equal(cliReport.scopeTimeoutMs, 110000); assert.equal(cliReport.scopeExpired, false); assert.deepEqual(cliReport.unrun, []);
+  assert.ok(cliReport.millisecondsTotal <= cliReport.scopeTimeoutMs);
+  for (const argv of [['--scope', 'manga-image-cache', '--test-timeout-ms', String(MAX_CONTRACT_TIMEOUT_MS + 1)],
+    ['--scope', 'unknown'], ['--full', '--test-timeout-ms', '0'], ['--full', '--test-timeout-ms', '2', '--test-timeout-ms', '2']]) {
+    const rejected = spawnSync(process.execPath, [fixtureRunner, ...argv], { encoding: 'utf8', timeout: 5000 });
+    assert.notEqual(rejected.status, 0, 'invalid scope/deadline/duplicate cannot execute the fixture suite');
+  }
+  await assert.rejects(runContractsBounded(root, 'full', 1, { timeoutMs: MAX_CONTRACT_TIMEOUT_MS + 1 }), /invalid test deadline/);
+
   const nativeFixture = (label, scripts) => {
     const directory = join(root, label); mkdirSync(join(directory, 'tools'), { recursive: true });
     for (const [name, source] of Object.entries(scripts)) writeFileSync(join(directory, 'tools', name), source);
@@ -48,6 +86,80 @@ try {
     const log = failure.message.match(/\); ([^\n]+\.log)/)?.[1]; assert.ok(log, 'per-child failure log retained');
     return JSON.parse(readFileSync(join(dirname(log), 'results.json'), 'utf8')).results;
   };
+
+  const scopedFixture = (label, scripts) => {
+    const directory = nativeFixture(label, scripts), manifestPath = join(directory, 'tools/contract-test-tiers.json');
+    const classification = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    classification.scopes = { 'manga-image-cache': Object.keys(scripts).sort() };
+    writeFileSync(manifestPath, JSON.stringify(classification)); return directory;
+  };
+  const scopeFailure = async (directory, workers) => {
+    // This exercises delivery to an installed child signal handler, rather than
+    // the separate process-startup deadline path. SDK/compiler peers can consume
+    // most of a 250ms window before Node has evaluated the fixture at all.
+    const scopeTimeoutMs = 2_000;
+    let failure;
+    try { await runContractsBounded(directory, 'full', workers,
+      { scope: 'manga-image-cache', scopeTimeoutMs, timeoutMs: 4_000, killGraceMs: 1_000 }); } catch (error) { failure = error; }
+    assert.ok(failure); assert.match(failure.message, new RegExp(`total timeout ${scopeTimeoutMs}ms`));
+    const report = JSON.parse(readFileSync(failure.message.split('); ')[1], 'utf8'));
+    assert.equal(report.scopeExpired, true); assert.ok(report.unrun.length > 0);
+    assert.ok(report.millisecondsTotal >= report.scopeTimeoutMs);
+    assert.equal(report.results.length + report.unrun.length, report.selected.length);
+    assert.ok(report.results.every(row => row.scopeTimedOut && row.timedOut), 'every active child is terminated and settled');
+    return report;
+  };
+  const unrunMarker = join(root, 'unrun-must-not-execute');
+  const afterScript = `import {writeFileSync} from 'node:fs';writeFileSync(${JSON.stringify(unrunMarker)},'incorrect dispatch');`;
+  const signalFixture = (label, exits) => {
+    const ready = join(root, `${label}-ready`), term = join(root, `${label}-term`);
+    const script = `import {writeFileSync} from 'node:fs';` +
+      `process.on('SIGTERM',()=>{writeFileSync(${JSON.stringify(term)},String(process.pid));${exits ? 'process.exit(0);' : ''}});` +
+      `writeFileSync(${JSON.stringify(ready)},String(process.pid));setInterval(()=>{},1000);`;
+    return { ready, term, script };
+  };
+  const cleanSignal = signalFixture('scope-clean', true);
+  const scopeClean = scopedFixture('scope-term-clean', {
+    'test-active.mjs': cleanSignal.script,
+    'test-unrun.mjs': afterScript,
+  });
+  const scopeCleanReport = await scopeFailure(scopeClean, 1);
+  assert.equal(readFileSync(cleanSignal.ready, 'utf8'), readFileSync(cleanSignal.term, 'utf8'), 'the actual initialized child received TERM');
+  assert.equal(scopeCleanReport.results[0].status, 0, 'TERM exit0 is still a failed overall scope');
+  assert.equal(scopeCleanReport.results[0].signal, null);
+  assert.deepEqual(scopeCleanReport.results[0].termination, [{ signal: 'SIGTERM', sent: true }]);
+  assert.deepEqual(scopeCleanReport.unrun, ['test-unrun.mjs']); assert.equal(existsSync(unrunMarker), false);
+  const ignoredSignals = [signalFixture('scope-ignore-a', false), signalFixture('scope-ignore-b', false)];
+  const scopeIgnore = scopedFixture('scope-term-ignored', {
+    'test-active-a.mjs': ignoredSignals[0].script,
+    'test-active-b.mjs': ignoredSignals[1].script,
+    'test-unrun-a.mjs': afterScript, 'test-unrun-b.mjs': afterScript,
+  });
+  const scopeIgnoreReport = await scopeFailure(scopeIgnore, 2);
+  for (const fixture of ignoredSignals)
+    assert.equal(readFileSync(fixture.ready, 'utf8'), readFileSync(fixture.term, 'utf8'), 'each initialized child received and ignored TERM');
+  assert.equal(scopeIgnoreReport.results.length, 2);
+  assert.ok(scopeIgnoreReport.results.every(row => row.signal === 'SIGKILL' && row.termination.length === 2));
+  assert.deepEqual(scopeIgnoreReport.unrun, ['test-unrun-a.mjs', 'test-unrun-b.mjs']); assert.equal(existsSync(unrunMarker), false);
+  const unlimitedFull = nativeFixture('full-no-scope-cap', { 'test-slow.mjs': 'setTimeout(()=>process.exit(0),90);' });
+  const fullWithoutScopeCap = await runContractsBounded(unlimitedFull, 'full', 1, { scopeTimeoutMs: 1, timeoutMs: 2000 });
+  assert.equal(fullWithoutScopeCap.scopeTimeoutMs, null); assert.equal(fullWithoutScopeCap.scopeExpired, false);
+  assert.ok(fullWithoutScopeCap.millisecondsTotal > 1, 'full keeps per-child deadlines without a new total limit');
+  const ioFailure = scopedFixture('scope-worker-io-failure', {
+    'test-a-injector.mjs': "import {tmpdir} from 'node:os';import {dirname,join} from 'node:path';import {mkdirSync} from 'node:fs';" +
+      "mkdirSync(join(dirname(dirname(tmpdir())),'test-c-next.mjs.log'));setTimeout(()=>process.exit(0),200);",
+    'test-b-active.mjs': "process.on('SIGTERM',()=>{});setInterval(()=>{},1000);",
+    'test-c-next.mjs': afterScript,
+  });
+  let ioError;
+  try { await runContractsBounded(ioFailure, 'full', 2,
+    { scope: 'manga-image-cache', scopeTimeoutMs: 2000, timeoutMs: 2000, killGraceMs: 100 }); } catch (error) { ioError = error; }
+  assert.ok(ioError); assert.match(ioError.message, /contract worker failed/);
+  const ioReport = JSON.parse(readFileSync(ioError.message.split('); ')[1], 'utf8'));
+  assert.deepEqual(ioReport.unrun, ['test-c-next.mjs']);
+  assert.equal(ioReport.results.find(row => row.name === 'test-b-active.mjs').signal, 'SIGKILL');
+  assert.equal(ioReport.results.length, 2, 'I/O failure still reaps the other worker before reporting failure');
+  assert.equal(existsSync(unrunMarker), false);
 
   // A real child still uses the unchanged finite timeout after wall-clock
   // adjustment. Duration is monotonic; the raw wall difference stays visible.
@@ -137,5 +249,5 @@ try {
   assert.equal(readFileSync(sentinel, 'utf8'), 'preserve');
   assert.ok(cleanRows.find(row => row.timedOut).temporaryStorageRemoved === false, 'expired exit0 cannot trigger successful scratch cleanup');
   assert.ok(ignoredRows.find(row => row.timedOut).temporaryStorageRemoved === false);
-  console.log('PASS: failed/unclassified/duplicate/empty tiers, timeout cleanup exit0, TERM ignore/KILL, actual concurrency bound and every selected settlement');
+  console.log('PASS: complete inventory and explicit scope CLI, finite deadline, failed/unclassified/duplicate/empty tiers, timeout cleanup exit0, TERM ignore/KILL, actual concurrency bound and every selected settlement');
 } finally { rmSync(root, { recursive: true, force: true }); }

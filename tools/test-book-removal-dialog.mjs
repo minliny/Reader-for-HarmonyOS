@@ -50,7 +50,7 @@ const local = { sourceId: 'local', bookId: 'a', title: '本地书' };
 const online = { sourceId: 'source', bookId: 'b', title: '在线书' };
 function fixture(route, book = local) {
   const events = [];activeEvents=events;
-  const host = Object.assign(new Host(), { route, detailBook: book, shelfBooks: [local, online],
+  const host = Object.assign(new Host(), { route, detailBook: book, detailInBookshelf: true, shelfBooks: [local, online],
     bookshelfSelectionBooks: [local, online], bookshelfSelectionReady: true,
     bookshelfBatchRemovalBusy: false, shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, offlineMutationActiveKey: '',
     readingSessionActive: false, sourceSwitchVisible: false, pendingSourceSwitch: undefined,
@@ -61,6 +61,10 @@ function fixture(route, book = local) {
     removeShelfBooks(targets) { events.push(['batch', targets]); },
   });
   return { host, events };
+}
+{
+ const {host,events}=fixture('detail',local);host.detailInBookshelf=false;host.requestRemoveDetailBook();
+ assert.deepEqual(events,[],'removed local metadata cannot dispatch another delete or open a dead confirmation');
 }
 for (const origin of ['detail', 'bookshelf', 'bookshelfMultiSelect']) {
   const request = h => origin === 'detail' ? h.requestRemoveDetailBook() :

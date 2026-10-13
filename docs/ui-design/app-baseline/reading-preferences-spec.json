@@ -1,0 +1,3532 @@
+{
+  "schemaVersion": 2,
+  "domain": "reading-preferences",
+  "purpose": "实际应用阅读偏好视觉重绘，供效果检验和跨平台开发",
+  "previousDesignAuthority": "INVALIDATED_AND_ARCHIVED",
+  "classificationVocabulary": [
+    "existing-app",
+    "confirmed-demo-unimplemented",
+    "unconfirmed-demo"
+  ],
+  "pendingEvidenceRule": {
+    "classificationStatus": "pending",
+    "candidateCategory": "existing-app",
+    "category": null,
+    "meaning": "已有源码候选的证据尚未核实，不表示未实现，也不是新demo提案。"
+  },
+  "nativeFrame": {
+    "width": 1280,
+    "height": 2832,
+    "density": 3.5,
+    "logicalViewport": [
+      365.714,
+      809.143
+    ],
+    "manifestBinding": "OPEN",
+    "installedSourceBinding": "OPEN",
+    "demoScreenshotComparison": "OPEN",
+    "iosAndroidNativeAcceptance": "OPEN"
+  },
+  "captures": [
+    {
+      "id": "reader-control-redo-022-appearance-quick",
+      "png": "evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-022-appearance-quick.png",
+      "sha256": "f7cdb4950dac13b9c836e46de4a3c2c470755d265c4f5c7830b71449d6a5b234",
+      "classification": "existing-app",
+      "pngInspected": true
+    },
+    {
+      "id": "reader-control-redo-023-appearance-full",
+      "png": "evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-023-appearance-full.png",
+      "sha256": "8db0ad5c664bf7900fa7ba5ce68d77ce6a16ad2b7962d07a26e5c6e1669c7aaf",
+      "classification": "existing-app",
+      "pngInspected": true
+    },
+    {
+      "id": "reader-control-redo-024-appearance-layout",
+      "png": "evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-024-appearance-layout.png",
+      "sha256": "f0b9db24d41fe9b850b5e8e43776b70096a3221afc45efffe768f861b335bd75",
+      "classification": "existing-app",
+      "pngInspected": true
+    },
+    {
+      "id": "reader-control-redo-025-reader-settings-quick",
+      "png": "evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-025-reader-settings-quick.png",
+      "sha256": "ae3ac9df40bdd66bff6e47646cbe1b623cc7bbb5cd82dadc05a64786d45193da",
+      "classification": "existing-app",
+      "pngInspected": true
+    },
+    {
+      "id": "reader-control-redo-026-reader-settings-full",
+      "png": "evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-026-reader-settings-full.png",
+      "sha256": "58548b4e8ce1966c436c2ac3ee353fb3adc43514972ec21a57de62972e0356fb",
+      "classification": "existing-app",
+      "pngInspected": true
+    },
+    {
+      "id": "reader-control-redo-027-reader-settings-controls",
+      "png": "evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-027-reader-settings-controls.png",
+      "sha256": "4ebb61e75612e4d9396012bfdce44d30cf9c2d2a1c6c8cb1fa5f52bac9694f62",
+      "classification": "existing-app",
+      "pngInspected": true
+    }
+  ],
+  "screens": [
+    {
+      "id": "reader-appearance",
+      "label": "阅读界面",
+      "classification": "existing-app",
+      "classificationStatus": "classified",
+      "developmentBaselineAdmission": true,
+      "captureIds": [
+        "reader-control-redo-022-appearance-quick",
+        "reader-control-redo-023-appearance-full",
+        "reader-control-redo-024-appearance-layout"
+      ],
+      "controls": [
+        {
+          "id": "theme-library",
+          "label": "主题库",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "items": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                "日间",
+                "暖白",
+                "夜间",
+                "暖夜",
+                "纸纹",
+                "青叶纹",
+                "靛夜",
+                "林夜纹"
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "grid": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "4列×2行；Quick只色块，Full色块+名称卡",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "swatchSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                46,
+                18
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "colors": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                "#f7f3ea",
+                "#f2e8d3",
+                "#2b2823",
+                "#413020",
+                "#eee4d0",
+                "#e3ebdd",
+                "#26313f",
+                "#24382c"
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": "日间",
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "theme-0",
+          "label": "日间",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "swatchColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#f7f3ea",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                62.5,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "按实景可用宽度4等列，58.8高",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": true,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "theme-1",
+          "label": "暖白",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "swatchColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#f2e8d3",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                62.5,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "按实景可用宽度4等列，58.8高",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "theme-2",
+          "label": "夜间",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "swatchColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2b2823",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                62.5,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "按实景可用宽度4等列，58.8高",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "theme-3",
+          "label": "暖夜",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "swatchColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#413020",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                62.5,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "按实景可用宽度4等列，58.8高",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "theme-4",
+          "label": "纸纹",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "swatchColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#eee4d0",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                62.5,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "按实景可用宽度4等列，58.8高",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "theme-5",
+          "label": "青叶纹",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "swatchColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#e3ebdd",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                62.5,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "按实景可用宽度4等列，58.8高",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "theme-6",
+          "label": "靛夜",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "swatchColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#26313f",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                62.5,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "按实景可用宽度4等列，58.8高",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "theme-7",
+          "label": "林夜纹",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "swatchColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#24382c",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                62.5,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullRoot": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "按实景可用宽度4等列，58.8高",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "day-night-actions",
+          "label": "日夜主题设置",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "labels": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                "已设为日间",
+                "设为夜间主题"
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "size": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                74,
+                28
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                9,
+                700
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "spacing": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 6,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": null,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "font-0",
+          "label": "系统",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "quickHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 27,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "grid": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "4列；Quick间距4，Full间距8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fontSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 12,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedBackground": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "background": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "font-1",
+          "label": "宋体",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "quickHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 27,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "grid": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "4列；Quick间距4，Full间距8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fontSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 12,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedBackground": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "background": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": true,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "font-2",
+          "label": "黑体",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "quickHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 27,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "grid": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "4列；Quick间距4，Full间距8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fontSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 12,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedBackground": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "background": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "font-3",
+          "label": "楷体",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "quickHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 27,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "grid": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "4列；Quick间距4，Full间距8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fontSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 12,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedBackground": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "background": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "font-4",
+          "label": "仿宋",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "quickHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 27,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "grid": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "4列；Quick间距4，Full间距8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fontSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 12,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedBackground": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "background": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "font-5",
+          "label": "等宽",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "quickHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 27,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "grid": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "4列；Quick间距4，Full间距8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fontSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 12,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedBackground": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "background": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "font-6",
+          "label": "思源宋体",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "quickHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 27,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "grid": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "4列；Quick间距4，Full间距8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fontSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 12,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedBackground": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "background": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "font-7",
+          "label": "霞鹜文楷",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-022-appearance-quick",
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "quickHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 27,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "grid": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "4列；Quick间距4，Full间距8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fontSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 12,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedBackground": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "background": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-022-appearance-quick",
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "font-import",
+          "label": "导入字体",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "label": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "导入",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "borderStyle": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "虚线",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "height": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "position": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "Full字体第3行第1列",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": null,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "layout-indent",
+          "label": "缩进",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 42,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "controlType": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义选择入口",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                12,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "value": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "2字符",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": "2字符",
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "layout-language",
+          "label": "简繁",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 42,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "controlType": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义选择入口",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                12,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "value": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "原文",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": "原文",
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "layout-font-size",
+          "label": "字号",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 42,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "controlType": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义减/值/加步进器",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                12,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "value": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "18px",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": "18px",
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "layout-line-height",
+          "label": "行距",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 42,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "controlType": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义减/值/加步进器",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                12,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "value": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "1.96",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": "1.96",
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "layout-paragraph-spacing",
+          "label": "段距",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 42,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "controlType": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义减/值/加步进器",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                12,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "value": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "16px",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": "16px",
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "layout-letter-spacing",
+          "label": "字距",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-023-appearance-full",
+            "reader-control-redo-024-appearance-layout"
+          ],
+          "visualProperties": {
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 42,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "controlType": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义减/值/加步进器",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                12,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "value": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "0px",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-023-appearance-full",
+                  "reader-control-redo-024-appearance-layout"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": "0px",
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        }
+      ],
+      "variants": [
+        {
+          "id": "quick",
+          "captureId": "reader-control-redo-022-appearance-quick"
+        },
+        {
+          "id": "full",
+          "captureId": "reader-control-redo-023-appearance-full"
+        },
+        {
+          "id": "layout",
+          "captureId": "reader-control-redo-024-appearance-layout",
+          "sameLogicalSurfaceAs": "full",
+          "initialScrollLogical": 88.571
+        }
+      ]
+    },
+    {
+      "id": "reader-settings",
+      "label": "阅读设置",
+      "classification": "existing-app",
+      "classificationStatus": "classified",
+      "developmentBaselineAdmission": true,
+      "captureIds": [
+        "reader-control-redo-025-reader-settings-quick",
+        "reader-control-redo-026-reader-settings-full",
+        "reader-control-redo-027-reader-settings-controls"
+      ],
+      "controls": [
+        {
+          "id": "direction",
+          "label": "屏幕方向",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-025-reader-settings-quick",
+            "reader-control-redo-026-reader-settings-full",
+            "reader-control-redo-027-reader-settings-controls"
+          ],
+          "visualProperties": {
+            "choices": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                "跟随系统",
+                "竖屏",
+                "横屏"
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickLabelFont": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                10,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullLabelFont": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                11,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "segmentTextFont": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                9,
+                500
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickBarHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullBarHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 33,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#6b9ca7",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "background": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#eee6dba3",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": "跟随系统",
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "page-style",
+          "label": "翻页样式",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-025-reader-settings-quick",
+            "reader-control-redo-026-reader-settings-full",
+            "reader-control-redo-027-reader-settings-controls"
+          ],
+          "visualProperties": {
+            "choices": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                "覆盖",
+                "滑动",
+                "仿真",
+                "滚动",
+                "无动画"
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickLabelFont": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                10,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullLabelFont": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                11,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "segmentTextFont": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                9,
+                500
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickBarHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullBarHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 33,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#6b9ca7",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "background": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#eee6dba3",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": "滑动",
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "timeout",
+          "label": "屏幕超时",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-025-reader-settings-quick",
+            "reader-control-redo-026-reader-settings-full",
+            "reader-control-redo-027-reader-settings-controls"
+          ],
+          "visualProperties": {
+            "choices": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                "跟随系统",
+                "1 分钟",
+                "5 分钟",
+                "10 分钟",
+                "始终开启"
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickLabelFont": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                10,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullLabelFont": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                11,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "segmentTextFont": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                9,
+                500
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "quickBarHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 30,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "fullBarHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 33,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "selectedColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#6b9ca7",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "background": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#eee6dba3",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-025-reader-settings-quick",
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": "跟随系统",
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "hide-navigation",
+          "label": "隐藏导航栏",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-026-reader-settings-full",
+            "reader-control-redo-027-reader-settings-controls"
+          ],
+          "visualProperties": {
+            "type": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义开关",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "trackSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                44,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                20,
+                20
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 38,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                11,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "offColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#aaa39a",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "onColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8bd",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "extend-cutout",
+          "label": "拓展到刘海（灵动岛）",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-026-reader-settings-full",
+            "reader-control-redo-027-reader-settings-controls"
+          ],
+          "visualProperties": {
+            "type": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义开关",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "trackSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                44,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                20,
+                20
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 38,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                11,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "offColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#aaa39a",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "onColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8bd",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "justify",
+          "label": "文字两端对齐",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-026-reader-settings-full",
+            "reader-control-redo-027-reader-settings-controls"
+          ],
+          "visualProperties": {
+            "type": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义开关",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "trackSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                44,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                20,
+                20
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 38,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                11,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "offColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#aaa39a",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "onColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8bd",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": true,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "align-bottom",
+          "label": "底部对齐",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-026-reader-settings-full",
+            "reader-control-redo-027-reader-settings-controls"
+          ],
+          "visualProperties": {
+            "type": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义开关",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "trackSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                44,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                20,
+                20
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 38,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                11,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "offColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#aaa39a",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "onColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8bd",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "volume-turn",
+          "label": "音量键翻页",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-026-reader-settings-full",
+            "reader-control-redo-027-reader-settings-controls"
+          ],
+          "visualProperties": {
+            "type": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义开关",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "trackSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                44,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                20,
+                20
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 38,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                11,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "offColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#aaa39a",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "onColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8bd",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "stop-tts-screen-off",
+          "label": "息屏终止朗读",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-026-reader-settings-full",
+            "reader-control-redo-027-reader-settings-controls"
+          ],
+          "visualProperties": {
+            "type": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义开关",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "trackSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                44,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                20,
+                20
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 38,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                11,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "offColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#aaa39a",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "onColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8bd",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": false,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        },
+        {
+          "id": "long-press-selection",
+          "label": "长按选择文本",
+          "classification": "existing-app",
+          "classificationStatus": "classified",
+          "developmentBaselineAdmission": true,
+          "captureIds": [
+            "reader-control-redo-026-reader-settings-full",
+            "reader-control-redo-027-reader-settings-controls"
+          ],
+          "visualProperties": {
+            "type": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "自定义开关",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "trackSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                44,
+                24
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobSize": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                20,
+                20
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "rowHeight": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": 38,
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "font": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": [
+                11,
+                400
+              ],
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "offColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#aaa39a",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "onColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#2f6373",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            },
+            "knobColor": {
+              "classification": "existing-app",
+              "classificationStatus": "classified",
+              "value": "#fffcf8bd",
+              "evidence": {
+                "captureIds": [
+                  "reader-control-redo-026-reader-settings-full",
+                  "reader-control-redo-027-reader-settings-controls"
+                ],
+                "basis": "逐张PNG直接观察；布局树和当前源码只补充测量/语义。"
+              }
+            }
+          },
+          "observedValue": true,
+          "customImplementationRequirement": "custom-app-controls",
+          "nativeResult": {
+            "classification": null,
+            "classificationStatus": "pending",
+            "candidateCategory": "existing-app",
+            "basis": "未抓到修改、持久化或正文变化的结果。"
+          },
+          "demoDraftBehavior": "只更新本地输入草稿；原生结果待取证，备注展示在画布外。"
+        }
+      ],
+      "variants": [
+        {
+          "id": "quick",
+          "captureId": "reader-control-redo-025-reader-settings-quick"
+        },
+        {
+          "id": "full",
+          "captureId": "reader-control-redo-026-reader-settings-full"
+        },
+        {
+          "id": "controls",
+          "captureId": "reader-control-redo-027-reader-settings-controls",
+          "sameLogicalSurfaceAs": "full",
+          "initialScrollLogical": 93.714
+        }
+      ]
+    }
+  ],
+  "sourceCheckedPendingContracts": [
+    {
+      "id": "metric-bounds-and-steps",
+      "classification": null,
+      "classificationStatus": "pending",
+      "candidateCategory": "existing-app",
+      "category": null,
+      "source": [
+        "entry/src/main/ets/features/reading/ReaderAppearanceState.ts:87",
+        "entry/src/main/ets/features/reading/LocalReadingExperience.ets:852"
+      ],
+      "values": {
+        "fontSize": [
+          12,
+          40,
+          2
+        ],
+        "lineHeight": [
+          1.2,
+          2.8,
+          0.08
+        ],
+        "paragraphSpacing": [
+          0,
+          32,
+          2
+        ],
+        "letterSpacing": [
+          -2,
+          4,
+          0.5
+        ]
+      },
+      "basis": "当前源码明确边界/步长，操作未实景采集；仅控制本地草稿，不能证明应用效果。"
+    }
+  ],
+  "confirmedRequirements": [
+    {
+      "id": "custom-app-controls",
+      "classification": "confirmed-demo-unimplemented",
+      "basis": {
+        "kind": "direct-user-instruction",
+        "quote": "系统控件不保留，这个 demo 的目录是检验实际效果和用于 iOS/Android UI 开发"
+      },
+      "scope": "自定义实现方向",
+      "finalVisualApproval": false
+    }
+  ],
+  "unconfirmedProposals": [],
+  "notYetObserved": [
+    "主题/字体改变后正文、持久化与日夜配置",
+    "字体重排实际拖拽与完成后位置",
+    "缩进/简繁选项弹层",
+    "导入字体选择器、导入完成与失败",
+    "阅读设置操作后的正文和设备行为",
+    "完整扩展/收起动画中间帧",
+    "横屏/夜间/iOS与Android实际实现"
+  ],
+  "canvasAnnotationRule": "开发说明和未核验状态展示在画布外；保持原生实际业务文案。"
+}

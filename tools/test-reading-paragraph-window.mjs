@@ -135,3 +135,89 @@ for (const [name, mutate, pattern] of [
   await assert.rejects(f.gateway.loadParagraphWindow(admitted, 4, 'after', 'lineSeparated', () => true), /image mismatch/);
 }
 console.log('PASS paragraph windows: actual gateway/scanner, bidirectional original paragraphs, emoji/CRLF/blank lines, giant multi-RPC, part underfill, scope/overlap/no-progress/cancellation, no whole RPC or progress/cache writes');
+
+// The cold whole-body path must use the same cooperative preparation as
+// document expansion. Exercise the actual openChapter publication boundary,
+// retaining real scalar/range preparation and controlling only IO/measurement.
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const Reader = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  ['openChapter', 'prepareChapterMeasurementProjection'], {
+    RemoteChapterCacheRefreshError: class extends Error {},
+  });
+const chapterFor = (index, content) => ({ sourceId: 's', bookId: 'b', chapterIndex: index,
+  chapterTitle: `第${index + 1}章`, content, images: [], contentVersion: `v-${index}`,
+  bodyVersion: `body-${index}`, processingVersion: 'process' });
+const oldChapter = chapterFor(2, '旧章原文');
+const largeText = ('这是原文😀éאב。\n').repeat(80660);
+function reader(load) {
+  const events = [], failures = [];
+  const owner = Object.assign(new Reader(), {
+    sourceId: 's', bookId: 'b', bookKind: 'text', lifecycleToken: 1, chapterSelectionToken: 1,
+    materializedChapterSelectionToken: 0, chapter: oldChapter, tocEntries: [{ index: 324 }, { index: 325 }],
+    phase: 'loading', requireKnownChapter() {},
+    isSelectionActive(token, selection) { return token === this.lifecycleToken && selection === this.chapterSelectionToken; },
+    loadSessionChapter: load, ensureCurrentContentMetrics: async () => true,
+    admitChapterContentVersion() {}, setCurrentReadingChapter(chapter) { events.push(['admit', chapter.chapterIndex]); },
+    retainCurrentChapterWindow() {}, rebuildChapterImageIndexes() {},
+    configureRestoredAnchor(chapter, map) { this.chapterLayoutMap = map; },
+    hasMeasuredViewport: () => true, beginMeasurement() { events.push(['measure', this.chapter.chapterIndex]); },
+    notifyPreservedContentRefresh() {}, fail(error) { failures.push(error.message); },
+  });
+  owner.paragraphLayout.ranges = [{ id: 'old', startUtf16: 0, endUtf16: 4, startScalar: 0, endScalar: 4 }];
+  return { owner, events, failures };
+}
+{
+  const chapter = chapterFor(324, largeText);
+  const { owner, events, failures } = reader(async () => chapter);
+  let timerDuringPreparation = false;
+  const timer = new Promise(resolve => setTimeout(() => {
+    timerDuringPreparation = owner.chapter === oldChapter;
+    assert.deepEqual(events, [], 'no admission, native measurement or progress before private preparation finishes');
+    assert.equal(owner.materializedChapterSelectionToken, 0);
+    assert.equal(owner.paragraphLayout.ranges[0].id, 'old', 'partial ranges never publish');
+    resolve();
+  }, 0));
+  await owner.openChapter(324, false, 1, 1);
+  await timer;
+  assert.equal(timerDuringPreparation, true, 'UI timers execute while cold whole-body work is in flight');
+  assert.deepEqual(failures, []);
+  assert.deepEqual(events, [['admit', 324], ['measure', 324]]);
+  assert.equal(owner.chapter, chapter);
+  assert.equal(owner.paragraphLayout.ranges.length, 80660);
+  for (const range of owner.paragraphLayout.ranges) {
+    assert.equal(owner.chapterLayoutMap.utf16ForScalar(range.startScalar), range.startUtf16);
+    assert.equal(owner.chapterLayoutMap.utf16ForScalar(range.endScalar), range.endUtf16);
+  }
+}
+for (const phase of ['scalar-map', 'paragraph-scan', 'range-conversion']) {
+  const chapter = chapterFor(324, phase === 'range-conversion' ? '中\n'.repeat(2048) : largeText);
+  if (phase !== 'scalar-map') readingChapterLayoutMap(chapter);
+  const { owner, events, failures } = reader(async () => chapter);
+  const timer = new Promise(resolve => setTimeout(() => { owner.chapterSelectionToken = 2; resolve(); }, 0));
+  await owner.openChapter(324, false, 1, 1);
+  await timer;
+  assert.equal(owner.chapter, oldChapter, `${phase}: cancellation retains the previous body`);
+  assert.equal(owner.materializedChapterSelectionToken, 0, `${phase}: stale selection has no publication authority`);
+  assert.equal(owner.paragraphLayout.ranges[0].id, 'old', `${phase}: no partially prepared range table`);
+  assert.deepEqual(events, [], `${phase}: no native measurement/progress for cancelled preparation`);
+  assert.deepEqual(failures, [], `${phase}: predecessor cancellation must not fail its successor`);
+}
+{
+  const slow = chapterFor(324, largeText), next = chapterFor(325, '新章节😀\n第二段');
+  const { owner, events, failures } = reader(async index => index === 324 ? slow : next);
+  let successor;
+  const timer = new Promise(resolve => setTimeout(() => {
+    owner.chapterSelectionToken = 2;
+    successor = owner.openChapter(325, false, 1, 2);
+    resolve();
+  }, 0));
+  const predecessor = owner.openChapter(324, false, 1, 1);
+  await timer;
+  await Promise.all([predecessor, successor]);
+  assert.equal(owner.chapter, next, 'new selection wins while old scalar preparation is unfinished');
+  assert.equal(owner.materializedChapterSelectionToken, 2);
+  assert.deepEqual(events, [['admit', 325], ['measure', 325]], 'old preparation never starts a native measurement');
+  assert.deepEqual(failures, []);
+  assert.equal(owner.paragraphLayout.ranges.length, 2);
+}
+console.log('PASS cold chapter: real cooperative scalar/scanner/range preparation, responsive timers, cancellation at all stages, atomic body/table admission and successor selection authority');

@@ -15,6 +15,7 @@ import { ReaderWindowMetricsSnapshot, readerVisualSafeLeft, readerVisualSafeRigh
 import type { DownloadBookView, DownloadChapterView, SharedDownloadFilters, DownloadReadingTarget, DownloadStorageSummary } from './SharedDownloadProjection';
 import { filterDownloadBooks, describeDownloadReadingTarget, downloadChapterDetailLabel, formatDownloadStorageBytes, canCleanDownloadStorage } from './SharedDownloadProjection';
 import { FrameCallback, TextModifier, SymbolGlyphModifier } from '@kit.ArkUI';
+import { ReaderInlineSelect } from '../common/ReaderInlineSelect';
 
 export type SharedDownloadUiAction = 'download' | 'pause' | 'cancel' | 'deleteLocal' | 'cleanup' | 'configureStorage';
 export interface SharedDownloadUiBookTarget {
@@ -496,23 +497,16 @@ export struct SharedDownloadPage {
         .fontSize(TYPE_DOWNLOAD_BOOK_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BOOK_TITLE.lineHeightFp as number).halfLeading(true)
         .fontColor(downloadVisualColor('muted', this.appThemeScheme)).layoutWeight(1);
       if (this.managing) {
-        Select([{ value: '快速选择' }, { value: '当前章节' }, { value: '从当前往后' }, { value: '全部章节' }])
-          .value('快速选择').selected(0)
-          .controlSize(ControlSize.SMALL)
-          .font({ size: TYPE_DOWNLOAD_QUICK_SELECT.fontSizeFp, family: TYPE_DOWNLOAD_QUICK_SELECT.fontFamily, weight: TYPE_DOWNLOAD_QUICK_SELECT.fontWeight })
-          .textModifier(this.selectTextModifier(true))
-          .arrowModifier(this.selectArrowModifier(true))
-          .space(this.selectArrowGap(true))
-          .height(this.textControlHeight(DOWNLOAD_VISUAL.chapterQuickHeight, DOWNLOAD_VISUAL.chapterQuickLineHeight, DOWNLOAD_VISUAL.settingsSelectPadding * 2))
-          .width(this.selectClosedWidth('快速选择', ['快速选择', '当前章节', '从当前往后', '全部章节'],
-            DOWNLOAD_VISUAL.chapterToolbarSelectMaxWidth, '章节内容', true))
-          .fontColor(downloadVisualColor('muted', this.appThemeScheme)).padding(DOWNLOAD_VISUAL.settingsSelectPadding)
-          .backgroundColor(downloadVisualColor('soft', this.appThemeScheme)).borderRadius(DOWNLOAD_VISUAL.settingsSelectRadius)
-          .constraintSize({ maxWidth: DOWNLOAD_VISUAL.chapterToolbarSelectMaxWidth })
-          .onSelect((index: number): void => {
+        ReaderInlineSelect({
+          value: '快速选择',
+          options: ['快速选择', '当前章节', '从当前往后', '全部章节'],
+          controlWidth: this.selectClosedWidth('快速选择', ['快速选择', '当前章节', '从当前往后', '全部章节'],
+            DOWNLOAD_VISUAL.chapterToolbarSelectMaxWidth, '章节内容', true),
+          onSelect: (index: number, _value: string): void => {
             const current = this.eventBook(book, ownerGeneration);
             if (current !== undefined && this.detailKey === current.key) this.quickSelectChapters(index);
-          });
+          },
+        });
       } else {
         Text(book().totalChapters === undefined ? '' : `共 ${book().totalChapters}${this.unit(book())}`)
           .fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
@@ -821,38 +815,26 @@ export struct SharedDownloadPage {
       Text('下载状态').fontFamily(TYPE_DOWNLOAD_BODY.fontFamily).fontWeight(TYPE_DOWNLOAD_BODY.fontWeight)
         .fontSize(TYPE_DOWNLOAD_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BODY.lineHeightFp as number).halfLeading(true)
         .fontColor(downloadVisualColor('ink', this.appThemeScheme)).layoutWeight(1);
-      Select(this.stateChoices().map((choice: DownloadChoice): SelectOption => ({ value: choice.label })))
-        .selected(this.stateChoices().findIndex((choice: DownloadChoice): boolean => choice.id === this.stateFilter))
-        .value(this.stateChoices().find((choice: DownloadChoice): boolean => choice.id === this.stateFilter)?.label ?? '全部状态')
-        .controlSize(ControlSize.SMALL)
-        .font({ size: TYPE_DOWNLOAD_BODY.fontSizeFp, family: TYPE_DOWNLOAD_BODY.fontFamily, weight: TYPE_DOWNLOAD_BODY.fontWeight })
-        .textModifier(this.selectTextModifier())
-        .arrowModifier(this.selectArrowModifier())
-        .space(this.selectArrowGap())
-        .height(this.textControlHeight(DOWNLOAD_VISUAL.settingsSelectHeight, DOWNLOAD_VISUAL.bodyLineHeight, DOWNLOAD_VISUAL.settingsSelectPadding * 2))
-        .width(this.selectClosedWidth(this.stateChoices().find((choice: DownloadChoice): boolean => choice.id === this.stateFilter)?.label ?? '全部状态', this.stateChoices().map((choice: DownloadChoice): string => choice.label), DOWNLOAD_VISUAL.settingsSelectMaxWidth, '下载状态'))
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
-        .borderRadius(DOWNLOAD_VISUAL.settingsSelectRadius).padding(DOWNLOAD_VISUAL.settingsSelectPadding).constraintSize({ maxWidth: DOWNLOAD_VISUAL.settingsSelectMaxWidth })
-        .onSelect((index: number): void => { this.stateFilter = this.stateChoices()[index]?.id ?? 'all'; this.selectedBookKeys = []; });
+      ReaderInlineSelect({
+        value: this.stateChoices().find((choice: DownloadChoice): boolean => choice.id === this.stateFilter)?.label ?? '全部状态',
+        options: this.stateChoices().map((choice: DownloadChoice): string => choice.label),
+        selectedIndex: Math.max(0, this.stateChoices().findIndex((choice: DownloadChoice): boolean => choice.id === this.stateFilter)),
+        controlWidth: this.selectClosedWidth(this.stateChoices().find((choice: DownloadChoice): boolean => choice.id === this.stateFilter)?.label ?? '全部状态', this.stateChoices().map((choice: DownloadChoice): string => choice.label), DOWNLOAD_VISUAL.settingsSelectMaxWidth, '下载状态'),
+        onSelect: (index: number, _value: string): void => { this.stateFilter = this.stateChoices()[index]?.id ?? 'all'; this.selectedBookKeys = []; },
+      });
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.settingsHeight })
       .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
     Row({ space: DOWNLOAD_VISUAL.settingsGap }) {
       Text('书源').fontFamily(TYPE_DOWNLOAD_BODY.fontFamily).fontWeight(TYPE_DOWNLOAD_BODY.fontWeight)
         .fontSize(TYPE_DOWNLOAD_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BODY.lineHeightFp as number).halfLeading(true)
         .fontColor(downloadVisualColor('ink', this.appThemeScheme)).layoutWeight(1);
-      Select(this.sourceChoices().map((choice: DownloadSourceChoice): SelectOption => ({ value: choice.label })))
-        .selected(this.sourceChoices().findIndex((choice: DownloadSourceChoice): boolean => choice.id === this.sourceFilter))
-        .value(this.sourceChoices().find((choice: DownloadSourceChoice): boolean => choice.id === this.sourceFilter)?.label ?? '全部书源')
-        .controlSize(ControlSize.SMALL)
-        .font({ size: TYPE_DOWNLOAD_BODY.fontSizeFp, family: TYPE_DOWNLOAD_BODY.fontFamily, weight: TYPE_DOWNLOAD_BODY.fontWeight })
-        .textModifier(this.selectTextModifier())
-        .arrowModifier(this.selectArrowModifier())
-        .space(this.selectArrowGap())
-        .height(this.textControlHeight(DOWNLOAD_VISUAL.settingsSelectHeight, DOWNLOAD_VISUAL.bodyLineHeight, DOWNLOAD_VISUAL.settingsSelectPadding * 2))
-        .width(this.selectClosedWidth(this.sourceChoices().find((choice: DownloadSourceChoice): boolean => choice.id === this.sourceFilter)?.label ?? '全部书源', this.sourceChoices().map((choice: DownloadSourceChoice): string => choice.label), DOWNLOAD_VISUAL.settingsSelectMaxWidth, '书源'))
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
-        .borderRadius(DOWNLOAD_VISUAL.settingsSelectRadius).padding(DOWNLOAD_VISUAL.settingsSelectPadding).constraintSize({ maxWidth: DOWNLOAD_VISUAL.settingsSelectMaxWidth })
-        .onSelect((index: number): void => { this.sourceFilter = this.sourceChoices()[index]?.id ?? 'all'; this.selectedBookKeys = []; });
+      ReaderInlineSelect({
+        value: this.sourceChoices().find((choice: DownloadSourceChoice): boolean => choice.id === this.sourceFilter)?.label ?? '全部书源',
+        options: this.sourceChoices().map((choice: DownloadSourceChoice): string => choice.label),
+        selectedIndex: Math.max(0, this.sourceChoices().findIndex((choice: DownloadSourceChoice): boolean => choice.id === this.sourceFilter)),
+        controlWidth: this.selectClosedWidth(this.sourceChoices().find((choice: DownloadSourceChoice): boolean => choice.id === this.sourceFilter)?.label ?? '全部书源', this.sourceChoices().map((choice: DownloadSourceChoice): string => choice.label), DOWNLOAD_VISUAL.settingsSelectMaxWidth, '书源'),
+        onSelect: (index: number, _value: string): void => { this.sourceFilter = this.sourceChoices()[index]?.id ?? 'all'; this.selectedBookKeys = []; },
+      });
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.settingsHeight })
       .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
   }
@@ -919,36 +901,26 @@ export struct SharedDownloadPage {
       Text('空间上限').layoutWeight(1).fontFamily(TYPE_DOWNLOAD_BODY.fontFamily).fontWeight(TYPE_DOWNLOAD_BODY.fontWeight)
         .fontSize(TYPE_DOWNLOAD_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BODY.lineHeightFp as number).halfLeading(true)
         .fontColor(downloadVisualColor('ink', this.appThemeScheme));
-      Select([{ value: '512 MB' }, { value: '1 GB' }, { value: '2 GB' }, { value: '4 GB' }])
-        .value(this.cacheLimitMb === 512 ? '512 MB' : `${this.cacheLimitMb / 1024} GB`).selected(this.limitIndex())
-        .controlSize(ControlSize.SMALL)
-        .font({ size: TYPE_DOWNLOAD_BODY.fontSizeFp, family: TYPE_DOWNLOAD_BODY.fontFamily, weight: TYPE_DOWNLOAD_BODY.fontWeight })
-        .textModifier(this.selectTextModifier())
-        .arrowModifier(this.selectArrowModifier())
-        .space(this.selectArrowGap())
-        .height(this.textControlHeight(DOWNLOAD_VISUAL.settingsSelectHeight, DOWNLOAD_VISUAL.bodyLineHeight, DOWNLOAD_VISUAL.settingsSelectPadding * 2))
-        .width(this.storageSelectWidth())
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
-        .borderRadius(DOWNLOAD_VISUAL.settingsSelectRadius).padding(DOWNLOAD_VISUAL.settingsSelectPadding)
-        .onSelect((index: number): void => { this.cacheLimitMb = [512, 1024, 2048, 4096][index]; });
+      ReaderInlineSelect({
+        value: this.cacheLimitMb === 512 ? '512 MB' : `${this.cacheLimitMb / 1024} GB`,
+        options: ['512 MB', '1 GB', '2 GB', '4 GB'],
+        selectedIndex: this.limitIndex(),
+        controlWidth: this.storageSelectWidth(),
+        onSelect: (index: number, _value: string): void => { this.cacheLimitMb = [512, 1024, 2048, 4096][index]; },
+      });
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.storageSettingsHeight })
       .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
     Row({ space: DOWNLOAD_VISUAL.storageSettingsGap }) {
       Text('多久未阅读后清理').layoutWeight(1).fontFamily(TYPE_DOWNLOAD_BODY.fontFamily).fontWeight(TYPE_DOWNLOAD_BODY.fontWeight)
         .fontSize(TYPE_DOWNLOAD_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BODY.lineHeightFp as number).halfLeading(true)
         .fontColor(downloadVisualColor('ink', this.appThemeScheme));
-      Select([{ value: '3 天' }, { value: '7 天' }, { value: '14 天' }, { value: '30 天' }])
-        .value(`${this.cleanupAfterDays} 天`).selected(this.daysIndex())
-        .controlSize(ControlSize.SMALL)
-        .font({ size: TYPE_DOWNLOAD_BODY.fontSizeFp, family: TYPE_DOWNLOAD_BODY.fontFamily, weight: TYPE_DOWNLOAD_BODY.fontWeight })
-        .textModifier(this.selectTextModifier())
-        .arrowModifier(this.selectArrowModifier())
-        .space(this.selectArrowGap())
-        .height(this.textControlHeight(DOWNLOAD_VISUAL.settingsSelectHeight, DOWNLOAD_VISUAL.bodyLineHeight, DOWNLOAD_VISUAL.settingsSelectPadding * 2))
-        .width(this.storageSelectWidth())
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
-        .borderRadius(DOWNLOAD_VISUAL.settingsSelectRadius).padding(DOWNLOAD_VISUAL.settingsSelectPadding)
-        .onSelect((index: number): void => { this.cleanupAfterDays = [3, 7, 14, 30][index]; });
+      ReaderInlineSelect({
+        value: `${this.cleanupAfterDays} 天`,
+        options: ['3 天', '7 天', '14 天', '30 天'],
+        selectedIndex: this.daysIndex(),
+        controlWidth: this.storageSelectWidth(),
+        onSelect: (index: number, _value: string): void => { this.cleanupAfterDays = [3, 7, 14, 30][index]; },
+      });
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.storageSettingsHeight })
       .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
     }.width('100%').border({ width: { top: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
@@ -1052,21 +1024,13 @@ export struct SharedDownloadPage {
   @Builder
   private rangeSheet() {
     if (this.actionBookKeys.length > 1) {
-      Select(this.actionBooks().map((book: DownloadBookView): SelectOption => ({ value: book.title })))
-        .selected(this.actionBooks().findIndex((book: DownloadBookView): boolean => book.key === this.rangeBookKey))
-        .value(this.actionBooks().find((book: DownloadBookView): boolean => book.key === this.rangeBookKey)?.title ?? '')
-        .controlSize(ControlSize.SMALL)
-        .font({ size: TYPE_DOWNLOAD_BODY.fontSizeFp, family: TYPE_DOWNLOAD_BODY.fontFamily, weight: TYPE_DOWNLOAD_BODY.fontWeight })
-        .textModifier(this.selectTextModifier())
-        .arrowModifier(this.selectArrowModifier())
-        .space(this.selectArrowGap())
-        .height(this.textControlHeight(DOWNLOAD_VISUAL.bodyLineHeight + DOWNLOAD_VISUAL.rangeSelectPadding * 2 + DOWNLOAD_VISUAL.borderWidth * 2,
-          DOWNLOAD_VISUAL.bodyLineHeight, DOWNLOAD_VISUAL.rangeSelectPadding * 2 + DOWNLOAD_VISUAL.borderWidth * 2))
-        .fontColor(downloadVisualColor('ink', this.appThemeScheme)).width('100%').padding(DOWNLOAD_VISUAL.rangeSelectPadding)
-        .backgroundColor(downloadVisualColor('paper', this.appThemeScheme)).borderRadius(DOWNLOAD_VISUAL.rangeSelectRadius)
-        .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) })
-        .margin({ bottom: DOWNLOAD_VISUAL.rangeBookBottom })
-        .onSelect((index: number): void => { this.rangeBookKey = this.actionBooks()[index]?.key ?? ''; });
+      ReaderInlineSelect({
+        value: this.actionBooks().find((book: DownloadBookView): boolean => book.key === this.rangeBookKey)?.title ?? '',
+        options: this.actionBooks().map((book: DownloadBookView): string => book.title),
+        selectedIndex: Math.max(0, this.actionBooks().findIndex((book: DownloadBookView): boolean => book.key === this.rangeBookKey)),
+        controlWidth: 0,
+        onSelect: (index: number, _value: string): void => { this.rangeBookKey = this.actionBooks()[index]?.key ?? ''; },
+      }).width('100%').margin({ bottom: DOWNLOAD_VISUAL.rangeBookBottom });
     }
     this.choiceRow('全部章节', (): boolean => this.rangeChoice === 'all', (): void => { this.rangeChoice = 'all'; });
     this.choiceRow('从当前章节往后', (): boolean => this.rangeChoice === 'forward', (): void => { this.rangeChoice = 'forward'; });
@@ -1450,7 +1414,7 @@ export struct SharedDownloadPage {
   private sheetTitle(): string {
     if (this.sheet === 'filter') return '筛选'; if (this.sheet === 'sort') return '排序';
     if (this.sheet === 'settings') return '存储管理'; if (this.sheet === 'range') return '下载范围';
-    if (this.sheet === 'read') return '阅读入口 · 待接线';
+    if (this.sheet === 'read') return '阅读入口';
     return this.sheet === 'chapter-actions' ? `章节操作 · 已选 ${this.actionChapterIndices.length}${this.unit(this.actionBooks()[0])}`
       : this.actionBooks().length === 1 ? `${this.actionBooks()[0].title} · 书籍操作` : `书籍操作 · 已选 ${this.actionBooks().length} 本`;
   }
@@ -1461,8 +1425,7 @@ export struct SharedDownloadPage {
     const chapter = chapterSnapshot === undefined ? undefined : book.chapters.find((current: DownloadChapterView): boolean => current.key === chapterSnapshot.key);
     if (chapterSnapshot !== undefined && chapter === undefined) return;
     const target = describeDownloadReadingTarget(book, chapter);
-    this.readingDescription = target.route === 'unavailable' ? target.description :
-      `对应${book.contentKind === 'manga' ? '漫画图片阅读页' : '小说正文阅读页'}，打开这本书的所选章节。当前仅标注目标，尚未接入实际阅读。`;
+    this.readingDescription = target.description;
     this.readingBookTitle = book.title;
     this.readingChapterTitle = target.chapterTitle ?? '';
     this.sheet = 'read'; this.onReadTarget(target);

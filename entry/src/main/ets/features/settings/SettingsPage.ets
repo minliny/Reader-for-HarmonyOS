@@ -53,6 +53,7 @@ export interface SettingsSnapshot {
   tapBottomScrollTop: boolean;
   reduceMotion: boolean;
   crashLog: boolean;
+  developerMode: boolean;
 }
 
 let settingsSelectionGeneration: number = 0;
@@ -69,6 +70,7 @@ export struct SettingsPage {
     tapBottomScrollTop: true,
     reduceMotion: false,
     crashLog: true,
+    developerMode: false,
   };
   @Prop isTablet: boolean;
   @Prop operation: SettingsOperationProjection = { action: 'load' };
@@ -85,6 +87,7 @@ export struct SettingsPage {
   @State private tapBottomScrollTopValue: boolean = true;
   @State private reduceMotionValue: boolean = false;
   @State private crashLogValue: boolean = true;
+  @State private developerModeValue: boolean = false;
   @State private cacheActionLabel: string = '清理文字缓存';
   @State private cacheCleanupInFlight: boolean = false;
   @State private resetInFlight: boolean = false;
@@ -116,7 +119,7 @@ export struct SettingsPage {
   onDiscoverRequested: () => void = (): void => {};
   onClearCache: () => Promise<SettingsCacheCleanupSnapshot | undefined> = async (): Promise<SettingsCacheCleanupSnapshot | undefined> => undefined;
   onRestoreDefaults: () => Promise<boolean> = async (): Promise<boolean> => false;
-  onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog', value: boolean) => void =
+  onToggle: (key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode', value: boolean) => void =
     (_key: string, _value: boolean): void => {};
 
   aboutToAppear(): void {
@@ -280,6 +283,7 @@ export struct SettingsPage {
         this.switchRow('崩溃日志', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_crash_theme_night') : $r('app.media.settings_gen_crash')), 'crashLog');
         this.selectRow('动画效果', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'animation', ['标准', '减弱', '关闭']);
       }
+      this.switchRow('开发者模式（显示组件边界）', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'developerMode');
       this.cacheActionRow();
     }
   }
@@ -303,7 +307,7 @@ export struct SettingsPage {
 
   // 开关行: CategoryRow + 尾部 ReaderToggle。
   @Builder
-  private switchRow(label: string, icon: () => Resource, key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
+  private switchRow(label: string, icon: () => Resource, key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode',
   ) {
     ForEach([this.temporaryBackIdentity], (identity: string): void => {
       CategoryRow({ icon: icon(), label,
@@ -326,6 +330,7 @@ export struct SettingsPage {
     this.tapBottomScrollTopValue = this.snapshot.tapBottomScrollTop;
     this.reduceMotionValue = this.snapshot.reduceMotion;
     this.crashLogValue = this.snapshot.crashLog;
+    this.developerModeValue = this.snapshot.developerMode;
   }
 
   private settingToggleBusy(): boolean {
@@ -338,7 +343,7 @@ export struct SettingsPage {
   }
 
   private toggleSetting(
-    key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog',
+    key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode',
     value: boolean,
     identity: string = this.temporaryBackIdentity,
   ): void {
@@ -348,7 +353,7 @@ export struct SettingsPage {
     this.onToggle(key, value);
   }
 
-  private settingValue(key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog'): boolean {
+  private settingValue(key: 'autoCheckUpdate' | 'tapBottomScrollTop' | 'reduceMotion' | 'crashLog' | 'developerMode'): boolean {
     if (key === 'autoCheckUpdate') {
       return this.autoCheckUpdateValue;
     }
@@ -357,6 +362,9 @@ export struct SettingsPage {
     }
     if (key === 'reduceMotion') {
       return this.reduceMotionValue;
+    }
+    if (key === 'developerMode') {
+      return this.developerModeValue;
     }
     return this.crashLogValue;
   }

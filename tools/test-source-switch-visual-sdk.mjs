@@ -150,6 +150,23 @@ for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])fo
 assertScene(scene(390,844,1),390,844,1);
 assertScene(scene(270,180,2),270,180,2);
 for(const width of [310,265])assertScene(scene(width,844,1),width,844,1);
+// Same-provider rule variants remain separate presentation rows. A shared
+// provider family is display metadata only; every sourceId/bookUrl remains
+// independently selectable.
+{
+ const familyScene=scene(390,844,1,{kind:'candidates',refreshing:false,candidates:[
+   {...candidate('qimao-md'),sourceName:'七猫小说（优++）',providerFamily:'qimao',bookUrl:'/md'},
+   {...candidate('qimao-yc'),sourceName:'七猫小说（优+）',providerFamily:'qimao',bookUrl:'/yc'},
+   {...candidate('other'),sourceName:'其他书源',providerFamily:'other',bookUrl:'/other'},
+ ]});
+ assert.equal(familyScene.rows.length,3,'same provider family keeps every rule selectable');
+ assert.equal(familyScene.rows[0].candidate.sourceId,'qimao-md');
+ assert.equal(familyScene.rows[1].candidate.sourceId,'qimao-yc');
+ assert.equal(familyScene.rows[2].candidate.sourceId,'other');
+ assert.equal(familyScene.rows[0].candidate.bookUrl,'/md');
+ assert.equal(familyScene.rows[1].candidate.bookUrl,'/yc');
+ familyScene.o.aboutToDisappear();
+}
 // The same native track remains reserved before remeasurement supplies a
 // latency. Only content is inset; the row's border and hit extent stay full width.
 {

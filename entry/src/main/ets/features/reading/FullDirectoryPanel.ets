@@ -31,6 +31,7 @@ import {
 
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { ReaderSearchField } from '../common/ReaderSearchField';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { projectReaderDirectoryEntries } from './ReaderDirectoryProjection';
 import {
   projectReaderBookmarkRows,
@@ -82,8 +83,10 @@ export struct FullDirectoryPanel {
 
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  onRetryCatalog: () => void = (): void => {};
   @Prop @Watch('onReadingAnchorChanged') currentChapterIndex: number = -1;
   @Prop chapterDownloadEnabled: boolean = false;
+  @Prop mangaSearch: boolean = false;
   @Prop isTablet: boolean = false;
   // The owner supplies the measured viewport-constrained width. Zero keeps
   // the source-exact standalone Figma endpoint.
@@ -434,11 +437,17 @@ export struct FullDirectoryPanel {
         Stack({ alignContent: Alignment.Center }) {
           this.chapterList();
           if (this.projectedEntries.length === 0 && !this.navigationActive) {
-            Text(this.catalogEmptyMessage())
-              .fontSize(TYPE_APP_INHERITED_OPTION.fontSizeFp)
-              .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-              .textAlign(TextAlign.Center)
-              .padding({ left: 20, right: 20 });
+            Column({ space: 10 }) {
+              Text(this.catalogEmptyMessage())
+                .fontSize(TYPE_APP_INHERITED_OPTION.fontSizeFp)
+                .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+                .textAlign(TextAlign.Center)
+                .padding({ left: 20, right: 20 });
+              if (this.catalogRetryVisible()) {
+                ReaderRecoveryAction({ label: '重试加载目录', actionEnabled: true,
+                  onReconcile: (): void => this.onRetryCatalog() });
+              }
+            }.justifyContent(FlexAlign.Center);
           }
         }
         .width('100%')
@@ -457,6 +466,12 @@ export struct FullDirectoryPanel {
   private catalogEmptyMessage(): string {
     if (this.entries.length > 0) return '没有匹配的章节';
     return this.catalogMessage.trim().length > 0 ? this.catalogMessage : '暂无可用章节，可返回阅读页重试或更换书源';
+  }
+
+  private catalogRetryVisible(): boolean {
+    if (this.entries.length > 0 || this.navigationActive) return false;
+    const message = this.catalogMessage.trim();
+    return !/^正在|^加载|^读取/.test(message);
   }
 
   @Builder
@@ -1322,7 +1337,7 @@ export struct FullDirectoryPanel {
         sourceEntries, query, this.bookmarkIdentity);
       return;
     }
-    this.projectedEntries = projectReaderDirectoryEntries(sourceEntries, query, ascending);
+    this.projectedEntries = projectReaderDirectoryEntries(sourceEntries, query, ascending, this.mangaSearch);
     this.projectedBookmarks = [];
     this.bookmarkTabLoading = false;
   }

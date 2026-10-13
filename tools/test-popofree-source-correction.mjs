@@ -46,7 +46,7 @@ const supply = readFileSync(new URL('../entry/src/main/ets/app/BundledBookSource
 const methods = stripTypeScriptTypes(supply.slice(supply.indexOf('function canonicalJson'), supply.indexOf('type StoredLedger')))
   .replace(/^export /gm, '');
 const guards = new Function('RULE_PAYLOAD_FIELDS', `${methods}; return { canonicalRulePayloadJson,
-  hasBuiltinMarker, isUserModifiedBuiltinCopy, decideBundledUpgrade };`)(RULE_PAYLOAD_FIELDS);
+  hasBuiltinMarker, isUserModifiedBuiltinCopy, decideBundledUpgrade, mergeBundledDefaultStateCorrection };`)(RULE_PAYLOAD_FIELDS);
 const oneDocument = JSON.stringify([corrected]);
 let ledger;
 const Owner = productionMotionMethods(fileURLToPath(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url)),

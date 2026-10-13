@@ -24,6 +24,7 @@ import {
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../common/ReaderTokens';
+import { ReaderPageFrameModifier } from '../common/ReaderPageShell';
 
 
 // SettingsShell —— Settings 页面骨架 (FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §七/§十)。
@@ -125,6 +126,7 @@ export struct SettingsShell {
     }
       .width('100%')
       .height('100%')
+      .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme))
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
       .onAreaChange((_oldValue: Area, newValue: Area): void => {
         // Area.globalPosition 已是 vp 单位, 直接取用 (曾 px2vp 二次÷3.5 致面板错位)。

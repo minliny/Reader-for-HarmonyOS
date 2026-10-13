@@ -83,7 +83,7 @@ export async function fixture(official=false,existing){
  const SettingsOwner=compile('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,SettingsCacheGateway:SettingsGateway},official);
  const general=actualGeneralSettingsFixture();general.setActive(runtime);
  general.Runtime.isCurrent=owner=>Runtime.isCurrent(owner);general.Runtime.current=()=>Runtime.current();
- const generalHost=new general.Host(()=>{},()=>({autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true}),()=>true,()=>runtime.getUIAbilityContext());
+ const generalHost=new general.Host(()=>{},()=>({autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true,developerMode:false}),()=>true,()=>runtime.getUIAbilityContext());
  assert.equal(generalHost.bindPresentation(runtime,'reading-cache-general-factory',()=>Runtime.isCurrent(runtime)),true);
  const SettingsHost=compile('features/settings/SettingsHost.ets','SettingsHost',{ReaderRuntimeOwner:Runtime,SettingsCacheCleanupOwner:SettingsOwner,SettingsOrchestrator:generalHost.orchestrator.constructor},official);
  const bookmarkStore=new types.BookmarkOperationIntentStore(runtime,()=>Runtime.isCurrent(runtime)),clearStore=new types.CacheClearOperationIntentStore(runtime,()=>Runtime.isCurrent(runtime));

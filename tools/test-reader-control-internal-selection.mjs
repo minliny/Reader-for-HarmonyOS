@@ -46,7 +46,7 @@ function owner(Type = Host()) {
     phase: 'ready', sessionGateway: {}, contentMetrics: undefined, knownContentVersions: [1],
     pendingControlSelection: undefined, hideCalls: 0, stops: 0, opens: [],
     tocEntries: [{ index: 2 }, { index: 3 }, { index: 4 }],
-    controlVisible: () => true, controlShellExitArmed: () => false,
+    controlsShown: true, controlVisible() { return this.controlsShown; }, controlShellExitArmed: () => false,
     isKnownControlChapter: index => [2, 3, 4].includes(index),
     isSessionActive(token) { return this.mounted && !this.exitRequested && this.lifecycleToken === token; },
     isSelectionActive(token, selection) { return this.isSessionActive(token) && this.chapterSelectionToken === selection; },
@@ -64,7 +64,7 @@ function owner(Type = Host()) {
     ttsCoordinator: { stop: async () => { host.stops++; }, setTimer: value => { host.timerSet = value; } },
     logTtsFailure() {}, resetForChapterSelection() {}, armFirstPageReadyDeadline() {},
     openChapter: async (...args) => { host.opens.push(args); },
-    hideControl() { this.hideCalls++; },
+    hideControl() { this.hideCalls++; this.controlsShown = false; },
     invalidatePageTurnRuntime() {}, paginationIndex: { invalidateBook() {} }, resetPaginationDraft() {},
   });
   host.clearDeferredPageTurnWork();
@@ -180,7 +180,8 @@ await assert.rejects(checkProjection(Host(oldProjection)), /internal conversion\
 }
 
 const scope = { sourceId: 'source', bookId: 'book', chapterIndex: 3, bodyVersion: 'body', processingVersion: 'processing' };
-// Discrete list/bookmark/search picks retain close AFTER the real commit.
+// Discrete list/bookmark/search picks enter the reader before body admission.
+// The reading ticket and stored progress still wait for a real page commit.
 // Progress scrubbing is a continuous control and keeps the same panel open.
 const picks = [
   ['directory', host => host.selectControlChapter(3)],
@@ -201,15 +202,20 @@ const picks = [
 for (const [name, pick] of picks) {
   const host = owner(); pick(host);
   assert.equal(host.pendingControlSelection?.controlOpenRevision, 41, name);
-  assert.equal(host.hideCalls, 0, name + ' must not close on download/start');
+  const immediateCloses = name.startsWith('progress') ? 0 : 1;
+  assert.equal(host.hideCalls, immediateCloses, name + ' immediately exposes reader loading for a discrete selection');
+  assert.equal(host.chapter.chapterIndex, 2, name + ' loading cannot publish an uncommitted chapter');
+  assert.equal(host.visiblePageSelectionToken, 10, name + ' old page stays private until a new page commits');
   commit(host, host.pendingControlSelection.targetChapterIndex, 0);
   assert.equal(host.hideCalls, name.startsWith('progress') ? 0 : 1,
-    name + ' applies its explicitly chosen close policy after real commit');
+    name + ' never closes twice after real commit');
 
   const newer = owner(); pick(newer);
   newer.controlOpenRevision = 42;
+  newer.controlsShown = true;
   commit(newer, newer.pendingControlSelection.targetChapterIndex, 0);
-  assert.equal(newer.hideCalls, 0, name + ' cannot close a later reopening');
+  assert.equal(newer.hideCalls, immediateCloses, name + ' cannot close a later reopening');
+  assert.equal(newer.controlsShown, true, name + ' preserves a later reopening');
 }
 for (const deferred of [false, true]) {
   const host = owner(); host.pageTurnSettlementActive = deferred;

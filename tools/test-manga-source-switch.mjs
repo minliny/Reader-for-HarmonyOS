@@ -13,25 +13,31 @@ function fixture(){const calls=[],releases=[];let fail=false,current=true;
  assert.equal(method,'manga.sourceSwitch.commit');return {data:{mapping:'approximate',progress:{token:{epoch:2,revision:1},location:{...oldLocation,chapter:p.firstImage.chapter,manifestVersion:p.firstImage.manifestVersion,pageId:p.firstImage.pageId,pageOrdinalFallback:p.targetPageOrdinal,x:0,y:0}}}};},
  async loadReadingImage(...args){assert.equal(args[12],manifest.decodeRevision,'source switch carries target decode fact');calls.push(['image']);if(fail)throw Error('image failed');return {fileUri:'file://img',width:600,height:800,revision:'pixels'};},releaseReadingImage(uri){releases.push(uri);}};
  return {gateway:new MangaSourceSwitchGateway(runtime),calls,releases,current:()=>current,cancel:()=>current=false,fail:()=>fail=true};}
-const target={contentKind:'manga',sourceVersion:'s',identity:{sourceId:'target',bookId:'b'},entries:[{index:3,title:'C',url:'/chapter'}]};
+const target={contentKind:'manga',sourceVersion:'s',identity:{sourceId:'target',bookId:'b'},
+ book:{title:'Target Manga',author:'Target Author'},entries:[{index:3,title:'C',url:'/chapter'}]};
 {const f=fixture();const p=await f.gateway.prepare('old','a',target,'C',5,f.current);assert.equal(p.mapping,'approximate');assert.equal(p.targetPageOrdinal,0);assert.equal(f.releases.length,1);assert.equal(f.calls.filter(c=>c[0]==='image').length,1);await assert.rejects(f.gateway.commit(p,false,f.current),/SELECTION/);assert.equal(f.calls.some(c=>c[0]==='manga.sourceSwitch.commit'),false);await f.gateway.commit(p,true,f.current);assert.equal(f.calls.at(-1)[1].expectedFrom.revision,1);}
 {const f=fixture();f.fail();await assert.rejects(f.gateway.prepare('old','a',target,'C',3,f.current),/image failed/);assert.equal(f.calls.some(c=>c[0]==='manga.sourceSwitch.commit'),false);}
 {const f=fixture();const p=await f.gateway.prepare('old','a',target,'C',3,f.current);f.cancel();await assert.rejects(f.gateway.commit(p,true,f.current),/CANCELLED/);}
 console.log('PASS manga switch directly selects after saved-position and chapter-first-image validation, retains old shelf on failed image, fences cancellation');
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
-const {fixture:sourceOwnerFixture,setCurrentRuntime,Runtime:SourceRuntime}=await import('./lib/source-switch-owner-probe.mjs');
+const {readBookAuthorIdentity}=await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
+const {fixture:sourceOwnerFixture,setCurrentRuntime,Runtime:SourceRuntime,Gateway:ActualSourceGateway}=await import('./lib/source-switch-owner-probe.mjs');
 for(const mode of ['success','cancel','image-fail','lost-response','navigation-away']){
  let committed=false,refresh=0,installed=0,consent=mode!=='cancel',current=mode!=='cancel';
  const proposal={expectedFrom:{epoch:2,revision:1},firstImage:{chapterIndex:3},chapterTitle:'C',targetPageOrdinal:0};
  class Sessions {async progress(){return {token:{epoch:2,revision:1},location:{chapter:{chapterId:'/old'}}};}}
  class Switch {async prepare(){if(mode==='image-fail')throw Error('image failed');return proposal;}async commitPrepared(p){return this.commit(p,true);}async commit(_p,accepted){assert.equal(accepted,true);assert.equal(consent,true);committed=true;if(mode==='navigation-away')current=false;if(mode==='lost-response')throw Error('response lost');}}
  class Shelf {async loadShelfBook(source){return source==='old'?(committed?undefined:{sourceId:'old',bookId:'a'}):(committed?{sourceId:'target',bookId:'b',contentKind:'manga'}:undefined);}}
- const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),['switchMangaSource','commitMangaSourceSwitch','mangaSourceSwitchFailureMessage'],{MangaSessionGateway:Sessions,MangaSourceSwitchGateway:Switch,MangaSwitchChapterSelectionRequired,ReaderCoreGateway:Shelf,ReaderRuntimeOwner:{current:()=>({})},errorMessageOf:e=>e.message});
- const owner=Object.assign(new Index(),{detailInBookshelf:true,detailBook:{sourceId:'old',bookId:'a'},remoteReadingSession:{contentKind:'manga',identity:{sourceId:'old',bookId:'a'},entries:[{url:'/old',title:'Saved Chapter',index:8}]},
- getSourceSwitchGateway:()=>({fetchTargetToc:async()=>({readingSession:target})}),
+ const guard=new ActualSourceGateway({request:async(method)=>{
+  assert.equal(method,'source.list');return{data:{sources:['old','target'].map(sourceId=>
+   ({sourceId,name:sourceId,enabled:true,sourceVersion:'s',bookSource:{bookSourceType:2}}))}};
+ }});guard.fetchTargetToc=async()=>({readingSession:target});
+ const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),['switchMangaSource','commitMangaSourceSwitch','mangaSourceSwitchFailureMessage','sourceSwitchProbeQuery'],{MangaSessionGateway:Sessions,MangaSourceSwitchGateway:Switch,MangaSwitchChapterSelectionRequired,ReaderCoreGateway:Shelf,ReaderRuntimeOwner:{current:()=>({})},readBookAuthorIdentity,errorMessageOf:e=>e.message});
+ const owner=Object.assign(new Index(),{detailInBookshelf:true,detailBook:{sourceId:'old',bookId:'a',title:target.book.title,author:target.book.author},detailToc:[],remoteReadingSession:{contentKind:'manga',identity:{sourceId:'old',bookId:'a'},book:target.book,entries:[{url:'/old',title:'Saved Chapter',index:8}]},
+ getSourceSwitchGateway:()=>guard,
  getSourceSwitchHost:()=>({readMangaShelf:(...args)=>new Shelf().loadShelfBook(...args)}),
  refreshBookshelf:()=>refresh++,performSourceSwitchSeam:()=>installed++,closeSourceSwitch:()=>{},presentMangaSourceSwitchAcquisitionFailure:()=>{}});
- await owner.switchMangaSource({sourceId:'target',bookUrl:'b',category:'comic'},()=>current);
+ await owner.switchMangaSource({sourceId:'target',bookUrl:'b',bookName:target.book.title,author:target.book.author,sourceVersion:'s',category:'comic'},()=>current);
  assert.equal(committed,!['cancel','image-fail'].includes(mode));
  assert.equal(installed,['success','lost-response'].includes(mode)?1:0);
  if(committed)assert.ok(refresh>0);
@@ -134,7 +140,7 @@ console.log('PASS changed catalog or malformed commit receipt is rejected; old o
 // Execute the real Index selection/commit/back/retry methods with the real
 // manga gateway. Only runtime image I/O and durable shelf reads are ports.
 const indexFile=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
-const selectionMethods=['onPickSource','switchMangaSource','presentMangaSourceSwitchSelection',
+const selectionMethods=['onPickSource','switchMangaSource','sourceSwitchProbeQuery','presentMangaSourceSwitchSelection',
  'mangaSourceSwitchFailureMessage',
  'isMangaSourceSwitchSelectionCurrent','clearMangaSourceSwitchSelection','cancelMangaSourceSwitchSelection',
  'mangaSourceSwitchDirectorySelection','mangaSourceSwitchDirectoryBack',
@@ -149,9 +155,13 @@ const selectionTarget={...target,book:{title:'Target Manga',author:'Target Autho
 ]};
 function selectionFixture(mode='success',catalog=selectionTarget){
  const f=fixture(),runtime=f.gateway.runtime,request=runtime.request,load=runtime.loadReadingImage;
- let committed=false,revision=1,oldReads=0,refresh=0;
+ let committed=false,revision=1,registryRevision=1,oldReads=0,refresh=0;
  const imageGate=deferred(),commitGate=deferred(),imageStarted=deferred(),commitStarted=deferred();
  runtime.request=async(method,params)=>{
+  if(method==='source.list'){
+   f.calls.push([method,params]);return{data:{sources:['old','target'].map(sourceId=>
+    ({sourceId,name:sourceId,enabled:true,sourceVersion:'s',bookSource:{bookSourceType:2}}))}};
+  }
   if(method==='bookshelf.get'){
    const row=await new Shelf().loadShelfBook(params.sourceId);
    return {data:{book:row===undefined?null:{...row,addedAt:1,sortIndex:0}}};
@@ -176,18 +186,18 @@ function selectionFixture(mode='success',catalog=selectionTarget){
   if(mode==='image-pending')await imageGate.promise;
   return load(...args);
  };
- const original={sourceId:'old',bookId:'a',title:'Original Manga',author:'Original Author',contentKind:'manga',
+ const original={sourceId:'old',bookId:'a',title:'Target Manga',author:'Target Author',contentKind:'manga',
   mangaPosition:{chapterIndex:8,chapterTitle:'Saved Chapter',pageOrdinal:1,totalPages:2},sourceName:'Original source'};
- const originalSession={contentKind:'manga',identity:{sourceId:'old',bookId:'a'},entries:[{index:8,title:'Saved Chapter',url:'/old'}]};
+ const originalSession={contentKind:'manga',identity:{sourceId:'old',bookId:'a'},book:{title:original.title,author:original.author},entries:[{index:8,title:'Saved Chapter',url:'/old'}]};
  const originalToc=[{index:8,title:'Saved Chapter',downloadState:'unknown'}];
- const candidate={sourceId:'target',bookUrl:'b',bookName:'Target Manga',category:'comic',sourceName:'Target source'};
+ const candidate={sourceId:'target',bookUrl:'b',bookName:'Target Manga',author:'Target Author',sourceVersion:'s',category:'comic',sourceName:'Target source'};
  const installed=[],fetches=[],starts=[];
  class Shelf {async loadShelfBook(source){return source==='old'?(committed?undefined:original):
   (committed?{sourceId:'target',bookId:'b',title:'Target Manga',author:'Target Author',contentKind:'manga'}:undefined);}}
  const {Constructor:SourceSwitchHost}=sourceOwnerFixture({open:false});
  runtime.getUIAbilityContext=()=>({filesDir:'/private-files'});
  catalog.continuationVariables??=[];catalog.entries.forEach(row=>row.variables??=[]);
- runtime.bookAcquisitions=()=>({async acquireBook(seed,admission){
+ runtime.bookAcquisitions=()=>({sourceRegistryRevision:()=>registryRevision,async acquireBook(seed,admission){
   assert.deepEqual([seed.sourceId,seed.bookId],['target','b']);assert.equal(admission.isCurrent(),true);return catalog;
  }});
  setCurrentRuntime(runtime);
@@ -197,7 +207,7 @@ function selectionFixture(mode='success',catalog=selectionTarget){
  preparation.fetchTargetToc=async(...args)=>{fetches.push(args);return fetch(...args);};
  const Index=productionMotionMethods(indexFile,selectionMethods,{MangaSessionGateway:ActualSessions,
   MangaSourceSwitchGateway,MangaSwitchChapterSelectionRequired,ReaderCoreGateway:Shelf,
-  ReaderRuntimeOwner:SourceRuntime,errorMessageOf:error=>error.message,
+  ReaderRuntimeOwner:SourceRuntime,readBookAuthorIdentity,errorMessageOf:error=>error.message,
   sourceSwitchCandidateKey:(source,book)=>JSON.stringify([source,book])});
  // Actual captured SourceSwitchHost and typed gateways own preparation and
  // durable shelf reads. Only native request/image/acquisition IO is controlled.
@@ -218,7 +228,7 @@ function selectionFixture(mode='success',catalog=selectionTarget){
  owner.switchMangaSource=(...args)=>{const task=start(...args);starts.push(task);return task;};
  return {f,owner,original,originalSession,originalToc,candidate,catalog,installed,fetches,
   begin:()=>{owner.onPickSource(candidate);assert.ok(starts.length>0);return starts.at(-1);},
-  latest:()=>starts.at(-1),setRevision:value=>revision=value,committed:()=>committed,refresh:()=>refresh,
+  latest:()=>starts.at(-1),setRevision:value=>revision=value,setRegistryRevision:value=>registryRevision=value,committed:()=>committed,refresh:()=>refresh,
   imageGate,commitGate,imageStarted,commitStarted};
 }
 // The SDK native TS loader has already imported this class above through the
@@ -230,6 +240,42 @@ function assertOriginal(s){
  assert.deepEqual(s.original.mangaPosition,{chapterIndex:8,chapterTitle:'Saved Chapter',pageOrdinal:1,totalPages:2});
  assert.equal(s.owner.readingSessionActive,true);
 }
+for(const inShelf of [false,true]) {
+ const wrong={...selectionTarget,book:{...selectionTarget.book,title:'另一部漫画'}};
+ const s=selectionFixture('success',wrong);s.owner.detailInBookshelf=inShelf;
+ await s.begin();assertOriginal(s);
+ assert.equal(s.fetches.length,1,'same URL is acquired once before resolved metadata can be verified');
+ assert.equal(s.installed.length,0);assert.equal(s.committed(),false);
+ assert.equal(s.owner.mangaSourceSwitchSelectionVisible,false);
+ assert.match(s.owner.sourceSwitchFailureMessage,/书名或作者.*不一致/);
+ assert.equal(s.f.calls.some(call=>['manga.chapter.get','manga.sourceSwitch.commit','reading.progress.update','bookshelf.add'].includes(call[0])),false,
+  'same-URL detail mismatch stops before image admission, directory selection or a durable mutation');
+}
+for(const reason of ['off-pane','old-version','old-scope','polluted-title','polluted-author']) {
+ const s=selectionFixture(),before=s.owner.sourceSwitchState,generation=s.owner.mangaSourceSwitchPreparationGeneration;
+ let candidate=s.candidate,scope=s.owner.sourceSwitchScopeId;
+ if(reason==='off-pane')candidate={...candidate,bookUrl:'another-url'};
+ if(reason==='old-version')candidate={...candidate,sourceVersion:'old-rule'};
+ if(reason==='old-scope')scope-=1;
+ if(reason==='polluted-title'||reason==='polluted-author'){
+  candidate={...candidate,...(reason==='polluted-title'?{bookName:'另一部漫画'}:{author:'其他作者'})};
+  s.owner.sourceSwitchState={kind:'candidates',candidates:[candidate]};
+ }
+ const pane=s.owner.sourceSwitchState;
+ s.owner.onPickSource(candidate,scope);
+ if(reason==='polluted-title'||reason==='polluted-author'){
+  assert.equal(s.owner.sourceSwitchState.kind,'switching','metadata qualification gives immediate feedback');
+  await s.latest();assert.match(s.owner.sourceSwitchFailureMessage,/书籍身份已变更/);
+  assert.equal(s.f.calls.every(call=>call[0]==='source.list'),true,'only current registry qualification runs');
+ }else{
+  assert.equal(s.latest(),undefined,`${reason}: rejected callback cannot start preparation`);
+  assert.equal(s.f.calls.length,0);assert.equal(s.owner.sourceSwitchState,pane);
+  assert.equal(s.owner.mangaSourceSwitchPreparationGeneration,generation);assert.equal(pane,before);
+ }
+ assert.equal(s.fetches.length,0);assert.equal(s.committed(),false);
+ assertOriginal(s);
+}
+console.log('PASS actual Index manga same-URL detail mismatch blocks trial/shelf before mutation; off-pane, stale scope/version and polluted current-row metadata cannot start acquisition');
 for(const catalog of [selectionTarget,{...selectionTarget,entries:[
  {index:3,title:'Saved Chapter',url:'/chapter',navigable:true},
  {index:8,title:'Saved Chapter',url:'/duplicate',navigable:true},
@@ -237,7 +283,7 @@ for(const catalog of [selectionTarget,{...selectionTarget,entries:[
  const s=selectionFixture('success',catalog);await s.begin();assertOriginal(s);
  assert.equal(s.owner.mangaSourceSwitchSelectionVisible,true,'missing or ambiguous match opens a target directory immediately');
  assert.equal(s.installed.length,0);assert.equal(s.committed(),false);
- assert.deepEqual(s.f.calls.map(call=>call[0]),['reading.progress.get','reading.progress.get']);
+ assert.deepEqual(s.f.calls.map(call=>call[0]),['source.list','reading.progress.get','reading.progress.get']);
  const pending=s.owner.mangaSourceSwitchSelection;
  assert.equal(pending.target,catalog);assert.equal(pending.candidate,s.candidate);
  assert.deepEqual(pending.expectedFrom,{epoch:2,revision:1});assert.equal(pending.entries.length,catalog.entries.length);
@@ -274,6 +320,33 @@ console.log('PASS actual Index missing/ambiguous signal opens an independent Cor
  assert.equal(s.f.calls.filter(call=>call[0]==='manga.chapter.get').length,1,'double taps cannot issue duplicate preparation');
 }
 console.log('PASS actual Index Back cancels only target catalog selection; late first-image loads and repeated taps cannot commit or disturb the original reader');
+
+for(const phase of ['before-selection','during-image','before-dispatch']){
+ const s=selectionFixture(phase==='during-image'?'image-pending':'success');await s.begin();
+ if(phase==='before-selection')s.setRegistryRevision(2);
+ if(phase==='before-dispatch'){
+  const request=s.f.gateway.runtime.request;
+  s.f.gateway.runtime.request=async(method,params,options)=>{
+   if(method==='manga.sourceSwitch.commit'){
+    // Controlled native scheduler boundary: registry changes after proposal
+    // validation and before the actual Core send, so shouldCancel must fence it.
+    s.setRegistryRevision(2);assert.equal(options.shouldCancel(),true);
+    throw Error('native dispatch cancelled');
+   }
+   return request(method,params,options);
+  };
+ }
+ const task=s.owner.selectMangaSourceSwitchChapter(3);
+ if(phase==='during-image'){await s.imageStarted.promise;s.setRegistryRevision(2);s.imageGate.resolve();}
+ await task;assertOriginal(s);assert.equal(s.committed(),false);assert.equal(s.installed.length,0);
+ assert.match(s.owner.sourceSwitchFailureMessage,/书源配置已变更/);
+ assert.equal(s.owner.mangaSourceSwitchSelectionVisible,false);assert.equal(s.owner.mangaSourceSwitchSelectionBusy,false);
+ assert.equal(s.owner.mangaSourceSwitchCommitGeneration,-1);
+ assert.equal(s.f.calls.some(call=>call[0]==='manga.sourceSwitch.commit'),false,'no Core progress transaction can dispatch under stale qualification');
+ if(phase==='before-selection')assert.equal(s.f.calls.some(call=>call[0]==='manga.chapter.get'),false);
+ if(phase==='during-image')assert.equal(s.f.releases.length,1,'cancelled first-image lease is released exactly once');
+}
+console.log('PASS actual Index manual manga qualification remains fenced while the directory is open, during first-image IO and at native commit dispatch; errors recover without silent switching or progress mutation');
 
 for(const mode of ['success','lost-response','commit-rejected','image-failed','progress-changed']){
  const s=selectionFixture(mode);await s.begin();

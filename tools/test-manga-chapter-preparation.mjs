@@ -1,3 +1,4 @@
+import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -79,7 +80,7 @@ console.log('PASS manga whole-chapter metadata: 75-page prepared entry paginatio
 
 const MangaResourceGateway = load('MangaResourceGateway');
 const Coordinator = load('MangaChapterPreparationCoordinator', { MangaSessionGateway, MangaResourceGateway });
-const Controller = load('MangaSessionController', { MangaSessionGateway, MangaResourceGateway, MangaChapterPreparationCoordinator: Coordinator });
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway, MangaChapterPreparationCoordinator: Coordinator });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function until(predicate, message) {
   for (let count = 0; count < 100; count++) { if (predicate()) return; await tick(); }

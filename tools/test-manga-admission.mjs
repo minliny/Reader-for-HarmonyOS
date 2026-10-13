@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 const { MangaAdmissionGateway } = await import('../entry/src/main/ets/features/manga/MangaAdmissionGateway.ts');
+const {readBookAuthorIdentity}=await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
 const pageId=`mp1:${'a'.repeat(64)}`;
 const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'/chapter'},sourceRuleVersion:'v',manifestVersion:'m',decodeRevision:'identity-v1',pages:[{ordinal:0,pageId,resourceRef:`manga:${pageId}`}]};
 const session={contentKind:'manga',sourceVersion:'v',identity:{sourceId:'s',bookId:'b'},detailUrl:'b',
@@ -96,7 +97,12 @@ const { fixture: sourceSwitchFixture, setCurrentRuntime: setSourceSwitchRuntime,
 const { MangaSwitchChapterSelectionRequired } = await import('../entry/src/main/ets/features/manga/MangaSourceSwitchGateway.ts');
 for(const mode of ['success','image-fail','cancel','route-away','identity-away','login-cancel']){
  const f=fixture();const opened=[];let imageResolve;
- f.runtime.bookAcquisitions=()=>({acquireBook:async()=>session});
+ f.runtime.bookAcquisitions=()=>({sourceRegistryRevision:()=>1,acquireBook:async()=>session});
+ const request=f.runtime.request;f.runtime.request=async(method,params,options)=>{
+  if(method==='source.list')return{data:{sources:['old','s'].map(sourceId=>
+   ({sourceId,name:sourceId,enabled:true,sourceVersion:session.sourceVersion,bookSource:{bookSourceType:2}}))}};
+  return request(method,params,options);
+ };
  if(mode==='image-fail')f.failImage();
  if(['cancel','route-away','identity-away','login-cancel'].includes(mode)){
   const load=f.runtime.loadReadingImage;
@@ -109,15 +115,15 @@ for(const mode of ['success','image-fail','cancel','route-away','identity-away',
  const switchOwner=sourceSwitchFixture({open:false});setSourceSwitchRuntime(f.runtime);
  const host=new switchOwner.Constructor(f.runtime);
  const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-  ['onPickSource','switchMangaSource','getSourceSwitchHost','performMangaPreviewSourceSwitch',
+  ['onPickSource','switchMangaSource','getSourceSwitchHost','getSourceSwitchGateway','sourceSwitchProbeQuery','performMangaPreviewSourceSwitch',
    'presentMangaSourceSwitchAcquisitionFailure','mangaSourceSwitchFailureMessage',
    'clearMangaSourceSwitchSelection','closeSourceSwitch','canCancelMangaSourcePreparation'],{
    SourceSwitchHost:switchOwner.Constructor,MangaSwitchChapterSelectionRequired,
    sourceSwitchCandidateKey:gatewayExports.sourceSwitchCandidateKey,
-   MangaAdmissionGateway,ReaderRuntimeOwner:{current:()=>f.runtime},
+   MangaAdmissionGateway,ReaderRuntimeOwner:{current:()=>f.runtime},readBookAuthorIdentity,
   });
- const original={sourceId:'old',bookId:'old-book',contentKind:'manga'},originalToc=[{index:9,title:'原目录'}];
- const candidate={sourceId:'s',bookUrl:'b',bookName:'Book',author:'Author',category:'comic'};
+ const original={sourceId:'old',bookId:'old-book',title:'Book',author:'Author',contentKind:'manga'},originalToc=[{index:9,title:'原目录'}];
+ const candidate={sourceId:'s',bookUrl:'b',bookName:'Book',author:'Author',sourceVersion:session.sourceVersion,category:'comic'};
  const owner=Object.assign(new Index(),{detailBook:original,detailToc:originalToc,detailReturnRoute:'search',
   mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,sourceSwitchHost:host,detailInBookshelf:false,
   route:'detail',readingSessionActive:false,sourceSwitchVisible:true,sourceSwitchState:{kind:'candidates',candidates:[candidate]},

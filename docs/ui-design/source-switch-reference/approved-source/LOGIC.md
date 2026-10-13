@@ -2245,7 +2245,7 @@ flowchart TD
 - text-selection：原生手柄/默认编辑菜单由系统生成，源未固定宽高/r/完整组成；UI只示范选区与COPY项目，平台外观为评审近似，不能声明为iOS/Android已验收几何。
 - 页角书签 topAccessory24×24；clock/title同一实测安全区slot，clock侧够宽放其左方gap5，否则进title lane。Y=rowTop+max(0,(rowHeight−24)/2)，取消预览opacity.35；该槽不接收点击。
 - 书签下拉实时位移 bookmarkOffsetY=min(viewportHeight/2,max(0,currentOffsetY)/2)。ReaderPageTurnStage整体translateY，只有top-info以−translateY反向补偿；正文和bottom-info随之下移，页角Accessory在Host独立固定。稿件preview静态样本downward96vp→48vp；cancel样本先peak96vp后回拉downward24vp→12vp，24<96/2所以预览取消/opacity.35；filled静止样本offset0。样本距离只是评审取值，公式与48vp门槛来自源码。
-- 会话胶囊 minW TTS94/auto96，高24/r12/border1、paddingX6；leading16×16、gap4、pause16×16位于W−20/y4、icon8、TTS耳机11；hit rect y−10/h44、shadow8/y3/#12463423。X=max(visualLeft,footerRight−sessionW)，Y=footerTop+max(0,(24−sessionH)/2)，页码给它预留W+5。
+- 会话胶囊 minW TTS94/auto96，高24/r12/border1、paddingX6；leading16×16、gap4、pause16×16位于W−20/y4、icon8、TTS耳机11；hit rect y−10/h44、shadow8/y3/#12463423。X=max(visualLeft,footerRight−sessionW)，Y=footerTop+max(0,(24−sessionH)/2)，底栏右侧进度槽给它预留W+5。
 - 漫画与文本按ReaderShell.contentKind分开挂载。竖向连续/横向分页、图片适配及页锚点由MangaReadingSurface/controller持有；小说朗读/替换/仿真设置不成为漫画控制入口。
 - persistentDirectory条件：有限W/H且W>=600，deviceIsTablet或W>=900或H>=600；左列W<=700取168，否则258。Phone横屏保留图片canvas，仅使用右侧panel；图片stage始终按剩余width布局。
 - Top floating chrome：left/right16，top=interactiveSafeTop+10，height52/r18/border1；左右88，back44/换源44，中心title17SerifBold/sub11。Bottom最大560，左右16，bottom=interactiveSafeBottom+12，padding13/14/11，progress48、nav55，三个图标22/标签11。
@@ -2259,7 +2259,7 @@ flowchart TD
 
 - 默认正文 serif，18fp、lineHeightMultiplier1.96、paragraphSpacing16vp、letterSpacing0fp、indent none、alignment justify；字号12–40，行距倍率1.2–2.8，段距0–32，字距-2–4。
 - 章标题 TYPE_READER_CHAPTER_TITLE：NotoSerifSC Bold700/23fp，layout.titleLineHeightFp28.75；字号支持系统 scale，标题必须按实际换行高度先测量后分页。
-- 沉浸 time/progress/pageOrdinal：NotoSansSC400/12fp、14.4行高。top实际bookTitle/clock，bottom progress/pageOrdinal。胶囊label NotoSansSC700/10fp/12.5，countdown900/8fp/8、baselineOffset−0.65fp。错误标题20fp/Medium、正文16fp；原Button样式由平台控件决定。
+- 沉浸 time/chapter/progress：NotoSansSC400/12fp、14.4行高。top实际bookTitle/clock；bottom 左侧绑定 page-owned 当前章节标题，右侧绑定全书阅读百分比。顶部 lane 使用真实 WindowInsets 状态栏高度与文字测量（含上下8vp留白）取较大值，正文同步避让；不再把页码作为底栏右槽。胶囊label NotoSansSC700/10fp/12.5，countdown900/8fp/8、baselineOffset−0.65fp。错误标题20fp/Medium、正文16fp；原Button样式由平台控件决定。
 
 **行为与状态**
 

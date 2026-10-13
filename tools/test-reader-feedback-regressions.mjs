@@ -67,14 +67,29 @@ assert.match(searchField, /\.enterKeyType\(EnterKeyType\.Search\)\s*\.onSubmit\(
 assert.match(search,
   /private canSubmit\(\): boolean \{[\s\S]*return scope === undefined \|\| scope\.length > 0;/,
   'the default all-source scope must keep the search action enabled before the first search');
-for(const busy of[false,true]){
+for(const isTablet of[false,true])for(const busy of[false,true]){
  const f=searchSharedActionFixture(busy?{kind:'results',operation:projectOperationFacts({phase:'partial',canCancel:true,canRetry:false})}:{kind:'initial'});
- f.page.searchBar();const action=f.action('search-field-phone',busy?'停止':'搜索');
+ f.page.isTablet=isTablet;
+ f.page.searchBar();const action=f.action(isTablet?'search-field-wide':'search-field-phone',busy?'停止':'搜索');
  assert.equal(action.native.backgroundColor,readerAppColor('app.action.fill','day'),'actual shared search action keeps the original dark fill');
  assert.equal(action.native.opacity,1);assert.equal(action.native.enabled,true);
+ const label=f.controls.nodes(action.actor).find(n=>n.type==='Text'&&n.create===(busy?'停止':'搜索'));
+ assert.ok(label,'actual shared search action mounts its native label');
+ assert.equal(label.fontSize,isTablet?14:13,'phone and wide search actions retain their original type sizes');
+ assert.equal(label.lineHeight,isTablet?22:20,'search action line box accommodates the actual CJK fallback metrics');
+ assert.equal(label.halfLeading,true,'search and stop labels distribute line leading symmetrically');
  sharedActionFeedbackReset(action.actor,action.native);assert.equal(f.calls.filter(c=>c[0]===(busy?'stopSearch':'performSearch')).length,0,'press and cancel-reset alone never submit or stop');
  action.click();assert.equal(f.calls.filter(c=>c[0]===(busy?'stopSearch':'performSearch')).length,1,'actual native search action submits or stops the live sweep');
- if(busy){const spinner=[...f.page.children.values()].findLast(c=>c instanceof f.controls.dependencies.SearchSpinner&&c.diameter===13&&c.active);assert.ok(spinner,'busy action executes its actual lexical leading Builder and mounts the shared spinner');assert.ok(f.controls.nodes(spinner).some(n=>n.type==='LoadingProgress'&&n.enableLoading===true),'actual leading spinner enables native loading');}
+ if(busy){
+  const spinner=[...f.page.children.values()].findLast(c=>c instanceof f.controls.dependencies.SearchSpinner&&c.active&&c.light);
+  assert.ok(spinner,'busy action executes its actual lexical leading Builder and mounts the shared spinner');
+  const progress=f.controls.nodes(spinner).find(n=>n.type==='LoadingProgress');
+  assert.ok(progress,'actual leading spinner mounts the native loading indicator');
+  assert.equal(progress.width,28);assert.equal(progress.height,28);
+  assert.equal(progress.enableLoading,true,'actual leading spinner enables native loading');
+  const row=f.controls.nodes(action.actor).find(n=>n.type==='Row');
+  assert.equal(row.alignItems,'VerticalAlign.Center','native spinner and label share the centered action row');
+ }
  updateActualReaderButton(f,action.actor,{actionEnabled:false});assert.equal(action.native.enabled,false);assert.equal(action.native.opacity,0.4);
  action.click();assert.equal(f.calls.filter(c=>c[0]===(busy?'stopSearch':'performSearch')).length,1,'disabled real shared actor does not submit or stop');
  updateActualReaderButton(f,action.actor,{actionEnabled:true});action.actor.aboutToDisappear();action.click();
@@ -176,7 +191,7 @@ const windowStruct=switchSource.slice(switchSource.indexOf('@Component\nexport s
 const gatewaySource=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchGateway.ts',import.meta.url),'utf8');
 const countStart=gatewaySource.indexOf('export function sourceSwitchSourceCount'),countEnd=gatewaySource.indexOf('\nfunction deduplicateSourceSwitchCandidates',countStart);
 assert.ok(countStart>=0&&countEnd>countStart,'actual distinct-source count remains bound to production');
-const sourceSwitchSourceCount=new Function(stripTypeScriptTypes(gatewaySource.slice(countStart,countEnd)).replace(/^export /,'')+';return sourceSwitchSourceCount;')();
+const sourceSwitchSourceCount=new Function(stripTypeScriptTypes(gatewaySource.slice(countStart,countEnd)).replace(/^export /gm,'')+';return sourceSwitchSourceCount;')();
 const makeStatus=(sweeping=true)=>{
  const {owner:status}=createReaderBuilderProbe(windowStruct,['novelDiscovery'],{SourceSwitchSpinner:SpinnerChild,SOURCE_SWITCH_VISUAL,sourceSwitchSourceCount,ButtonType:{Normal:'ButtonType.Normal'}});
  Object.assign(status,{appThemeScheme:'day',foreground:true,reduceMotion:false,displayedCandidates:[],isSweeping:()=>sweeping,

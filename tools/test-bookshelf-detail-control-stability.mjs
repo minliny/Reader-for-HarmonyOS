@@ -89,7 +89,7 @@ assert.match(actionAreaSource, /Stack\(\{ alignContent: Alignment\.Center \}\)/,
 assert.doesNotMatch(actionAreaSource, /\.align\(Alignment\.Bottom\)/,
   'detail action dock must not bottom-align its inner row a second time');
 const { owner: detail } = createReaderBuilderProbe(detailSource, ['actionArea',
-  'readingActionLabel', 'shelfActionLabel', 'detailColor'], {
+  'readingActionLabel', 'shelfActionLabel', 'detailBookAvailable', 'detailColor'], {
     GradientDirection: { Bottom: 'bottom' },
     READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold',
   });

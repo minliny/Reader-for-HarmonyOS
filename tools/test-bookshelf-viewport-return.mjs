@@ -62,4 +62,10 @@ assert.match(text,/maintainVisibleContentPosition\(true\)/);assert.match(text,/o
 const index=readFileSync(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'utf8');
 assert.match(index,/private readonly bookshelfViewState: BookshelfViewState = new BookshelfViewState/);
 assert.match(index,/BookshelfPage\(\{\s*navigationGeneration: this\.navigationGeneration,\s*viewState: this\.bookshelfViewState/);
+assert.match(index,/private pendingShelfReadbackKey: string = ''/,
+  'detail shelf admission retains a confirmed identity until the bookshelf route readback');
+assert.match(index,/this\.getUIContext\(\)\.postFrameCallback\(new ReaderNavigationBackfillFrame/,
+  'bookshelf return schedules a fresh read after the route binding is mounted');
+assert.match(index,/this\.invalidateBookshelfProjection\(\);\s*this\.refreshBookshelf\(\);\s*this\.pendingShelfReadbackKey = ''/,
+  'the post-frame shelf readback invalidates the stale detail projection before clearing the pending identity');
 console.log('PASS bookshelf route return: identity+item offset, list/state/type filters, removed group-filter migration, reordered books, late callback isolation');

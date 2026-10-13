@@ -116,34 +116,15 @@ for (const relative of selected) {
             'real SDK lowering observes subsequent structured storage publications');
         assert.match(output, /Button\.createWithChild\(\{\s*type:\s*ButtonType\.Normal/, 'the actual SDK lowering retains the explicit Normal constructor');
         assert.doesNotMatch(output, /Button\.createWithChild\(\s*\)/, 'SDK output contains no implicit Capsule constructor');
-        const selectCalls = [], selectModifiers = { textModifier: 0, arrowModifier: 0, controlSize: 0 };
+        const selectCalls = [], inlineSelectCalls = [];
         const visitSelects = n => {
             if ((ts.isCallExpression(n) || ts.isEtsComponentExpression(n)) && ts.isIdentifier(n.expression) && n.expression.text === 'Select') selectCalls.push(n);
-            if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression) &&
-                Object.hasOwn(selectModifiers, n.expression.name.text)) selectModifiers[n.expression.name.text]++;
+            if ((ts.isCallExpression(n) || ts.isEtsComponentExpression(n)) && ts.isIdentifier(n.expression) && n.expression.text === 'ReaderInlineSelect') inlineSelectCalls.push(n);
             ts.forEachChild(n, visitSelects);
         };
         visitSelects(inputNode);
-        assert.equal(selectCalls.length, 6, 'all six existing native Select controls remain present');
-        assert.deepEqual(selectModifiers, { textModifier: 6, arrowModifier: 6, controlSize: 6 },
-            'every Select declares its actual text, system arrow and small control attributes');
-        assert.match(output, /Select\.textModifier\(/, 'the SDK lowers the real platform text modifier');
-        assert.match(output, /Select\.arrowModifier\(/, 'the SDK lowers the system-glyph modifier');
-        assert.match(output, /Select\.controlSize\(ControlSize\.SMALL\)/);
-        const selectEmissions = [...output.matchAll(/Select\.create\([\s\S]*?Select\.pop\(\);/g)].map(match => match[0]);
-        assert.equal(selectEmissions.length, 6);
-        const verifySelectOrder = emission => {
-            const indices = ['Select.controlSize(', 'Select.font(', 'Select.textModifier(', 'Select.arrowModifier(']
-                .map(name => emission.indexOf(name));
-            assert.ok(indices.every(index => index >= 0));
-            assert.ok(indices.every((index, i) => i === 0 || indices[i - 1] < index),
-                'native SetControlSize resets the value font; explicit font and modifiers must follow it');
-        };
-        selectEmissions.forEach(verifySelectOrder);
-        const oldOrder = selectEmissions[0].replace(/(Select\.controlSize\(ControlSize\.SMALL\);)([\s\S]*?)(Select\.arrowModifier\([^\n]*\);)/, '$2$3$1');
-        assert.notEqual(oldOrder, selectEmissions[0]);
-        assert.throws(() => verifySelectOrder(oldOrder), assert.AssertionError,
-            'the previous native font-reset order is rejected by the same real SDK emission contract');
+        assert.equal(selectCalls.length, 0, 'download pages no longer mount platform Select directly');
+        assert.equal(inlineSelectCalls.length, 6, 'all download choices use the shared ReaderInlineSelect host');
 
         for (const [name, indices] of [['bookRow', [0]], ['statusButton', [0]], ['chapterRow', [0, 1]], ['chapterGroup', [0, 1]]]) {
             const method = inputNode.members.find(member => member.name?.getText(inputTree) === name);

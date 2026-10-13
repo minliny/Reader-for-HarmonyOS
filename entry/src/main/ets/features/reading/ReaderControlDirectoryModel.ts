@@ -28,7 +28,7 @@ export interface ReaderControlDirectoryCatalog {
 
 export function readerControlDirectorySnapshot(entries: LocalReadingTocEntry[], tab: string,
   query: string, ascending: boolean, currentChapter: number,
-  identity?: ReaderBookIdentity, catalog?: ReaderControlDirectoryCatalog): ReaderControlDirectorySnapshot {
+  identity?: ReaderBookIdentity, catalog?: ReaderControlDirectoryCatalog, mangaSearch: boolean = false): ReaderControlDirectorySnapshot {
   const currentOrdinal = entries.findIndex((entry: LocalReadingTocEntry): boolean => entry.index === currentChapter);
   const rows: ReaderControlDirectoryRow[] = [];
   let targetRow = -1;
@@ -44,7 +44,7 @@ export function readerControlDirectorySnapshot(entries: LocalReadingTocEntry[], 
     }));
     targetRow = readerControlNearestBookmarkRow(positions, currentOrdinal) ?? -1;
   } else {
-    for (const entry of projectReaderDirectoryEntries(entries, query, ascending)) {
+    for (const entry of projectReaderDirectoryEntries(entries, query, ascending, mangaSearch)) {
       if (entry.index === currentChapter) targetRow = rows.length;
       rows.push({ key: `chapter:${entry.index}`, chapter: entry, bookmark: undefined });
     }

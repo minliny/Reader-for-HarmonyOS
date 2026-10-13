@@ -114,7 +114,10 @@ for (const isTablet of [false, true]) {
   });
   owner.initialRender();
   const list = fullList(owner);
-  const headerHeight = (isTablet ? 56 : 52) + 41.5;
+  // Results with an available source group render both the source and
+  // content-type filter rows; keep the list/statistics offsets below the
+  // complete two-row header so the overlap regression stays covered.
+  const headerHeight = (isTablet ? 56 : 52) + 2 * 41.5;
   assert.equal(list.contentStartOffset, headerHeight + 28.5);
   assert.equal(list.contentEndOffset, 34);
   const header = nodes(owner).find(n => n.type === 'Column' && n.height === headerHeight && n.position?.top === 0);
@@ -278,7 +281,7 @@ for (const [safeTop, safeBottom] of [[0, 0], [48, 34], [10, 80]]) {
   let rawMangaOffset = 0;
   const nativeMangaScroller = { currentOffset: () => ({ xOffset: 0, yOffset: rawMangaOffset }) };
   const catalog = fixture('directory', ['build', 'mangaPage', 'mangaToolbar', 'mangaFlatList', 'mangaEmptyState', 'mangaDownloadMenuButton',
-    'mangaCurrentFooter', 'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'mangaContentTopInset', 'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaBottomClearance', 'headerFrame', 'onMangaScrollOffset', 'topInset', 'bottomInset'], {
+    'mangaCurrentFooter', 'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'mangaContentTopInset', 'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaSortIcon', 'headerFrame', 'onMangaScrollOffset', 'topInset', 'bottomInset'], {
     contentKind: 'manga', sourceId: 'source', bookId: 'book', admittedIdentity: 'source\u0000book',
     admittedEntries: entries, projectedEntries: entries, rulesRevision: 0, currentChapterIndex: 7,
     locateCurrentRevision: 0, navigationInteracted: false, mangaDownloadEnabled: false,
@@ -300,14 +303,14 @@ for (const [safeTop, safeBottom] of [[0, 0], [48, 34], [10, 80]]) {
   assert.equal(nodes(actualFooter).find(node => node.accessibilityText === '当前阅读位置').constraintSize.minHeight, 48);
   assert.ok(toolbar); assert.ok(footer);
   assert.equal(toolbar.position.y, safeTop + 80);
-  assert.equal(footer.margin.bottom, safeBottom + 12);
+  assert.equal(footer.margin.bottom, safeBottom + 8);
   const toolbarEnd = toolbar.position.y + catalog.mangaToolsHeight;
-  const footerClearance = catalog.mangaFooterHeight() + footer.margin.bottom + 12;
+  const footerClearance = catalog.mangaFooterHeight() + footer.margin.bottom + 8;
   for (const [key, child] of [['tree', treeChild], ['flat', flatChild]]) {
     assert.equal(child.params.listPaddingTop, safeTop + 255);
     assert.equal(child.params.listPaddingTop, toolbarEnd, `${key} first row clears the measured floating tools`);
-    assert.equal(child.params.listPaddingBottom, safeBottom + 72);
-    assert.equal(child.params.listPaddingBottom, footerClearance, `${key} final row clears the actual footer plus its 12vp gap`);
+    assert.equal(child.params.listPaddingBottom, safeBottom + 64);
+    assert.equal(child.params.listPaddingBottom, footerClearance, `${key} final row clears the actual footer plus its 8vp gap`);
     const { owner, list } = nativeDirectoryFixture(key, child.params);
     if (key === 'tree') {
       assert.equal(list.padding.top, 0);

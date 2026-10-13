@@ -1,5 +1,5 @@
 import type { JsonObject } from '@reader/core-harmony';
-import { errorMessageOf, isNetworkEnvironmentFailure } from '../../app/ErrorMessage.ts';
+import { catalogCurrentChapterRecoveryMessage, errorMessageOf, isNetworkEnvironmentFailure } from '../../app/ErrorMessage.ts';
 
 export type RemoteReadingCommand =
   'book.detail' | 'book.toc' | 'chapter.content' |
@@ -327,6 +327,13 @@ export function classifyRemoteReadingCommandFailure(
     requestId:raw?.event?.requestId,
     ...remoteReadingHttpSummary(details)};
   const category = details?.['category'];
+  const catalogRecovery = catalogCurrentChapterRecoveryMessage(error);
+  if (catalogRecovery !== undefined) {
+    // A refused catalog update is a retained-position recovery. It must not
+    // mark the source failed, trigger candidate fallback or derived cleanup.
+    return new RemoteReadingGatewayError('positionContextStale', catalogRecovery, command,
+      undefined, diagnostic, error);
+  }
   if (isNetworkEnvironmentFailure(error)) {
     return new RemoteReadingGatewayError('networkEnvironment', message, command, undefined, diagnostic, error);
   }

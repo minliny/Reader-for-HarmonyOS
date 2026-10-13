@@ -19,7 +19,7 @@ const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey',
 const timers = new Map(); let nextTimer = 0;
 class LayoutFrame { constructor(action) { this.action = action; } }
 const Controller = productionMotionMethods(page,
-  ['candidateKey', 'publishCandidates', 'acceptState', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
+  ['candidateKey', 'presentationCandidates', 'publishCandidates', 'acceptState', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
     'listTouch', 'selectCandidate', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
     'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
     'headingHeight', 'discoveryHeight', 'columnsHeight', 'footerHeight', 'bookHeight', 'timingWidth', 'drawerHeight', 'safeTop', 'safeBottom', 'safeLeft', 'safeRight'],
@@ -125,20 +125,21 @@ assert.match(source, /Text\('搜索耗时'\)/); assert.doesNotMatch(source, /Sou
 assert.match(source, /duration: this\.reduceMotion \? 0 : 220/);
 console.log('source-switch live window: progressive state, stable touch identity, real callbacks, zero/failure/refresh, search latency, anchor and lifecycle PASS');
 
-// Both formats share the drawer geometry. Novel arrival ordering and manga
-// authoritative delayed ordering/anchors above retain their original policies.
+// Both formats share the drawer geometry and publish the Gateway's measured
+// latency order while idle. Touch keeps the physical hit targets stable.
 const novel = owner([a, b], 'text'); flush();
 assert.equal(novel.page.listHeaderCount(), 0);
 assert.equal(novel.page.listHeaderHeight(), 0);
 assert.equal(novel.page.rowHeight(), 50);
 assert.equal(novel.page.statusText(), '查找结束 · 已找到 2 个书源');
-novel.page.state = { kind: 'candidates', candidates: [c, b, fasterA], refreshing: true };
+const fasterC={...c,latencyMs:25};
+novel.page.state = { kind: 'candidates', candidates: [fasterC, fasterA, b], refreshing: true };
 novel.page.acceptState(); flush();
-assert.deepEqual(novel.page.displayedCandidates.map(key), [a,b,c].map(key), 'successful additions append without re-sorting existing novel rows');
-assert.deepEqual(Array.from({length:novel.page.candidateDataSource.totalCount()},(_value,index)=>key(novel.page.candidateDataSource.getData(index))),[a,b,c].map(key),'native data receives the same held-order novel projection');
-assert.equal(novel.page.displayedCandidates[0].latencyMs, 50, 'metadata still updates in place');
+assert.deepEqual(novel.page.displayedCandidates.map(key), [c,a,b].map(key), 'a faster completed source moves ahead while the remaining sweep is active');
+assert.deepEqual(Array.from({length:novel.page.candidateDataSource.totalCount()},(_value,index)=>key(novel.page.candidateDataSource.getData(index))),[c,a,b].map(key),'native data receives the exact same measured ordering');
+assert.equal(novel.page.displayedCandidates[1].latencyMs, 50, 'metadata still updates on the same identity');
 novel.page.listTouch({type:'down'}); novel.page.heldKey = key(b);
-novel.page.state = { kind: 'candidates', candidates: [c, b, { ...fasterA, latestChapterTitle: '新章节' }], refreshing: true };
+novel.page.state = { kind: 'candidates', candidates: [fasterC, { ...fasterA, latestChapterTitle: '新章节' }, b], refreshing: true };
 novel.page.acceptState(); novel.page.selectCandidate(key(a)); assert.equal(novel.selected.length, 0);
 novel.page.listTouch({type:'up'}); novel.page.selectCandidate(key(b));
 assert.equal(novel.selected.length, 1); assert.equal(novel.selected[0].sourceId, 'b');

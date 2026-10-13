@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { assertSourceLoginDefault } from './source-login-default-policy.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = relative => readFileSync(resolve(repo, relative), 'utf8');
@@ -24,6 +25,7 @@ let fullCorpusRecords = 0;
 let laterAdmissionRecords = 0;
 let defaultEnabledRecords = 0;
 for (const [index, source] of sources.entries()) {
+  assertSourceLoginDefault(source);
   const label = `bundled source ${index + 1}`;
   assert.equal(typeof source.bookSourceUrl, 'string', `${label} requires bookSourceUrl`);
   assert.match(source.bookSourceUrl, /^https:\/\//, `${label} identity must use HTTPS`);
@@ -81,7 +83,7 @@ assert.equal(fullCorpusRecords, expectedFullCorpusRecords);
 assert.equal(laterAdmissionRecords, expectedLaterAdmissionRecords);
 assert.equal(sourceIds.size, expectedUniqueSourceIds,
   'duplicate tested rule variants must remain records but share their real bookSourceUrl identity');
-assert.equal(defaultEnabledRecords, 158,
+assert.equal(defaultEnabledRecords, 151,
   'only evidence-backed full-chain/admitted records may be enabled by default');
 
 // The six later admitted sources are appended after the older corpus variants,
@@ -93,7 +95,7 @@ for (const source of sources) {
 const currentAdmission = [...lastBySourceId.values()]
   .filter(source => source.verificationSuiteVersion === 'reader-source-admission/1');
 assert.equal(currentAdmission.length, expectedLaterAdmissionRecords);
-assert.equal([...lastBySourceId.values()].filter(source => source.defaultEnabled).length, 137);
+assert.equal([...lastBySourceId.values()].filter(source => source.defaultEnabled).length, 134);
 
 const owner = read('entry/src/main/ets/app/ReaderRuntimeOwner.ts');
 const host = read('entry/src/main/ets/app/ReaderHostRegistry.ts');

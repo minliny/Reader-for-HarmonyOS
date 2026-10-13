@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 import {
   copyReaderSettingsSnapshot,
@@ -254,8 +255,135 @@ assert.match(experience,
   /private onWindowChromeActiveChanged\(\): void \{[\s\S]*?this\.applyWindowChrome\(\);[\s\S]*?this\.applyWindowPolicyForChromeOwner\(\)/,
   'the visible-reader transition must apply chrome and system-bar policy together');
 assert.match(experience,
-  /private applyWindowPolicyForChromeOwner\(\): void \{[\s\S]*?if \(this\.windowChromeActive\)[\s\S]*?this\.applyReaderWindowPolicy\(this\.readerSettingsSnapshot, this\.controlsPresentedForWindow\(\)\)[\s\S]*?ReaderWindowCoordinator\.requestAppWindowPolicy\(\)/,
+  /private applyWindowPolicyForChromeOwner\(\): void \{[\s\S]*?const controlsPresented = this\.controlsPresentedForWindow\(\);[\s\S]*?if \(this\.windowChromeActive\)[\s\S]*?this\.applyReaderWindowPolicy\(this\.readerSettingsSnapshot, controlsPresented\)[\s\S]*?ReaderWindowCoordinator\.requestAppWindowPolicy\(\)/,
   'a hidden warm reader must preserve the app policy until it owns the screen');
+// Execute the production settings/lifecycle methods: a correct mount-time
+// guard alone cannot stop settings/awake callbacks from reclaiming hidden UI.
+{
+  const calls = [];
+  const windowFacts = new Map();
+  let windowOwner = 'app';
+  const settle = async () => { for (let i = 0; i < 8; i++) await new Promise(resolve => setImmediate(resolve)); };
+  const Owner = productionMotionMethods(new URL('LocalReadingExperience.ets', readingDir), [
+    'applyWindowPolicyForChromeOwner', 'onWindowChromeActiveChanged', 'loadReaderSettingsSnapshot',
+    'applyInitialReaderWindowPolicy', 'applyReaderWindowPolicy', 'windowPolicyFor', 'safeWindowSettingsFallback',
+    'onScreenAwakeKeepScreenOnChanged', 'isMountedToken', 'isSessionActive',
+  ], {
+    ReaderWindowCoordinator: {
+      requestAppWindowPolicy: async () => { windowOwner = 'app'; calls.push({ owner: 'app' }); },
+      requestReaderWindowPolicy: async policy => { windowOwner = 'reader'; calls.push({ owner: 'reader', hideStatusBar: policy.hideStatusBar }); },
+    },
+    ReaderWindowPolicy: class {
+      constructor(orientation, keepScreenOn, hideStatusBar, hideNavigationBar, extendIntoCutout) {
+        Object.assign(this, { orientation, keepScreenOn, hideStatusBar, hideNavigationBar, extendIntoCutout });
+      }
+    },
+    normalizeReaderSettingsSnapshot, AppStorage: { setOrCreate(key, value) { windowFacts.set(key, value); } },
+  });
+  function fixture(load) {
+    let current = true, controls = false;
+    const snapshot = { ...createDefaultReaderSettingsSnapshot(), extendIntoCutout: true };
+    const owner = Object.assign(new Owner(), {
+      isReaderIdentityCurrent: () => current, windowChromeActive: false, mounted: true, exitRequested: false,
+      readerSettingsLoaded: false, readerSettingsMutationGeneration: 0, readerSettingsSnapshot: snapshot, lifecycleToken: 1,
+      screenAwakeKeepScreenOn: false, ttsKeepScreenOn: false, controlsPresentedForWindow: () => controls,
+      syncVolumeKeyPolicy() {}, configureReaderScreenAwakeLease() {}, applyReaderSystemEventPolicy() {},
+      onControlInputBoundaryChanged() {}, applyWindowChrome() {}, readerSettingsGateway: { load },
+      captureReaderSettingsAdmission: () => () => true, retryPendingReaderSettings() {},
+    });
+    return { owner, snapshot, current: value => { current = value; }, controls: value => { controls = value; } };
+  }
+  for (const outcome of ['success', 'failure']) {
+    let resolve, reject;
+    const pending = new Promise((a, b) => { resolve = a; reject = b; });
+    const f = fixture(() => pending); calls.length = 0;
+    f.owner.onWindowChromeActiveChanged();
+    const loading = f.owner.loadReaderSettingsSnapshot(1);
+    if (outcome === 'success') resolve(f.snapshot); else reject(new Error('controlled late settings failure'));
+    await loading; await settle();
+    assert.deepEqual(calls, [{ owner: 'app' }], `hidden late ${outcome} cannot write any Window policy`);
+    f.owner.onScreenAwakeKeepScreenOnChanged(true); await settle();
+    assert.deepEqual(calls, [{ owner: 'app' }], 'a hidden awake callback cannot write any Window policy');
+  }
+  const f = fixture(async () => f.snapshot); calls.length = 0;
+  f.owner.windowChromeActive = true; f.owner.onWindowChromeActiveChanged(); await settle();
+  f.controls(true); f.owner.applyWindowPolicyForChromeOwner(); await settle();
+  f.controls(false); f.owner.applyWindowPolicyForChromeOwner(); await settle();
+  f.owner.windowChromeActive = false; f.owner.onWindowChromeActiveChanged(); await settle();
+  assert.deepEqual(calls, [{ owner: 'reader', hideStatusBar: true }, { owner: 'reader', hideStatusBar: false },
+    { owner: 'reader', hideStatusBar: true }, { owner: 'app' }], 'active/open/close/inactive retain the correct bar policy');
+  let reads = 0;
+  f.owner.windowChromeActive = true;
+  f.owner.controlsPresentedForWindow = () => ++reads === 1;
+  calls.length = 0; f.owner.applyWindowPolicyForChromeOwner(); await settle();
+  assert.equal(reads, 1, 'native policy and painted top band must share one control-session sample');
+  assert.equal(f.owner.windowControlsPresented, true);
+  assert.equal(windowFacts.get('readerTopInfoSuppressed'), true);
+  assert.deepEqual(calls, [{ owner: 'reader', hideStatusBar: false }]);
+  let resolveLate;
+  const late = fixture(() => new Promise(resolve => { resolveLate = resolve; }));
+  late.owner.windowChromeActive = true; calls.length = 0;
+  late.owner.onWindowChromeActiveChanged();
+  const lateLoad = late.owner.loadReaderSettingsSnapshot(1);
+  late.owner.windowChromeActive = false; late.owner.onWindowChromeActiveChanged();
+  resolveLate(late.snapshot); await lateLoad; await settle();
+  assert.deepEqual(calls, [{ owner: 'reader', hideStatusBar: true }, { owner: 'app' }],
+    'settings admitted before deactivation may not reclaim the window after its hidden transition');
+  for (const outcome of ['success', 'failure']) {
+    let resolve, reject;
+    const pending = new Promise((a, b) => { resolve = a; reject = b; });
+    const warm = fixture(() => pending);
+    warm.owner.isReaderIdentityCurrent = undefined;
+    warm.owner.onWindowChromeActiveChanged();
+    const loading = warm.owner.loadReaderSettingsSnapshot(1);
+    const visible = fixture(async () => createDefaultReaderSettingsSnapshot());
+    visible.owner.windowChromeActive = true; visible.owner.onWindowChromeActiveChanged(); await settle();
+    assert.equal(windowOwner, 'reader'); calls.length = 0;
+    if (outcome === 'success') resolve(warm.snapshot); else reject(new Error('controlled warm settings failure'));
+    await loading; warm.owner.onScreenAwakeKeepScreenOnChanged(true); await settle();
+    assert.deepEqual(calls, [], `hidden warm ${outcome}/awake cannot replace a different visible reader with either App or Reader policy`);
+    assert.equal(windowOwner, 'reader');
+  }
+  calls.length = 0; f.current(false);
+  f.owner.onWindowChromeActiveChanged(); f.owner.onScreenAwakeKeepScreenOnChanged(true); await settle();
+  assert.deepEqual(calls, [], 'an obsolete owner cannot restore app bars over the current reader');
+  for (const retired of ['identity', 'unmounted']) {
+    let resolve;
+    const pending = new Promise(a => { resolve = a; });
+    const old = fixture(() => pending); calls.length = 0;
+    const loading = old.owner.loadReaderSettingsSnapshot(1);
+    if (retired === 'identity') old.current(false); else old.owner.mounted = false;
+    resolve(old.snapshot); await loading; await settle();
+    assert.deepEqual(calls, [], `late settings from ${retired} lifecycle cannot reclaim chrome`);
+  }
+  const policyInputs = [['default', undefined], ['saved-v5-false', { ...initial, extendIntoCutout: false }],
+    ['saved-v5-true', { ...initial, extendIntoCutout: true }]];
+  for (const version of [1, 2, 3, 4]) for (const extend of [false, true]) for (const hide of [false, true]) {
+    policyInputs.push([`legacy-v${version}-extend-${extend}-hide-${hide}`,
+      { ...initial, version, extendIntoCutout: extend, hideStatusBar: hide }]);
+  }
+  for (const version of [3, 4]) {
+    const raw = { ...initial, version, hideStatusBar: true }; delete raw.extendIntoCutout;
+    policyInputs.push([`legacy-v${version}-missing-cutout`, raw]);
+  }
+  policyInputs.push(['window-fallback', new Owner().safeWindowSettingsFallback({ ...initial, extendIntoCutout: true })]);
+  for (const [name, raw] of policyInputs) {
+    const original = JSON.stringify(raw), snapshot = normalizeReaderSettingsSnapshot(raw);
+    const active = fixture(async () => snapshot);
+    active.owner.readerSettingsSnapshot = snapshot;
+    active.owner.windowChromeActive = true; calls.length = 0;
+    for (const controls of [false, true, false]) {
+      active.controls(controls); active.owner.applyWindowPolicyForChromeOwner(); await settle();
+    }
+    assert.deepEqual(calls, [{ owner: 'reader', hideStatusBar: true }, { owner: 'reader', hideStatusBar: false },
+      { owner: 'reader', hideStatusBar: true }], `${name}: immersion/controls/immersion must not depend on cutout or legacy hide flags`);
+    assert.equal(active.owner.readerSettingsSnapshot.extendIntoCutout, snapshot.extendIntoCutout,
+      `${name}: content cutout geometry remains the user's normalized preference`);
+    assert.equal(JSON.stringify(raw), original, `${name}: status policy cannot rewrite persisted preferences`);
+  }
+  console.log(`reader status control lifecycle: PASS (${policyInputs.length} default/saved/legacy/fallback cases; cutout geometry preserved)`);
+  console.log('reader settings window ownership lifecycle: PASS (hidden late success/failure/awake; active controls; inactive; retired)');
+}
 assert.match(experience,
   /safeWindowSettingsFallback\([\s\S]*?version: 5[\s\S]*?extendIntoCutout: false/,
   'a Host failure must keep the requested immersive status-bar default');

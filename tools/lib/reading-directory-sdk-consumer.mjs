@@ -37,7 +37,14 @@ export function makeIndex(f,{remote=false,mount=1,index=indexSource}={}){
   isKnownDetailChapter:index=>idx.detailToc.some(e=>e.index===index),getUIContext:()=>({getPromptAction:()=>({showToast(){}})})});
  function render(name='BookDirectoryPage'){
   let leaf;
-  if(name==='BookDirectoryPage'){idx.externalDirectory();leaf=[...idx.children.values()].find(c=>c instanceof leaves.BookDirectoryPage);}
+  if(name==='BookDirectoryPage'){
+   // The production detail route now sends text books through
+   // ReaderFullDirectory. This helper explicitly exercises the manga leaf
+   // recovery surface, so select the manga branch before invoking the real
+   // external-directory Builder.
+   if (idx.detailBook !== undefined) idx.detailBook.contentKind = 'manga';
+   idx.externalDirectory();leaf=[...idx.children.values()].find(c=>c instanceof leaves.BookDirectoryPage);
+  }
   else leaf=new leaves.ReaderFullDirectory(undefined,{directoryRecovery:idx.directoryRecovery(),
     onReconcileBookmarks:(g,i)=>idx.reconcileDirectoryOperation(g,i),onContinueBookmarks:(g,i)=>idx.reconcileDirectoryOperation(g,i,true),
     onReconcileOffline:(g,i)=>idx.reconcileOfflineOperation(g,i),onContinueOffline:(g,i)=>idx.reconcileOfflineOperation(g,i,true)});

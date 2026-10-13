@@ -211,11 +211,12 @@ export struct LocalBookDetail {
             .fontSize(visual.heroSourceFontSize).lineHeight(visual.heroSourceLineHeight)
             .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
             .fontColor(mangaDirectoryColor('muted', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-          if (this.sourceSwitchEnabled) {
+          if (this.book.sourceId !== 'local') {
             Text('换源').constraintSize({ minHeight: 30 }).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
               .fontWeight(visual.bodyFontWeight).fontSize(visual.heroSourceFontSize).lineHeight(visual.heroSourceLineHeight)
               .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
               .fontColor(mangaDirectoryColor('accent', this.appThemeScheme))
+              .enabled(this.sourceSwitchEnabled).opacity(this.sourceSwitchEnabled ? 1 : visual.disabledOpacity)
               .attributeModifier(new MangaDirectoryPressFeedback(this.sourceSwitchEnabled, true, this.appThemeScheme))
               .onClick((): void => { if (this.sourceSwitchEnabled) this.onSwitchSource(); });
           }
@@ -335,11 +336,12 @@ export struct LocalBookDetail {
           Text(`当前来源：${this.book.sourceName}`).layoutWeight(1).constraintSize({ minWidth: 0 })
             .fontSize(13).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-          if (this.sourceSwitchEnabled) {
+          if (this.book.sourceId !== 'local') {
             Text('换源').height(32).padding({ left: 12, right: 12 }).fontSize(12)
               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme)).borderRadius(10)
-              .textAlign(TextAlign.Center).onClick((): void => { if (this.sourceSwitchEnabled) this.onSwitchSource(); });
+              .textAlign(TextAlign.Center).enabled(this.sourceSwitchEnabled).opacity(this.sourceSwitchEnabled ? 1 : 0.4)
+              .onClick((): void => { if (this.sourceSwitchEnabled) this.onSwitchSource(); });
           }
         }.width('100%');
         Text(`最新：${this.book.lastChapter?.trim() || '暂无最新章节'}`).width('100%')
@@ -529,8 +531,8 @@ export struct LocalBookDetail {
       .backgroundColor(this.isCurrentChapter(entry) ? readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) :
         entry.navigable === false ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent)
       .borderRadius(this.isCurrentChapter(entry) || entry.navigable === false ? 8 : 0)
-      .enabled(!this.removing).onClick((): void => {
-        if (this.removing) return;
+      .enabled(!this.removing && this.detailBookAvailable()).onClick((): void => {
+        if (this.removing || !this.detailBookAvailable()) return;
         const current = this.toc.find((row: LocalReadingTocEntry): boolean => row.index === entry.index);
         if (current === undefined || current.title !== entry.title || current.level !== entry.level ||
           current.navigable !== entry.navigable) return;
@@ -559,9 +561,9 @@ export struct LocalBookDetail {
           .fontWeight(this.book.contentKind === 'manga' ? visual.groupFontWeight : FontWeight.Bold)
           .fontColor(this.detailColor('TOK_ON_PRIMARY', 'onGreen'))
           .textAlign(TextAlign.Center).backgroundColor(this.detailColor('TOK_PRIMARY_DARK', 'green')).borderRadius(this.book.contentKind === 'manga' ? visual.detailActionRadius : 16)
-          .enabled(!this.removing).opacity(this.removing ? (this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.5) : 1)
-          .attributeModifier(new MangaDirectoryPressFeedback(!this.removing, this.book.contentKind === 'manga', this.appThemeScheme))
-          .onClick((): void => { if (!this.removing) this.onContinue(); });
+          .enabled(!this.removing && this.detailBookAvailable()).opacity(this.removing || !this.detailBookAvailable() ? (this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.5) : 1)
+          .attributeModifier(new MangaDirectoryPressFeedback(!this.removing && this.detailBookAvailable(), this.book.contentKind === 'manga', this.appThemeScheme))
+          .onClick((): void => { if (!this.removing && this.detailBookAvailable()) this.onContinue(); });
         ForEach([this.admissionIdentity], (identity: string) => {
         Text(this.shelfActionLabel()).width(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94)
           .height(this.book.contentKind === 'manga' ? undefined : 48)
@@ -577,11 +579,11 @@ export struct LocalBookDetail {
             this.book.contentKind === 'manga' ? 'muted' : this.inBookshelf ? 'muted' : 'accent'))
           .backgroundColor(this.detailColor('TOK_SURFACE_PANEL_SOFT', 'soft')).borderRadius(this.book.contentKind === 'manga' ? visual.detailActionRadius : 16)
           .border({ width: 1, color: this.detailColor('TOK_LINE', 'line') })
-          .enabled(this.removalEnabled && !this.removing && !this.cancellingAdd)
-          .opacity(this.removalEnabled && !this.removing && !this.cancellingAdd ? 1 : this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.4)
-          .attributeModifier(new MangaDirectoryPressFeedback(this.removalEnabled && !this.removing && !this.cancellingAdd, this.book.contentKind === 'manga', this.appThemeScheme))
+          .enabled(this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable())
+          .opacity(this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable() ? 1 : this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.4)
+          .attributeModifier(new MangaDirectoryPressFeedback(this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable(), this.book.contentKind === 'manga', this.appThemeScheme))
           .onClick((): void => {
-            if (this.removalEnabled && !this.removing && !this.cancellingAdd) {
+            if (this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable()) {
               if (this.adding) this.onCancelAdd(identity); else this.onRemove(identity);
             }
           });
@@ -770,6 +772,7 @@ export struct LocalBookDetail {
   }
 
   private readingActionLabel(): string {
+    if (!this.detailBookAvailable()) return '请重新导入';
     if (this.book.contentKind === 'manga') return this.book.mangaPosition === undefined ? '开始阅读' : '继续阅读';
     return this.inBookshelf ? '继续阅读' : '开始阅读';
   }
@@ -777,8 +780,10 @@ export struct LocalBookDetail {
     if (this.cancellingAdd) return '正在取消…';
     if (this.adding) return '取消加入';
     if (this.removing) return this.inBookshelf ? '正在移除…' : '正在加入…';
+    if (!this.detailBookAvailable()) return '已移除';
     return this.inBookshelf ? '移除书架' : '加入书架';
   }
+  private detailBookAvailable(): boolean { return this.book.sourceId !== 'local' || this.inBookshelf; }
   private hasCover(): boolean {
     return this.book.coverUrl !== undefined && /^(https?:\/\/|data:image\/(png|jpeg|bmp|webp);base64,|file:\/\/)/.test(this.book.coverUrl.trim());
   }

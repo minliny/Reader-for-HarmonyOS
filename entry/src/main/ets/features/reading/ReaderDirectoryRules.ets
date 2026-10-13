@@ -1,4 +1,5 @@
 import { ReaderFormField } from '../common/ReaderFormField';
+import { ReaderInlineSelect } from '../common/ReaderInlineSelect';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_RULE_HEADING } from '../common/ReaderTypography';
@@ -196,10 +197,13 @@ export struct ReaderDirectoryRules {
             ReaderFormField({ specId: 'directory-rule-level', scheme: this.scheme, text: rule.level,
               isEditable: this.canEdit(),
               onTextChange: (value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'level', value); } });
-            Select([{ value: '已有标题' }, { value: '章首独立行' }, { value: '章尾独立行' }, { value: '独立行边界' }])
-              .selected(['title', 'head', 'tail', 'any'].indexOf(rule.boundary))
-              .enabled(this.canEdit())
-              .onSelect((index: number): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'boundary', ['title', 'head', 'tail', 'any'][index]); });
+            ReaderInlineSelect({
+              value: ['已有标题', '章首独立行', '章尾独立行', '独立行边界'][Math.max(0, ['title', 'head', 'tail', 'any'].indexOf(rule.boundary))],
+              options: ['已有标题', '章首独立行', '章尾独立行', '独立行边界'],
+              selectedIndex: Math.max(0, ['title', 'head', 'tail', 'any'].indexOf(rule.boundary)),
+              actionEnabled: this.canEdit(),
+              onSelect: (index: number, _value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'boundary', ['title', 'head', 'tail', 'any'][index]); },
+            });
             Button('删除').enabled(this.canEdit()).onClick((): void => {
               if (!this.ownsActor(identity) || !this.canEdit() || !this.rules.some((item: DirectoryRuleDraft): boolean => item.id === rule.id)) return;
               this.rules = this.rules.filter((item: DirectoryRuleDraft): boolean => item.id !== rule.id); this.changed();

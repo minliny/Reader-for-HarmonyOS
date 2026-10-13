@@ -69,11 +69,12 @@ assert.deepEqual({ ticket, owner, committed }, snapshot,
 const host = fs.readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
 const select = host.match(/private selectChapterAnchor\(([\s\S]*?)\n  private controlSelectionOwner/)?.[1];
 assert.ok(select);
-assert.doesNotMatch(select, /this\.hideControl\(/, 'chapter loading must not close controls');
+assert.match(select, /if \(closeControlOnCommit && selectionControlRevision === this\.controlOpenRevision &&\s*this\.controlVisible\(\) && !this\.controlShellExitArmed\(\)\)\s*this\.hideControl\(\);/,
+  'discrete selection exposes loading immediately, preserving the original control owner and slider policy');
 assert.match(select, /controlOwnerRevision: number = -2/,
   'deferred selection carries its original UI ownership instead of borrowing a reopened panel');
 assert.match(host, /this\.admitCommittedProgress\(stored\);\s*this\.completeControlSelectionAfterCommit\(stored, visiblePage, selectionToken, lifecycleToken\);/,
-  'closing is evaluated after the actual stored page anchor is admitted');
+  'a reading ticket completes only after the actual stored page anchor is admitted');
 const recovery = host.match(/private recoverControlSelectionFailure\(([\s\S]*?)\n  private captureMaterializedChapterContext/)?.[1];
 assert.ok(recovery);
 assert.match(recovery, /reconcileReaderControlSelectionProgress/);

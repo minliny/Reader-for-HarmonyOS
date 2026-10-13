@@ -124,7 +124,8 @@ assert.match(search, /groupScopeRow\(\)/,
   'the search surface must present the source-group chip row under the bar');
 assert.match(search, /selectGroup\(/,
   'group chips must apply the current result category');
-assert.match(search, /return \['本地', '在线'\]/, 'result tabs filter one unified session');
+assert.match(search, /return this\.scopeEntries\(\)\.map\(\(entry: SearchScopeEntry\)/,
+  'result tabs filter the metadata-driven unified session');
 assert.match(search, /onSearch\(keyword, scope\)/,
   'ACQ-02: submitting must forward the scope subset to the orchestrator');
 assert.match(search, /onStop/,

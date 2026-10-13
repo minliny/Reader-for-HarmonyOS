@@ -1,11 +1,25 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { findReaderTheme, readerThemeDefinition, READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { ReaderRectVp } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerAppearanceThemeStyle } from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
 import { readerWidthClass } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } from './lib/reader-page-chrome-measurement-probe.mjs';
+import { ReaderPageChromeMeasurements, READER_PAGE_CHROME_BOOKMARK_SIZE, resolveReaderPageChromeLayout } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
+import { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress } from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
+import { READER_CONTROL_PROGRESS_MAX } from '../entry/src/main/ets/features/reading/ReaderControlGeometry.ts';
+registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
+  if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;
+}}});
+const { createDefaultReaderReadingLayout, resolveReaderReadingLayout } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const { createDefaultReaderAppearanceSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
+const { createDefaultReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+const { readerRenderStageKind } = await import('../entry/src/main/ets/features/reading/ReaderRenderStageSpec.ts');
+const { ReaderWindowMetricsSnapshot, ReaderInsetsVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
 
 const read = file => readFileSync(new URL(`../entry/src/main/ets/${file}`, import.meta.url), 'utf8');
 const paperSource = read('features/reading/ReaderPaperBackground.ets');
@@ -143,6 +157,132 @@ for (const extend of [false, true]) for (const controls of [false, true]) {
     assert.equal(wrapper.zIndex, 10, 'only the presented control overlay owns stationary status paper');
     statusGeometry(status([...owner.children.values()][0].params), new ReaderRectVp(0, 0, 390, 48), [390, 844]);
   }
+}
+
+// Compile the production stage-selection block verbatim, excluding only the
+// unrelated controls/input overlays. Real SDK properties track which observer
+// consumes the new display value; a progress update must leave the stage alone.
+{
+  const ts=require(`${sdkRoot}/node_modules/typescript`),opts=require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
+  const parse=(text,file)=>ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,opts);
+  const tree=parse(lreSource,'ContinuousChrome.ets'),component=tree.statements.find(n=>n.name?.text==='ReadingExperience');
+  const member=name=>{const value=component.members.find(m=>m.name?.getText(tree)===name);assert.ok(value,name);return value.getText(tree);};
+  const start=lreSource.indexOf('      if (readerRenderStageKind('),end=lreSource.indexOf('      this.sourceSwitchCompletionWash();',start);
+  assert.ok(start>0&&end>start);
+  const stageBlock=lreSource.slice(start,end);
+  assert.equal((stageBlock.match(/this\.continuousPageChromeContent\(\)/g)??[]).length,1,
+    'one ordinary chrome call is a sibling of the continuous stage');
+  const continuousSource=read('features/reading/ReaderContinuousReadingStage.ets');
+  assert.doesNotMatch(continuousSource,/\bReaderPageChrome\s*\(/,'no chapter-list row or scrolling stage gains a duplicate header');
+  const continuousTree=parse(continuousSource,'ContinuousStage.ets');
+  const dataClass=continuousTree.statements.find(n=>n.name?.text==='ContinuousFragmentDataSource');
+  const DataSource=new Function(stripTypeScriptTypes(dataClass.getText(continuousTree))+';return ContinuousFragmentDataSource;')();
+  const pageTree=parse(read('features/reading/ReaderPageTurnStage.ets'),'PageTurnStage.ets');
+  const renderClass=pageTree.statements.find(n=>n.name?.text==='ReaderPageTurnRenderPage');
+  const RenderPage=new Function('ReaderPageChromeSnapshot',stripTypeScriptTypes(renderClass.getText(pageTree)).replace(/^export /,'')+
+    ';return ReaderPageTurnRenderPage;')(ReaderPageChromeSnapshot);
+  const selected=['continuousPageChromeContent','continuousPageChromeSnapshot','continuousChromeProgressText',
+    'continuousRenderRevision','sessionLaunch','pageChromeClockText','pageChromeSnapshot','pageChromeProgress',
+    'pageChromeChapterTitle','currentChapterIndex','normalizedProgress','pageChromeOrdinal','onContinuousVisibleRangeChanged',
+    'currentPageTurnRenderPage','pageChromePaginationKey','bookTurnTextureIdentity','bookTurnSurfaceIdentity'];
+  const scene='@Component struct ReadingExperience {\n'+selected.map(member).join('\n')+
+    '\nbuild(){Stack({alignContent:Alignment.TopStart}){\n'+stageBlock+'\n}}\n}';
+  let continuousCases=0;
+  function fixture(cold=false,launch=false,definition=scene,suppressed=false){
+    const properties=createArkUIPropertyRuntimeProbe(),appearance=createDefaultReaderAppearanceSnapshot();
+    const window=new ReaderWindowMetricsSnapshot();Object.assign(window,{ready:true,statusBarHeight:48,
+      statusBarRect:new ReaderRectVp(0,0,390,48),systemInsets:new ReaderInsetsVp()});
+    const layout=resolveReaderReadingLayout(390,844,false,window,false),stageUpdates=[];
+    const uiContext={px2vp:value=>value/3,fp2px:value=>value*3,px2fp:value=>value/3,
+      getHostContext:()=>({resourceManager:{getNumber:()=>48}}),getMeasureUtils:()=>({
+        measureTextSize:({textContent})=>({width:textContent.length*21,height:60}),
+        measureText:({textContent})=>textContent.length*21})};
+    const chromeSource=read('features/reading/ReaderPageChrome.ets');
+    const deps={...properties.sdk,uiContext,createDefaultReaderReadingLayout,createDefaultReaderAppearanceSnapshot,
+      ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE,resolveReaderPageChromeLayout,
+      measureReaderPageChromeText,readerPageChromeTextMeasurements,readerPageChromeTopTextStyle};
+    const hooks={...properties.hooks,childSources:{ReaderPageChrome:chromeSource},mountChildren:true,allowEmptyBranchAdmission:true};
+    const ChromeBase=createReaderBuilderProbe(chromeSource,boundedMembers(chromeSource),deps,hooks).Component;
+    // Native StorageLink delivery is the explicit seam; the linked property's
+    // SDK class, actual conditional Builders and retained Text are unmodified.
+    class Chrome extends ChromeBase{
+      constructor(owner,params,storage,id){super(owner,params,storage,id);this.topInfoSuppressed=suppressed;}
+    }
+    class ContinuousPort{
+      constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id,children:new Map(),nodes:new Map()});
+        this.dataSource=new DataSource();this.dataSource.replace(params.fragmentsProvider());}
+      updateStateVars(params){stageUpdates.push(params);Object.assign(this.params,params);}
+    }
+    class PagedPort{
+      constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id,children:new Map(),nodes:new Map()});
+        const page=params.currentPageProvider();
+        this.header=new Chrome(this,{topStartText:page.chromeTopStartText,topEndText:page.chromeTopEndText,
+          bottomStartText:page.chromeBottomStartText,bottomEndText:page.chromeBottomEndText,
+          layout:params.layout,appearance:params.appearance},undefined,-1);
+        this.children.set(-1,this.header);this.header.initialRender();}
+      updateStateVars(params){stageUpdates.push(params);Object.assign(this.params,params);}
+    }
+    const {owner}=createReaderBuilderProbe(definition,['build',...selected],{
+      ...deps,ReaderPageChrome:Chrome,ReaderContinuousReadingStage:ContinuousPort,ReaderPageTurnStage:PagedPort,
+      ReaderBookTurnSurface:Child,
+      ReaderPageTurnRenderPage:RenderPage,ReaderPageChromeSnapshot,formatReaderPageOrdinal,formatReaderPageProgress,
+      readerRenderStageKind,READER_CONTROL_PROGRESS_MAX,formatReaderPageClock:()=> '12:30',
+    },{...hooks,childSources:{...hooks.childSources,ReaderContinuousReadingStage:continuousSource,
+      ReaderPageTurnStage:read('features/reading/ReaderPageTurnStage.ets'),
+      ReaderBookTurnSurface:read('features/reading/ReaderBookTurnSurface.ets')}});
+    const fragments=[{id:'visible-first',startScalar:0,endScalar:1000,text:'正文',imageHeight:0}];
+    Object.assign(owner,{bookTitle:'连续书名',sourceId:'s',bookId:'b',readerSettingsSnapshot:{navigationMode:'continuous'},
+      chapter:cold?undefined:{chapterIndex:2,chapterTitle:'当前章'},chapterLayoutMap:{scalarCount:()=>1000},
+      continuousFragments:fragments,continuousVisibleScalar:cold?0:250,continuousProgressRevision:0,
+      continuousRenderChapterIdentity:'s:b:2',continuousRenderChapterTitle:'当前章',continuousRenderGeometryKey:'geometry',
+      entryCatalogPending:cold,entryCatalogNavigation:cold?undefined:{readableChapterCount:10},contentMetrics:undefined,
+      physicalPagination:{draft:undefined},materializedContentVersion:'',pageTurnFrozenRevision:-1,pageTurnRenderRevision:0,
+      visiblePage:undefined,visibleFragments:[],appearanceSnapshot:appearance,
+      hasContinuousRenderContent:()=>!cold,readingLayout:()=>layout,visibleReadingAppearance:()=>appearance,
+      readingTocEntries:()=>[],readableChapterPosition:index=>index,shouldShowSessionCapsule:()=>false,
+      activeSessionCapsuleWidth:()=>0,activeSessionCapsuleHeight:()=>0,
+      autoPageHighlightStart:()=>undefined,autoPageHighlightEnd:()=>undefined,readerTextSelectionEnabled:()=>false,
+      isReaderPageInteractionEnabled:()=>true,sourceSwitchContinuousRangeObserver:()=>()=>{},
+      usesBookTurnSimulation:()=>false,effectivePageTurnStyle:()=> 'none',pageTurnStageViewportWidth:()=>390,
+      shouldMountBookTurnSurface:()=>false,resolveVisibleContinuousImages(){},hasPartialEntryWindow:()=>false,
+    });
+    owner.pageChromeClockText='12:30';owner.sessionLaunch=launch?{ownership:'stage'}:undefined;
+    owner.initialRender();properties.flush();
+    const walk=value=>[value,...[...(value.children?.values()??[])].flatMap(walk)];
+    const header=()=>walk(owner).filter(child=>child instanceof Chrome);
+    const labels=()=>header().flatMap(child=>[...child.nodes.values()].filter(node=>node.type==='Text').map(node=>node.create));
+    return{owner,properties,fragments,stageUpdates,header,labels,
+      stage:[...owner.children.values()].find(child=>child instanceof ContinuousPort||child instanceof PagedPort)};
+  }
+  for(const cold of[false,true])for(const controls of[false,true]){
+    const f=fixture(cold,false,scene,controls);assert.equal(f.header().length,1,'cold fallback and ready continuous each own exactly one normal header');
+    assert.equal(f.labels().includes('连续书名'),!controls);assert.equal(f.labels().includes('12:30'),!controls);
+    assert.ok(f.labels().includes(cold?'—':'23%'),'progress comes from the existing exact chapter/scalar projection');
+    const header=f.header()[0];
+    if(controls){
+      header.topInfoSuppressed=false;f.properties.flush();
+      assert.ok(f.labels().includes('连续书名')&&f.labels().includes('12:30'),'closing controls restores the same retained information layer');
+    }
+    assert.equal(f.header().length,1);continuousCases++;
+  }
+  const running=fixture(),stage=running.stage,source=stage.dataSource,fragment=source.getData(0);
+  const header=running.header()[0];running.stageUpdates.length=0;
+  running.owner.onContinuousVisibleRangeChanged(0,0,.6);running.properties.flush();
+  assert.ok(running.labels().includes('26%'),'visible scalar changes update the actual stationary progress Text');
+  assert.equal(running.stage,stage);assert.equal(stage.dataSource,source);assert.equal(source.getData(0),fragment);
+  assert.equal(running.owner.continuousFragments,running.fragments);assert.equal(stage.params.fragmentsProvider(),running.fragments);
+  assert.equal(running.stageUpdates.length,0,'header display updates cannot schedule a continuous-stage Prop refresh or replace its data source');
+  assert.equal(running.header()[0],header);
+  const display=running.owner.continuousChromeProgressText;
+  running.owner.onContinuousVisibleRangeChanged(0,0,.601);running.properties.flush();
+  assert.equal(running.owner.continuousChromeProgressText,display,'a scalar change within the same displayed percentage has no new chrome display value');
+  assert.equal(running.stageUpdates.length,0);
+  assert.equal(fixture(false,true).header().length,0,'the existing session-launch overlay exclusively owns chrome during launch');
+  const omitted=scene.replace('this.continuousPageChromeContent();','');
+  assert.notEqual(omitted,scene,'negative control removes only the newly connected production call');
+  assert.throws(()=>assert.equal(fixture(false,false,omitted).header().length,1,'continuous must mount its one shared header'),
+    /continuous must mount its one shared header/,'the original missing call fails the same actual SDK composition');
+  console.log(`PASS continuous chrome: ${continuousCases} real SDK cold/ready Text, control suppression, one header, launch exclusion and header-only progress dependency; stage/list paint and native StorageLink delivery are controlled boundaries.`);
 }
 
 assert.match(surfaceSource, /ReaderPaperBackground\(\{[\s\S]*?theme: this\.appearance\.activeTheme,[\s\S]*?expanded: this\.layout\.widthClass === 'expanded',[\s\S]*?synchronousImages: this\.snapshotSynchronousImages/);

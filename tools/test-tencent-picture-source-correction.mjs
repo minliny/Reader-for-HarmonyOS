@@ -67,7 +67,7 @@ const supply = read('../entry/src/main/ets/app/BundledBookSourceSupply.ts');
 const methods = stripTypeScriptTypes(supply.slice(supply.indexOf('function canonicalJson'), supply.indexOf('type StoredLedger')))
   .replace(/^export /gm, '');
 const guards = new Function('RULE_PAYLOAD_FIELDS', `${methods}; return { canonicalRulePayloadJson,
-  hasBuiltinMarker, isUserModifiedBuiltinCopy, decideBundledUpgrade };`)(RULE_PAYLOAD_FIELDS);
+  hasBuiltinMarker, isUserModifiedBuiltinCopy, decideBundledUpgrade, mergeBundledDefaultStateCorrection };`)(RULE_PAYLOAD_FIELDS);
 for (let index = 0; index < current.length; index += 1) {
   const source = current[index];
   const oneDocument = JSON.stringify([source]);

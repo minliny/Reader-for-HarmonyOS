@@ -16,13 +16,13 @@ export function readableAdmissionFixture({runtime,book={sourceId:'s',bookId:'b',
  const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>installed);
  const ReaderCoreGateway=bookshelfOperationClass('app/ReaderCoreGateway.ts','ReaderCoreGateway',{ReaderRuntimeOwner});
  const types=actualBookshelfOperationTypes({ReaderRuntimeOwner,ReaderCoreGateway,ReaderCoreRequestError});
- const methods=['addDetailBook','cancelDetailBookAddition','isSameDetailBook','readableAdmissionCurrent','publishReadableAdmission','detailReadableAdmission','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','requestDetailShelfMutation'];
+ const methods=['addDetailBook','cancelDetailBookAddition','isSameDetailBook','readableAdmissionCurrent','publishReadableAdmission','detailReadableAdmission','detailShelfMessage','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','requestDetailShelfMutation','canRemoveDetailBook','hasUnknownShelfWrite'];
  const Index=productionMotionMethods(new URL('../../entry/src/main/ets/pages/Index.ets',import.meta.url),methods,{ReaderRuntimeOwner,LOCAL_SOURCE_ID:'local',EMPTY_READABLE_ADMISSION:types.EMPTY_READABLE_ADMISSION});
  const make=()=>{
   const notices=[];const page=Object.assign(new Index(),{route:'detail',navigationGeneration:1,mountedRuntimeOwner:runtime,shelfReceiptRetired:false,
    detailShelfAdmissionMount:1,readableAdmissions:[],detailBook:{...book},remoteReadingSession:{identity:{sourceId:book.sourceId,bookId:book.bookId},book:{...book}},
    shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},detailInBookshelf:false,refreshes:0,memberships:0,
-   canRemoveDetailBook:()=>true,detailBookKey:b=>`${b.sourceId}\u0000${b.bookId}`,
+   readingSessionActive:false,sourceSwitchVisible:false,pendingSourceSwitch:undefined,offlineOperationActive:false,sourceSwitchHost:undefined,detailBookKey:b=>`${b.sourceId}\u0000${b.bookId}`,
    refreshBookshelf(){this.refreshes++;},refreshSearchShelfMembership(){this.memberships++;},showReadingFailure:(...args)=>notices.push(args)});
   page.bookshelfHost=actualBookshelfHostField(page,types.Host,{setOrCreate(){}});
   page.bookshelfHost.readable(runtime);

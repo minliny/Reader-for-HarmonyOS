@@ -59,6 +59,12 @@ class Child { constructor(owner, params, _storage, id) { Object.assign(this, { o
 const pageSource = read('features/bookshelf/BookDirectoryPage');
 const headerSource = read('features/common/PageBackBar');
 const footerSource = read('features/manga/MangaDirectoryCurrentFooter');
+assert.match(pageSource, /reader_directory_sort_ascending/);
+assert.match(pageSource, /reader_directory_sort_descending/);
+assert.doesNotMatch(pageSource, /manga_sheet_vertical_accent/,
+  'manga full directory uses the same ascending/descending icon pair as the book directory');
+assert.match(pageSource, /Row\(\{ space: 5 \}\)/,
+  'the compact search/sort row uses the detail-directory gap');
 const iconProvenance = JSON.parse(readFileSync(new URL('../../Reader-UI/design/manga-directory/icon-provenance.json', import.meta.url), 'utf8'));
 const canonicalArrow = readFileSync(new URL('../../Reader-UI/design/manga-directory/arrow-left.svg', import.meta.url), 'utf8');
 assert.equal(iconProvenance.upstream, '@radix-ui/react-icons'); assert.equal(iconProvenance.version, '1.3.2');
@@ -83,7 +89,7 @@ const palettes = {
 };
 const pageNames = ['mangaPage', 'mangaToolbar', 'mangaCurrentFooter', 'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaSummaryLabel', 'mangaIsGroup',
   'mangaCurrentTitle', 'mangaCurrentPosition', 'mangaToolsHeight', 'mangaViewportHeight', 'searchDraft', 'ascending',
-  'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaBottomClearance',
+  'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaSortIcon',
   'headerFrame', 'onMangaScrollOffset', 'mangaScrollOffset', 'readerWindowMetricsRevision', 'onMangaMetricsChanged',
   'mangaDownloadMenuButton', 'mangaFooterMeasured'];
 const headerNames = ['build', 'leftInset', 'rightInset', 'mangaFontScale', 'variant', 'centered', 'floating',
@@ -129,7 +135,7 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
       applySearch() { searches.push(this.searchDraft); }, locateCurrent: () => actions.push('locate'), toggleSort: () => actions.push('sort') });
     owner.mangaPage();
     const children = [...owner.children.values()];
-    const field = children.find(child => child.variant === 'mangaDirectory' && child.floating !== true);
+    const field = children.find(child => child.variant === 'readerDirectory' && child.floating !== true);
     const header = children.find(child => child.floating === true);
     assert.ok(field?.nodes && header?.nodes, 'mount both actual SDK-compiled shared input and header');
     // Storage dispatch is a platform boundary. Deliver its published values to
@@ -144,16 +150,21 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     assert.equal(title.maxLines, undefined, 'short windows and long titles retain the demo natural wrap');
     assert.equal(title.wordBreak, 'WordBreak.BREAK_WORD');
     const locate = nodes.find(node => node.accessibilityText === '定位当前条目');
-    const sort = nodes.find(node => node.accessibilityText === '切换目录排序');
+    const sort = nodes.find(node => node.accessibilityText === '切换排序');
     const toolHeight = Math.max(38, 16.5 * scale + 8);
     assert.deepEqual(locate.constraintSize, { minHeight: toolHeight });
-    assert.deepEqual(sort.constraintSize, { minHeight: toolHeight });
-    assert.equal(locate.height, undefined); assert.equal(sort.height, undefined,
-      'wrapped tool labels grow the native actor instead of being clipped to a fixed single-line height');
+    assert.equal(sort.width, 32); assert.equal(sort.height, 32);
+    assert.equal(sort.backgroundColor, palette.soft);
+    assert.equal(sort.constraintSize, undefined,
+      'the compact sort actor stays beside the search field instead of reserving a second tool row');
+    assert.equal(locate.height, undefined,
+      'wrapped locate labels grow the native actor instead of being clipped to a fixed single-line height');
     const expectedFocus = { strokeWidth: { value: 2, unit: 'vp' }, strokeColor: { color: palette.accent },
       margin: { value: 3, unit: 'vp' } };
-    assert.deepEqual(locate.focusBox, expectedFocus); assert.deepEqual(sort.focusBox, expectedFocus);
-    assert.equal(locate.focusable, true); assert.equal(sort.focusable, true);
+    assert.deepEqual(locate.focusBox, expectedFocus);
+    assert.equal(sort.focusBox, undefined,
+      'the sort actor follows the compact detail-directory control and does not add a second custom focus ring');
+    assert.equal(locate.focusable, true); assert.equal(sort.focusable, undefined);
     for (const text of nodes.filter(node => node.type === 'Text' && ['定位当前条目', '正序'].includes(node.create))) {
       assert.equal(text.fontColor, palette.accent); assert.equal(text.lineHeight, 16.5);
     }
@@ -163,7 +174,7 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     popup.params.onOpen(); header.onBack();
     assert.deepEqual(actions, ['locate', 'sort', 'download-menu', 'back']);
     const input = [...field.nodes.values()].find(node => node.type === 'TextInput');
-    assert.equal(input.lineHeight, 20); assert.equal(input.height, 42 + 20 * (scale - 1));
+    assert.equal(input.lineHeight, undefined); assert.equal(input.height, 24);
     input.onChange('48'); assert.deepEqual(searches, ['48'], 'typing publishes the full-directory query');
     const headerNodes = [...header.nodes.values()];
     const headerTitle = headerNodes.find(node => node.type === 'Text' && node.create === '章节目录');
@@ -192,7 +203,7 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     near(navigation.params.listPaddingTop, initialContentTop + 175);
     const stackedFooter = scale === 3.2;
     const footerHeight = stackedFooter ? (15 + 18 + 15) * scale + 8 + 22 : Math.max(48, 18 * scale + 22);
-    near(navigation.params.listPaddingBottom, safeBottom + footerHeight + 24);
+    near(navigation.params.listPaddingBottom, safeBottom + footerHeight + 16);
     const footer = children.find(child => child.availableWidth === contentWidth && child.title === '48');
     assert.ok(footer?.nodes, 'mount the actual shared current-position footer producer');
     const footerNodes = [...footer.nodes.values()];
@@ -212,7 +223,7 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
       assert.ok(!footerNodes.some(node => node.type === 'Row' && node.layoutWeight === 1));
     } else assert.ok(footerNodes.some(node => node.type === 'Row' && node.layoutWeight === 1));
     footerSurface.onAreaChange({}, { width: contentWidth, height: footerHeight + 5 }); properties.flush();
-    near(navigation.params.listPaddingBottom, safeBottom + footerHeight + 5 + 24,
+    near(navigation.params.listPaddingBottom, safeBottom + footerHeight + 5 + 16,
       'actual footer measurement replaces estimates in Core/list/grid bottom clearance');
     const toolbar = nodes.find(node => node.type === 'Column' && node.onAreaChange);
     assert.equal(toolbar.width, contentWidth); assert.equal(toolbar.position.x, 20); near(toolbar.position.y, initialContentTop);
@@ -245,7 +256,7 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     properties.flush();
     assert.equal(owner.mangaFooterMeasured, 0, 'font/width revision invalidates measurements from the old footer layout');
     const nextFooterHeight = nextScale === 3.2 ? 48 * nextScale + 8 + 22 : 48;
-    near(navigation.params.listPaddingBottom, safeBottom + nextFooterHeight + 24,
+    near(navigation.params.listPaddingBottom, safeBottom + nextFooterHeight + 16,
       'new scale immediately uses its admitted estimated clearance while awaiting fresh native footer measurement');
     assert.equal([...owner.children.values()].find(child => child.params?.chapterEntries), navigation);
   }
@@ -301,20 +312,20 @@ function checkFullAdaptive(candidate = pageSource) {
     assert.equal(owner.mangaFlowFooter(), flow, 'short clear band selects the shared finite flow predicate');
     assert.equal([...owner.nodes.values()].some(node => node.type === 'Stack' && node.create?.alignContent === 'Alignment.Bottom'), !flow,
       'actual initial SDK Builder omits the fixed bottom overlay only in flow mode');
-    assert.equal([...owner.nodes.values()].some(node => node.type === 'Row' && node.margin?.top === 12), flow,
-      'flow uses the unchanged footer producer after the existing tools with12vp top margin');
+    assert.equal([...owner.nodes.values()].some(node => node.type === 'Row' && node.margin?.top === 8), flow,
+      'flow moves the current footer down to the safe-area edge and keeps the released list space');
     assert.ok(footer?.nodes); assert.equal(footer.title, '48'); assert.equal(footer.pagePosition, '4 / 24 页'); assert.equal(footer.scheme, scheme);
     assert.equal([...footer.nodes.values()].find(node => node.accessibilityText === '当前阅读位置').backgroundColor, palettes[scheme].soft);
     assert.equal(nav.params.mangaCatalogNarrow, true, '320vp full parent publishes the explicit narrow class rather than inner content guesses');
     near(nav.params.mangaVisibleTopInset, 159.6, 'parent publishes its actual fixed header bottom');
-    near(nav.params.listPaddingBottom, flow ? 58 : 241.6);
+    near(nav.params.listPaddingBottom, flow ? 50 : 233.6);
     assert.equal(nav.params.scroller, scroller);
     const admitted = nav.params.chapterEntries, nativeOwner = nav;
     toolbar.onAreaChange({}, { height: 453 }); properties.flush();
     near(nav.params.listPaddingTop, 632.6, 'measured flow footer is admitted through the existing toolbar area');
     const nativeFooter = [...footer.nodes.values()].find(node => node.accessibilityText === '当前阅读位置');
     nativeFooter.onAreaChange({}, { width: 280, height: 201 }); properties.flush();
-    near(nav.params.listPaddingBottom, flow ? 58 : 259, 'flow height never reintroduces the bottom overlay clearance');
+    near(nav.params.listPaddingBottom, flow ? 50 : 251, 'flow height never reintroduces the bottom overlay clearance');
     owner.mounted = true; owner.pendingMangaCurrentScroll = true; owner.navigationActive = false;
     owner.mangaLayoutRows = [{ entries: [rows[1]] }];
     owner.onListFirstLayout('s\0b');

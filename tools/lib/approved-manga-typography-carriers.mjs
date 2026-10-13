@@ -56,7 +56,7 @@ const directoryRetainedHistorical = {
   'entry/src/main/ets/features/bookshelf/LocalBookDetail.ets': { carriers: [6, 10, 11, 12, 19, 20, 21, 22], nativeDefaults: [] },
   'entry/src/main/ets/features/common/PageBackBar.ets': { carriers: [], nativeDefaults: [] },
   'entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets': { carriers: [], nativeDefaults: [] },
-  'entry/src/main/ets/features/manga/MangaReadingSurface.ets': { carriers: [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36], nativeDefaults: [0, 1, 2, 3] },
+  'entry/src/main/ets/features/manga/MangaReadingSurface.ets': { carriers: [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36], nativeDefaults: [0, 2, 3] },
   'entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets': { carriers: [6, 7, 8], nativeDefaults: [] },
   'entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets': { carriers: [2], nativeDefaults: [] },
 };
@@ -94,6 +94,18 @@ export function validateMangaDirectoryTypographySuccessor(successor, readSource 
         assert.ok(found >= 0, 'retained historical directory ' + field + ' missing or changed: ' + entry.path);
         remaining.splice(found, 1);
       }
+    }
+    // The image retry action is an intentional finite successor: content
+    // identity changes use "重新打开本章", while ordinary image failures
+    // retain "重试". Record the retired historical carrier explicitly rather
+    // than rewriting the immutable historical fixture or hiding the mismatch.
+    for (const retired of entry.retiredNativeDefaults ?? []) {
+      const old = original.nativeDefaults.find(carrier => JSON.stringify(carrier) === JSON.stringify(retired.carrier));
+      assert.ok(old, 'retired directory native default exists historically: ' + entry.path);
+      assert.ok(!entry.nativeDefaults.some(carrier => JSON.stringify(carrier) === JSON.stringify(retired.carrier)),
+        'retired directory native default is absent from successor: ' + entry.path);
+      assert.ok(typeof retired.reason === 'string' && retired.reason.length > 20,
+        'retired directory native default has an explicit reason: ' + entry.path);
     }
   }
   return successor;

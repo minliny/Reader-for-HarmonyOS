@@ -33,7 +33,11 @@ assert.doesNotMatch(fetchTargetToc, /'book\.toc',\s*\{\s*sourceId,\s*bookId\s*\}
 
 assert.match(gateway, /private requireStringMap\([\s\S]*typeof variableValue !== 'string'/);
 assert.match(gateway, /candidate\.trim\(\)\.length === 0/);
-assert.match(gateway, /'change\.bookSource',[\s\S]*sourceIds:\s*\[candidateSourceId\]/);
+assert.match(gateway, /'book\.search',[\s\S]*sourceId:\s*source\.sourceId, keyword, page:\s*1/);
+assert.doesNotMatch(gateway, /'change\.bookSource'/,
+  'per-source discovery keeps actual search errors instead of a soft-skipped batch');
+assert.match(gateway, /decodeBookSearchResult\(raw, searchSource/,
+  'discovery uses the shared production live-search decoder');
 assert.match(gateway, /SOURCE_SWITCH_DISCOVERY_CONCURRENCY\s*=\s*8/);
 assert.match(gateway, /runBookSourceWorkers\(sources, SOURCE_SWITCH_DISCOVERY_CONCURRENCY/);
 assert.match(gateway, /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/);
@@ -76,7 +80,7 @@ function progressiveDeferred() {
   return { promise, resolve, reject };
 }
 async function untilProgress(predicate) {
-  for (let turn = 0; turn < 100 && !predicate(); turn++) await new Promise(resolve => setTimeout(resolve, 0));
+  for (let turn = 0; turn < 300 && !predicate(); turn++) await new Promise(resolve => setTimeout(resolve, 1));
   assert.ok(predicate(), 'expected progressive publication before the unresolved source completes');
 }
 const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'Current Book', author: 'Writer',
@@ -100,12 +104,22 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
       if (method === 'source.list') return { data: { sources: sourceIds.map(sourceId =>
         ({ sourceId, name: sourceId, enabled: true, sourceVersion: 'v1' })) } };
       if (method === 'search-book.related') return { data: relatedData(structuredClone(rows)) };
-      assert.equal(method, 'change.bookSource');
-      const id = params.sourceIds[0]; started.push(id); now += 100;
+      if (method === 'search-book.batch.get') {
+        const books = [], missing = [];
+        for (const identity of params.identities) {
+          const row = rows.find(item => item.origin === identity.sourceId && item.bookUrl === identity.bookId);
+          if (row === undefined) missing.push(identity);
+          else books.push({ ...row, relationKey: 'relation', relationRevision: '1' });
+        }
+        return { data: { complete: true, books, missing } };
+      }
+      assert.equal(method, 'book.search');assert.equal(params.page, 1);
+      const id = params.sourceId; started.push(id); now += 100;
       await gates.get(id).promise;
       rows.push({ origin: id, bookUrl: '/book', name: 'Current Book', author: 'Writer', time: now,
         acquisition: { sourceVersion: 'v1' } });
-      return { data: { candidates: [{ sourceId: id, bookUrl: '/book', bookName: 'Current Book', author: 'Writer' }] } };
+      return { data: { sourceId: id, sourceVersion: 'v1', contentKind: 'text',
+        books: [{ bookId: '/book', title: 'Current Book', author: 'Writer', variables: {} }] } };
     },
   };
   const gateway = new SourceSwitchGateway(runtime);
@@ -129,8 +143,10 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
     rows.find(row => row.origin === 'a').latestChapterTitle = 'New chapter';
     for (const listener of listeners) listener({ reset: false, identities: [{ sourceId: 'a', bookId: '/book' }] });
     await untilProgress(() => publications.at(-1)?.some(item => item.latestChapterTitle === 'New chapter'));
-    assert.deepEqual(publications.at(-1).map(item => item.sourceId), ['c', 'a', 'legacy']);
-    assert.equal(publications.at(-1)[2].latencyMs, undefined, 'unknown duration never sorts as zero');
+    // The debounced delta validates only the changed identity; unrelated
+    // durable rows join the list during the final complete relation check.
+    assert.deepEqual(publications.at(-1).map(item => item.sourceId), ['c', 'a']);
+    assert.equal(publications.at(-1)[1].latencyMs, 400);
     now = 10800; gates.get('b').resolve();
     const result = await run;
     assert.deepEqual(result.candidates.map(item => item.sourceId), ['c', 'a', 'b', 'legacy']);
@@ -151,13 +167,13 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
   } finally { Date.now = originalNow; }
 }
 
-// A captured older cache read and a later live seed may overlap. Serialize the
-// projection and retain Core-confirmed missing live rows until persistence,
-// without guessing same-book identity or replacing a newer visible snapshot.
+// A live seed may arrive while the durable relation is still unchanged. The
+// in-memory accumulator publishes it immediately, while the debounced batch
+// identity check retains missing live rows until the final relation pass.
 {
   const rows = [], publications = [], listeners = new Set();
-  const a = progressiveDeferred(), b = progressiveDeferred(), cacheRead = progressiveDeferred();
-  let relatedReads = 0, started = 0, captured = false, bReturned = false;
+  const a = progressiveDeferred(), b = progressiveDeferred();
+  let relatedReads = 0, started = 0, bReturned = false;
   const gateway = new SourceSwitchGateway({
     bookAcquisitions: () => ({ sourceRegistryRevision: () => 1,
       subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener); } }),
@@ -166,29 +182,29 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
         ({ sourceId, enabled: true, sourceVersion: 'v1' })) } };
       if (method === 'search-book.related') {
         const data = relatedData(structuredClone(rows));
-        if (++relatedReads === 2) { captured = true; await cacheRead.promise; }
+        relatedReads++;
         return { data };
       }
       if (method === 'search-book.batch.get') {
-        assert.deepEqual(params.identities, [{ sourceId: 'b', bookId: '/book' }]);
         return { data: { complete: true, books: [], missing: params.identities } };
       }
-      assert.equal(method, 'change.bookSource'); started++;
-      const id = params.sourceIds[0]; await (id === 'a' ? a.promise : b.promise);
+      assert.equal(method, 'book.search');assert.equal(params.page, 1);started++;
+      const id = params.sourceId; await (id === 'a' ? a.promise : b.promise);
       if (id === 'a') rows.push({ origin: id, bookUrl: '/book', name: 'Current Book', author: 'Writer', time: Date.now() });
       else bReturned = true;
-      const candidate = { sourceId: id, bookUrl: '/book', bookName: 'Current Book', author: 'Writer' };
-      return { data: { candidates: [candidate, candidate] } };
+      const book = { bookId: '/book', title: 'Current Book', author: 'Writer', variables: {} };
+      return { data: { sourceId: id, sourceVersion: 'v1', contentKind: 'text', books: [book, book] } };
     },
   });
   const run = gateway.refreshCandidates(progressiveQuery, () => true, ['original'],
     candidates => publications.push(structuredClone(candidates)));
   await untilProgress(() => started === 2);
-  a.resolve(); await untilProgress(() => captured);
+  a.resolve(); await untilProgress(() => publications.at(-1)?.some(item => item.sourceId === 'a'));
+  assert.equal(relatedReads, 1, 'source completion does not trigger another full relation read');
   b.resolve(); await untilProgress(() => bReturned);
   for (const listener of listeners) listener({ reset: true, identities: [] });
-  cacheRead.resolve();
   const result = await run;
+  assert.equal(relatedReads, 2, 'the final sweep performs one complete relation verification');
   assert.deepEqual(result.candidates.map(item => item.sourceId).sort(), ['a', 'b']);
   assert.equal(result.candidates.length, 2, 'duplicate live rows keep one stable composite identity');
   const bVisible = publications.findIndex(items => items.some(item => item.sourceId === 'b'));
@@ -204,13 +220,15 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
   let now = 20000, requests = 0;
   Date.now = () => now;
   const gates = [progressiveDeferred(), progressiveDeferred()], oldPublications = [], newPublications = [];
-  const rows = [{ origin: 's', bookUrl: '/book', name: 'Current Book', author: 'Writer', time: now }];
-  const runtime = { async request(method) {
-    if (method === 'source.list') return { data: { sources: [{ sourceId: 's', enabled: true }] } };
+  const rows = [{ origin: 's', bookUrl: '/book', name: 'Current Book', author: 'Writer', time: now,
+    acquisition:{sourceVersion:'v1'} }];
+  const runtime = { async request(method, params) {
+    if (method === 'source.list') return { data: { sources: [{ sourceId: 's', enabled: true,sourceVersion:'v1' }] } };
     if (method === 'search-book.related') return { data: relatedData(rows) };
-    assert.equal(method, 'change.bookSource'); const index = requests++;
+    assert.equal(method, 'book.search');assert.equal(params.page, 1);const index = requests++;
     await gates[index].promise;
-    return { data: { candidates: [{ sourceId: 's', bookUrl: '/book', bookName: 'Current Book' }] } };
+    return { data: { sourceId: 's', sourceVersion: 'v1', contentKind: 'text',
+      books: [{ bookId: '/book', title: 'Current Book', author: 'Writer', variables: {} }] } };
   } };
   const gateway = new SourceSwitchGateway(runtime);
   try {
@@ -253,8 +271,10 @@ console.log('PASS progressive source discovery: early rows, live acquisition pro
  const owner={async request(method,params){
   if(method==='source.list')return {data:{sources}};
   if(method==='search-book.related')return {data:relatedData(rows)};
-  assert.equal(method,'change.bookSource');const id=params.sourceIds[0];searched.push(id);
-  return {data:{candidates:[{sourceId:id,bookUrl:'/same-name',bookName:'Book',author:'Writer'},{sourceId:'spoof',bookUrl:'/spoof',bookName:'Book'}]}};
+  assert.equal(method,'book.search');assert.equal(params.page,1);const id=params.sourceId;searched.push(id);
+  return {data:{sourceId:id,sourceVersion:'v1',contentKind:id.startsWith('comic')?'manga':'text',books:
+    [{bookId:'/same-name',title:'Book',author:'Writer',variables:{}},
+      {sourceId:'spoof',bookId:'/spoof',title:'Unrelated Book',author:'Writer',variables:{}}]}};
  }};
  const gateway=new SourceSwitchGateway(owner);
  const query={contentKind:'manga',sourceId:'comic-a',bookId:'/same-name',bookName:'Book',author:'Writer',currentChapterIndex:0,currentChapterTitle:''};
@@ -266,8 +286,10 @@ console.log('PASS progressive source discovery: early rows, live acquisition pro
  assert.deepEqual(searched,['novel']);
  searched.length=0;const result=await gateway.refreshCandidates(query,()=>true,[],()=>{});
  assert.deepEqual(searched,['comic-a','comic-b']);assert.ok(result.candidates.every(row=>row.category==='comic'));
- const next=gateway.withoutSearchTiming(result.candidates);
- assert.ok(next.every(row=>row.latencyMs===undefined&&row.latencyKind===undefined));assert.deepEqual(next.map(row=>row.bookUrl),result.candidates.map(row=>row.bookUrl));
+ const next=await gateway.loadCachedCandidates(query);
+ assert.deepEqual(next.map(row=>row.latencyMs),result.candidates.map(row=>row.latencyMs),
+  'reopening retains the last same-version measurement without another search');
+ assert.deepEqual(next.map(row=>row.bookUrl),result.candidates.map(row=>row.bookUrl));
  await assert.rejects(gateway.refreshCandidates({...query,currentChapterIndex:-1}),/non-negative/);
 }
-console.log('PASS manga/text discovery and same-type cached relation filtering; spoofed source rejection; remeasure keeps identities');
+console.log('PASS manga/text discovery and same-type cached relation filtering; unrelated search-result rejection; remeasure keeps identities');

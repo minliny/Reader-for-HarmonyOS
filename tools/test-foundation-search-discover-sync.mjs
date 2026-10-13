@@ -9,11 +9,21 @@ const baseline=JSON.parse(readFileSync(new URL('./fixtures/design/foundation-sea
 const props=['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','textAlign','maxLines','textOverflow','padding','margin','constraintSize','width','height','layoutWeight','backgroundColor','borderRadius','border','responseRegion'];
 const tuple=n=>Object.fromEntries(props.filter(k=>Object.hasOwn(n,k)).map(k=>[k,n[k]]));
 function members(source,names){const tree=ts.createSourceFile('Page.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,opts);const component=tree.statements.find(n=>n.members&&n.members.some(m=>m.name?.text==='build'));return names.map(name=>{const member=component.members.find(m=>m.name?.text===name);assert.ok(member,name);return member.getText(tree);});}
+function searchScopeDependencies(source){
+ const tree=ts.createSourceFile('SearchPage.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,opts);
+ const declarations=tree.statements.filter(ts.isVariableStatement).flatMap(statement=>[...statement.declarationList.declarations]);
+ return Object.fromEntries(['SEARCH_LOCAL_SCOPE','SEARCH_ONLINE_SCOPE'].map(name=>{
+  const declaration=declarations.find(value=>value.name.getText(tree)===name);
+  assert.ok(declaration&&ts.isStringLiteral(declaration.initializer),name+' must bind the actual production scope label');
+  return[name,declaration.initializer.text];
+ }));
+}
 function setup(file,method,{scheme='day',tablet=false,busy=false,selected=true,canRetry=true}={}){
  const old=tailControls(),current=tailControls(),source=readFileSync(new URL('../'+file.path,import.meta.url),'utf8');
+ const scope=file.path.includes('/search/')?searchScopeDependencies(source):{};
  const required=file.path.includes('/search/')?searchActionMethods:file.path.includes('/sync/')?['canMutate']:['currentFilterText','kindTitles'];
  const frozen='@Component struct OriginalActionFamily{\n'+file.methods.join('\n')+'\n'+members(source,required.filter(n=>!file.names.includes(n))).join('\n')+'\nbuild(){Column(){}}\n}';
- const names=[...new Set([method,...required])];const owners={old:compileTailConsumer(frozen,names,old.dependencies,old.hooks).owner,current:compileTailConsumer(source,names,current.dependencies,current.hooks).owner},calls={old:[],current:[]};
+ const names=[...new Set([method,...required])];const owners={old:compileTailConsumer(frozen,names,{...old.dependencies,...scope},old.hooks).owner,current:compileTailConsumer(source,names,{...current.dependencies,...scope},current.hooks).owner},calls={old:[],current:[]};
  for(const[side,owner]of Object.entries(owners)){
   seedTailOwner(owner,{scheme,tablet,busy,kind:method==='searchBar'&&busy?'loading':method==='resultsContent'?'results':method==='emptyContent'?'empty':method==='errorContent'?'error':'initial',operation:{canRetry,canCancel:busy}});
   if(method==='groupScopeChip'){owner.presentation={kind:'initial',history:[]};owner.selectedGroupName=selected?'在线':'本地';}
@@ -85,7 +95,7 @@ for(const [searching,stopped,expected]of[
 {
  const normal=foundationSpecs(),changed={...normal,resolveReaderButtonSpec:id=>({...normal.resolveReaderButtonSpec(id),height:id==='search-field-phone'?38:normal.resolveReaderButtonSpec(id).height})};
  const controls=tailControls({foundation:(await import('./lib/reader-foundation-control-probe.mjs')).foundationControls({specs:changed})});
- for(const[tablet,height]of[[false,38],[true,40]]){const source=readFileSync(new URL('../'+files.search.path,import.meta.url),'utf8'),owner=compileTailConsumer(source,['searchBar',...searchActionMethods],controls.dependencies,controls.hooks).owner;seedTailOwner(owner,{tablet});owner.searchBar();const child=[...owner.children.values()].find(c=>c.specId?.startsWith('search-field-'));assert.equal(controls.nodes(child).find(n=>n.type==='Stack').height,height);}
+ for(const[tablet,height]of[[false,38],[true,40]]){const source=readFileSync(new URL('../'+files.search.path,import.meta.url),'utf8'),owner=compileTailConsumer(source,['searchBar',...searchActionMethods],{...controls.dependencies,...searchScopeDependencies(source)},controls.hooks).owner;seedTailOwner(owner,{tablet});owner.searchBar();const child=[...owner.children.values()].find(c=>c.specId?.startsWith('search-field-'));assert.equal(controls.nodes(child).find(n=>n.type==='Stack').height,height);}
 }
 // A thin official ColorMetrics API seam observes both original gradient stops
 // delegating to the existing modifier. It does not implement alpha blending.

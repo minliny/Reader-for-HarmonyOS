@@ -215,6 +215,14 @@ function operationPlan(operation, outputDir) {
     exactFields(operation, []);
     return shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry');
   }
+  if (operation.op === 'clearRebuildableCache') {
+    exactFields(operation, []);
+    // The app owns the deletion policy. This Want invokes the debug-only,
+    // preserve-data maintenance entry and never exposes an app-sandbox path
+    // or a raw HDC rm command to the VM agent.
+    return shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
+      '--pb', 'readerClearRebuildableCache', 'true');
+  }
   if (operation.op === 'startColdEntryMemoryMiss') {
     exactFields(operation, []);
     // Debug-only cold onCreate gate in the app. Normal Index/reader routing and

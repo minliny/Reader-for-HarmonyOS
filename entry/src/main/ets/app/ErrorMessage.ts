@@ -10,6 +10,8 @@
  * else the interpolated string.
  */
 export function errorMessageOf(error: unknown): string {
+  const catalogRecovery = catalogCurrentChapterRecoveryMessage(error);
+  if (catalogRecovery !== undefined) return catalogRecovery;
   if (error instanceof Error) {
     return error.message;
   }
@@ -33,6 +35,22 @@ export function errorMessageOf(error: unknown): string {
     }
   }
   return `${error}`;
+}
+
+/** Core rejects an unsafe catalog replacement while retaining the original
+ * catalog and progress. The exact structured reason authorizes this copy;
+ * source text and unrelated INVALID_PARAMS errors do not. */
+export function catalogCurrentChapterRecoveryMessage(error: unknown): string | undefined {
+  const raw = errorObject(error);
+  const event = errorObject(raw?.['event']);
+  const failure = errorObject(event?.['error']) ?? errorObject(raw?.['error']) ?? raw;
+  const details = errorObject(failure?.['details']);
+  if (failure?.['code'] !== 'INVALID_PARAMS' || details?.['reason'] !== 'CATALOG_CURRENT_CHAPTER_UNRESOLVED' ||
+    details['previousCatalogPreserved'] !== true || details['recoverable'] !== true) return undefined;
+  const cause = details['cause'];
+  if (cause !== 'previousChapterMissing' && cause !== 'chapterIdentityMissingOrAmbiguous' &&
+    cause !== 'cachedChapterCoordinateChanged' && cause !== 'cachedCatalogCoordinatesChanged') return undefined;
+  return '目录更新无法对应当前章节，已保留原目录和阅读进度，可重试或换源';
 }
 
 /** Only the NAPI send rejection carries these codes with this exact message. */

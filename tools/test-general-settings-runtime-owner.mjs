@@ -20,13 +20,13 @@ function binding(f,name){const x=f.host(),runtime=f.current();assert.equal(x.hos
  first.host.retryAccepted(oldGeneration,first.name);second.host.reconcile(second.ui.projection.receipt.facts.generation,second.name);await settle();
  assert.equal(puts(f),before,'old gesture and current pure read cannot write');assert.equal(second.ui.projection.receipt.receipt.confirmation,'unknown');
  const generation=second.ui.projection.receipt.facts.generation;second.host.retryAccepted(generation,second.name);second.host.retryAccepted(generation,second.name);await settle();
- assert.equal(puts(f),before+4);assert.equal(second.ui.projection.receipt.receipt.confirmation,'confirmed');cases++;
+ assert.equal(puts(f),before+5);assert.equal(second.ui.projection.receipt.receipt.confirmation,'confirmed');cases++;
 }
 {
  const f=fixture(),x=binding(f,'queue');x.open();await settle();const gate=deferred();f.barrier(()=>gate.promise);
  x.toggle('autoCheckUpdate',false);x.toggle('reduceMotion',true);await settle();assert.equal(puts(f),0,'pending platform preparation is not dispatch');
  x.host.detachPresentation(x.name);x.ui.mounted=false;const next=binding(f,'queue-next');next.open();gate.resolve();await settle();
- assert.equal(puts(f),8,'both distinct admitted choices retain one original business lane');
+ assert.equal(puts(f),10,'both distinct admitted choices retain one original business lane');
  assert.deepEqual(Object.fromEntries(f.disk),{...defaults,autoCheckUpdate:false,reduceMotion:true});
  assert.deepEqual(next.ui.value,Object.fromEntries(f.disk),'fresh initial UI cannot replace admitted domain facts');cases++;
 }
@@ -43,6 +43,26 @@ function binding(f,name){const x=f.host(),runtime=f.current();assert.equal(x.hos
 {
  const f=fixture(),x=binding(f,'exact');x.open();await settle();x.host.toggle('reduceMotion',true);x.host.toggle('reduceMotion',true,'foreign');await settle();
  assert.equal(puts(f),0,'explicitly bound host requires the exact presentation identity');
- x.toggle('reduceMotion',true);await settle();assert.equal(puts(f),4);cases++;
+ x.toggle('reduceMotion',true);await settle();assert.equal(puts(f),5);cases++;
+}
+{
+ const f=fixture(),first=binding(f,'developer');first.open();await settle();
+ first.toggle('developerMode',true);await settle();
+ assert.equal(first.ui.value.developerMode,true,'actual Host accepts the developer toggle');
+ assert.equal(first.ui.projection.receipt.receipt.confirmation,'confirmed');
+ assert.deepEqual(Object.fromEntries(f.disk),{...defaults,developerMode:true},'developer choice saves a complete snapshot without changing other settings');
+ first.host.detachPresentation(first.name);first.ui.mounted=false;
+ const returned=binding(f,'developer-return');returned.open();await settle();
+ assert.equal(returned.ui.value.developerMode,true,'a fresh presentation restores the confirmed developer choice');
+ assert.equal((await f.coldGateway().load()).developerMode,true,'cold Gateway restores developer mode from durable Preferences after static/cache reset');
+ const before=puts(f);first.toggle('developerMode',false);await settle();assert.equal(puts(f),before,'retired developer gesture cannot disable a later visit');
+ returned.toggle('developerMode',false);await settle();
+ assert.equal((await f.coldGateway().load()).developerMode,false,'disabled developer mode is also durable');cases++;
+}
+{
+ const f=fixture();f.disk.delete('developerMode');
+ assert.deepEqual(await f.coldGateway().load(),defaults,'pre-existing four-field Preferences migrate to developerMode=false');
+ f.disk.set('developerMode','invalid');
+ await assert.rejects(f.coldGateway().load(),/设置持久化数据格式异常/,'invalid persisted developer values remain rejected');cases++;
 }
 console.log(`General settings actual shared Runtime owner + complete Preferences IO: PASS (${cases} groups; queued choices, exact lease, retained ACK/unknown, explicit retry, pure read, retirement and publisher failure).`);

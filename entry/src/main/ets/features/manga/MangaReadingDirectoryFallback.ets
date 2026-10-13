@@ -98,7 +98,7 @@ export struct MangaReadingDirectoryFallback {
       query.length > 0 ? this.admittedEntries : mangaDirectoryVisibleEntries(this.admittedEntries, this.presentation, this.collapsedGroups);
     // The compact Quick viewport can browse the entire admitted catalog.
     // Core target indexes, disabled rows and full-tree metadata remain intact.
-    const projected = projectReaderDirectoryEntries(visible, query, this.ascending);
+    const projected = projectReaderDirectoryEntries(visible, query, this.ascending, true);
     if (!sameReaderDirectoryData(this.projectedEntries, projected)) this.projectedEntries = projected;
     this.prepareLayout();
   }

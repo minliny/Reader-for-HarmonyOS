@@ -51,6 +51,7 @@ export struct ReaderFullDirectory {
   @Prop chapterTitle: string = '';
   @Prop entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  onRetryCatalog: () => void = (): void => {};
   @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
   onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
@@ -63,6 +64,7 @@ export struct ReaderFullDirectory {
   // third copy of the LOCAL_SOURCE_ID sentinel (also Index.ets:70 and
   // LocalReadingFlowGateway.ts:89) — consolidated if those files are touched.
   @Prop sourceId: string = '';
+  @Prop mangaSearch: boolean = false;
   // True only for Module Directory -> Full Directory. Detail -> Directory
   // keeps its existing route semantics and does not borrow the Phone motion.
   @Prop animateFromControl: boolean = false;
@@ -174,8 +176,10 @@ export struct ReaderFullDirectory {
         FullDirectoryPanel({
           entries: this.entries,
           catalogMessage: this.catalogMessage,
+          onRetryCatalog: (): void => this.onRetryCatalog(),
           currentChapterIndex: this.currentChapterIndex,
           chapterDownloadEnabled: this.sourceId !== 'local',
+          mangaSearch: this.mangaSearch,
           isTablet: this.usesExpandedLayout(),
           panelWidthOverride: this.panelWidth(),
           panelHeightOverride: Math.max(0, this.fullPanelHeight() - this.activeRecoveryHeight()),

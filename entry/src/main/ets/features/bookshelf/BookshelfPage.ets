@@ -971,14 +971,16 @@ export struct BookshelfPage {
   }
 
   private isCurrentBookActionSheet(presentationId: string, book: ShelfBook | undefined): boolean {
+    // Builder arguments unwrap State proxies; the opening and compound book
+    // identity own this callback across both representations.
     return this.mounted && this.actionSheetNavigation === this.navigationGeneration && presentationId.length > 0 && presentationId === this.actionSheetId &&
-      book !== undefined && this.actionBook === book && this.books.some(
+      book !== undefined && this.actionBook !== undefined && this.actionBook.sourceId === book.sourceId && this.actionBook.bookId === book.bookId && this.books.some(
         (candidate: ShelfBook): boolean => candidate.sourceId === book.sourceId && candidate.bookId === book.bookId);
   }
 
   private dismissBookActionSheet(presentationId: string, book: ShelfBook | undefined): void {
     if (!this.mounted || presentationId.length === 0 || presentationId !== this.actionSheetId ||
-      book === undefined || this.actionBook !== book) return;
+      book === undefined || this.actionBook === undefined || this.actionBook.sourceId !== book.sourceId || this.actionBook.bookId !== book.bookId) return;
     this.actionBook = undefined;
     this.actionSheetId = '';
   }

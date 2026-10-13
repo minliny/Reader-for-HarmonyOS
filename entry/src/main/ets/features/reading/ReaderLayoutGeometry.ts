@@ -28,6 +28,10 @@ export const READER_FULL_PANEL_HEIGHT_PHONE = 736;
 export const READER_FULL_PANEL_HEIGHT_TABLET = 852;
 export const READER_FULL_PANEL_TOP = 88;
 export const READER_FULL_PANEL_BOTTOM_GAP = 20;
+// The immersive information row is a measured content lane, not a second
+// status-bar guess.  Keep enough vertical breathing room around the platform
+// text line while allowing large accessibility metrics to grow the lane.
+export const READER_PAGE_CHROME_TOP_ROW_PADDING_VP = 8;
 export const READER_FULL_PANEL_INNER_INSET_X = 13;
 export type ReaderContentInsetProfile = {
   compact: number;
@@ -265,19 +269,37 @@ export function resolveReaderReadingLayout(
   const configuredHorizontal = Number.isFinite(requestedHorizontal) ? Math.max(0, requestedHorizontal) : autoHorizontal;
   const contentHorizontal = Math.max(configuredHorizontal, safeHorizontal,
     widthClass === 'expanded' && insetProfile === undefined ? Math.max(0, (width - 720) / 2) : 0);
-  // Reserve the information lane exactly once. With system chrome visible,
-  // it starts below the retained status region; when extended it owns that region.
-  const informationTop = metrics.statusBarRect.top + (extendIntoCutout ? 0 : metrics.statusBarHeight);
+  // The immersive metadata uses the real status-bar origin and a lane that is
+  // at least as high as the measured status region.  Its own text line also
+  // gets measured breathing room, so a small status bar cannot make the
+  // information row look shorter than the system chrome.
+  // `statusBarRect` is the most precise source, but on HarmonyOS it can be
+  // temporarily empty while the visible/hidden system-bar transaction is
+  // settling.  Keep the origin in the window coordinate space and derive the
+  // lane from every platform-provided top boundary so the information row
+  // never falls back to the authored 72/92.44vp height for one frame.
+  const informationTop = Number.isFinite(metrics.statusBarRect.top) ?
+    Math.max(0, metrics.statusBarRect.top) : 0;
   const measuredInformationHeight = Number.isFinite(measuredTopInfoHeightVp) ? Math.max(0, measuredTopInfoHeightVp) : 0;
-  // Keep the real status band for chrome alignment, while reserving every
-  // measured text line when accessibility or fallback glyphs make it taller.
-  const informationBottom = informationTop + Math.max(metrics.statusBarHeight, measuredInformationHeight);
+  const measuredInformationLane = measuredInformationHeight > 0 ?
+    measuredInformationHeight + READER_PAGE_CHROME_TOP_ROW_PADDING_VP * 2 : 0;
+  const cutoutRectBottom = metrics.statusBarCutoutRect.height > 0 ?
+    Math.max(0, metrics.statusBarCutoutRect.top) + Math.max(0, metrics.statusBarCutoutRect.height) - informationTop : 0;
+  const statusBarLane = Math.max(
+    Number.isFinite(metrics.statusBarHeight) ? Math.max(0, metrics.statusBarHeight) : 0,
+    Number.isFinite(metrics.statusBarRect.height) ? Math.max(0, metrics.statusBarRect.height) : 0,
+    Number.isFinite(metrics.systemInsets.top) ? Math.max(0, metrics.systemInsets.top) : 0,
+    Number.isFinite(metrics.cutoutInsets.top) ? Math.max(0, metrics.cutoutInsets.top) : 0,
+    Math.max(0, cutoutRectBottom),
+  );
+  const informationLaneHeight = Math.max(statusBarLane, measuredInformationLane);
+  const informationBottom = informationTop + informationLaneHeight;
   const contentTop = Math.max(metrics.systemInsets.top, cutoutSafeTop,
     informationBottom > 0 ? informationBottom + 8 : 0);
-  // Once the real status region is known, its information lane owns this
-  // budget. The authored 72/92.44vp fallback would otherwise pin both modes
-  // to the same top and reserve a second, unrelated blank region.
-  const resolvedContentTop = metrics.ready && metrics.statusBarHeight > 0 ? contentTop :
+  // Once the real status region is known, this measured information lane owns
+  // the body budget. The authored 72/92.44vp fallback remains only for the
+  // genuinely unknown/landscape-without-status case.
+  const resolvedContentTop = metrics.ready && informationLaneHeight > 0 ? contentTop :
     Math.max(profile.contentTop, contentTop);
   const contentBottom = Math.max(
     metrics.systemInsets.bottom,
@@ -301,7 +323,7 @@ export function resolveReaderReadingLayout(
     readerVisualSafeLeft(metrics),
     readerInteractiveSafeRight(metrics, true),
     readerInteractiveSafeBottom(metrics, true),
-    metrics.statusBarHeight,
+    informationLaneHeight,
     metrics,
   );
 }

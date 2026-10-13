@@ -28,6 +28,21 @@ for(const sourceId of ['local','remote']){
  host.onDirectoryChapterSelected(19);assert.equal(host.route,'reading','reader current chapter is revealed without a new session');
  host.openReaderControlDirectory();host.closeDirectory();assert.equal(host.route,'reading');assert.equal(host.readingSessionActive,true);
 }
+// A retained reader must reveal the target immediately. No body, measurement,
+// or progress callback participates in navigation to the requested chapter.
+for (const sourceId of ['local', 'remote']) for (const kind of ['chapter', 'bookmark']) {
+ const host=index(sourceId);
+ host.detailToc=Array.from({length:500},(_,index)=>({index,title:`第 ${index+1} 章`,url:`/${index}`,navigable:true}));
+ if(host.remoteReadingSession) host.remoteReadingSession.entries=host.detailToc;
+ host.readingSessionActive=true;host.directoryCurrentChapterIndex=2;
+ host.openReaderControlDirectory();
+ if(kind==='chapter') host.onDirectoryChapterSelected(324);
+ else host.onReaderBookmarkSelected('325',324,17,{sourceId,bookId:'book',chapterIndex:324,bodyVersion:'v1',processingVersion:'p1'});
+ assert.equal(host.route,'reading',`${sourceId}/${kind}: chapter 325 navigation cannot await the body`);
+ assert.equal(host.directoryCurrentChapterIndex,2,'navigation does not invent an admitted reading position');
+ assert.equal(kind==='chapter'?host.requestedChapterIndex:host.requestedBookmarkAnchor.chapterIndex,324);
+ assert.equal(host.readingSessionActive,true);
+}
 {
  const host=index('remote');host.detailBook.contentKind='manga';host.openFullDirectory();
  assert.equal(host.readerOwnsWindowEdges(),true,'manga external directory applies safe clearance inside its full-viewport list');
@@ -97,27 +112,32 @@ for(const mutate of [h=>{h.requestedBookmarkAnchor.positionScope=undefined;},h=>
 // Actual SDK-generated external Builder: no reader child may be constructed.
 const require=createRequire(import.meta.url);const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
-syntax.componentCollection.customComponents.add('BookDirectoryPage');syntax.propCollection.set('BookDirectoryPage',new Set(['sourceId','bookId','bookKind','entries','catalogMessage','chapterStartBookmarkCreationEnabled']));
+syntax.componentCollection.customComponents.add('BookDirectoryPage');syntax.propCollection.set('BookDirectoryPage',new Set(['sourceId','bookId','bookKind','contentKind','entries','catalogMessage','chapterStartBookmarkCreationEnabled']));
+syntax.componentCollection.customComponents.add('ReaderFullDirectory');syntax.propCollection.set('ReaderFullDirectory',new Set(['bookTitle','chapterTitle','entries','catalogMessage','directoryRecovery','currentChapterIndex','sourceId','mangaSearch','reduceMotion','offlineBookOperationActive','onSelectChapter','onSelectNavigationTarget','onSelectBookmark','bookmarkIdentity','onDownloadChapter','onDownloadBook','onClearBookOffline','onDeleteBookmarks','chapterStartBookmarkCreationEnabled','onCreateChapterStartBookmark','onSwitchSource','onExit','onReconcileBookmarks','onContinueBookmarks','onReconcileOffline','onContinueOffline']));
 syntax.componentCollection.customComponents.add('LocalBookDetail');syntax.propCollection.set('LocalBookDetail',new Set(['book','toc','sourceSwitchEnabled','readingEnabled','readingBlockedReason','inBookshelf','loadingMessage','removalEnabled','removing']));
 class DirectoryChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 const enums=Object.fromEntries(['SafeAreaType','SafeAreaEdge'].map(name=>[name,new Proxy({},{get:(_,key)=>`${name}.${String(key)}`})]));
 for(const sourceId of ['local','remote']){
- const {owner,output}=createReaderBuilderProbe(source,['externalDirectory','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{BookDirectoryPage:DirectoryChild,readingDirectoryRecovery,...enums});
- const host=index(sourceId);Object.assign(owner,host,{settingsSnapshot:{reduceMotion:false},offlineMutationActiveKey:'',detailBookmarkIdentity:()=>({sourceId,bookId:'book'}),appThemeScheme:'day'});
+ const {owner,output}=createReaderBuilderProbe(source,['externalDirectory','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{BookDirectoryPage:DirectoryChild,ReaderFullDirectory:DirectoryChild,readingDirectoryRecovery,ReaderRuntimeOwner:{current:()=>({supportsCoreCapability:()=>true})},...enums});
+ const host=index(sourceId);host.detailBook.contentKind = sourceId === 'remote' ? 'manga' : 'text';
+ Object.assign(owner,host,{settingsSnapshot:{reduceMotion:false},offlineMutationActiveKey:'',detailBookmarkIdentity:()=>({sourceId,bookId:'book'}),appThemeScheme:'day'});
  owner.onDirectoryChapterSelected=host.onDirectoryChapterSelected.bind(host);owner.onDirectoryNavigationTargetSelected=host.onDirectoryNavigationTargetSelected.bind(host);owner.closeDirectory=host.closeDirectory.bind(host);
  owner.externalDirectory();assert.equal(owner.children.size,1);const props=[...owner.children.values()][0].params;
- props.onSelectChapter(19);assert.equal(host.requestedChapterIndex,19);host.route='directory';props.onBack();assert.equal(host.route,'detail');
+ props.onSelectChapter(19);assert.equal(host.requestedChapterIndex,19);host.route='directory';(props.onBack ?? props.onExit)();assert.equal(host.route,'detail');
  if(sourceId==='local'){
   host.openFullDirectory();props.onSelectNavigationTarget(20,7,{...localProof,chapterIndex:20});
   assert.equal(host.requestedBookmarkAnchor.chapterOffset,7,'detail directory target uses exact-position admission');
  }
- assert.equal(props.bookId,'book');assert.equal(props.onSwitchSource,undefined);assert.equal(props.onDownloadBook,undefined);assert.equal(props.entries,host.detailToc);assert.equal(props.sourceId,sourceId);assert.doesNotMatch(output,/new ReaderShell|new ReadingExperience/);
+ assert.equal(props.entries,host.detailToc);assert.equal(props.sourceId,sourceId);
+ if(sourceId==='remote') assert.equal(props.contentKind,'manga','detail directory preserves the admitted manga content kind');
+ else { assert.equal(props.onSwitchSource instanceof Function,true); assert.equal(props.onDownloadBook instanceof Function,true); }
+ assert.doesNotMatch(output,/new ReaderShell|new ReadingExperience/);
  assert.match(source,/if \(this\.route === 'directory' && this\.directoryReturnTarget === 'detail'\) (?:\{\s*)?this\.externalDirectory\(\)/,'detail content mounts the independent page');
  assert.match(source,/visible: this\.route === 'reading' \|\|\s*\(this\.route === 'directory' && this\.directoryReturnTarget === 'readerControl'\)/,'a preparing external selection cannot expose the reading control directory');
 }
 // The real retained detail observer keeps the same child ID through catalog/back.
 {
- const {owner}=createReaderBuilderProbe(source,['detailContent','detailSurface','externalDirectory','detailBookKey','isCurrentRuntime','hasUnknownShelfWrite','detailReadableAdmission','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','isCurrentDetailPresentation','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{readingDirectoryRecovery,BookDirectoryPage:DirectoryChild,LocalBookDetail:DirectoryChild,ReaderRuntimeOwner:{current:()=>undefined},LOCAL_SOURCE_ID:'local',EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,message:''},...enums});
+ const {owner}=createReaderBuilderProbe(source,['detailContent','detailSurface','externalDirectory','detailBookKey','isCurrentRuntime','hasUnknownShelfWrite','detailReadableAdmission','detailShelfMessage','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','isCurrentDetailPresentation','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{readingDirectoryRecovery,BookDirectoryPage:DirectoryChild,ReaderFullDirectory:DirectoryChild,LocalBookDetail:DirectoryChild,ReaderRuntimeOwner:{current:()=>undefined},LOCAL_SOURCE_ID:'local',EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,message:''},...enums});
  const host=index();host.openFullDirectory();Object.assign(owner,host,{readableAdmissions:[],detailShelfAdmissionMount:1,offlineMutationActiveKey:'',remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',appThemeScheme:'day'});
  owner.detailContent();
  const detail=[...owner.children.values()].find(child=>child.params.book);
@@ -134,14 +154,12 @@ for(const sourceId of ['local','remote']){
 console.log('PH119 independent catalog routing, retained detail Builder and exact initial bookmark lifecycle: PASS');
 
 {
- const {owner}=createReaderBuilderProbe(source,['externalDirectory','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{BookDirectoryPage:DirectoryChild,readingDirectoryRecovery,...enums});
+ const {owner}=createReaderBuilderProbe(source,['externalDirectory','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{BookDirectoryPage:DirectoryChild,ReaderFullDirectory:DirectoryChild,readingDirectoryRecovery,ReaderRuntimeOwner:{current:()=>({supportsCoreCapability:()=>true})},...enums});
  const host=index('local');host.detailBook.kind='EPUB';Object.assign(owner,host);
  owner.externalDirectory();const child=[...owner.children.values()][0];
- assert.equal(child.params.bookKind,'EPUB','detail passes the existing Core format without a new fetch');
- owner.detailBook={...host.detailBook,bookId:'plain-text.epub',kind:'local'};
+ assert.equal(child.params.bookTitle,'Book','text detail uses the complete ReaderFullDirectory surface');
+ assert.equal(child.params.entries,host.detailToc);
+ owner.detailBook={...host.detailBook,bookId:'plain-text.epub',title:'Renamed'};
  owner.replayOnly([child.id]);
- assert.equal(child.params.bookKind,'local','retained child receives TXT metadata when book identity changes');
- assert.equal(child.params.bookId,'plain-text.epub');
- owner.detailBook={...owner.detailBook,kind:undefined};owner.replayOnly([child.id]);
- assert.equal(child.params.bookKind,'','unknown metadata revokes rules eligibility instead of retaining the previous format');
+ assert.equal(child.params.bookTitle,'Renamed','retained child receives the updated detail identity');
 }

@@ -34,13 +34,13 @@ const deps = { ...fonts, ...directoryVisual, visual: directoryVisual.MANGA_DIREC
   readerDirectoryScopeKey: (_source, book) => book,
   readerDirectorySignalScrollIntent: bookId => programmaticScrolls.push(bookId),
   readerDirectorySignalScrollCommand: bookId => completedScrolls.push(bookId),
-  setTimeout: action => { pending.push(action); } };
+  setTimeout: action => { pending.push(action); }, $r: value => value };
 const methods = ['aboutToAppear', 'aboutToDisappear', 'identity', 'rowIsCurrent', 'onIdentityChanged',
   'supportsDirectoryRules', 'supportsCurrentDirectoryView', 'onRulesKindChanged', 'mangaIsGroup',
   'onEntriesChanged', 'admitEntries', 'applySearch', 'toggleSort', 'scheduleTopScroll', 'scrollToEdge',
   'emptyMessage', 'contentFrame', 'topInset', 'bottomInset', 'mangaCurrentTitle', 'mangaCurrentPosition',
   'prepareMangaLayout', 'mangaVisibleEntries', 'mangaLayoutEntries', 'mangaLayoutRow', 'mangaEntryIsDisplayed',
-  'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaBottomClearance',
+  'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaSortIcon',
   'headerFrame', 'onMangaScrollOffset', 'prepareMangaPageFonts', 'mangaSummaryLabel', 'publishProjection', 'onListFirstLayout', 'onListUserScroll', 'flushPendingScroll'];
 const Page = productionMotionMethods(path, methods, deps);
 const entries = Array.from({ length: 3000 }, (_, i) => ({ index: i * 2 + 1, title: `Chapter ${i + 1}`,

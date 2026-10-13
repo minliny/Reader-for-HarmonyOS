@@ -9,6 +9,8 @@ import {stripTypeScriptTypes,createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedMembers,boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
+import {makeIndex} from './lib/reading-entry-sdk-consumer.mjs';
+import {ProductionHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const load=(path,names,deps={})=>new Function(...Object.keys(deps),stripTypeScriptTypes(source(path).replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,'').replace(/private readonly filter: BookshelfFilter/g,'filter: BookshelfFilter').replace(/private readonly background: boolean/g,'background: boolean').replace('this.bookshelf = new ReaderCoreGateway(runtimeOwner);',path.endsWith('BookshelfFlowGateway.ts')?'this.filter = filter; this.background = background; this.bookshelf = new ReaderCoreGateway(runtimeOwner);':'this.bookshelf = new ReaderCoreGateway(runtimeOwner);'))+`;return ${names};`)(...Object.values(deps));
 const facts=load('app/ReaderOperationFacts.ts','{projectOperationFacts,projectCommitReadback}');
@@ -78,7 +80,7 @@ async function fixture({runtime,stored='',reconstruct=false}={}) {
  }
  currentOwner=r;let serialized=stored;
  const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),indexNames,
-  {...durable,ReaderRuntimeOwner,readerRecoveryView,projectPersistedReceipt,LocalImportPresentation:durable.LocalImportPresentation,hilog:{error(){}},DOMAIN:0});
+  {...durable,ReaderRuntimeOwner,readerRecoveryView,projectPersistedReceipt,LocalImportPresentation:durable.LocalImportPresentation,hilog:{error(){}},DOMAIN:0,LOCAL_SOURCE_ID:'local'});
 
  const index=Object.assign(new Index(),{route:'bookshelf',settingsSnapshot:{reduceMotion:true},navigationGeneration:1,mountedRuntimeOwner:r,
  detailShelfAdmissionMount:1,rssInstanceIdentity:++indexInstance,bookshelfViewState:{anchorKey:'',anchorOffset:0},searchHost:{sources:()=>[],updateShelf(){}},sourceSources:[],sourceToolsSnapshot:{sources:[]},scheduleBookshelfBackgroundRefresh(){},preparePersistedShelfBooks(){},bookshelfLoadGeneration:0,shelfOperation:{...operationTypes.EMPTY_BOOKSHELF_OPERATION_SNAPSHOT},shelfReceiptRetired:false,
@@ -100,13 +102,14 @@ async function fixture({runtime,stored='',reconstruct=false}={}) {
  assert.ok(notice,'actual decorated Shell -> shared Notice mounted');return{view:notice.view,nodes:new Map(composition.nodes(p).map((node,id)=>[id,node]))};};
  const importRender=()=>{const props=renderIndex('localImportContent'),composition=boundedSurfaceSdk(),p=composition.consumer(source('features/bookshelf/LocalImportDialog.ets'),['resultFooter','resultRecovery']);Object.assign(p,props,{appThemeScheme:'day',resultButtonWidth:()=>100,availableHeight:()=>400});p.resultFooter();const notice=composition.walk(p).find(owner=>owner instanceof composition.deps.ReaderRecoveryNotice);assert.ok(notice,'actual shared Footer -> RecoveryNotice child mounted');return{view:notice.view,nodes:new Map(composition.nodes(p).map((node,id)=>[id,node]))};};
  const retry=async p=>{const action=[...p.nodes.values()].find(n=>n.type==='Text'&&n.height===36);assert.ok(action,'actual SDK shared recovery action exists');action.onClick();action.onClick();await until(()=>!index.bookshelfHost.operations(r).current().reconcileBusy);};
- const remove=async(kind='single')=>{if(kind==='batch'){index.route='bookshelfMultiSelect';index.removeShelfBooks(clone(index.shelfBooks));}else if(kind==='detail'){index.route='detail';index.detailBook=clone(index.shelfBooks[0]);index.removeDetailBook(index.detailBook);}else index.removeShelfBook(index.shelfBooks[0]);await until(()=>!index.bookshelfHost.operations(r).current().busy);};
+ const remove=async(kind='single')=>{if(kind==='batch'){index.route='bookshelfMultiSelect';index.removeShelfBooks(clone(index.shelfBooks));}else if(kind==='detail'){index.route='detail';index.detailBook=clone(index.shelfBooks[0]);index.detailInBookshelf=true;index.detailToc=[{index:324,title:'第325章',navigable:true}];index.detailMembershipOriginal={book:index.detailBook,toc:index.detailToc};index.removeDetailBook(index.detailBook);}else index.removeShelfBook(index.shelfBooks[0]);await until(()=>!index.bookshelfHost.operations(r).current().busy);};
  return{r,index,remove,render,importRender,retry,import:async()=>{index.openImportDialog();await index.beginImport();},receipt:()=>index.shelfOperation.receipt,presentation:()=>index.currentImportPresentation(),serialized:()=>serialized,owner:()=>index.bookshelfHost.operations(r),renderIndex};}
 for(const kind of ['single','batch','detail']){
  const command=kind==='batch'?'bookshelf.removeBatch':'bookshelf.remove';
- {const f=await fixture();f.r.readFail=1;await f.remove(kind);assert.equal(f.receipt().receipt.fact,'confirmedRefreshFailed');assert.equal(f.index.route,'bookshelf');const notice=f.render();assert.match(notice.view.message,/已确认.*刷新失败/);await f.retry(notice);assert.equal(f.r.count(command),1);assert.equal(f.receipt().receipt.fact,'confirmedCurrent');assert.equal(f.r.count('assets.release'),kind==='batch'?2:1,'read retry does not retry cleanup');}
- {const f=await fixture();f.r.writeFail=true;await f.remove(kind);assert.equal(f.receipt().receipt.confirmation,'unknown');assert.equal(f.r.count('assets.release'),0);assert.ok(f.receipt().value,'current available bookshelf retained');await f.retry(f.render());assert.equal(f.receipt().receipt.fact,'confirmedCurrent');assert.equal(f.r.count('assets.release'),0,'pure exact ACK query does not perform Host cleanup');assert.equal(f.index.hasUnknownShelfWrite(),true,'qualified Core ACK still blocks later writes until original cleanup');assert.equal(f.r.count(command),1);f.index.removeShelfBook(book('b'));await tick();assert.equal(f.r.count(command),1,'unknown receipt cannot blindly reissue removal');}
- {const f=await fixture();f.r.cleanupFail=true;await f.remove(kind);assert.equal(f.receipt().receipt.fact,'confirmedCurrent');assert.match(f.render().view.message,/已移出书架.*清理未完成/);assert.equal(f.render().view.canRetry,true,'pure original ACK/list query remains available separately from explicit cleanup');assert.equal(f.index.canContinueShelfRemoval(),true,'same original typed cleanup can be explicitly continued');assert.equal(f.r.count(command),1);}
+ const leaveDetailForRecovery=(f,member)=>{if(kind==='detail'){assert.equal(f.index.route,'detail','membership result stays in the current detail');assert.equal(f.index.navigationGeneration,1,'membership result retains admission generation');assert.equal(f.index.detailBook,f.index.detailMembershipOriginal.book);assert.equal(f.index.detailToc,f.index.detailMembershipOriginal.toc);assert.equal(f.index.detailToc[0].index,324);assert.equal(f.index.detailInBookshelf,member);f.index.returnFromDetail();}};
+ {const f=await fixture();f.r.readFail=1;await f.remove(kind);assert.equal(f.receipt().receipt.fact,'confirmedRefreshFailed');leaveDetailForRecovery(f,false);assert.equal(f.index.route,'bookshelf');const notice=f.render();assert.match(notice.view.message,/已确认.*刷新失败/);await f.retry(notice);assert.equal(f.r.count(command),1);assert.equal(f.receipt().receipt.fact,'confirmedCurrent');assert.equal(f.r.count('assets.release'),kind==='batch'?2:1,'read retry does not retry cleanup');}
+ {const f=await fixture();f.r.writeFail=true;await f.remove(kind);assert.equal(f.receipt().receipt.confirmation,'unknown');assert.equal(f.r.count('assets.release'),0);assert.ok(f.receipt().value,'current available bookshelf retained');leaveDetailForRecovery(f,true);await f.retry(f.render());assert.equal(f.receipt().receipt.fact,'confirmedCurrent');assert.equal(f.r.count('assets.release'),0,'pure exact ACK query does not perform Host cleanup');assert.equal(f.index.hasUnknownShelfWrite(),true,'qualified Core ACK still blocks later writes until original cleanup');assert.equal(f.r.count(command),1);f.index.removeShelfBook(book('b'));await tick();assert.equal(f.r.count(command),1,'unknown receipt cannot blindly reissue removal');}
+ {const f=await fixture();f.r.cleanupFail=true;await f.remove(kind);assert.equal(f.receipt().receipt.fact,'confirmedCurrent');leaveDetailForRecovery(f,false);assert.match(f.render().view.message,/已移出书架.*清理未完成/);assert.equal(f.render().view.canRetry,true,'pure original ACK/list query remains available separately from explicit cleanup');assert.equal(f.index.canContinueShelfRemoval(),true,'same original typed cleanup can be explicitly continued');assert.equal(f.r.count(command),1);}
  {const f=await fixture();const d=defer();f.r.pause={method:command,...d};const work=f.remove(kind);await until(()=>f.r.durable.writes().some(c=>c.dispatched));f.index.nextNavigationGeneration();f.index.route='search';d.resolve();await work;assert.equal(f.receipt().receipt.confirmation,'confirmed','owner keeps accepted durable truth after route close');assert.equal(f.index.shelfOperation.removalKey,'');}
  {const f=await fixture();const d=defer();f.r.pause={method:command,...d};const work=f.remove(kind);await until(()=>f.r.durable.writes().some(c=>c.dispatched));currentOwner=rpc();d.resolve();await work;assert.equal(f.receipt(),undefined,'old runtime cannot deliver into new owner');}
 }
@@ -210,4 +213,45 @@ for(const state of ['pickerOpening','importing']){const x=await fixture({stored:
  assert.ok(cancel);cancel.onClick();assert.equal(x.presentation(),undefined,'current shared native action can close live opening');
  x.index.openImportDialog();const original=x.index.isCurrentImport;x.index.isCurrentImport=()=>true;oldButtons.find(n=>n.border).onClick();assert.equal(x.presentation(),undefined,'negative control: removing captured opening guard allows old physical cancel to close successor');x.index.isCurrentImport=original;
 }
-console.log('Bookshelf/import actual gateway → finite Host owner → Index → SDK notice/actions: PASS (ACK/read/cleanup/unknown/admission/partial/only-read, close/reopen, same-Runtime Index reconstruction, retired Runtime inspection, concurrency/reentry, actual old physical callbacks and negative control).');
+for(const result of ['confirmed','unknown','cancelled','legacy-navigation-negative']) {
+ const f=await fixture(),input={runtime:f.r,host:{constructor:ProductionHost},notices:[]};setRuntime(f.r);
+ const baseline=source('pages/Index.ets'),start=baseline.indexOf('  private applyDetailBookRemoval('),end=baseline.indexOf('\n  private openReading(',start);
+ const oldHandler=baseline.slice(start,end).replace('this.detailInBookshelf = false;','this.returnFromDetail();');
+ assert.notEqual(oldHandler,baseline.slice(start,end));
+ const broken=baseline.slice(0,start)+oldHandler+baseline.slice(end);
+ const x=makeIndex(input,{route:'detail',indexSource:result==='legacy-navigation-negative'?broken:baseline}),shown=clone(f.index.shelfBooks[0]);
+ x.idx.returnFromDetail=()=>{x.idx.navigationGeneration++;x.idx.route='bookshelf';};
+ Object.assign(x.idx,{detailBook:shown,detailToc:[{index:324,title:'第325章',navigable:true}],detailInBookshelf:true,
+  remoteContentVerdict:'readable',detailLoadingMessage:'',shelfOperation:f.owner().current()});
+ x.idx.bookshelfHost=actualBookshelfHostField(x.idx,f.r.durable.Host,{setOrCreate(){}});x.idx.bookshelfHost.operations(f.r);
+ const leaf=x.render(),scroll=[...leaf.nodes.values()].find(node=>node.type==='Scroll');assert.ok(scroll);scroll.nativeOffset={x:0,y:590};
+ const secondary=[...leaf.nodes.values()].find(node=>node.type==='Text'&&node.create==='移除书架'&&node.height===48);assert.ok(secondary?.onClick);
+ const nav=x.idx.navigationGeneration,book=x.idx.detailBook,toc=x.idx.detailToc,copies=x.p.properties.copies.length,leafCount=leaf.observers.length;
+ secondary.onClick();secondary.onClick();assert.equal(x.idx.bookRemovalDialogOpen,true);assert.equal(x.idx.bookRemovalPresentation,1,'two pending detail taps open one scoped confirmation');
+ if(result==='cancelled'){input.removalDialog.cancel();assert.equal(x.idx.bookRemovalDialogOpen,false);assert.equal(f.r.count('bookshelf.remove'),0);}
+ else {
+  const gate=defer();f.r.pause={method:'bookshelf.remove',...gate};if(result==='unknown')f.r.writeFail=true;
+  x.idx.confirmBookRemovalDialog();x.idx.confirmBookRemovalDialog();await until(()=>f.r.durable.writes().some(call=>call.dispatched));x.p.properties.flush();
+  assert.equal(secondary.create,'正在移除…');assert.equal(secondary.enabled,false);secondary.onClick();
+  assert.equal(f.r.count('bookshelf.remove'),1,'pending/repeated physical action keeps one genuine SQLite mutation');
+  gate.resolve();await until(()=>!f.owner().current().busy);await tick();x.p.properties.flush();
+  if(result==='legacy-navigation-negative'){
+   assert.equal(x.idx.route,'bookshelf','negative reintroducing old actual detail handler exits and destroys its admission');
+   assert.notEqual(x.idx.navigationGeneration,nav);assert.equal(x.idx.detailShelfAdmissionIdentity().includes(`:${nav}:`),false);
+   continue;
+  }
+  assert.equal(f.r.count('bookshelf.remove'),1);assert.equal(x.idx.detailInBookshelf,result!=='confirmed');
+  if(result==='confirmed'){
+   assert.equal(secondary.create,'已移除');assert.equal(secondary.enabled,false);assert.match(leaf.shelfMessage,/本地书已移除.*重新导入/);
+   const primary=[...leaf.nodes.values()].find(node=>node.type==='Text'&&node.create==='请重新导入');assert.ok(primary);assert.equal(primary.enabled,false);
+   const before=f.r.calls.length;primary.onClick();secondary.onClick();assert.equal(f.r.calls.length,before);assert.equal(x.idx.route,'detail');
+  }
+  if(result==='unknown')assert.match(leaf.shelfMessage,/待核对|未确认|原删除/,'unknown removal is visible in the same detail');
+ }
+ assert.equal(x.idx.route,'detail');assert.equal(x.idx.navigationGeneration,nav);assert.equal(x.idx.detailBook,book);assert.equal(x.idx.detailToc,toc);
+ assert.equal(x.p.walk(x.idx).filter(child=>child instanceof x.leaf).length,1);assert.equal([...leaf.nodes.values()].find(node=>node.type==='Scroll'),scroll);
+ assert.deepEqual(scroll.nativeOffset,{x:0,y:590});assert.equal(leaf.observers.length,leafCount+(leaf.shelfMessage.length>0?1:0));
+ assert.deepEqual(x.p.properties.copies.slice(copies).filter(sample=>sample.object&&['book','toc'].includes(sample.name)),[],
+  'confirmed/unknown/cancelled remove must not reset actual detail body props');
+}
+console.log('Bookshelf/import actual gateway → finite Host owner → Index → SDK notice/actions: PASS (ACK/read/cleanup/unknown/admission/partial/only-read, close/reopen, same-Runtime Index reconstruction, retired Runtime inspection, concurrency/reentry, actual old physical callbacks and negative control; actual decorated detail add/remove membership retains body/scroll and scoped dialog across genuine SQLite confirmed/unknown/cancelled removal).');

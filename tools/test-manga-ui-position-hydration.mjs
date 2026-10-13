@@ -10,7 +10,9 @@ import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
 // evaluation. Link the production recovery graph only after that resolver is
 // active, retaining its real receipt/privacy projection and imported helpers.
 const {EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
-const EMPTY_READABLE_ADMISSION={generation:0,adding:false,cancelling:false,confirmation:'none'};
+const {readerRecoveryView}=await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
+const {bookshelfOperationClass}=await import('./lib/bookshelf-operation-owner-probe.mjs');
+const EMPTY_READABLE_ADMISSION=bookshelfOperationClass('features/bookshelf/BookshelfReadableAdmissionOwner.ts','EMPTY_READABLE_ADMISSION');
 const file=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
 let runtime={},pending=[],writes=[],nullEntryBooks=new Set();
 const runtimeAuthority={current:()=>runtime};
@@ -290,10 +292,11 @@ async function drain(){
   const first=pending.shift(),initial=entry(first,{pageOrdinal:1});
   initial.chapter.chapterTitle='01';initial.chapter.totalPages=36;first.resolve(initial);await tick();
   const {owner,output}=createReaderBuilderProbe(readFileSync(file,'utf8'),['detailContent','detailSurface','externalDirectory','detailBookKey',
+    'detailShelfMessage','detailReadableAdmission','shelfRecovery','emptyShelfRecovery',
     'hydrateMangaPositions','mangaPositionProjectionCurrent','pumpMangaPositionProjections','projectMangaPosition',
     'refreshDetailMangaPosition','returnToReadingOrigin','onReaderExited','currentReaderPresentationIdentity','isCurrentRuntime','directoryRecovery'],{
       LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local',MangaBookPresentation,
-      EMPTY_READABLE_ADMISSION,EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery,
+      EMPTY_READABLE_ADMISSION,EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery,readerRecoveryView,
       ReaderRuntimeOwner:runtimeAuthority,MangaSessionGateway:Gateway,
       AppStorage:{setOrCreate:(_key,value)=>writes.push(value)},
     },{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:directorySource}});
@@ -315,7 +318,6 @@ async function drain(){
     detailToc:[{index:4,title:'01'},{index:5,title:'02'}],
     detailInBookshelf:true,pendingSourceSwitch:undefined,offlineOperationActive:false,
     hasUnknownShelfWrite:()=>false,directoryOperationPresentationId:()=>'',
-    detailReadableAdmission:()=>EMPTY_READABLE_ADMISSION,
     detailShelfAdmissionIdentity:()=>JSON.stringify([owner.detailShelfAdmissionMount,owner.navigationGeneration,owner.detailBook.sourceId,owner.detailBook.bookId]),
     remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',appThemeScheme:'day'});
   owner.detailContent();

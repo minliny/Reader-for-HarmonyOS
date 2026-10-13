@@ -5,6 +5,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
@@ -15,7 +16,7 @@ const names = [...mangaDirectoryAdaptiveFields, ...mangaDirectoryAdaptiveMembers
   'directoryColumnWidth', 'windowInteractiveInsets', 'interactiveInsets', 'panelInsets', 'controlsPresentedForWindow', 'persistentDirectory', 'panelContentInset', 'panelWidth'];
 function fixture({ current = 71, night = false, stale = false, candidate = source } = {}) {
   const properties = createArkUIPropertyRuntimeProbe();
-  const dependencies = { ...mangaDirectoryAdaptiveDependencies, ...properties.sdk, ...mangaSurfaceSdkDependencies, ...fonts };
+  const dependencies = { ...mangaDirectoryAdaptiveDependencies, ...properties.sdk, ...mangaSurfaceSdkDependencies, ...fonts, mangaDirectoryDisplay };
   const hooks = { ...properties.hooks, childSources: { MangaDirectoryCurrentFooter: footerSource }, mountChildren: true };
   dependencies.MangaDirectoryCurrentFooter = createReaderBuilderProbe(footerSource, boundedMembers(footerSource), dependencies, hooks).Component;
   const probe = createReaderBuilderProbe(candidate, names, dependencies, hooks);
@@ -30,7 +31,7 @@ function fixture({ current = 71, night = false, stale = false, candidate = sourc
   Object.assign(owner, {
     sourceId: 'source', bookId: 'book', title: 'book · chapter', backgroundPreference: night ? 'ink' : 'paper',
     remoteSession: { contentKind: 'manga', identity: { sourceId: stale ? 'other' : 'source', bookId: 'book' }, entries },
-    controller: { chapter: { chapterIndex: current, manifest: { chapter: { chapterId: `chapter-${current}` } } }, totalPages: 24 },
+    controller: { chapter: { chapterIndex: current, manifest: { chapter: { sourceId: 'source', bookId: 'book', chapterId: `chapter-${current}` } } }, totalPages: 24 },
     horizontal: false, displayedPage: 4, panelPhase: 'open', panel: 'directory', chapterEnd: false,
     directoryQuery: '', directoryAscending: true, directoryRevision: 0, directoryOpenRevision: 2,
     publishedManifestVersion: 4, downloadEnabled: true, isReaderIdentityCurrent: () => true, stageWidth: 390, viewportWidth: 390,

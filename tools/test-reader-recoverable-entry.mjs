@@ -4,6 +4,12 @@ import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
+import { readerAppearanceThemeStyle, readerAppearanceChromeTone } from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+import { readerVisualSafeTop, readerInteractiveSafeLeft, ReaderInsetsVp } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { createReaderRapidPageTurnState, cancelReaderRapidPageTurn } from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
+import * as controlSelection from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error;
 } } });
@@ -27,6 +33,7 @@ class Gateway {
   constructor(sourceId, bookId, source, owner, transactionId) { Object.assign(this, { sourceId, bookId, source, owner, transactionId }); gateways.push(this); }
   async loadProgress() { return gatewayOptions.progress ?? { kind: 'missing' }; }
   supportsExactContentMetrics() { return false; }
+  hasPendingSourceSwitch() { return this.transactionId !== undefined; }
   remoteSession() { return this.source.kind === 'remote' ? this.source.session : undefined; }
 }
 const OpenGateway = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts', import.meta.url), ['open'], { ReadingSessionFlowGateway: Gateway });
@@ -35,10 +42,12 @@ const Reader = productionMotionMethods(source, ['ensureReadingSession','restartP
   'loadInitialReading','loadInitialChapter','openChapter','fail','retryReading','resetForChapterSelection',
   'isSessionActive','isMountedToken','isSelectionCurrent','isSelectionActive',
   'armFirstPageReadyDeadline','cancelFirstPageReadyDeadline','openReaderControl','isReaderPageInteractionEnabled',
-  'isControlInputEnabled','loadContentMetricsIfNeeded','onRequestedChapterChanged','onRequestedBookmarkAnchorChanged'], {
+  'isControlInputEnabled','loadContentMetricsIfNeeded','onRequestedChapterChanged','onRequestedBookmarkAnchorChanged',
+  'controlSelectionOwner'], {
   LOCAL_READING_SOURCE_ID:'local', ReaderRuntimeOwner:{current:()=>runtime}, ReadingSessionFlowGateway:Gateway,
   ReadingSurfaceLayoutMap, RemoteReadingSourceError, RemoteChapterCacheRefreshError, remoteReadingFailureKindOf,
   readerControlHostInputEnabled, stopReaderAutoPage:s=>s,
+  readerControlSelectionOwnsReading:controlSelection.readerControlSelectionOwnsReading,
   cancelReaderRapidPageTurn:s=>s, openReaderControlSession:()=>({opened:true}),
   hilog:{error(){},info(){}}, FIRST_PAGE_READY_TIMEOUT_MS:45000,
   setTimeout(callback) { const id=++nextTimer;timers.set(id,callback);return id; }, clearTimeout:id=>timers.delete(id),
@@ -80,6 +89,7 @@ function fixture(options={}) {
     beginExit(){throw Error('recoverable entry must not exit');},
     appForeground:true,windowChromeActive:true,controlObscured:false,interactionBlocked:false,controlOpenRevision:0,
     controlVisible:()=>false,pageTurnOwnsReaderInput:()=>false,invalidateControlBackdrop(){},
+    controlShellExitArmed:()=>false,
     controlTiming:()=>({showDurationMs:0}),refreshReaderBrightness(){},
     clearTtsChapterEndTimer(){},positionContextForScope:()=>undefined,
     selectBookmarkAnchor(){assert.fail('a bookmark cannot use an uninitialized gateway');},
@@ -273,7 +283,7 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
       'cancelPageTurnPreparationRetry'])owner[name]=()=>{};
     calls.length=0;assert.equal(owner.isSessionActive(1),current);
     owner.applyWindowChrome();assert.deepEqual(calls,current?[chromeActive?'reader-chrome':'app-chrome']:[]);
-    calls.length=0;await owner.applyReaderWindowPolicy({});assert.deepEqual(calls,current?['reader-policy']:[]);
+    calls.length=0;await owner.applyReaderWindowPolicy({});assert.deepEqual(calls,current&&chromeActive?['reader-policy']:[]);
     calls.length=0;owner.applyWindowPolicyForChromeOwner();await settle();
     assert.deepEqual(calls,current?['volume-policy','global-top-info',chromeActive?'reader-policy':'app-policy']:[]);
     calls.length=0;owner.aboutToDisappear();await settle();
@@ -341,5 +351,158 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
   owner.readingOwner();[...owner.children.values()].at(-1).params.onReadingReady(0);
   assert.deepEqual(deliveries.at(-1),[0,'source-B','next-book',9]);
 
+}
+// Chapter navigation feedback is the actual SDK-emitted production loading
+// host/component. Native rasterization and asynchronous IO stay explicit seams.
+{
+  const raw=readFileSync(source,'utf8'),require=createRequire(import.meta.url);
+  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+  const tree=ts.createSourceFile('/tmp/RecoverableLoading.ets',raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+  const reader=tree.statements.find(node=>node.name?.text==='ReadingExperience');
+  const selected=['chapterLoadingContent','shouldShowChapterLoading','loadingChapterTitle',
+    'shouldShowSourceSwitchPreparation','beginExit','isSessionActive','isMountedToken','loadingChapterIndex'];
+  const members=selected.map(name=>{const node=reader.members.find(member=>member.name?.getText(tree)===name);
+    assert.ok(node,`real loading member ${name}`);return node.getText(tree);});
+  const call='      this.chapterLoadingContent();';
+  assert.equal(raw.split(call).length-1,1,'the reader build owns one loading layer');
+  assert.match(raw,/this\.readerStatusBarUnderlay\(\);\s*this\.chapterLoadingContent\(\);\s*if \(this\.phase === 'failed'/,
+    'the production loading layer is below the native-status underlay and preserves the failure branch');
+  const scene='@Component struct ReadingExperience {\n'+members.join('\n')+'\nbuild(){Stack(){'+call+'}}\n}';
+  const loadingSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderChapterLoadingState.ets',import.meta.url),'utf8');
+  const paperSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPaperBackground.ets',import.meta.url),'utf8');
+  const metrics={systemInsets:new ReaderInsetsVp(22,0,0,0),cutoutInsets:new ReaderInsetsVp(30,7,0,0),
+    gestureInsets:new ReaderInsetsVp(),navigationInsets:new ReaderInsetsVp(),keyboardInsets:new ReaderInsetsVp()};
+  function loadingFixture(fields={},definition=scene) {
+    const controls=iconButtonControls();
+    const enums=Object.fromEntries(['GradientDirection','ImageFit','ImageInterpolation','ImageRepeat'].map(name=>
+      [name,new Proxy({},{get:(_target,key)=>`${name}.${key}`})]));
+    const deps={...controls.dependencies,readerAppearanceThemeStyle,readerAppearanceChromeTone,
+      readerVisualSafeTop,readerInteractiveSafeLeft,cancelReaderRapidPageTurn,...enums};
+    const hooks={...controls.hooks,childSources:{...controls.hooks.childSources,
+      ReaderPaperBackground:paperSource,ReaderChapterLoadingState:loadingSource}};
+    const Paper=createReaderBuilderProbe(paperSource,boundedMembers(paperSource),deps,hooks).Component;
+    const Loading=createReaderBuilderProbe(loadingSource,boundedMembers(loadingSource),
+      {...deps,ReaderPaperBackground:Paper},hooks).Component;
+    const {owner}=createReaderBuilderProbe(definition,['build',...selected],
+      {...deps,ReaderPaperBackground:Paper,ReaderChapterLoadingState:Loading},hooks);
+    const exit=[];
+    Object.assign(owner,{mounted:true,lifecycleToken:1,chapterSelectionToken:1,exitRequested:false,exitAttemptGeneration:0,
+      windowChromeActive:true,phase:'loading',sourceSwitchFailureMessage:'',appForeground:true,reduceMotion:false,
+      appearanceSnapshot:{activeTheme:'day'},isTablet:false,visibleFragments:[],readerWindowMetricsRevision:1,
+      requestedChapterIndex:324,readingTocEntries:()=>[{index:2,title:'第三章'},{index:324,title:'第325章 目标章节'}],
+      readerStatusBarMetrics:()=>metrics,isReaderIdentityCurrent:()=>true,controlVisible:()=>false,
+      rapidPageTurnState:createReaderRapidPageTurnState(),pageTurnInputPhase:()=> 'idle',
+      autoPageCoordinator:{cancelPendingTurn(){},dispose(){}},stopReaderTtsAudition(){},
+      captureReadingRecordElapsed(){},finishSessionCapsuleMorph(){},clearReadingRecordTimer(){},
+      clearAutoPageTimer(){},clearAutoPageSessionTimer(){},cancelFirstPageReadyDeadline(){},
+      finishExit:async token=>exit.push(token),...fields});
+    owner.initialRender();controls.properties.flush();
+    const walk=value=>[value,...[...(value.children?.values()??[])].flatMap(walk)];
+    const loading=()=>walk(owner).filter(child=>child instanceof Loading);
+    const nodes=()=>walk(owner).flatMap(child=>[...(child.nodes?.values()??[])]);
+    return{owner,loading,nodes,exit,controls};
+  }
+  for(const theme of ['day','night'])for(const active of [false,true])for(const reduced of [false,true]) {
+    const f=loadingFixture({appearanceSnapshot:{activeTheme:theme},appForeground:active,reduceMotion:reduced,isTablet:theme==='night'});
+    assert.equal(f.loading().length,1);const layer=f.loading()[0],nodes=f.nodes();
+    const spinner=nodes.filter(node=>node.type==='LoadingProgress');assert.equal(spinner.length,1);
+    assert.deepEqual([spinner[0].width,spinner[0].height,spinner[0].color,spinner[0].enableLoading],
+      [32,32,readerAppearanceThemeStyle(theme).ink,active&&!reduced],'real native spinner owns the pending chapter feedback');
+    assert.ok(nodes.some(node=>node.type==='Text'&&node.create==='第325章 目标章节'));
+    assert.ok(nodes.some(node=>node.type==='Text'&&node.create==='正在加载章节…'));
+    assert.ok([...layer.nodes.values()].some(node=>node.backgroundColor===readerAppearanceThemeStyle(theme).paperStart&&
+      node.hitTestBehavior==='HitTestMode.Block'),'the loading state paints opaque paper and owns input');
+    const back=nodes.find(node=>node.accessibilityText==='取消加载并返回');assert.ok(back?.onClick);
+    const position=[...layer.nodes.values()].find(node=>node.type==='__Common__'&&node.position);
+    assert.deepEqual(position.position,{x:readerInteractiveSafeLeft(metrics)+12,y:readerVisualSafeTop(metrics)+8});
+    back.onClick();assert.equal(f.owner.exitRequested,true);assert.deepEqual(f.exit,[1],
+      'the native icon invokes the real beginExit rather than a label-only back seam');
+  }
+  const cases=[
+    [{phase:'failed'},false,'failed retains its actionable failure content'],
+    [{sourceSwitchFailureMessage:'换源失败'},false,'source error retains recovery'],
+    [{sourceSwitchTransactionId:'pending'},false,'source-switch preparation has priority'],
+    [{sessionGateway:{hasPendingSourceSwitch:()=>true}},false,'admitted gateway source-switch preparation has priority'],
+    [{pendingControlSelection:{targetChapterIndex:324,closeOnCommit:false},controlVisible:()=>true},false,'slider preview keeps controls visible'],
+    [{phase:'ready',visiblePage:{startScalar:0},visiblePageSelectionToken:0},true,'an old chapter token cannot masquerade as the selected body'],
+    [{phase:'measuring',visiblePage:{startScalar:0},visiblePageSelectionToken:1},false,'current page reflow or neighbour measurement retains its visible body'],
+    [{phase:'ready',visiblePage:{startScalar:0},visiblePageSelectionToken:1},false,'the current ready page needs no loading wash'],
+    [{windowChromeActive:false},false,'a retained inactive reader owns no loading surface'],
+  ];
+  for(const [fields,expected,description] of cases) assert.equal(loadingFixture(fields).loading().length,expected?1:0,description);
+  assert.ok(loadingFixture({requestedChapterIndex:2,loadingChapterIndex:324}).nodes().some(node=>node.type==='Text'&&node.create==='第325章 目标章节'),
+    'the pending load target outranks the old requested chapter');
+  assert.ok(loadingFixture({loadingChapterIndex:2,pendingControlSelection:{targetChapterIndex:324,closeOnCommit:true}}).nodes()
+    .some(node=>node.type==='Text'&&node.create==='第325章 目标章节'),'a controller target is the displayed destination');
+
+  // Reuse the actual cold entry/loading methods with deferred chapter IO. The
+  // captured SDK callback uses production beginExit; its flag cancels the late
+  // body before publication or measurement without waiting for acquisition.
+  const pending=deferred(),cold=fixture({session:session(),entries:[{index:324,title:'第325章 目标章节'}],loadBody:()=>pending.promise});
+  const f=loadingFixture();
+  for(const name of Object.getOwnPropertyNames(Reader.prototype)) {
+    const method=Object.getOwnPropertyDescriptor(Reader.prototype,name)?.value;
+    if(name!=='constructor'&&typeof method==='function'&&!(name in f.owner))f.owner[name]=method;
+  }
+  const sdkBeginExit=f.owner.beginExit;Object.assign(f.owner,cold.owner);f.owner.beginExit=sdkBeginExit;
+  f.owner.requestedChapterIndex=324;f.owner.readingTocEntries=()=>f.owner.tocEntries??[{index:324,title:'第325章 目标章节'}];
+  f.owner.pageTurnInputPhase=()=> 'idle';f.owner.exitAttemptGeneration=0;f.owner.rapidPageTurnState=createReaderRapidPageTurnState();
+  f.owner.autoPageCoordinator={cancelPendingTurn(){},dispose(){}};f.owner.stopReaderTtsAudition=()=>{};
+  f.owner.finishSessionCapsuleMorph=()=>{};f.owner.finishExit=async token=>f.exit.push(token);
+  const operation=f.owner.loadInitialReading(1);await settle();assert.ok(cold.events.includes('body'));
+  assert.deepEqual(cold.measured,[]);assert.equal(f.owner.shouldShowChapterLoading(),true);
+  const back=f.nodes().find(node=>node.accessibilityText==='取消加载并返回');back.onClick();
+  assert.equal(f.owner.exitRequested,true);assert.deepEqual(f.exit,[1]);
+  pending.resolve({...body,chapterIndex:324,chapterTitle:'第325章 目标章节'});await operation;
+  assert.equal(f.owner.chapter,undefined,'a deferred body cannot revive the reader after loading back');
+  assert.deepEqual(cold.measured,[]);assert.deepEqual(cold.failures,[]);
+
+  // A failed position reconciliation has no remaining load task. Its actual
+  // error-page retry must keep the original destination and selection options.
+  const deferredType=tree.statements.find(node=>node.name?.text==='ReaderDeferredChapterSelection');
+  assert.ok(deferredType);
+  const ReaderDeferredChapterSelection=new Function(stripTypeScriptTypes(deferredType.getText(tree))+
+    ';return ReaderDeferredChapterSelection;')();
+  const Recovery=productionMotionMethods(source,['reconcileFailedControlSelection','selectionDisplayAnchor',
+    'recoverRefreshedChapterDisplay','controlSelectionOwner','retryReading'],
+    {...controlSelection,ReaderDeferredChapterSelection});
+  for(const stored of [undefined,{bookId:'book',chapterIndex:2,chapterOffset:0,chapterProgress:0,updatedAt:1}]) {
+    const selected=[],notices=[],target=324;
+    const positionContext={bodyVersion:'body-325',processingVersion:'processing',anchors:[{id:'requested',offset:17}]};
+    const ticket={sourceId:'target',bookId:'book',lifecycleToken:1,selectionToken:3,controlOpenRevision:6,
+      targetChapterIndex:target,closeOnCommit:true};
+    const r=Object.assign(new Recovery(),{sourceId:'target',bookId:'book',lifecycleToken:1,chapterSelectionToken:3,
+      mounted:true,exitRequested:false,phase:'loading',controlOpenRevision:6,controlVisible:()=>true,controlShellExitArmed:()=>false,
+      pendingControlSelection:ticket,pendingControlSelectionOrigin:undefined,pendingControlSelectionCandidate:undefined,
+      pendingControlSelectionRetry:new ReaderDeferredChapterSelection(target,17,false,true,.32,6,true,false,positionContext),
+      activeGateway:()=>({runProgressCommitSerial:async work=>work(),loadProgress:async()=>stored===undefined?{kind:'missing'}:{kind:'restored',progress:stored}}),
+      showControlSelectionFailure:(...args)=>notices.push(args),selectChapterAnchor:(...args)=>selected.push(args),
+      loadInitialReading(){assert.fail('selection retry must not return to ordinary entry resume');},
+    });
+    await r.reconcileFailedControlSelection(ticket,Error('章节加载失败'));
+    assert.equal(r.phase,'failed');assert.equal(notices.length,1);
+    assert.equal(loadingFixture({phase:r.phase,pendingControlSelection:ticket}).loading().length,0,
+      'unresolved reconciliation exposes recovery rather than an indefinite spinner');
+    const failure=createReaderBuilderProbe(raw,['readingFailureContent'],{LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle}).owner;
+    Object.assign(failure,{sourceId:'target',sourceSwitchFailureMessage:'',failureCode:'章节加载失败',appearanceSnapshot:{activeTheme:'day'},
+      readingLayout:()=>({bodyWidth:()=>300,bodyHeight:()=>600,contentLeft:16,contentTop:30}),
+      retryReading:()=>r.retryReading(),openReaderControl(){},onSwitchSource(){}});
+    failure.readingFailureContent();
+    const retry=[...failure.nodes.values()].find(node=>node.type==='Button'&&node.createWithLabel==='重试');
+    assert.ok(retry?.onClick);retry.onClick();
+    assert.deepEqual(selected,[[target,17,false,true,.32,6,true,false,positionContext,undefined]],
+      'the actual error-page retry preserves chapter325, offset, context and close-on-commit request');
+    assert.equal(r.chapterSelectionToken,3,'the new selection transaction alone owns token advancement');
+  }
+  const omitted=scene.replace(call,'');assert.notEqual(omitted,scene);
+  assert.throws(()=>assert.equal(loadingFixture({},omitted).loading().length,1,'cold navigation must paint loading'),
+    /cold navigation must paint loading/,'the previous missing production call fails the same SDK composition');
+  const wrongMeasuring=scene.replace('!(this.visiblePage !== undefined && this.visiblePageSelectionToken === this.chapterSelectionToken)',
+    "!(this.phase === 'ready' && this.visiblePage !== undefined && this.visiblePageSelectionToken === this.chapterSelectionToken)");
+  assert.notEqual(wrongMeasuring,scene);
+  assert.throws(()=>assert.equal(loadingFixture({phase:'measuring',visiblePage:{},visiblePageSelectionToken:1},wrongMeasuring).loading().length,0,
+    'current-page measurement must not be covered'),/current-page measurement must not be covered/);
+  console.log('PASS chapter loading: real SDK spinner/title/paper/back across 8 appearance/activity cases, 9 visibility/priority cases, cold deferred chapter325 cancellation, 2 unresolved exact-target retries and two counterfactuals; native pixels remain separate evidence');
 }
 console.log('PH116 actual reader admission, retained errors, retry generations, late-reply rejection, controls, SDK error actions and source/window ownership PASS');

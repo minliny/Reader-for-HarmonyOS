@@ -1,3 +1,4 @@
+import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
@@ -9,7 +10,7 @@ function load(name, dependencies = {}) {
 }
 const MangaSessionGateway = load('MangaSessionGateway');
 const MangaResourceGateway = load('MangaResourceGateway');
-const Controller = load('MangaSessionController', { MangaSessionGateway, MangaResourceGateway });
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
 const Projection = load('MangaStripProjection');
 const Surface = productionMotionMethods(new URL('MangaReadingSurface.ets', root), ['updateViewport','requestedLast','onRowAppear','displayChapterTitle']);
 const tick = () => new Promise(resolve => setImmediate(resolve));

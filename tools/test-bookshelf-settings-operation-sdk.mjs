@@ -46,9 +46,9 @@ for(const failure of ['before','after']) {
  // The probe executes real V1 props, but does not model native branch removal.
  // Replay only the real parent observer so the existing Page receives terminal Props.
  x.idx.replayOnly([x.page.id]);
- assert.equal(f.events.filter(event=>event[0]==='put').length,puts+4,'current explicit retry uses exactly one complete accepted snapshot setter');
+ assert.equal(f.events.filter(event=>event[0]==='put').length,puts+5,'current explicit retry uses exactly one complete five-field accepted snapshot setter');
  assert.equal(x.page.operation.receipt.receipt.confirmation,'confirmed');
- assert.equal(x.page.operation.canRetryAccepted,false);assert.equal(Object.fromEntries(f.disk).autoCheckUpdate,false);cases++;
+ assert.equal(x.page.operation.canRetryAccepted,false);assert.deepEqual(Object.fromEntries(f.disk),{...defaults,autoCheckUpdate:false},'bookshelf settings retry preserves developer mode and every unrelated setting');cases++;
 }
 {
  const f=fixture(),x=build(f);x.host.open(x.idx.settingsPresentationIdentity);await settle();f.fail('after');x.page.onAutoCheckUpdate(false);await settle();x.sdk.properties.flush();

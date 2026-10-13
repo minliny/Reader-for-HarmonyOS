@@ -27,6 +27,7 @@ import { ReaderDirectoryNavigationSurface } from '../reading/ReaderDirectoryNavi
 import { readerDirectorySignalScrollCommand, readerDirectorySignalScrollIntent } from '../reading/ReaderDirectoryViewport';
 import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
 import { ReaderMangaDownloadPopup } from '../common/ReaderMangaDownloadPopup';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import type { MangaDownloadAction, MangaDownloadActionId } from '../manga/MangaDownloadActionsGateway';
 import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries,
   type MangaDirectoryRowPresentation } from '../manga/MangaDirectoryPresentation';
@@ -34,6 +35,7 @@ import { mangaDirectoryEntryRows, type MangaDirectoryLayoutRow } from '../manga/
 import { MangaDirectoryEntryRow } from '../manga/MangaDirectoryEntryRow';
 import { ReaderSearchField } from '../common/ReaderSearchField';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SERIF_SC_BOLD } from '../common/ReaderFontFamilies';
+import { ReaderHeaderFrameModifier, ReaderPageFrameModifier, readerPageContentStartInset } from '../common/ReaderPageShell';
 
 /** Detail-owned catalog. Reuses the control's toolbar/rows, never its sheet or reading session. */
 @Component
@@ -69,6 +71,7 @@ export struct BookDirectoryPage {
   private downloadMenuGeneration: number = 0;
   private downloadMenuIdentity: string = '';
   onBack: () => void = (): void => {};
+  onRetryCatalog: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject) => void =
     (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: JsonObject): void => {};
@@ -187,6 +190,11 @@ export struct BookDirectoryPage {
       .width(this.contentFrame().width)
       .position({ x: this.contentFrame().left, y: 58 })
       .zIndex(1)
+      // The toolbar is fixed above the directory surface. Keep its own
+      // opaque layer so rows cannot bleed through while the list scrolls.
+      .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme))
+      .clip(true)
+      .attributeModifier(new ReaderHeaderFrameModifier('directoryTools', 'solid', this.appThemeScheme))
       .hitTestBehavior(HitTestMode.Transparent)
       .onAreaChange((_old: Area, next: Area): void => {
         const height = Number(next.height);
@@ -204,7 +212,7 @@ export struct BookDirectoryPage {
                 currentChapterIndex: this.currentChapterIndex, openRevision: `${identity}:${this.rulesRevision}`,
                 interacted: this.navigationInteracted,
                 rowHeight: 40, listPaddingX: 10, listPaddingY: 0,
-                contentStartInset: 58 + this.toolsHeight + 5, contentEndInset: this.bottomInset() + 5,
+                contentStartInset: readerPageContentStartInset(58, this.toolsHeight, 5), contentEndInset: this.bottomInset() + 5,
                 edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
                 chapterEntries: this.admittedEntries,
                 chapterDownloadEnabled: this.sourceId !== 'local' && this.directoryRecovery.offlineBlocked !== true,
@@ -234,12 +242,20 @@ export struct BookDirectoryPage {
             }
           }, (identity: string): string => identity);
           if (this.projectedEntries.length === 0 && !this.navigationActive) {
-            Text(this.emptyMessage())
+            Column({ space: 10 }) {
+              Text(this.emptyMessage())
+                .width('100%')
+                .fontFamily(TYPE_FORM_STATE_BODY.fontFamily as string).fontSize(TYPE_FORM_STATE_BODY.fontSizeFp)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+                .textAlign(TextAlign.Center);
+              if (this.catalogRetryVisible()) {
+                ReaderRecoveryAction({ label: '重试加载目录', generation: this.projectionGeneration,
+                  actionEnabled: this.mounted, onReconcile: (): void => this.onRetryCatalog() });
+              }
+            }
               .width('100%').height('100%')
-              .padding({ left: 20, right: 20, top: 58 + this.toolsHeight + 20, bottom: this.bottomInset() + 20 })
-              .fontFamily(TYPE_FORM_STATE_BODY.fontFamily as string).fontSize(TYPE_FORM_STATE_BODY.fontSizeFp)
-              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-              .textAlign(TextAlign.Center);
+              .justifyContent(FlexAlign.Center)
+              .padding({ left: 20, right: 20, top: 58 + this.toolsHeight, bottom: this.bottomInset() + 20 });
           }
         }.height('100%').width(this.contentFrame().width)
           .margin({ left: this.contentFrame().left, right: this.contentFrame().right });
@@ -247,6 +263,7 @@ export struct BookDirectoryPage {
         .width('100%').height(58).zIndex(2).hitTestBehavior(HitTestMode.Transparent);
     }
     .width('100%').height('100%')
+    .attributeModifier(new ReaderPageFrameModifier(this.appThemeScheme))
     .backgroundColor(readerAppColor('app.window.background', this.appThemeScheme))
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = Number(newValue.width);
@@ -301,7 +318,7 @@ export struct BookDirectoryPage {
       if (!this.mangaFlowFooter()) {
         Stack({ alignContent: Alignment.Bottom }) {
           Row() { this.mangaCurrentFooter(); }.width(this.contentFrame().width)
-            .margin({ left: this.contentFrame().left, right: this.contentFrame().right, bottom: this.mangaBottomInset() + visual.footerBottom });
+            .margin({ left: this.contentFrame().left, right: this.contentFrame().right, bottom: this.mangaBottomInset() + this.mangaFooterBottomOffset() });
         }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent);
       }
     }.width('100%').height('100%')
@@ -330,11 +347,20 @@ export struct BookDirectoryPage {
           .fontWeight(visual.bodyFontWeight).fontSize(visual.countFontSize).lineHeight(visual.countLineHeight).halfLeading(true).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).fontColor(mangaDirectoryColor('muted', this.appThemeScheme))
           .width('100%');
       }.width('100%').alignItems(HorizontalAlign.Start).margin({ bottom: visual.summaryBottom });
-      ReaderSearchField({ variant: 'mangaDirectory', mode: 'live', text: this.searchDraft,
-        placeholder: '搜索章名或序号', accessibilityLabel: '搜索章名或序号', clearable: true,
-        onTextChange: (value: string): void => { this.searchDraft = value; this.applySearch(); },
-        onSubmit: (): void => this.applySearch(),
-      });
+      // Keep the sort control beside the compact query field. The detail
+      // directory uses the shared ascending/descending asset pair.
+      Row({ space: 5 }) {
+        Row() {
+          ReaderSearchField({ variant: 'readerDirectory', mode: 'live', text: this.searchDraft,
+            placeholder: '搜索章名或序号', accessibilityLabel: '搜索章名或序号', clearable: true,
+            onTextChange: (value: string): void => { this.searchDraft = value; this.applySearch(); },
+            onSubmit: (): void => this.applySearch(),
+          });
+        }.layoutWeight(1).height(32);
+        Stack() { Image(this.mangaSortIcon()).width(16).height(16); }
+          .width(32).height(32).backgroundColor(mangaDirectoryColor('soft', this.appThemeScheme)).borderRadius(8)
+          .accessibilityText('切换排序').onClick((): void => this.toggleSort());
+      }.width('100%').height(32).padding({ left: 0, right: 0 });
       Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween, alignItems: ItemAlign.Center, space: { main: LengthMetrics.vp(visual.toolsGap), cross: LengthMetrics.vp(visual.toolsGap) } }) {
         Row({ space: visual.toolGap }) {
           Image(this.appThemeScheme === 'night' ? $r('app.media.manga_sheet_locate_theme_night') :
@@ -344,15 +370,9 @@ export struct BookDirectoryPage {
         }.constraintSize({ minHeight: this.mangaToolHeight() }).enabled(this.currentChapterIndex >= 0).opacity(this.currentChapterIndex >= 0 ? 1 : .36)
           .attributeModifier(new MangaDirectoryPressFeedback(this.currentChapterIndex >= 0, true, this.appThemeScheme))
           .accessibilityText('定位当前条目').onClick((): void => this.locateCurrent());
-        Row({ space: visual.toolGap }) {
-          Text(this.ascending ? '正序' : '倒序').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400)
-            .fontSize(visual.toolFontSize).lineHeight(visual.toolLineHeight).halfLeading(true).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).fontColor(mangaDirectoryColor('accent', this.appThemeScheme));
-          Image(this.appThemeScheme === 'night' ? $r('app.media.manga_sheet_vertical_accent_theme_night') :
-            $r('app.media.manga_sheet_vertical_accent')).width(visual.toolIcon).height(visual.toolIcon);
-        }.constraintSize({ minHeight: this.mangaToolHeight() }).attributeModifier(new MangaDirectoryPressFeedback(true, true, this.appThemeScheme)).accessibilityText('切换目录排序').onClick((): void => this.toggleSort());
       }.width('100%').margin({ top: visual.toolsTop, bottom: visual.toolsBottom });
       if (this.mangaFlowFooter()) {
-        Row() { this.mangaCurrentFooter(); }.width('100%').margin({ top: visual.footerBottom });
+        Row() { this.mangaCurrentFooter(); }.width('100%').margin({ top: this.mangaFooterBottomOffset() });
       }
     }.width(this.contentFrame().width).alignItems(HorizontalAlign.Start)
       .position({ x: this.contentFrame().left, y: this.topInset() + mangaDirectoryContentTop(this.mangaFontScale()) - this.mangaScrollOffset })
@@ -368,6 +388,12 @@ export struct BookDirectoryPage {
       availableWidth: this.contentFrame().width,
       onHeightChanged: (height: number): void => { if (Math.abs(height - this.mangaFooterMeasured) > .1) this.mangaFooterMeasured = height; },
     }).width('100%');
+  }
+
+  private mangaSortIcon(): Resource {
+    if (this.appThemeScheme === 'night') return this.ascending ?
+      $r('app.media.reader_directory_sort_ascending_theme_night') : $r('app.media.reader_directory_sort_descending_theme_night');
+    return this.ascending ? $r('app.media.reader_directory_sort_ascending') : $r('app.media.reader_directory_sort_descending');
   }
 
   private mangaNarrow(): boolean {
@@ -407,7 +433,9 @@ export struct BookDirectoryPage {
   private mangaToolHeight(): number { return mangaDirectoryLineBox(visual.toolHeight, visual.toolLineHeight, visual.toolPaddingY * 2, this.mangaFontScale()); }
   private mangaFooterHeight(): number { return this.mangaFooterMeasured > 0 ? this.mangaFooterMeasured : mangaDirectoryFooterHeight(this.mangaFontScale(), this.contentFrame().width, this.mangaCurrentPosition()); }
   private mangaBottomInset(): number { return Math.max(0, readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics())); }
-  private mangaBottomClearance(): number { return this.mangaBottomInset() + (this.mangaFlowFooter() ? 0 : this.mangaFooterHeight()) + visual.footerBottom * 2; }
+  /** The footer follows the safe area closely; the released 4vp is usable list space. */
+  private mangaFooterBottomOffset(): number { return Math.max(0, visual.footerBottom - 4); }
+  private mangaBottomClearance(): number { return this.mangaBottomInset() + (this.mangaFlowFooter() ? 0 : this.mangaFooterHeight()) + this.mangaFooterBottomOffset() * 2; }
 
   private headerFrame(): SurfaceHorizontalFrame {
     const frame = this.contentFrame();
@@ -819,6 +847,14 @@ export struct BookDirectoryPage {
   private emptyMessage(): string {
     if (this.searchQuery.length > 0 && this.admittedEntries.length > 0) return '没有匹配的章节';
     return this.catalogMessage.trim().length > 0 ? this.catalogMessage : '暂无章节信息';
+  }
+
+  private catalogRetryVisible(): boolean {
+    if (this.searchQuery.length > 0 || this.navigationActive) return false;
+    const message = this.catalogMessage.trim();
+    // Do not expose a retry action while the owner is still acquiring the
+    // first catalog. Empty/error projections remain actionable in place.
+    return !/^正在|^加载|^读取/.test(message);
   }
 
   private contentFrame(): SurfaceHorizontalFrame {

@@ -256,6 +256,7 @@ export struct ReaderControlPanel {
   @Prop currentChapterIndex: number = -1;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   @Prop chapterDownloadEnabled: boolean = false;
+  @Prop mangaSearch: boolean = false;
   @Prop bookmarkLoadFailed: boolean = false;
   @Prop bookmarkLoadMessage: string = '';
   onRetryBookmarkLoad: () => void = (): void => {};
@@ -1215,6 +1216,7 @@ export struct ReaderControlPanel {
           bookmarkLoadMessage: this.bookmarkLoadMessage,
           onRetryBookmarkLoad: (): void => this.onRetryBookmarkLoad(),
           chapterDownloadEnabled: this.chapterDownloadEnabled,
+          mangaSearch: this.mangaSearch,
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           progress: this.contentMotionProgress,
           interactionEnabled: this.secondaryModuleInputEnabled('directory'),

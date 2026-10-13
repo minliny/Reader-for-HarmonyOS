@@ -35,6 +35,13 @@ export function readerDisableOptionalEntryMemory(debug: boolean, buildModeName: 
   return debug === true && buildModeName === 'debug' && parameterValue === true;
 }
 
+/** Explicit debug Want for preserve-data VM cache maintenance. This flag is
+ * never inferred from a route or error and is ignored by release builds. */
+export function readerRebuildableCacheClearEnabled(debug: boolean, buildModeName: string,
+  parameterValue: Object | undefined): boolean {
+  return debug === true && buildModeName === 'debug' && parameterValue === true;
+}
+
 /** Exact cold Want only. Never persists or accepts a warm route parameter. */
 export function readerMangaOfflineProbeScope(debug: boolean, buildModeName: string,
   enabled: Object | undefined, sourceId: Object | undefined, bookId: Object | undefined,

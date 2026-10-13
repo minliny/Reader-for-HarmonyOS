@@ -5,6 +5,7 @@ import { boundedMembers } from './bounded-surface-sdk-probe.mjs';
 import * as visual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import * as layout from '../../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
 import * as presentation from '../../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
+import { mangaDirectoryDisplay } from '../../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
 import * as fonts from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 
 export const mangaDirectoryEntryRowSource = readFileSync(new URL('../../entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets', import.meta.url), 'utf8');
@@ -13,7 +14,7 @@ export const mangaDirectoryEntryRowSource = readFileSync(new URL('../../entry/sr
  * execute their production callbacks; no row geometry or identity is copied. */
 export function mangaDirectoryEntryRowSdk({ source = mangaDirectoryEntryRowSource,
   properties = createArkUIPropertyRuntimeProbe(), dependencies = {}, hooks = {} } = {}) {
-  const deps = { ...visual, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) }, ...layout, ...presentation, ...fonts, ...properties.sdk, ...dependencies };
+  const deps = { ...visual, mangaDirectoryDisplay, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) }, ...layout, ...presentation, ...fonts, ...properties.sdk, ...dependencies };
   const carrier = { ...properties.hooks, ...hooks,
     childSources: { ...hooks.childSources, MangaDirectoryEntryRow: source }, mountChildren: true };
   deps.MangaDirectoryEntryRow = createReaderBuilderProbe(source, boundedMembers(source), deps, carrier).Component;

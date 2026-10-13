@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readBookSearchTiming } from '../entry/src/main/ets/features/common/BookSearchTiming.ts';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const gatewayPath = resolve(
@@ -15,6 +16,8 @@ const identityModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/c
 const sourceCategoryModule = stripTypeScriptTypes(
   readFileSync(resolve(repo, 'entry/src/main/ets/features/source/ReaderSourceCategory.ts'), 'utf8'),
 ).replace(/^export /gm, '');
+const timingModule = stripTypeScriptTypes(readFileSync(resolve(repo,
+  'entry/src/main/ets/features/common/BookSearchTiming.ts'), 'utf8')).replace(/^export /gm, '');
 
 // The helper module is inlined because data-URL loads cannot resolve
 // relative specifiers like '../../app/ErrorMessage'.
@@ -27,6 +30,7 @@ const errorMessageModule = stripTypeScriptTypes(
 // an injected owner without replacing application code.
 const nodeSource = stripTypeScriptTypes(
   (authorMetadataModule + '\n' + gatewaySource
+    .replace(/^import \{ readBookSearchTiming \} from .*;$/m, () => timingModule)
     .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
       readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))
     .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\.\/source\/ReaderSourceCategory['"];$/m,
@@ -338,6 +342,114 @@ function fixture(count=1) {
   return {sources,books,rows,calls,owner,gateway:new SearchGateway(owner),setHandler:h=>handler=h,bump:()=>revision++};
 }
 function apply(index,patch){for(const key of patch.removedKeys)index.delete(key);for(const book of patch.upserted)index.set(keyOf(book),book);}
+// A live search sample begins at scheduler execution, not its UI/queue wait.
+// Timing writes are Core merge enrichments: they must neither gate first
+// results nor overwrite stored detail/catalog/readability facts.
+{
+  const originalNow = Date.now;
+  let now = 10000;
+  Date.now = () => now;
+  try {
+    const f = fixture();
+    const row = f.rows.get('a\u0000/0');
+    row.acquisition = { schemaVersion: 2, sourceVersion: 'v-a', detailAt: 8000, catalogAt: 8000,
+      catalogCount: 3, checkedAt: 8000, readableAt: 8000, stage: 'readable', verificationCurrent: true };
+    let releaseWrite;
+    const writeGate = new Promise(resolve => { releaseWrite = resolve; });
+    const originalRequest = f.owner.request;
+    let timingPatch;
+    f.owner.request = async (method, params, options) => {
+      if (method === 'book.search') {
+        now += 5000;
+        options.onDispatch();
+        now += 237;
+        return { data: { sourceId: 'a', sourceVersion: 'v-a', books: [
+          { bookId: '/0', title: '书0', author: '作者', acquisition: structuredClone(row.acquisition) },
+        ] } };
+      }
+      if (method === 'search-book.put') {
+        timingPatch = params;
+        await writeGate;
+        row.acquisition = { ...row.acquisition, searchTiming: params.acquisition.searchTiming };
+        return { data: { book: row } };
+      }
+      return originalRequest(method, params, options);
+    };
+    const outcome = await f.gateway.searchBySource(f.sources[0], '书0', () => true, 'timed-search');
+    assert.equal(outcome.ok, true, 'live results resolve while the timing store write is still blocked');
+    const sample = { latencyMs: 237, latencyKind: 'search', latencyMeasuredAt: 15237 };
+    assert.deepEqual(readBookSearchTiming(outcome.results[0].acquisition, 'v-a'), sample,
+      'only the dispatched acquisition duration is reused by first drawer open');
+    assert.equal(outcome.results[0].acquisition.stage, 'readable', 'timing enrichment keeps an existing stronger stage');
+    assert.equal(outcome.results[0].acquisition.checkedAt, 8000, 'search timing cannot advance readability freshness');
+    assert.deepEqual(timingPatch, { origin: 'a', bookUrl: '/0', acquisition: { schemaVersion: 2,
+      sourceVersion: 'v-a', stage: 'search', checkedAt: 15237,
+      searchTiming: { kind: 'search', sourceVersion: 'v-a', durationMs: 237, measuredAt: 15237 } } });
+    const beforeStored = await f.gateway.refreshBooks(outcome.results);
+    assert.deepEqual(readBookSearchTiming(beforeStored[0].acquisition, 'v-a'), sample,
+      'an early metadata projection cannot erase the live sample while its write is pending');
+    assert.equal(beforeStored[0].acquisition.catalogCount, 3);
+    releaseWrite();
+    await f.gateway.searchTimingPersistence;
+    const reopened = await new SearchGateway(f.owner).refreshBooks(outcome.results.map(book => ({ ...book, acquisition: undefined })));
+    assert.deepEqual(readBookSearchTiming(reopened[0].acquisition, 'v-a'), sample,
+      'a fresh gateway recovers the durable sample without another book.search');
+    assert.equal(reopened[0].acquisition.readableAt, 8000);
+    f.sources[0].sourceVersion = 'v-a-new';
+    row.acquisition.sourceVersion = 'v-a-new';
+    f.bump();
+    const updated = await f.gateway.refreshBooks(outcome.results.map(book => ({ ...book, sourceRuleVersion: 'v-a-new' })));
+    assert.equal(readBookSearchTiming(updated[0].acquisition, 'v-a-new'), undefined,
+      'a sample of the previous source rule is not reused after the registry changes');
+  } finally { Date.now = originalNow; }
+}
+{
+  const timedSource = { ...source, sourceVersion: 'v1' };
+  for (const mode of ['not-dispatched', 'missing-version', 'cancelled', 'write-failed']) {
+    let current = true, writes = 0;
+    const gateway = new SearchGateway({ request: async (method, _params, options) => {
+      if (method === 'search-book.put') { writes++; throw new Error('read-only timing store'); }
+      assert.equal(method, 'book.search');
+      if (mode !== 'not-dispatched') options.onDispatch();
+      if (mode === 'cancelled') current = false;
+      return { data: { sourceId: source.sourceId,
+        ...(mode === 'missing-version' ? {} : { sourceVersion: 'v1' }),
+        books: [{ bookId: '/timed', title: '计时书' }] } };
+    } });
+    const outcome = await gateway.searchBySource(mode === 'missing-version' ? source : timedSource,
+      '计时书', () => current);
+    await gateway.searchTimingPersistence;
+    assert.equal(outcome.ok, mode !== 'cancelled');
+    if (outcome.ok) assert.equal(readBookSearchTiming(outcome.results[0].acquisition, 'v1') !== undefined,
+      mode === 'write-failed', 'only a current dispatched request with a source-version proof creates timing');
+    assert.equal(writes, mode === 'write-failed' ? 1 : 0, 'no timing write for a cancelled or unmeasured request');
+  }
+}
+{
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  let active = 0, maximum = 0, writes = 0;
+  const gateway = new SearchGateway({ request: async (method, params, options) => {
+    if (method === 'book.search') {
+      options.onDispatch();
+      return { data: { sourceId: params.sourceId, sourceVersion: 'v1', books: Array.from({ length: 9 },
+        (_, i) => ({ bookId: `/${i}`, title: '计时书' })) } };
+    }
+    assert.equal(method, 'search-book.put');
+    writes++; active++; maximum = Math.max(maximum, active);
+    await gate;
+    active--;
+    return { data: {} };
+  } });
+  const outcomes = await Promise.all(['a', 'b'].map(sourceId => gateway.searchBySource(
+    { ...source, sourceId, sourceVersion: 'v1' }, '计时书')));
+  assert.ok(outcomes.every(outcome => outcome.ok), 'two live sources publish before their durable enrichments finish');
+  assert.equal(active, 4, 'one gateway bounds background timing writes across every source');
+  release();
+  await gateway.searchTimingPersistence;
+  assert.equal(writes, 18); assert.equal(maximum, 4);
+}
+console.log('Search timing: dispatched duration, first-open seed, durable reopen, source-version invalidation, projection race, cancellation, write failure and global four-write bound PASS');
 // Fixed query, increasingly unrelated cache: response/projection cost remains scoped.
 for(const unrelated of [0,9000]) {
   const f=fixture(1000);const index=new Map(f.books.map(b=>[keyOf(b),b]));

@@ -8,6 +8,13 @@ import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThem
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url), 'utf8');
 const tokenSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTokens.ets', import.meta.url), 'utf8');
+assert.match(source, /this\.groupScopeRow\(\);\s*this\.contentTypeRow\(\);/, 'results render source and content-type filter rows together');
+assert.match(source, /const filterRows = groups \? \(this\.groupNames\(\)\.length > 0 \? 2 : 1\) : 0;/, 'header reserves both filter rows when source scopes exist');
+assert.match(source, /return \(this\.isTablet \? 56 : 52\) \+ filterRows \* 41\.5;/, 'header height includes every rendered filter row');
+assert.match(source, /add\(SEARCH_ONLINE_SCOPE, source\.sourceId\);/, 'remote sources stay in one online scope');
+assert.match(source, /add\(SEARCH_LOCAL_SCOPE, 'local'\);/, 'local scope remains visible even when no local result has arrived');
+assert.doesNotMatch(source, /const name = source\.group\?\./, 'provider groups are retained for later but are not rendered as search scopes');
+assert.match(source, /reduceMotion: this\.reduceMotion, diameter: 28, light: true/, 'search and stop action uses the calibrated 28vp native leading spinner');
 const tokens = Object.fromEntries(['TOK_SPACE_SM', 'TOK_SPACE_CARD_PADDING', 'TOK_SPACE_ROW_BLOCK', 'TOK_BORDER_W'].map(name => {
   const match = tokenSource.match(new RegExp(`export const ${name} = ([0-9.]+);`));
   assert.ok(match, `read actual numeric token ${name}`);
@@ -64,7 +71,7 @@ for (const category of ['novel', 'comic']) for (const sourceId of ['source', 'lo
       let selected;
       owner.onSelectResult = (chosen, variants) => { selected = { chosen, variants }; };
       const hit = nodes().find(n => n.type === 'Row' && n.width === width && n.onClick);
-      assert.equal(hit.alignItems, 'VerticalAlign.Bottom');
+      assert.equal(hit.alignItems, 'VerticalAlign.Top');
       assert.equal(hit.height, undefined, 'the card grows with wrapped metadata');
       const info = nodes().find(n => n.type === 'Column' && n.layoutWeight === 1);
       const image = nodes().find(n => n.type === 'Image');

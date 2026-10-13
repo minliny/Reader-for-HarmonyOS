@@ -63,25 +63,28 @@ async function regressions() {
     nfs.writeFileSync(path, source);
     const payload = { fileUri:`file://${path}`, width:600, height:800, intrinsicWidth:600, intrinsicHeight:800, revision:'worker' };
     await retention.store(key, chapter, payload, () => true);
+    // A cold owner has no in-memory proof scope, so this exercises the
+    // worker-backed validation path rather than the warmed scroll fast path.
+    const reader = new MangaDisplayRetention(dir, async value => createHash('sha256').update(value).digest('hex'), path => live.has(path));
     let entered, proceed, current = true;
     const atWorker = new Promise(resolve => { entered = resolve; }), heldWorker = new Promise(resolve => { proceed = resolve; });
     atomicReadHooks.beforeExecute = async args => { if (args[0] === path) { entered(); await heldWorker; } };
     let read;
     try {
-      read = retention.lookup(key, chapter, () => current, value => live.add(value.fileUri.slice(7)));
+      read = reader.lookup(key, chapter, () => current, value => live.add(value.fileUri.slice(7)));
       const rejected = assert.rejects(read, /MANGA_RESOURCE_CANCELLED/);
       await atWorker;
-      const files = await retention.inventory();
+      const files = await reader.inventory();
       assert.equal(files.find(file => file.path === path)?.live, true, 'read pin spans the queued/native payload wait');
-      assert.equal(await retention.remove(chapter, files), false, 'eviction cannot unlink a payload during its worker wait');
+      assert.equal(await reader.remove(chapter, files), false, 'eviction cannot unlink a payload during its worker wait');
       current = false; proceed(); await rejected;
-      assert.equal(retention.reads.size, 0); assert.equal(live.size, 0);
+      assert.equal(reader.reads.size, 0); assert.equal(live.size, 0);
       assert.deepEqual(new Uint8Array(nfs.readFileSync(path)), source, 'cancelled acquisition retains the immutable payload');
     } finally { proceed(); await Promise.allSettled([read]); delete atomicReadHooks.beforeExecute; }
-    const reused = await retention.lookup(key, chapter, () => true, value => live.add(value.fileUri.slice(7)));
+    const reused = await reader.lookup(key, chapter, () => true, value => live.add(value.fileUri.slice(7)));
     assert.equal(reused.fileUri, payload.fileUri);
-    assert.equal(await retention.remove(chapter, await retention.inventory()), false, 'a live lease follows the read pin without a deletion gap');
-    live.clear(); assert.equal(await retention.remove(chapter, await retention.inventory()), true);
+    assert.equal(await reader.remove(chapter, await reader.inventory()), false, 'a live lease follows the read pin without a deletion gap');
+    live.clear(); assert.equal(await reader.remove(chapter, await reader.inventory()), true);
     console.log('PASS actual display worker-wait pin, cancellation cleanup and acquire-before-unpin lease continuity');
   }
   if (focus === undefined || focus === 'files-dir-leases') {
@@ -227,8 +230,8 @@ async function regressions() {
     disk.setMangaExternalStorage({ inventory: () => host.mangaDisplayInventory(),
       remove: async () => { throw Error('unknown crash temp cannot be physically removed through a chapter grant'); } });
     assert.equal((await disk.mangaStorageUsage()).ordinaryBytes, 29, 'actual Body temporary inventory reaches production shared Disk accounting');
-    nfs.truncateSync(stale, 2 * 1024 ** 3);
-    assert.equal((await disk.mangaStorageUsage()).ordinaryBytes, 2 * 1024 ** 3);
+    nfs.truncateSync(stale, 10 * 1024 ** 3);
+    assert.equal((await disk.mangaStorageUsage()).ordinaryBytes, 10 * 1024 ** 3);
     await assert.rejects(disk.reserveExternalWrite(owner('admitted-next'), 1, 'background', 'derived'), /MANGA_CACHE_STORAGE_FULL/,
       'sparse crash-temp bytes consume ordinary cache quota after a cold process loses its write reservations');
     nfs.truncateSync(stale, 29);
@@ -269,8 +272,22 @@ try {
   assert.equal(await cold.removeMangaDisplay({ ...owner('A'), grantToken: 'grant' }, files), true);
   assert.equal(nfs.existsSync(a.fileUri.slice(7)), false); assert.equal(nfs.existsSync(v2.fileUri.slice(7)), true, 'exact-version eviction preserves newer version');
   const goodB = await cold.loadMangaBytes(source, owner('B'), () => true); cold.release(goodB.fileUri);
+  // A warmed immutable derivative is served from the in-memory proof scope;
+  // repeated backscroll lookup must not issue a stat/hash on the caller path.
+  const warmedKey = await cold.mangaDisplay.key(owner('B'), await cold.sha256(source), 0, false);
+  const originalStat = fs.stat; let warmedStats = 0;
+  fs.stat = async path => { warmedStats++; return originalStat(path); };
+  const warmedPromise = cold.mangaDisplay.lookup(warmedKey, owner('B'), () => true);
+  assert.equal(warmedStats, 0, 'warmed scroll lookup does not synchronously stat the payload');
+  const warmed = await warmedPromise;
+  assert.ok(warmed !== undefined, 'warmed immutable display proof is reusable');
+  fs.stat = originalStat;
   nfs.writeFileSync(goodB.fileUri.slice(7), new Uint8Array([9, 9, 9, 9]));
+  // Validated scroll lookups return from the in-memory scope; corruption is
+  // marked by the asynchronous background proof before the next strict read.
   const count = decodes;
+  const staleFrame = await cold.loadMangaBytes(source, owner('B'), () => true); cold.release(staleFrame.fileUri);
+  await new Promise(resolve => setTimeout(resolve, 20));
   const repaired = await cold.loadMangaBytes(source, owner('B'), () => true);
   assert.equal(decodes, count + 1, 'same-sized corrupt derivative cannot reuse hash proof'); cold.release(repaired.fileUri);
   assert.equal(reservations, 0, 'all display writes release budget reservations');
