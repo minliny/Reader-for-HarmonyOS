@@ -5,6 +5,8 @@ import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { novelSourceSwitchSuccessorPath, sharedSourceSwitchTypographySuccessorPath,
  validateSharedSourceSwitchTypographySuccessor } from './approved-manga-typography-carriers.mjs';
+import {fullDirectoryLayoutSuccessorPath,verifyFullDirectoryLayoutSuccession} from './reader-full-directory-layout-successor.mjs';
+import {indexSyncColdLayoutSuccessorPath,verifyIndexSyncColdLayoutSuccession} from './index-sync-cold-layout-successor.mjs';
 const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript'),options=createRequire(import.meta.url)(sdk+'/lib/ets_checker.js').compilerOptions;
 const physical=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin','width','height','constraintSize','opacity','clip','responseRegion']);
@@ -94,6 +96,9 @@ function legacyBudgetOriginFacts(baseline,contract,readSource){
 }
 export function verifyArchitectureRegistration(inventory,baseline,contract,root,readSource=file=>readFileSync(path.join(root,file),'utf8')){
  const origins=legacyBudgetOriginFacts(baseline,contract,readSource);
+ assert.deepEqual(contract.pageLayoutSuccessors,[fullDirectoryLayoutSuccessorPath,indexSyncColdLayoutSuccessorPath],'only the exact full-directory and unready-sync frame successions are admitted');
+ verifyFullDirectoryLayoutSuccession(baseline,readSource,sharedProducerShape);
+ verifyIndexSyncColdLayoutSuccession(baseline,readSource);
  assert.equal(createHash('sha256').update(JSON.stringify(baseline.rows)).digest('hex'),contract.legacyBusinessRowsSha256,'legacy100 private budgets cannot be silently raised');
  const producerFiles=new Set(contract.producers.map(p=>p.file));
  const boundedSpecs=contract.boundedSpecs??[];

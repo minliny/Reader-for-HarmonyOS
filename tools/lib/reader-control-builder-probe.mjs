@@ -103,11 +103,17 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     if (name && !names.includes(name) && delegatedReferences.has(name) &&
       ts.getAllDecorators(member).some(decorator => decorator.getText(original) === '@Builder')) names.push(name);
   }
+  // Full directory's new surface context is a finite input fact. Retain the
+  // actual reader default in older focused Builders instead of inventing a
+  // caller default or weakening detail-vs-reader admission.
+  if(struct.name.getText(original)==='ReaderFullDirectory'&&delegatedReferences.has('catalogContext')&&!names.includes('catalogContext'))
+    names.push('catalogContext');
   // These newly introduced members are the finite page-chrome measurement
   // seam. Keep their real initializers/functions when older focused probes
   // select pre-migration Builders; do not reconstruct inset math in fixtures.
   const chromeMembers = new Set(['searchContentStartInset', 'fixedHeaderHeight', 'selectionHeaderHeight',
-    'standardHeaderHeight', 'pageHeaderHeight', 'pageFooterHeight', 'headerHeight', 'fixedHeaderLayoutKey', 'searchHeaderLayoutKey']);
+    'standardHeaderHeight', 'pageHeaderHeight', 'pageFooterHeight', 'headerHeight', 'fixedHeaderLayoutKey', 'searchHeaderLayoutKey',
+    'catalogHeaderHeight','catalogHeaderTop']);
   let addedChrome;
   do {
     addedChrome = false;

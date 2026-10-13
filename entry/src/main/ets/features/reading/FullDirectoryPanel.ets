@@ -85,6 +85,9 @@ export struct FullDirectoryPanel {
   @Prop catalogMessage: string = '';
   onRetryCatalog: () => void = (): void => {};
   @Prop @Watch('onReadingAnchorChanged') currentChapterIndex: number = -1;
+  // Detail catalogs can be browsed before a reading position exists. The
+  // embedded reader still waits for its admitted current chapter.
+  @Prop allowUnanchoredBrowse: boolean = false;
   @Prop chapterDownloadEnabled: boolean = false;
   @Prop mangaSearch: boolean = false;
   @Prop isTablet: boolean = false;
@@ -1115,8 +1118,11 @@ export struct FullDirectoryPanel {
     this.initialListPositionReady = false;
     const ordinal = this.canonicalOrdinal(this.currentChapterIndex);
     if (!this.positioningMounted || ordinal < 0) {
-      this.awaitingReadingAnchor = true;
+      const browseWithoutAnchor = this.positioningMounted && ordinal < 0 &&
+        this.allowUnanchoredBrowse && !this.embeddedInControl;
+      this.awaitingReadingAnchor = !browseWithoutAnchor;
       this.listPositioning = endReaderControlListOpen(this.listPositioning);
+      this.initialListPositionReady = browseWithoutAnchor;
       return;
     }
     this.awaitingReadingAnchor = false;

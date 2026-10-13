@@ -1,0 +1,637 @@
+{
+  "schema": 1,
+  "previousSourceHead": "838078322bb267c95e11757ccce8a242678be44a",
+  "page": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+  "previousSourceSha256": "a8c8d44475062ff8ffbf334604aaca6656912f53d20ff9d19fbd0b792c404adc",
+  "legacyBudgetWitness": {
+    "file": "tools/fixtures/architecture-legacy-business-budgets-20261005.json",
+    "rowSha256": "ae9d06fbf2ad6a4c953513f15882dcd37a4b814baa2132b429a98da204406caf",
+    "counts": {
+      "fontSize": 5,
+      "backgroundColor": 2
+    }
+  },
+  "previousTypographyWitness": {
+    "file": "tools/fixtures/design/approved-manga-typography-carriers-20261005.json",
+    "rowSha256": "54063aaa674ea1afd41169e491dc40fe334a803c1d6b3a8ca4e4ac75d544b195",
+    "carriers": 5,
+    "nativeDefaults": 0
+  },
+  "previousStyles": [
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "build",
+      "property": "clip",
+      "args": [
+        "true"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "build",
+      "property": "height",
+      "args": [
+        "'100%'"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "build",
+      "property": "width",
+      "args": [
+        "'100%'"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "build",
+      "property": "width",
+      "args": [
+        "this.panelWidth()"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "build",
+      "property": "clip",
+      "args": [
+        "true"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "build",
+      "property": "opacity",
+      "args": [
+        "this.shouldAnimatePanel() ? this.panelProgress : 1"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "build",
+      "property": "height",
+      "args": [
+        "Math.max(0, this.panelViewportHeight() - this.activeRecoveryHeight())"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "build",
+      "property": "width",
+      "args": [
+        "this.panelWidth()"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "margin",
+      "args": [
+        "{ top: this.topBarTop() }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "padding",
+      "args": [
+        "{ left: this.topBarLeft(), right: this.topBarRight() }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "height",
+      "args": [
+        "54"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "width",
+      "args": [
+        "'100%'"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "borderRadius",
+      "args": [
+        "24"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "border",
+      "args": [
+        "{ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "backgroundColor",
+      "args": [
+        "readerAppColor('TOK_READ_SURFACE', this.appThemeScheme)"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "height",
+      "args": [
+        "54"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "width",
+      "args": [
+        "'100%'"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "margin",
+      "args": [
+        "{ left: 13 }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "height",
+      "args": [
+        "42"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "width",
+      "args": [
+        "44"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "height",
+      "args": [
+        "24"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "width",
+      "args": [
+        "24"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "margin",
+      "args": [
+        "{ left: 8 }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "constraintSize",
+      "args": [
+        "{ minWidth: 0 }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontColor",
+      "args": [
+        "readerAppColor('TOK_READ_INK', this.appThemeScheme)"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontSize",
+      "args": [
+        "TYPE_READER_DIRECTORY_BOOK_TITLE.fontSizeFp"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontWeight",
+      "args": [
+        "TYPE_READER_DIRECTORY_BOOK_TITLE.fontWeight"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontFamily",
+      "args": [
+        "TYPE_READER_DIRECTORY_BOOK_TITLE.fontFamily"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "height",
+      "args": [
+        "22"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "width",
+      "args": [
+        "'100%'"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontColor",
+      "args": [
+        "readerAppColor('TOK_READ_MUTED', this.appThemeScheme)"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontSize",
+      "args": [
+        "TYPE_READER_DIRECTORY_CHAPTER.fontSizeFp"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontWeight",
+      "args": [
+        "TYPE_READER_DIRECTORY_CHAPTER.fontWeight"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontFamily",
+      "args": [
+        "TYPE_READER_DIRECTORY_CHAPTER.fontFamily"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "height",
+      "args": [
+        "17"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "width",
+      "args": [
+        "'100%'"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "opacity",
+      "args": [
+        "this.isLocalBook() ? 0.4 : 1"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "margin",
+      "args": [
+        "{ left: 8 }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "height",
+      "args": [
+        "42"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "width",
+      "args": [
+        "62"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "margin",
+      "args": [
+        "{ top: 1.25 }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "height",
+      "args": [
+        "20"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "width",
+      "args": [
+        "20"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontColor",
+      "args": [
+        "readerAppColor('TOK_READ_INK', this.appThemeScheme)"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontSize",
+      "args": [
+        "TYPE_READER_DIRECTORY_SOURCE_ACTION.fontSizeFp"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontWeight",
+      "args": [
+        "TYPE_READER_DIRECTORY_SOURCE_ACTION.fontWeight"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "fontFamily",
+      "args": [
+        "TYPE_READER_DIRECTORY_SOURCE_ACTION.fontFamily"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "height",
+      "args": [
+        "15"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "width",
+      "args": [
+        "24"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "opacity",
+      "args": [
+        "this.isLocalBook() || this.offlineBookOperationActive ? 0.4 : 1"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "margin",
+      "args": [
+        "{ left: 8 }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "height",
+      "args": [
+        "42"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "width",
+      "args": [
+        "34"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "height",
+      "args": [
+        "20"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "topBar",
+      "property": "width",
+      "args": [
+        "20"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "borderRadius",
+      "args": [
+        "12"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "border",
+      "args": [
+        "{ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "backgroundColor",
+      "args": [
+        "readerAppColor('TOK_READ_SURFACE', this.appThemeScheme)"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "height",
+      "args": [
+        "85"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "width",
+      "args": [
+        "142"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "fontColor",
+      "args": [
+        "readerAppColor('TOK_READ_INK', this.appThemeScheme)"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "fontSize",
+      "args": [
+        "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "fontWeight",
+      "args": [
+        "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "fontFamily",
+      "args": [
+        "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "padding",
+      "args": [
+        "{ left: 16 }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "height",
+      "args": [
+        "42"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "width",
+      "args": [
+        "'100%'"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "fontColor",
+      "args": [
+        "readerAppColor('TOK_READ_INK', this.appThemeScheme)"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "fontSize",
+      "args": [
+        "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "fontWeight",
+      "args": [
+        "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "fontFamily",
+      "args": [
+        "TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontFamily"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "padding",
+      "args": [
+        "{ left: 16 }"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "height",
+      "args": [
+        "42"
+      ]
+    },
+    {
+      "owner": "ReaderFullDirectory",
+      "method": "offlineBookMenu",
+      "property": "width",
+      "args": [
+        "'100%'"
+      ]
+    }
+  ],
+  "previousStylesSha256": "a48dfa0b9557a3ddde2169c954960bfecc412aef3cda628be949990162abaaa4",
+  "removedRootStyleIndex": 0,
+  "previousBodyMethod": "build",
+  "currentBodyMethod": "directoryContent",
+  "host": "ReaderPageScaffold",
+  "variantExpression": "this.catalogContext === 'detail' ? 'directory' : 'readerDirectory'",
+  "slots": {
+    "header": "topBar",
+    "content": "directoryContent",
+    "overlayContent": "offlineBookMenu"
+  },
+  "sdkProof": "tools/test-reader-page-header-contract.mjs",
+  "safeTopOwnership": {
+    "method": "topBarTop",
+    "detail": {
+      "owner": "Index parent",
+      "ownGap": 18
+    },
+    "reader": {
+      "owner": "ReaderFullDirectory window",
+      "minimumTop": 18
+    }
+  }
+}

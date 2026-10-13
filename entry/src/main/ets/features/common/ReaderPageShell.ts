@@ -5,7 +5,7 @@ import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from
 import { readerFloatingBarBottomInset, readerFloatingTabContentInset } from './ReaderFloatingBarMetrics';
 
 /** Finite production categories; state and native scroll owners stay with pages. */
-export type ReaderPageShellKind = 'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader';
+export type ReaderPageShellKind = 'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'readerDirectory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader';
 export type ReaderHeaderKind = 'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader';
 export type ReaderHeaderSurface = 'solid' | 'transparent';
 export type ReaderStandardPageVariant = 'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral';
@@ -80,8 +80,8 @@ export class ReaderPageFrameModifier implements AttributeModifier<CommonAttribut
     this.scheme = scheme; this.kind = kind; this.readingUnderlayColor = readingUnderlayColor;
   }
   applyNormalAttribute(instance: CommonAttribute): void {
-    if (this.kind === 'reader') {
-      instance.clip(false).backgroundColor(this.readingUnderlayColor.length > 0 ? this.readingUnderlayColor : Color.Transparent).zIndex(0); return;
+    if (this.kind === 'reader' || this.kind === 'readerDirectory') {
+      instance.clip(this.kind === 'readerDirectory').backgroundColor(this.readingUnderlayColor.length > 0 ? this.readingUnderlayColor : Color.Transparent).zIndex(0); return;
     }
     instance.clip(true).zIndex(0);
     if (this.kind === 'mangaDirectory' || this.kind === 'mangaDetail') {
