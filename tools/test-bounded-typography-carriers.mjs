@@ -3,6 +3,13 @@ import {approvedTypographyContract, approvedMangaTypography, novelSourceSwitchSu
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
+import { typographyLayoutSuccessor, validateTypographyLayoutSuccessor, proveBookshelfTypographyRail } from './lib/reader-typography-layout-successor.mjs';
+import { boundedMembers, boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createRequire, stripTypeScriptTypes } from 'node:module';
+import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import * as geometryApi from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
+import { readerFloatingTabBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const baseline = JSON.parse(read('tools/fixtures/design/conventional-typography-baseline.json'));
 const registry = JSON.parse(read('tools/fixtures/design/typography-carrier-successors.json'));
@@ -124,8 +131,79 @@ const duplicateDirectoryText = directorySource.replace("Text(this.bookTitle || '
 assert.notEqual(duplicateDirectoryText, directorySource);
 assert.throws(() => approvedTypographyContract(duplicateDirectoryText, directoryPath), /exact approved typography carrier\/tuple changed/, 'exact directory carrier occurrence counts reject copied text actors');
 
+// Framework migration may relocate an approved declaration, but cannot
+// recapture its immutable witness or silently admit another public slot.
+assert.equal(validateTypographyLayoutSuccessor(), typographyLayoutSuccessor);
+assert.throws(() => validateTypographyLayoutSuccessor(typographyLayoutSuccessor, path =>
+  path === typographyLayoutSuccessor.previousFixtures[0].path ? read(path) + '\n' : read(path)),
+/historical typography witness byte immutable/, 'layout registration cannot refresh old physical approval bytes');
+const missingOccurrence = structuredClone(typographyLayoutSuccessor);
+missingOccurrence.approvedRelocations[0].carrierCount--;
+assert.throws(() => validateTypographyLayoutSuccessor(missingOccurrence), /AssertionError/, 'layout relocation cannot reduce old logical occurrence counts');
+const duplicateOccurrence = structuredClone(typographyLayoutSuccessor);
+duplicateOccurrence.approvedRelocations[0].relocations.push(structuredClone(duplicateOccurrence.approvedRelocations[0].relocations[0]));
+assert.throws(() => validateTypographyLayoutSuccessor(duplicateOccurrence), /one historical typography occurrence/, 'each approved occurrence has one successor');
+const wrongDirectorySlot = directorySource.replace('content: (): void => { this.standardContent(); }', 'content: (): void => { this.mangaEmptyState(); }');
+assert.notEqual(wrongDirectorySlot, directorySource);
+assert.throws(() => approvedTypographyContract(wrongDirectorySlot, directoryPath), /actual public slot calls/, 'unchanged fonts disconnected from the real content slot are rejected');
+
+const rail = typographyLayoutSuccessor.sharedRail, railEntry = approvedMangaTypography.files.find(entry => entry.path === rail.path);
+const shelfSource = read(rail.path), shelfShellSource = read(rail.ownerPath), mainSource = read(rail.shellPath), barSource = read(rail.producerPath);
+assert.equal(approvedTypographyContract(shelfSource, rail.path).count, 18, 'all original logical shelf typography occurrences remain, including one unique shared rail delegate');
+for (const [path, from, to, message] of [
+  [rail.shellPath, 'vertical: true', 'vertical: false', /actual bookshelf delegate is vertical/],
+  [rail.ownerPath, "railVariant: 'bookshelf'", "railVariant: 'standard'", /exact bookshelf wide rail binding/],
+  [rail.ownerPath, 'showTabletRail: !this.showBottomNav()', 'showTabletRail: false', /exact bookshelf wide rail binding/],
+  [rail.producerPath, 'if (this.vertical)', 'if (!this.vertical)', /actual vertical state admits/],
+  [rail.producerPath, '.fontSize(TYPE_MAIN_TAB_LABEL.fontSizeFp)', '.fontSize(99)', /authored physical role/],
+]) {
+  const original = read(path), changed = original.replaceAll(from, to); assert.notEqual(changed, original);
+  assert.throws(() => proveBookshelfTypographyRail(shelfSource, railEntry, candidate => candidate === path ? changed : read(candidate)), message, 'only the actual bookshelf wide shared rail chain inherits this occurrence');
+}
+// The current wide bookshelf shell mounts the actual MainTabShell, Scaffold
+// and MainTabBar SDK components. Only header content/native window metrics
+// are seams; navigation branching, label declarations and callbacks are real.
+{
+  const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  createRequire(import.meta.url)(sdkRoot + '/lib/validate_ui_syntax.js').builderParamObjectCollection.set('BookshelfShell', new Set(['content']));
+  const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
+  Object.assign(sdk.childSources, { BookshelfShell: shelfShellSource, MainTabShell: mainSource, MainTabBar: barSource,
+    BookshelfMoreMenu: read('entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets') });
+  class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+  const config = barSource.match(/const ALL_MAIN_TABS:[\s\S]*?;\s*export const MAIN_TABS:[\s\S]*?;/)[0];
+  // This pre-existing route-admission seam exercises all four declared labels;
+  // it does not enable deferred tabs in the shipping product profile.
+  const MAIN_TABS = new Function('isReaderMainTabEnabled', stripTypeScriptTypes(config).replace(/\bexport /g, '') + ';return MAIN_TABS;')(() => true);
+  const platform = { ...sdk.deps, ...metricsApi, ...geometryApi, MAIN_TABS, readerFloatingTabBottomInset,
+    ReaderWindowCoordinator: { metrics: () => new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0, 0, 1280, 800)) },
+    registerReaderShelfFonts() {}, bookshelfTemporaryGeneration: 0,
+    BOOKSHELF_WIDE_BREAKPOINT: Number(shelfShellSource.match(/export const BOOKSHELF_WIDE_BREAKPOINT = (\d+);/)[1]) };
+  const Bar = createReaderBuilderProbe(barSource, boundedMembers(barSource), platform, sdk.hooks).Component;
+  const Main = createReaderBuilderProbe(mainSource, boundedMembers(mainSource), { ...platform, MainTabBar: Bar }, sdk.hooks).Component;
+  const names = ['build', 'shellHeader', 'shellOverlay', 'content', 'headerHeight', 'onHeaderHeightChange', 'showBottomNav', 'numericAreaLength',
+    'recovery', 'readRecovery', 'populated', 'reduceMotion', 'onMainTab', 'mounted', 'navigationGeneration', 'onNavigationGenerationChanged', 'registerTemporaryBackGeneration', 'onTemporaryBackBridge',
+    'temporaryBackGeneration', 'temporaryBackIdentity', 'moreMenuVisible', 'moreSelectionId', 'dismissMoreMenu', 'requestMainTab'];
+  const Shell = createReaderBuilderProbe(shelfShellSource, names, { ...platform, MainTabShell: Main, BookshelfMoreMenu: Child }, sdk.hooks).Component;
+  const calls = [], empty = { visible: false, canRetry: false, message: '', generation: 0 };
+  const owner = new Shell(undefined, { populated: true, navigationGeneration: 7, recovery: empty, readRecovery: empty, content() {}, onMainTab: (key, generation) => calls.push([key, generation]) });
+  Object.assign(owner, { populated: true, mounted: true, navigationGeneration: 7, recovery: empty, readRecovery: empty, moreMenuVisible: false, topBar() {}, content() {}, onMainTab: (key, generation) => calls.push([key, generation]) });
+  owner.initialRender();
+  const main = sdk.walk(owner).find(child => child instanceof Main); assert.ok(main); main.aboutToAppear();
+  const nav = sdk.walk(owner).find(child => child instanceof Bar); assert.ok(nav);
+  assert.deepEqual([nav.vertical, nav.railVariant], [true, 'bookshelf'], 'actual wide bookshelf selected its one finite shared rail actor');
+  assert.ok(sdk.nodes(nav).some(node => node.type === 'Column' && node.width === 82 && node.height === 332), 'actual SDK vertical state renders the original rail rather than the phone bar');
+  const labels = sdk.nodes(nav).filter(node => node.type === 'Text');
+  assert.deepEqual(labels.map(node => node.create), ['书架', '发现', 'RSS', '设置'], 'all four original configured titles remain in the actual shared producer');
+  for (const node of labels) assert.deepEqual(Object.fromEntries(['fontFamily', 'fontWeight', 'fontSize', 'lineHeight'].map(key => [key, node[key]])), rail.fontTuple, 'current SDK label retains every original physical font value');
+  for (const label of ['书架', '发现', 'RSS', '设置']) {
+    const item = sdk.nodes(nav).find(node => node.type === 'Column' && node.accessibilityText === label + (label === '书架' ? '，已选中' : ''));
+    assert.equal(typeof item?.onClick, 'function'); item.onClick();
+  }
+  assert.deepEqual(calls, [['discover', 7], ['rss', 7], ['settings', 7]], 'the current title stays selected and all original other routes dispatch through actual public owner callbacks');
+}
+
 const file = baseline.files.find(file => file.path.endsWith('/LocalImportDialog.ets'));
 for (const node of file.nodes.filter(node => node.method === 'fileSelectionPanel' && [1, 2, 3].includes(node.index))) {
   assert.equal(typographyCarrierMethod(file.path, node, read(file.path)), 'fileSelectionBody');
 }
-console.log('bounded typography carriers PASS: three retained import contracts and exact approved fullviewport source successor prove actual owners→shared SDK native Text, exact tuple/AUTO and active public roles; three exact same-file body successors; missing imports/finite bindings/comment edges/private literals/drift reject');
+console.log('bounded typography carriers PASS: retained import/source/directory witnesses and exact tuple/AUTO/public roles; 11 style +4 AUTO framework owner relocations, original 18 shelf occurrences with one actual wide shared rail/font/four-title callback proof; all prior controls plus 9 framework witness/count/slot/rail negative controls reject');

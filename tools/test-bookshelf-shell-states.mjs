@@ -161,7 +161,7 @@ dependencies.MainTabShell = class extends actualMain.Component {
 const iconHit = actor => actualIcons.nodes(actor).find(node => node.type === 'Stack' && node.onClick);
 function shellFixture({ populated = false, width = 365, menu = false } = {}) {
   shellWidth = width;
-  const { owner } = createReaderBuilderProbe(shellSource, ['content','mounted','temporaryBackIdentity','temporaryBackGeneration','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellHeader','shellOverlay','onHeaderHeightChange','headerHeight','recoveryNoticeContent','topBar','requestCheckUpdates','showBottomNav','numericAreaLength'], {
+  const { owner } = createReaderBuilderProbe(shellSource, ['content','mounted','temporaryBackIdentity','temporaryBackGeneration','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellHeader','shellOverlay','onHeaderHeightChange','headerHeight','recoveryNoticeContent','topBar','requestMainTab','requestCheckUpdates','showBottomNav','numericAreaLength'], {
     ...dependencies, ...actualIcons.dependencies, ...metricsApi, bookshelfTemporaryGeneration:0,registerReaderShelfFonts(){}, BOOKSHELF_WIDE_BREAKPOINT: 600, READER_FLOATING_TOP_BAR_HEIGHT: 58,
     ReaderWindowCoordinator: { metrics: () => new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,width,844)) },
   }, { ...actualIcons.hooks, childSources: { ...actualIcons.hooks.childSources, AppTopBar: actualHeaderSource } });
@@ -177,7 +177,7 @@ function shellFixture({ populated = false, width = 365, menu = false } = {}) {
   owner.aboutToAppear();
   if(menu)owner.moreOpenAction(owner.temporaryBackIdentity)();
   owner.initialRender();
-  const nav = childOf(owner, 'MainTabShell')[0];
+  const nav = childOf(owner, 'MainTabShell')[0]; nav.aboutToAppear();
   const header = childOf(owner, 'AppTopBar')[0];
   assert.equal(contentCalls, 1); assert.equal(header.title, '书架'); assert.equal(header.divider, false);
   assert.deepEqual([header.floating, header.centered, header.showLeadingSearch], [true, true, true]);
@@ -203,7 +203,10 @@ check('one shell keeps title/actions/nav actors through day-night and populated 
   assert.ok(search, 'Search dispatch belongs to the actual floating Header');
   search.onClick(); assert.deepEqual(owner.calls, ['onSearchRequested']);
   assert.equal(owner.moreMenuVisible, false); iconHit(buttons[0]).onClick(); assert.equal(owner.moreMenuVisible, true);
-  nav.params.onMainTab('settings'); assert.deepEqual(owner.calls, ['onSearchRequested','onMainTab:settings']);
+  const navActor = actors(nav).find(actor => actor instanceof dependencies.MainTabBar);
+  const settingsTab = nodesOf(navActor, 'Column').find(node => node.accessibilityText === '设置' && node.onClick);
+  assert.ok(settingsTab, 'actual shared navigation native button is mounted'); settingsTab.onClick();
+  assert.deepEqual(owner.calls, ['onSearchRequested','onMainTab:settings']);
   assert.ok(nodesOf(owner, 'Stack').some(node => node.height === '100%' && node.width === '100%'), 'content retains its full viewport under the floating header');
   assert.ok(nodesOf(owner, 'Column').some(node => node.zIndex === 10 && node.margin?.top === 8 && node.hitTestBehavior === 'HitTestMode.Transparent'),
     'the public header host retains the 8vp top gap and transparent empty area');

@@ -6,6 +6,7 @@ import { auditTypographyConsumers, auditNativeTextElements, typographyRoleImport
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import * as families from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import {SOURCE_SWITCH_VISUAL_SHA256} from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
+import { normalizeApprovedTypographyLayout } from './reader-typography-layout-successor.mjs';
 
 export const approvedMangaTypography = JSON.parse(readFileSync(new URL('../fixtures/design/approved-manga-typography-carriers-20261005.json', import.meta.url), 'utf8'));
 export const novelSourceSwitchSuccessorPath = 'tools/fixtures/design/novel-source-switch-successor-20261006.json';
@@ -178,7 +179,8 @@ export function approvedTypographyContract(source, file) {
   if (!entry) return { registered: false, has: () => false, count: 0 };
   if (sharedSourceSwitchTypographySuccessor.files.includes(entry)) validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor);
   else if (novelPaths.includes(entry.path)) retainsHistoricalCarriers(entry);
-  const actual = auditTypographyConsumers(source, entry.path).map(typographyCarrierShape);
+  const actualFacts = auditTypographyConsumers(source, entry.path).map(typographyCarrierShape);
+  const actual = normalizeApprovedTypographyLayout(source, entry, 'carriers', actualFacts);
   assert.deepEqual(actual, entry.carriers, 'exact approved typography carrier/tuple changed: ' + entry.path);
   const imports = typographyRoleImports(source, entry.path);
   for (const [name, tuple] of Object.entries(entry.roles)) {
@@ -186,11 +188,12 @@ export function approvedTypographyContract(source, file) {
     assert.deepEqual(JSON.parse(JSON.stringify(readerTypographyRoles[name])), tuple, 'approved public role tuple changed: ' + name);
   }
   for (const [name, value] of Object.entries(entry.fontFamilies)) assert.equal(families[name], value, 'approved physical font binding changed: ' + name);
-  const native = approvedNativeCarrierFacts(source,entry.path);
+  const nativeFacts = approvedNativeCarrierFacts(source,entry.path);
+  const native = normalizeApprovedTypographyLayout(source, entry, 'nativeDefaults', nativeFacts);
   assert.deepEqual(native,entry.nativeDefaults,'exact approved native AUTO carrier changed: '+entry.path);
   if(entry.path===completionPath)assert.deepEqual(approvedNativeAllCarrierFacts(source,entry.path),entry.nativeActors,'exact completion text actor native attributes changed');
-  const nativeKeys=new Set(entry.nativeDefaults.map(carrier=>JSON.stringify(carrier)));
-  const keys = new Set(entry.carriers.map(carrier => JSON.stringify(carrier)));
+  const nativeKeys=new Set(nativeFacts.map(carrier=>JSON.stringify(carrier)));
+  const keys = new Set(actualFacts.map(carrier => JSON.stringify(carrier)));
   return { registered: true, entry, count: actual.length, hasNative: node=>nativeKeys.has(JSON.stringify(approvedNativeCarrierShape(node,approvedNativeOwner(source,entry.path,node.line)))), has: node => keys.has(JSON.stringify(typographyCarrierShape(node))) };
 }
 

@@ -25,7 +25,18 @@ function fixture({initial,failures=0,pages=false}={}){
  index.endStartupStage=(...args)=>stages.push(args);
  return{index,idx:index,projection,retainedBooks,owner,calls,applied,stages,projectionErrors,setOwner:v=>{installed=v;},fail:n=>{fail=n;},malformed:v=>{malformed=v;},filtered:v=>{filtered=v;},books:v=>{books=v;},pause(){gate=defer();return gate;}};
 }
-function sdkFeedback(f){const rendered=actualProjectionSdkFeedback(f).project();return{...rendered,pageProps:rendered.shelf?.params};}
+function sdkFeedback(f){
+ const rendered=actualProjectionSdkFeedback(f).project();
+ const actors=owner=>[owner,...[...(owner.children?.values()??[])].flatMap(actors)];
+ const owners=actors(rendered.shell),nodes=owners.flatMap(owner=>[...(owner.nodes?.values()??[])]);
+ assert.ok(owners.some(owner=>owner.variant==='mainTab'&&typeof owner.onHeaderHeightChange==='function'),'readback feedback executes the actual main-tab Scaffold owner');
+ assert.ok(nodes.some(node=>node.type==='Stack'&&node.width==='100%'&&node.height==='100%'&&node.backgroundColor),'public frame keeps its opaque full viewport');
+ if(rendered.notice){
+  assert.ok(owners.some(owner=>owner.kind==='standard'&&owner.surface==='solid'),'readonly recovery lives inside the actual opaque HeaderHost');
+  assert.ok(nodes.some(node=>node.type==='Column'&&node.backgroundColor&&node.onAreaChange),'fixed recovery surface is painted and measured by the shared owner');
+ }
+ return{...rendered,pageProps:rendered.shelf?.params};
+}
 
 {const f=fixture({failures:1});f.index.refreshBookshelf();await until(()=>f.index.bookshelfReadFacts.fact==='current');assert.equal(f.calls.length,2);assert.equal(f.index.bookshelfLoadFailed,false);assert.equal(f.applied.length,1);assert.deepEqual(f.projectionErrors,[]);assert.equal(f.index.isBookshelfVisualAdmitted,true);assert.equal(f.index.shelfBooks[0].bookId,'A');}
 {const f=fixture({failures:2});f.index.refreshBookshelf();await until(()=>f.index.bookshelfReadFacts.fact==='failed');assert.equal(f.calls.length,2);assert.equal(f.index.bookshelfLoadFailed,true);

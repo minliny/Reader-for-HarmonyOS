@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
+import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import * as metrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { readerFloatingTabBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
 
 import {
   READER_PRODUCT_PROFILE,
@@ -24,17 +29,40 @@ for (const surface of ['discover', 'rss', 'sync', 'unimplementedSettings']) {
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const mainTabs = await readFile(new URL('features/shell/MainTabBar.ets', root), 'utf8');
 const bookshelf = await readFile(new URL('features/bookshelf/BookshelfPage.ets', root), 'utf8');
+const bookshelfShell = await readFile(new URL('features/bookshelf/BookshelfShell.ets', root), 'utf8');
 const settings = await readFile(new URL('features/settings/SettingsPage.ets', root), 'utf8');
 const index = await readFile(new URL('pages/Index.ets', root), 'utf8');
 
 assert.match(mainTabs, /ALL_MAIN_TABS\.filter\([\s\S]*isReaderMainTabEnabled\(tab\.key\)/,
   'shared Phone/Tablet navigation must derive from the admitted product scope');
-assert.match(bookshelf,
-  /if \(isReaderProductSurfaceEnabled\('discover'\)\)[\s\S]*tabletNavigationItem\('bookshelf_compass'/,
-  'the private bookshelf Tablet rail must gate Discover');
-assert.match(bookshelf,
-  /if \(isReaderProductSurfaceEnabled\('rss'\)\)[\s\S]*tabletNavigationItem\('bookshelf_rss'/,
-  'the private bookshelf Tablet rail must gate RSS');
+assert.doesNotMatch(bookshelf, /private tabletNavigation(?:Item)?\(/,
+  'bookshelf content delegates navigation to the actual public owner');
+assert.match(bookshelfShell, /MainTabShell\(\{[\s\S]*railVariant: 'bookshelf'/,
+  'the bookshelf delegates its explicit legal rail variant to the public shell');
+const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),ts=require(loader+'/node_modules/typescript');
+const compilerOptions=require(loader+'/lib/ets_checker.js').compilerOptions;
+const tabAst=ts.createSourceFile('MainTabBar.ets',mainTabs,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,compilerOptions);
+assert.deepEqual(tabAst.parseDiagnostics,[]);
+const configuration=tabAst.statements.filter(statement=>ts.isVariableStatement(statement)&&
+  statement.declarationList.declarations.some(node=>['ALL_MAIN_TABS','MAIN_TABS'].includes(node.name.getText(tabAst))));
+assert.equal(configuration.length,2,'exact actual main-tab declarations are present');
+const tabConfig=configuration.map(statement=>statement.getText(tabAst)).join('\n');
+const admittedTabs=new Function('isReaderMainTabEnabled',stripTypeScriptTypes(tabConfig).replace(/^export /gm,'')+';return MAIN_TABS;')(isReaderMainTabEnabled);
+assert.deepEqual(admittedTabs.map(tab=>tab.key),['bookshelf','settings']);
+for(const vertical of[false,true])for(const railVariant of['standard','bookshelf']){
+  const properties=createArkUIPropertyRuntimeProbe();
+  const {owner}=createReaderBuilderProbe(mainTabs,boundedMembers(mainTabs),
+    {...properties.sdk,...metrics,readerFloatingTabBottomInset,MAIN_TABS:admittedTabs},properties.hooks);
+  const selected=[],current=[];
+  Object.assign(owner,{vertical,railVariant,current:'bookshelf',appThemeScheme:'day',onSelect:key=>selected.push(key),onCurrentTap:key=>current.push(key)});
+  owner.initialRender();
+  const nodes=[...owner.nodes.values()];
+  assert.deepEqual(nodes.filter(node=>node.type==='Text').map(node=>node.create),['书架','设置'],
+    'actual Phone/Tablet and both finite rail variants render only the admitted product tabs');
+  for(const node of nodes.filter(node=>node.type==='Column'&&typeof node.onClick==='function'))node.onClick();
+  assert.deepEqual(selected,['settings']);assert.deepEqual(current,['bookshelf']);
+}
 
 for (const [method, surface] of [['openRss', 'rss'], ['openDiscover', 'discover'], ['openSync', 'sync']]) {
   const guard = new RegExp(`private ${method}\\(\\): void \\{\\s*if \\(\\!isReaderProductSurfaceEnabled\\('${surface}'\\)\\) \\{\\s*return;`);
@@ -58,8 +86,6 @@ console.log('reader product scope contract: PASS');
 
 // Execute direct/recovery entry points with the real shipping profile. An empty
 // receiver makes any state access or I/O before admission fail deterministically.
-const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const require=createRequire(import.meta.url),ts=require(loader+'/node_modules/typescript');
 const ast=ts.createSourceFile('Index.ets',index,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(loader+'/lib/ets_checker.js').compilerOptions);
 assert.deepEqual(ast.parseDiagnostics,[]);
 const indexClass=ast.statements.find(node=>node.name?.text==='Index');assert.ok(indexClass);

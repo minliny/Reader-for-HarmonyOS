@@ -41,8 +41,14 @@ function harness(){
   p.hooks.lifecycleChildren=true;
   for(const [name,path,slot] of [['MainTabShell','features/shell/MainTabShell','content'],['AppTopBar','features/common/AppTopBar','trailing'],['ReaderIconButton','features/common/ReaderIconButton'],['ReaderSelect','features/common/ReaderSelect']]){
     const source=read(path);p.hooks.childSources[name]=source;
-    if(slot)syntax.builderParamObjectCollection.set(name,new Set([slot]));
-    p.deps[name]=class {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}};
+    if(slot)syntax.builderParamObjectCollection.set(name,new Set(name==='MainTabShell'?['content','header','overlay']:[slot]));
+    const NativeChild=class {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}};
+    if(name==='MainTabShell'){
+      // Back ownership remains in the actual Shell's named slots. Only tab
+      // contents are an unrelated actor seam in this leaf lifecycle proof.
+      p.hooks.childSources.MainTabBar=read('features/shell/MainTabBar');
+      p.deps[name]=createReaderBuilderProbe(source,boundedMembers(source),{...p.deps,MainTabBar:NativeChild},p.hooks).Component;
+    }else p.deps[name]=NativeChild;
   }
   for(const [name,source] of [['ReaderChoiceRow',choiceSource],['ReaderSelectPanel',selectPanel],['SettingsSelectOverlay',settingsOverlay],['ReaderActionMenuSurface',menuSource],['BookshelfMoreMenu',moreMenu]]){
     p.hooks.childSources[name]=source;
@@ -71,7 +77,7 @@ function sourceFixture(input=sourceSource){
 function shelfFixture(input=shelfSource){
   const h=harness(),f=h.owner(input,{populated:true,canCheckUpdates:true});f.calls=[];
   f.o.onImportRequested=()=>f.calls.push('import');f.o.onBatchManageRequested=()=>f.calls.push('batch');f.o.onBookshelfSettingsRequested=()=>f.calls.push('settings');f.o.onCheckUpdatesRequested=()=>f.calls.push('update');f.o.content=()=>{};
-  f.o.moreOpenAction(f.events.at(-1).identity)();f.o.shellContent();f.o.topBar();[...f.o.children.values()].find(x=>x instanceof f.p.deps.AppTopBar).params.trailing();return f;
+  f.o.moreOpenAction(f.events.at(-1).identity)();f.o.initialRender();[...f.o.children.values()].find(x=>x instanceof f.p.deps.AppTopBar).params.trailing();return f;
 }
 function assertCycle(factory){
   const f=factory(),old=f.events.at(-1);assert.equal(typeof old.handler,'function');assert.equal(old.handler(),true);
@@ -113,11 +119,11 @@ for(const tablet of [false,true]){
   const back=f.events.at(-1).handler;assert.equal(back(),true);
   // The helper does not simulate native If removal. Execute actual disappear
   // and a fresh SDK constructor path for the new overlay, retaining old ACKs.
-  menu.aboutToDisappear();o.moreOpenAction(f.events.at(-1).identity)();o.shellContent();menu=f.p.walk(o).filter(x=>x instanceof f.p.deps.BookshelfMoreMenu).at(-1);f.p.properties.flush();
+  menu.aboutToDisappear();o.moreOpenAction(f.events.at(-1).identity)();o.shellOverlay();menu=f.p.walk(o).filter(x=>x instanceof f.p.deps.BookshelfMoreMenu).at(-1);f.p.properties.flush();
   oldDismiss();oldImport();oldUpdate();assert.equal(o.moreMenuVisible,true);assert.deepEqual(f.calls,[],'old menu cannot execute business work');
   o.updateRunning=true;f.p.properties.flush();menu.onCheckUpdates();assert.equal(o.moreMenuVisible,true);assert.deepEqual(f.calls,[]);
   o.updateRunning=false;f.p.properties.flush();menu.onCheckUpdates();assert.equal(o.moreMenuVisible,false);assert.deepEqual(f.calls,['update']);
-  menu.aboutToDisappear();o.moreOpenAction(f.events.at(-1).identity)();o.shellContent();menu=f.p.walk(o).filter(x=>x instanceof f.p.deps.BookshelfMoreMenu).at(-1);f.p.properties.flush();
+  menu.aboutToDisappear();o.moreOpenAction(f.events.at(-1).identity)();o.shellOverlay();menu=f.p.walk(o).filter(x=>x instanceof f.p.deps.BookshelfMoreMenu).at(-1);f.p.properties.flush();
   const row=f.p.walk(menu).find(x=>x instanceof f.p.deps.ReaderActionMenuSurface);assert.ok(row);[...row.nodes.values()].find(n=>n.accessibilityText==='本地导入').onClick();assert.equal(o.moreMenuVisible,false);assert.deepEqual(f.calls,['update','import']);
   o.aboutToDisappear();o.aboutToAppear();oldOpen();oldDismiss();assert.equal(o.moreMenuVisible,false,'old trigger and dismiss reject a replaced mounting');
 }

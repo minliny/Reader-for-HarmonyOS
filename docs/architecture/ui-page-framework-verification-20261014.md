@@ -26,3 +26,15 @@
 - 主页面、RSS/发现、设置、书架状态、二级页避让和安全区 7 项回归。二级页实测 96→58vp 时正文避让 104→66vp，原 Scroll 保留；书架实测 header 经 Index 更新原列表 actor。
 
 Native 与当前 Core 的 1140 文件输入指纹匹配；隔离配套 Core/UI、19 项工作区投影通过身份门禁，规范 sync-native/sync-signing 已通过。完整 HAP 编译结果另行填入。
+
+## 第一轮规范 HAP 门禁失败及修复
+
+`node scripts/hap-pipeline.mjs build --class iteration` 的 Native、工作区身份、签名输入和主题预检通过；完整合同门禁未通过，未发布 HAP。日志位于私有 `.reader-local/ui-framework/hap-build.log`。该轮运行在已出现失败后停止，合同阶段约 193 秒；不能将已执行的部分视为全套通过。
+
+- 隔离 Core 尚无当前快照的 `reader-cli`，七项集成用例出现 ENOENT。已在隔离 Core 执行 `cargo build --locked -p reader-cli`，书源导入、管理共享 owner 和持久删除三项随后复测通过；其余交由第二轮完整门禁核验。
+- 迁移后的真实公共 Builder 路径需要原 SDK fixture 同步。已接入真实 Scaffold/HeaderHost 方法，保留原 Scroll、回调、路由和负控断言；临时返回 leaf/index、反馈及产品范围四项通过，38 个原路由守卫保留。
+- 合同回归发现实际导航缺陷：旧导航控件可能借用新的回调代号。公共导航控件现在按 presentation generation 轮换，MainTabShell、BookshelfShell 和 Index 校验代号、挂载生命周期与 Runtime。真实 SDK 用例验证旧回调拒绝、新代可用、卸载后拒绝和跨 Runtime 重建；读取 live generation 的 mutation 被拒绝。目录 List/Scroller 未随导航代号重建。
+- 字体 carrier 的 Builder owner 迁移已逐项证明，五项字体门禁通过。有限 successor 证明 11 个样式、4 个 AUTO 的同文件 owner 迁移及书架 rail 的唯一共享委托；书架 18 个逻辑 occurrence 保留，真实 wide SDK 验证四个标题/回调和原 UIBold 700/11/18 字体元组。九个新增负控拒绝历史字节、计数、slot、vertical、variant 或私有预算篡改。四个历史 fixture 未修改。
+- 搜索/发现/同步 30 项实际 SDK 布局及交互对比、两个复合头负控通过；正文列表、Scroller、原回调和几何保持。
+
+当前尚无本次修改的成功 HAP、安装、VM 或视觉验收证据。

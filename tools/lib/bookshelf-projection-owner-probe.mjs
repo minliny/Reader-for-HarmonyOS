@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
-import {boundedSurfaceSdk} from './bounded-surface-sdk-probe.mjs';
+import {boundedMembers,boundedSurfaceSdk} from './bounded-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {bookshelfOperationClass} from './bookshelf-operation-owner-probe.mjs';
 import {BookshelfReadOwner} from '../../entry/src/main/ets/features/bookshelf/BookshelfReadOwner.ts';
@@ -50,8 +50,19 @@ export function actualProjectionSdkFeedback(f) {
   const read=path=>readFileSync(new URL('../../entry/src/main/ets/'+path,import.meta.url),'utf8');
   class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
   const index=read('pages/Index.ets'),shellText=read('features/bookshelf/BookshelfShell.ets');
+  const mainText=read('features/shell/MainTabShell.ets');
   const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
   sdk.childSources.BookshelfMoreMenu=read('features/bookshelf/BookshelfMoreMenu.ets');
+  sdk.childSources.MainTabShell=mainText;
+  sdk.childSources.MainTabBar=read('features/shell/MainTabBar.ets');
+  const frameDeps={...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics}};
+  // Recovery remains the actual Shell header slot, through its real main-tab
+  // and page hosts. The tab actor and top-bar content are unrelated UI seams;
+  // the Shell's branching, recovery identity and public header mask are real.
+  const actualMain=createReaderBuilderProbe(mainText,boundedMembers(mainText),{
+    ...sdk.deps,...frameDeps,MainTabBar:Child,
+  },sdk.hooks);
+  sdk.deps.MainTabShell=actualMain.Component;
   const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
   const require=createRequire(import.meta.url),syntax=require(loader+'/lib/validate_ui_syntax.js'),builders=require(loader+'/lib/component_map.js').CUSTOM_BUILDER_METHOD;
   syntax.builderParamObjectCollection.set('BookshelfShell',new Set(['content']));
@@ -64,8 +75,12 @@ export function actualProjectionSdkFeedback(f) {
       if(typeof f.idx[name]==='function')parent[name]=f.idx[name].bind(f.idx);
     parent.bookshelfContent();parent.bookshelfShellContent();
     const shelf=[...parent.children.values()].find(child=>child.params.books),props=[...parent.children.values()].find(child=>child.params.readRecovery).params;
-    const shell=sdk.consumer(shellText,['shellContent','content','recoveryNoticeContent'],{BookshelfMoreMenu:Child,...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics},READER_FLOATING_TOP_BAR_HEIGHT:58});
-    Object.assign(shell,props,{content(){},topBar(){},moreMenuVisible:false});shell.shellContent();
+    const wideDeclaration=shellText.match(/^export const BOOKSHELF_WIDE_BREAKPOINT\s*=\s*([\d.]+);/m);
+    if(!wideDeclaration)throw Error('actual bookshelf width policy declaration required');
+    const shell=sdk.consumer(shellText,['build','shellHeader','shellOverlay','content','recoveryNoticeContent',
+      'showBottomNav','numericAreaLength','headerHeight','viewportWidth','readerWindowMetricsRevision','onHeaderHeightChange'],
+      {BookshelfMoreMenu:Child,...frameDeps,BOOKSHELF_WIDE_BREAKPOINT:Number(wideDeclaration[1])});
+    Object.assign(shell,props,{content(){},topBar(){},moreMenuVisible:false});shell.initialRender();
     const notice=sdk.walk(shell).find(owner=>owner instanceof sdk.deps.ReaderRecoveryNotice);
     const action=sdk.nodes(shell).find(node=>node.height===36&&node.onClick);
     return {props,shelf,notice,action,shell};
