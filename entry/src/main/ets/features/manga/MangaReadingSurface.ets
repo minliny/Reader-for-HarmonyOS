@@ -1721,8 +1721,8 @@ export struct MangaReadingSurface {
       placement: this.widePanel() ? 'side' : 'bottom', scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
       actionEnabled: this.panelPhase === 'open' || this.panelPhase === 'dragging',
       onClose: (): void => { void this.closePanel(); },
-      onDragStart: (): void => this.beginPanelDrag(), onDragUpdate: (offset: number): void => this.updatePanelDrag(offset),
-      onDragEnd: (offset: number, velocity: number): void => this.finishPanelDrag(offset, velocity),
+      onHandlePanStart: (): void => this.beginPanelDrag(), onHandlePanUpdate: (offset: number): void => this.updatePanelDrag(offset),
+      onHandlePanEnd: (offset: number, velocity: number): void => this.finishPanelDrag(offset, velocity),
     });
   }
   @Builder

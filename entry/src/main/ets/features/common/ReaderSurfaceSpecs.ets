@@ -490,7 +490,12 @@ export class ActionSheetSurfaceSpec {
   }
 }
 
-const ACTION_SHEET_SPECS: Record<ActionSheetSpecId, ActionSheetSurfaceSpec> = {
+interface ActionSheetSpecs {
+  grouped: ActionSheetSurfaceSpec;
+  quick: ActionSheetSurfaceSpec;
+}
+
+const ACTION_SHEET_SPECS: ActionSheetSpecs = {
   grouped: new ActionSheetSurfaceSpec({
     sectionHeadingHeight: 26, sectionHeadingFontSize: 12, sectionHeadingLineHeight: 18,
     quickActionHeight: 88, quickActionGap: 4, quickLabelFontSize: 13, quickLabelLineHeight: 18,

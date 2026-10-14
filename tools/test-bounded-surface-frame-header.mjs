@@ -1,10 +1,47 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
 import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import {SOURCE_SWITCH_VISUAL} from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}`,import.meta.url),'utf8');
 const source=read('features/source/SourceSwitchWindow.ets'),tts=read('features/reading/ReaderTtsConfigOverlay.ets');
+// SDK lowering alone does not diagnose incompatible inherited properties.
+// Compare real business callbacks with the installed CustomComponent API.
+const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript');
+const api=ts.createSourceFile('/tmp/common.d.ts',readFileSync(resolve(sdk,'../../component/common.d.ts'),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
+const declarations=new Map(api.statements.filter(ts.isClassDeclaration).map(node=>[node.name.text,node]));
+const inherited=new Set(),visited=new Set();
+function collectInherited(name){
+  if(visited.has(name))return;visited.add(name);const declaration=declarations.get(name);assert.ok(declaration,'actual SDK base declaration '+name);
+  for(const member of declaration.members)if(member.name)inherited.add(member.name.getText(api));
+  for(const clause of declaration.heritageClauses??[])if(clause.token===ts.SyntaxKind.ExtendsKeyword)for(const base of clause.types)collectInherited(base.expression.getText(api));
+}
+collectInherited('CustomComponent');assert.ok(inherited.has('onDragStart')&&inherited.has('onDragEnd'),'installed SDK reserves both native drag APIs');
+const headerSource=read('features/common/ReaderBoundedSurfaceHeader.ets');
+function verifyBusinessCallbacks(candidate){
+  const parsed=ts.createSourceFile('/tmp/ReaderBoundedSurfaceHeader.ets',candidate,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+  const header=parsed.statements.find(node=>node.name?.text==='ReaderBoundedSurfaceHeader');assert.ok(header);
+  for(const member of header.members.filter(node=>ts.isPropertyDeclaration(node)&&node.type&&ts.isFunctionTypeNode(node.type)))
+    assert.equal(inherited.has(member.name.getText(parsed)),false,'business callback shadows ArkUI CustomComponent API: '+member.name.getText(parsed));
+}
+verifyBusinessCallbacks(headerSource);
+for(const reserved of ['onDragStart','onDragEnd'])assert.throws(()=>verifyBusinessCallbacks(headerSource.replaceAll(reserved==='onDragStart'?'onHandlePanStart':'onHandlePanEnd',reserved)),/shadows ArkUI CustomComponent API/,'the original inherited-method collision is rejected before packaging');
+{
+  const gestures=[],calls=[];
+  const panGesture=new Proxy({}, {get:(_target,name)=>(...args)=>{
+    if(name==='create')gestures.push({options:args[0]});else if(String(name).startsWith('onAction'))gestures.at(-1)[name]=args[0];
+  }});
+  const probe=boundedSurfaceSdk({panGesture});
+  const header=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId:'reader-action-sheet',placement:'bottom',title:'更多',
+    onHandlePanStart:()=>calls.push(['start']),onHandlePanUpdate:offset=>calls.push(['update',offset]),onHandlePanEnd:(offset,velocity)=>calls.push(['end',offset,velocity])});
+  header.initialRender();assert.equal(gestures.length,1);const gesture=gestures[0];
+  assert.deepEqual(gesture.options,{fingers:1,direction:'vertical',distance:1});
+  gesture.onActionStart();gesture.onActionUpdate({offsetY:24});gesture.onActionEnd({offsetY:24,velocityY:80});gesture.onActionCancel();
+  assert.deepEqual(calls,[['start'],['update',24],['end',24,80],['end',0,0]],'actual SDK gesture forwards unchanged offset/velocity and cancel semantics through the business callbacks');
+}
 for(const [specId,width,height,radius,type] of [['source-switch-window',300,385,20,'Column'],['tts-config-manager','100%',574,22,'Column'],['tts-config-picker',260,172,14,'Column'],['local-import-selection',350,399.75,20,'Column'],['local-import-progress',350,228,20,'Stack'],['local-import-result-content',350,500,undefined,'Column'],['reader-replace-editor',338,666,12,'Column']]){
   const probe=boundedSurfaceSdk(),calls=[];
   const f=new probe.deps.ReaderBoundedSurface(undefined,{specId,surfaceWidth: width,surfaceHeight: height});

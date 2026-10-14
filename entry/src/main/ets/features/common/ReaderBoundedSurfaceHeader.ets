@@ -35,9 +35,9 @@ export struct ReaderBoundedSurfaceHeader {
   @BuilderParam accessory: () => void = this.emptySlot;
   onAreaChanged: (oldValue: Area, next: Area) => void = (_oldValue: Area, _next: Area): void => {};
   onClose: () => void = (): void => {};
-  onDragStart: () => void = (): void => {};
-  onDragUpdate: (offset: number) => void = (_offset: number): void => {};
-  onDragEnd: (offset: number, velocity: number) => void = (_offset: number, _velocity: number): void => {};
+  onHandlePanStart: () => void = (): void => {};
+  onHandlePanUpdate: (offset: number) => void = (_offset: number): void => {};
+  onHandlePanEnd: (offset: number, velocity: number) => void = (_offset: number, _velocity: number): void => {};
 
   @Builder private emptySlot() {}
 
@@ -92,10 +92,10 @@ export struct ReaderBoundedSurfaceHeader {
               .backgroundColor(readerAppColor(this.drawerSpec().handleRole, this.drawerScheme()));
           }.width('100%').height(this.drawerSpec().handleZone).justifyContent(FlexAlign.Center)
             .gesture(PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 1 })
-              .onActionStart((): void => this.onDragStart())
-              .onActionUpdate((event: GestureEvent): void => this.onDragUpdate(event.offsetY))
-              .onActionEnd((event: GestureEvent): void => this.onDragEnd(event.offsetY, event.velocityY))
-              .onActionCancel((): void => this.onDragEnd(0, 0)));
+              .onActionStart((): void => this.onHandlePanStart())
+              .onActionUpdate((event: GestureEvent): void => this.onHandlePanUpdate(event.offsetY))
+              .onActionEnd((event: GestureEvent): void => this.onHandlePanEnd(event.offsetY, event.velocityY))
+              .onActionCancel((): void => this.onHandlePanEnd(0, 0)));
           Text(this.title).fontFamily(this.drawerSpec().titleFontFamily).fontWeight(this.drawerSpec().titleFontWeight)
             .fontSize(this.drawerSpec().titleFontSize).lineHeight(this.drawerSpec().titleLineHeight)
             .minFontScale(this.drawerSpec().titleMinFontScale).maxFontScale(this.drawerSpec().titleMaxFontScale)

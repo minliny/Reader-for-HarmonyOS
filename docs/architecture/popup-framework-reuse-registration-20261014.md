@@ -44,7 +44,13 @@ Final registered production fingerprints:
 - `entry/src/main/ets/features/common/ReaderActionMenuSurface.ets`: `e3086027699adf08a9c863038ec64d7e8272306a8c697955c9c9331768b36214`
 - `entry/src/main/ets/features/common/ReaderActionSheetContent.ets`: `6c1e306a740de2642f31db6d419bb76a6bd6aee8a268c3b65c3c89bc1ceec47c`
 - `entry/src/main/ets/features/common/ReaderBoundedSurface.ets`: `54434a4649babb9e00a4bc3117790321f735fddd9e18f74e7cfd411f8087d986`
-- `entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets`: `2863f29a42e048d01bfbb8dc233cb893d3c1b032b1dcc79563e11984fe0a3064`
-- `entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets`: `3609334c9a43b392f87649aab322226e4d75861b107588169a8430ff3cbbbd4d`
+- `entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets`: `ef5432111d9e1700dd72fb6b2bc28b2473f79b6d59893a83873e7d6fde2595bb`
+- `entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets`: `3860f0200daab4f57856247ed8a9d824805e4941ac13f6f0604f50ee3b61258f`
 
 These are code and local SDK facts. HAP packaging, installation, native visual acceptance and user acceptance remain separate and unclaimed.
+
+## ArkTS compile correction
+
+The canonical build at 3261180a passed all 667 Host contracts and then reported three ArkTS errors. The action recipe registry now uses an explicit interface with grouped/quick fields instead of the mapped Record type; all recipe values and lookup behavior remain unchanged. The shared handle callbacks use onHandlePanStart/Update/End, avoiding CustomComponent drag API collisions. The Manga owner still receives the same start, offset update, offset/velocity end and cancellation events. Exact producer/spec/caller contracts were refreshed; packaging and device verification remain with the canonical pipeline.
+
+Targeted local verification passed: bounded-surface-frame-header, reader-action-sheet-content, manga-sheet-motion-sdk and manga-surface-sdk. These include real lowered pan start/update/end/cancel forwarding and unchanged full owner motion/token fences. Formal whole-app ArkTS compilation remains pending the next canonical build.

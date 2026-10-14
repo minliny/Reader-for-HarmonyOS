@@ -1,9 +1,25 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const source = read('features/common/ReaderActionSheetContent.ets');
+// ArkTS requires the registry literal to have a declared interface. A mapped
+// Record type lowers in the SDK probe but fails the real ArkTS checker.
+const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),ts=require(loader+'/node_modules/typescript');
+function verifyRegistryContext(candidate){
+  const parsed=ts.createSourceFile('/tmp/ReaderSurfaceSpecs.ets',candidate,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(loader+'/lib/ets_checker.js').compilerOptions);
+  const registry=parsed.statements.filter(ts.isVariableStatement).flatMap(statement=>[...statement.declarationList.declarations]).find(declaration=>declaration.name.getText(parsed)==='ACTION_SHEET_SPECS');
+  assert.ok(registry&&ts.isTypeReferenceNode(registry.type),'actual action-sheet registry has a declared type');
+  const declaration=parsed.statements.find(node=>ts.isInterfaceDeclaration(node)&&node.name.getText(parsed)===registry.type.typeName.getText(parsed));
+  assert.ok(declaration,'action-sheet registry object literal requires an explicit declared interface');
+  assert.deepEqual(declaration.members.map(member=>[member.name.getText(parsed),member.type.getText(parsed)]),[['grouped','ActionSheetSurfaceSpec'],['quick','ActionSheetSurfaceSpec']]);
+  assert.deepEqual(registry.initializer.properties.map(property=>property.name.getText(parsed)),['grouped','quick'],'both finite recipes remain present without widening the registry');
+}
+const specSource=read('features/common/ReaderSurfaceSpecs.ets');verifyRegistryContext(specSource);
+assert.throws(()=>verifyRegistryContext(specSource.replace('const ACTION_SHEET_SPECS: ActionSheetSpecs =','const ACTION_SHEET_SPECS: Record<ActionSheetSpecId, ActionSheetSurfaceSpec> =')),/requires an explicit declared interface/,'the original mapped-type object literal is rejected before packaging');
 const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
 const actions = [
   new sdk.deps.ReaderActionSheetAction('source', '更换书源', '阅读', '', '', true, undefined, 'default', true),
