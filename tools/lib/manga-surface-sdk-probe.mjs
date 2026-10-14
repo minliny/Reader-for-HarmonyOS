@@ -33,12 +33,23 @@ const nativeGesture = new Proxy({}, { get: () => () => {} });
 class ImportedChildBoundary {
   constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
 }
+
+/** Invoke the actual SDK-generated content Builder passed across the imported
+ * PullToRefresh boundary. Geometry/scroll probes still execute production List
+ * and image Builders; the upstream-specific suite owns gesture arbitration. */
+export function mountMangaViewportBuilder(owner) {
+  const wrappers = [...owner.children.values()].filter(child => typeof child.params?.customList === 'function');
+  for (const wrapper of wrappers) wrapper.params.customList();
+  return wrappers.length;
+}
 for (const [name, relative] of [
   ['ReaderIconButton', '../../entry/src/main/ets/features/common/ReaderIconButton.ets'],
   ['ReaderDirectoryNavigationSurface', '../../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets'],
   ['MangaReadingDirectoryFallback', '../../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets'],
   ['MangaDownloadOperationsPanel', '../../entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets'],
   ['MangaDirectoryCurrentFooter', '../../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets'],
+  ['PullToRefresh', '../../entry/src/main/ets/features/manga/vendor/pulltorefresh/PullToRefresh.ets'],
+  ['MangaBoundaryTurnFeedback', '../../entry/src/main/ets/features/manga/MangaBoundaryTurnFeedback.ets'],
 ]) {
   const source = readFileSync(new URL(relative, import.meta.url), 'utf8');
   syntax.componentCollection.customComponents.add(name);
@@ -58,6 +69,8 @@ export const mangaSurfaceSdkDependencies = {
   MangaReadingDirectoryFallback: ImportedChildBoundary,
   MangaDownloadOperationsPanel: ImportedChildBoundary,
   MangaDirectoryCurrentFooter: ImportedChildBoundary,
+  PullToRefresh: ImportedChildBoundary,
+  MangaBoundaryTurnFeedback: ImportedChildBoundary,
   MangaBookPresentation,
   ...readerWindowMetrics, isReaderProductSurfaceEnabled, isReaderMainTabEnabled, readerWidthClass,
   readingDirectoryRecovery, EMPTY_READING_DIRECTORY_RECOVERY,

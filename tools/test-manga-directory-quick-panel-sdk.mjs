@@ -40,7 +40,8 @@ function fixture({ current = 71, night = false, stale = false, candidate = sourc
     windowMetricsRevision: 0, quickHeaderMeasured: 0, quickToolsMeasured: 0, quickFooterMeasured: 0,
     directoryEntries: () => entries, widePanel: () => false, panelContentHeight: () => 610,
     performPanelAction: async action => { events.push('close-panel'); action(); },
-    onChapter: direction => events.push(['chapter', direction]), onDirectory: () => events.push('full-directory'),
+    turnBoundaryChapter: async direction => { events.push(['chapter', direction]); return ''; },
+    onDirectory: () => events.push('full-directory'),
   });
   const walk = owner => [owner, ...[...owner.children.values()].flatMap(child => child.nodes ? walk(child) : [])];
   return { owner, events, nodes: () => walk(owner).flatMap(child => [...child.nodes.values()]) };

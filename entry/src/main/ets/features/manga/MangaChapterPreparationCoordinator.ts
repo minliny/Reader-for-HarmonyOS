@@ -88,7 +88,43 @@ export class MangaChapterPreparationCoordinator {
     return task;
   }
 
-  leaveCurrent(): void { this.currentKey = undefined; }
+  /** A retired view can finish after its successor was admitted. It owns only
+   * its own chapter, never the successor's shared preparation clock. */
+  leaveCurrent(chapter?: MangaChapterResult): void {
+    if (chapter === undefined || this.currentKey === this.key(chapter)) this.currentKey = undefined;
+  }
+
+  /** Admission before native paint may be rolled back. Keep the exact prior
+   * three-chapter history, including the slot a failed candidate would evict.
+   * Core still owns the CAS epoch; never restore across exit or another owner. */
+  candidateProtectionRollback(target: MangaChapterResult): (isCurrent: () => boolean) => Promise<boolean> {
+    const revision = this.sessionRevision, epoch = this.sessionEpoch, runtimeEpoch = this.runtimeEpoch;
+    const currentKey = this.currentKey, targetKey = this.key(target);
+    const history = this.history.map(key => this.states.get(key)).filter((state): state is MangaPreparationState => state !== undefined);
+    return async (isCurrent: () => boolean): Promise<boolean> => {
+      const current = (): boolean => !this.closed && revision === this.sessionRevision && epoch === this.sessionEpoch &&
+        runtimeEpoch === this.runtimeEpoch && isCurrent() && (this.currentKey === targetKey || this.currentKey === currentKey);
+      const predecessor = this.protectionLane;
+      const task = predecessor.catch((): void => {}).then(async (): Promise<boolean> => {
+        if (!current() || runtimeEpoch === undefined) return false;
+        const valid = history.filter(state => state.contentCurrent());
+        const oldCurrent = valid.find(state => state.key === currentKey);
+        if (oldCurrent === undefined) return false;
+        await this.gateway.replaceProtection(valid.map(state => state.chapter.manifest.chapter), epoch, runtimeEpoch, current);
+        this.assertCurrent(current);
+        const start = oldCurrent.chapter.manifest.pages[0].ordinal;
+        const window = await this.gateway.window(oldCurrent.chapter, start, Math.min(32, oldCurrent.totalPages - start), current);
+        this.assertCurrent(current);
+        if (window.totalPages !== oldCurrent.totalPages) throw new Error('MANGA_SESSION_CONTENT_CHANGED');
+        for (const state of valid) this.states.set(state.key, state);
+        this.history = valid.map(state => state.key); this.currentKey = currentKey;
+        this.trimStates();
+        return true;
+      });
+      this.protectionLane = task.then((): void => {}, (): void => {});
+      return task;
+    };
+  }
 
   observeChapter(chapter: MangaChapterResult, listener: MangaPreparationListener): () => void {
     const key = this.key(chapter);

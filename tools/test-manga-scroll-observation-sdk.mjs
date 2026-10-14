@@ -27,7 +27,9 @@ assert.equal(rectangleQueries,0,'native input/scroll callbacks do not synchronou
 assert.equal(offsetQueries,0);
 assert.equal(frames.length,1,'both scrollers share one pending observation');
 latestY = -150;
-frames.shift().onFrame(0); await tick(); properties.flush();
+const observation = frames.shift();observation.onFrame(0);
+assert.equal(rectangleQueries,0,'frame start precedes rendered native geometry');
+observation.onIdle(2_000_000); await tick(); properties.flush();
 assert.equal(rectangleQueries,1); assert.equal(offsetQueries,1);
 assert.equal(owner.visibleAnchor.y,0.25,'delivered frame observes latest native position');
 assert.equal(snapshot().mounts,before.mounts); assert.equal(snapshot().reloads,before.reloads);
@@ -39,7 +41,8 @@ const restoredQueries=rectangleQueries;
 for (let index=0; index<100; index++) list.onScrollIndex(0,1);
 assert.equal(rectangleQueries,restoredQueries,'restore range callbacks cannot re-enter native geometry');
 assert.equal(frames.length,1);
-frames.shift().onFrame(0); await tick();
+const restored = frames.shift();restored.onFrame(0);assert.equal(owner.restoringAnchor,true);
+restored.onIdle(2_000_000); await tick();
 assert.equal(owner.restoringAnchor,false);
 assert.equal(rectangleQueries,restoredQueries+1);
 console.log('PASS repeated native restoration callbacks defer geometry and settle the current anchor');
@@ -48,7 +51,7 @@ list.onScroll(); horizontal.onScroll(); assert.equal(frames.length,1);
 owner.controller.close = async () => {};
 owner.restoreAppWindowChrome = () => {};
 owner.aboutToDisappear();
-frames.shift().onFrame(0);
+{const frame=frames.shift();frame.onFrame(0);frame.onIdle(2_000_000);}
 assert.equal(rectangleQueries,restoredQueries+1,'disappeared Surface cannot read native layout');
 assert.equal(offsetQueries,2);
 console.log('PASS pending observation is invalidated by production disappearance');
@@ -61,7 +64,7 @@ list.onScroll(); assert.equal(frames.length,1);
 list.onScrollStop(); await tick();
 assert.equal(owner.confirmedPosition.anchor.y,0.15);
 const finalQueries=rectangleQueries;
-frames.shift().onFrame(0);
+{const frame=frames.shift();frame.onFrame(0);frame.onIdle(2_000_000);}
 assert.equal(rectangleQueries,finalQueries,'native stop consumes and cancels the pending observation');
 console.log('PASS native stop captures position synchronously and cancels obsolete observation');
 `;

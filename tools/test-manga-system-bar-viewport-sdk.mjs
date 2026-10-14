@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
-import {mangaSurfaceSdkDependencies} from './lib/manga-surface-sdk-probe.mjs';
+import {mangaSurfaceSdkDependencies, mountMangaViewportBuilder} from './lib/manga-surface-sdk-probe.mjs';
 import {createDefaultReaderWindowMetrics,ReaderInsetsVp,ReaderRectVp,readerInteractiveSafeInsets,readerContentSafeTop} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -74,7 +74,7 @@ function mangaFixture(text=source,values={}){
   controlsVisible:true,opened:true,title:'当前章',bookTitle:'实际漫画',horizontalPageCount:32,panelFontsReady:true,...values});
  owner.data.projection.publish(manifest,()=>({width:1000,height:2000,tileHeight:2000}));
  owner.visibleAnchor={ordinal:0,y:.11709401709401709,x:.05299145299145299};owner.mounted=true;
- owner.initialRender();
+ owner.initialRender();mountMangaViewportBuilder(owner);
  const image=rows[0].nodes.find(n=>n.type==='Image'),listItem=rows[0].nodes.find(n=>n.type==='ListItem');
  const scroll=[...owner.nodes.values()].find(n=>n.type==='Scroll');
  const list=[...owner.nodes.values()].find(n=>n.type==='List');
@@ -129,6 +129,7 @@ function indexFixture(text=indexSource){
  const properties=createArkUIPropertyRuntimeProbe(),metrics=createDefaultReaderWindowMetrics();metrics.systemInsets=new ReaderInsetsVp(0,48,0,0);
  const selected=['build','route','readingSessionActive','readingContentKind','directoryReturnTarget','detailBook','readerWindowMetricsRevision',
   'appThemeScheme','readerOwnsWindowEdges','mangaOwnsWindowEdges','appContentTopInset','onSearchVisibilityChanged',
+  'applyMangaAdjacentChapter','applyDirectoryChapter',
   ...type.members.filter(n=>ts.getAllDecorators(n).some(d=>d.getText(tree)==='@Builder')).map(n=>n.name.getText(tree))];
  const {owner,output}=createReaderBuilderProbe(text,selected.filter(n=>names.includes(n)),{
   ...properties.sdk,...mangaSurfaceSdkDependencies,...dependencies,ReaderWindowCoordinator:{metrics:()=>metrics},readerContentSafeTop,

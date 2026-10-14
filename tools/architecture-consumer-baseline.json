@@ -1298,6 +1298,29 @@
       "proof": "tools/test-reader-recoverable-entry.mjs",
       "approvalEvidence": "docs/READING_CHROME_AND_INTERACTION_20261012.md",
       "status": "REGISTERED_READING_INTERACTION_NOT_DEVICE_ACCEPTANCE"
+    },
+    {
+      "file": "entry/src/main/ets/features/manga/vendor/pulltorefresh/PullToRefresh.ets",
+      "kind": "pinned-open-source-native-gesture-adapter",
+      "owner": "@ohos/pulltorefresh V1 2.1.1 / Reader native chapter boundary adapter",
+      "reason": "One exact Apache-2.0 source-pinned upstream pull component preserves native Pan and five-stage resistance while adapting short chapters, fixed viewport, cancellation and async lifetime. It owns no text typography or chapter transaction.",
+      "counts": {},
+      "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN",
+      "proof": "entry/src/main/ets/features/manga/vendor/pulltorefresh/UPSTREAM.md",
+      "sdkProof": "tools/test-manga-boundary-pull-upstream-sdk.mjs"
+    },
+    {
+      "file": "entry/src/main/ets/features/manga/MangaBoundaryTurnFeedback.ets",
+      "kind": "finite-manga-boundary-feedback",
+      "owner": "MangaReadingSurface upward boundary release / brief bottom hint",
+      "reason": "User-selected upward overscroll and release uses one flat footer with public action typography and current paper/ink/muted theme. No preparation/retry/cancel card is rendered; historical Surface typography and native image viewport geometry remain bounded.",
+      "counts": {
+        "fontSize": 0,
+        "backgroundColor": 1
+      },
+      "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN",
+      "proof": "docs/MANGA_BOUNDARY_TURN_UI_CONTRACT_20261008.md",
+      "sdkProof": "tools/test-manga-boundary-feedback-sdk.mjs"
     }
   ]
 }

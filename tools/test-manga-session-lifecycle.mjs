@@ -43,7 +43,7 @@ const Controller = productionMotionMethods(files.controller, ['close']);
 function surfaceFixture(shell, previousIdentity) {
   const events = [], intent = [], counts = { close: 0, leave: 0, releaseView: 0 };
   let surface, retentionChecks = 0;
-  const Surface = productionMotionMethods(files.surface, ['aboutToDisappear'], {
+  const Surface = productionMotionMethods(files.surface, ['rollbackChapterImages', 'aboutToDisappear'], {
     ReaderWindowCoordinator: { brightness: () => ({ release: async token => {
       assert.equal(token, 41); assert.equal(surface.mounted, false); events.push('brightness.release');
     } }) },

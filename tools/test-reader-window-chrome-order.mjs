@@ -119,13 +119,14 @@ const mangaChromeMembers=['windowChromeActive','windowChromeOverlayActive','isRe
  'backgroundPreference','loginRequiredForControls','aboutToAppear','aboutToDisappear','toggleControls','controlsPresentedForWindow',
  'refreshLoginRequiredForControls','onWindowChromeChanged','applyWindowChrome','applyWindowPolicyForChromeOwner','restoreAppWindowChrome',
  'paperColor','inkColor','loginRequired','imageError','notifyPublishedRows','requestedLast','measureVisibleWindow','onRowAppear',
- 'viewportWidth','viewportHeight','stageWidth','stageHeight','widePanel','persistentDirectory','directoryColumnWidth'];
+ 'viewportWidth','viewportHeight','stageWidth','stageHeight','widePanel','persistentDirectory','directoryColumnWidth',
+ 'rollbackChapterController','rollbackChapterImages','previousChapterPixels'];
 const mangaMaskSceneMembers=[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,'build','panelOverlay','panelOffset','panelScrimOpacity','panelPhase','panelGeneration',
  'panelActionGeneration','panelCloseTask','panelCloseResolve','reduceMotion','windowMetricsRevision','onDirectoryMetricsChanged',
  'quickHeaderMeasured','quickToolsMeasured','quickFooterMeasured','openPanel','closePanel','invalidatePanelMotion','settlePanel',
  'beginPanelDrag','updatePanelDrag','finishPanelDrag','panelTravel','panelHeight','panelWidth','panelContentHeight',
  'windowInteractiveInsets','interactiveInsets','panelInsets','panelTitle','panelContentInset','surfaceColor','lineColor',
- 'directoryFontScale','directoryHeaderChrome','resizeViewport'];
+ 'directoryFontScale','directoryHeaderChrome','resizeViewport','previousChapterPixels','boundaryBusy','boundaryFailure'];
 function mangaSdkFixture(f,text=mangaSource,properties=createArkUIPropertyRuntimeProbe(),maskScene=false){
  let identity=true;
  const frames=[],animations=[],restores=[];
@@ -175,7 +176,7 @@ function mangaSdkFixture(f,text=mangaSource,properties=createArkUIPropertyRuntim
    rowRenderKey(row){return `${row.key}:${this.imageError(row)}`;},confirmMountedTurn(){}});
   if(maskScene)Object.assign(instance,{
    opened:false,showPageNumbers:false,quickHeaderMeasured:0,quickToolsMeasured:0,quickFooterMeasured:0,
-   imageViewport(){},tabletDirectory(){},topControls(){},bottomControls(){},chapterEndContent(){},
+   imageViewport(){},boundaryViewport(){this.imageViewport();},tabletDirectory(){},topControls(){},bottomControls(){},chapterEndContent(){},
    directoryPanel(){},modePanel(){},settingsPanel(){},morePanel(){},
    // Chapter transport, static-font receipt and keyboard dismissal are IO
    // boundaries. Actual panel lifecycle, paint, Area and chrome remain selected.

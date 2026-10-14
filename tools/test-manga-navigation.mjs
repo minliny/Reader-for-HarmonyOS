@@ -32,16 +32,21 @@ const MangaLayoutFrame=new Function('FrameCallback',`${stripTypeScriptTypes(fram
 const timers=[],scrolls=[],frames=[],measurements=[];
 function flushLayout(width,height) {
   timers.splice(0).forEach(callback=>callback());
-  nativeWidth=width;nativeHeight=height;
-  for(const frame of frames.splice(0)) {
-    assert.ok(frame instanceof MangaLayoutFrame,'deliver the actual production callback class');
-    frame.onFrame(0);
+  for(let phase=0;phase<2;phase++) {
+    const batch=frames.splice(0);
+    for(const frame of batch) {
+      assert.ok(frame instanceof MangaLayoutFrame,'deliver the actual production callback class');
+      frame.onFrame(0);
+    }
+    nativeWidth=width;nativeHeight=height;
+    for(const frame of batch) frame.onIdle(2_000_000);
   }
+  assert.equal(frames.length,0,'scroll application and geometry confirmation use two rendered frames');
 }
 let xOffset=250;let clipped=100;let nativeWidth=1000;let nativeHeight=1000;
 const Surface=productionMotionMethods(surfaceURL,
  ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','changeFit','loginRequired','loginAndRetry','imageError','refreshImages','publish','requestedLast','measureVisibleWindow','openDirectory','openSourceSwitch','handleBack','positionIdentity','rememberVisible','restore','finishLayout','onViewportScroll','resizeViewport','changeZoom','toggleDirection','turnPage','saveVisible'],
- {setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},MangaLayoutFrame,
+ {setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},LengthMetrics:{vp:value=>({value,unit:'vp'})},MangaLayoutFrame,
   inputMethod:{getController:()=>({hideTextInput:async()=>{}})}, READER_FONT_NOTO_SERIF_SC_BOLD,
   prepareReaderFontFamily:async family=>{assert.equal(family,READER_FONT_NOTO_SERIF_SC_BOLD);},
   prepareMangaSheetFonts:async()=>true});
@@ -52,12 +57,13 @@ const owner=Object.assign(new Surface(),{data:{totalCount:()=>p.totalCount(),get
  settingsGateway:{updateMangaDirection:async value=>settings.push(value)},
  horizontalScroller:{currentOffset:()=>({xOffset}),scrollTo:position=>{xOffset=position.xOffset;scrolls.push(['x',position.xOffset]);}},
  getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),getFocusController:()=>({clearFocus(){}})}),
- scroller:{getItemIndex:(x,y)=>{measurements.push([x,y]);return owner.first;},getItemRect:()=>({y:-clipped,width:nativeWidth,height:nativeHeight}),scrollToIndex:(...args)=>{clipped=0;scrolls.push(['index',...args]);},scrollBy:(...args)=>{clipped=args[1];scrolls.push(['y',...args]);}},
+ scroller:{getItemIndex:(x,y)=>{measurements.push([x,y]);return owner.first;},getItemRect:()=>({y:-clipped,width:nativeWidth,height:nativeHeight}),scrollToIndex:(...args)=>{assert.equal(args[3].extraOffset.unit,'vp');clipped=args[3].extraOffset.value;assert.ok(Number.isFinite(clipped));scrolls.push(['index',...args]);},scrollBy:(...args)=>{clipped=args[1];scrolls.push(['y',...args]);}},
  controller:{chapter:{manifest},totalPages:3,pageAt:ordinal=>manifest.pages[ordinal],pageGeometry:geometry,tile:()=>undefined,visiblePages:()=>[],savePosition:async(...args)=>saved.push(args),close:async()=>{}},updateViewport:()=>{},persistentDirectory:()=>false});
 owner.rememberVisible();assert.deepEqual(owner.visibleAnchor,{ordinal:1,y:0.501,x:0.25});
 owner.changeZoom(99);assert.equal(owner.zoom,3);flushLayout(1500,1500);
 assert.ok(scrolls.some(s=>s[0]==='x'&&s[1]===375));
-assert.ok(scrolls.some(s=>s[0]==='y'&&s[2]===150));
+assert.ok(scrolls.some(s=>s[0]==='index'&&s[1]===p.index(1,0.501)&&s[4].extraOffset.value===150&&s[4].extraOffset.unit==='vp'));
+assert.equal(scrolls.some(s=>s[0]==='y'),false,'the target row and 150vp offset are consumed in one native request');
 assert.deepEqual(measurements,[[0.5,0.5],[0.5,899.5]],'actual frame measures the current platform viewport');
 // Gesture updates retain the same original anchor even before native layout catches up.
 owner.pinchAnchor={ordinal:1,y:0.75,x:0.2};owner.changeZoom(1.5);owner.changeZoom(2.5);
@@ -85,6 +91,7 @@ assert.match(surfaceSource,/onExitRequestHandler\([\s\S]*?this\.handleBack\(\)/)
 assert.match(surfaceSource,/iconAction\([\s\S]*?'返回',[\s\S]*?this\.handleBack\(\)/);
 console.log('PASS unified system/button back: first leaves zoom, second awaits accepted progress before exit');
 
+assert.equal(mangaUserError('MANGA_SESSION_CONTENT_CHANGED'),'章节内容已更新，请重新打开本章。');
 assert.match(mangaUserError('MANGA_REGION_ANIMATION_UNSUPPORTED'),/动画/);
 assert.match(mangaUserError('REMOTE_READING_IMAGE_NOT_DOWNLOADED'),/联网/);
 assert.equal(mangaUserError('READING_IMAGE_REPROCESS_REQUIRED'),'图片处理规则已更新，需联网重新下载');

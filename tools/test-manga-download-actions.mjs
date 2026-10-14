@@ -484,7 +484,10 @@ const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/Rea
  await props.onLoadDownloadActions(7);await props.onDownloadAction('pause',7);props.onDownloadChapter();props.onDownloadBook();
  assert.deepEqual(calls,[['load',7],['action','pause',7],['chapter',7],['book']]);
  owner.requestedChapterIndex=11;await props.onLoadDownloadActions(7);await props.onDownloadAction('cancel',7);props.onDownloadChapter();props.onDownloadBook();
- assert.equal(calls.length,4,'all retained download callbacks reject a replaced reader key');
+ assert.equal(calls.length,8,'an internally committed chapter retains its reader and exact scoped download callbacks');
+ owner.mangaChapterRequestGeneration++;
+ await props.onLoadDownloadActions(7);await props.onDownloadAction('cancel',7);props.onDownloadChapter();props.onDownloadBook();
+ assert.equal(calls.length,8,'all retained download callbacks reject an explicit request replacing the reader generation');
 }
 {
  const deps=await import('./lib/manga-surface-sdk-probe.mjs');

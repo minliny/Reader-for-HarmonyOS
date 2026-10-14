@@ -1,4 +1,4 @@
-import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
+import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -92,7 +92,7 @@ owner.viewportWidth=300;owner.viewportHeight=600;
 const project=()=>owner.data.projection.publish(manifest,index=>geometry.get(index),undefined,3,index=>manifest.pages[index]);
 const notify=()=>owner.data.notify(project(),0,0);
 const priorGesture=globalThis.Gesture;globalThis.Gesture=boundary;
-try {project();owner.initialRender();} finally {if(priorGesture===undefined)delete globalThis.Gesture;else globalThis.Gesture=priorGesture;}
+try {project();owner.initialRender();mountMangaViewportBuilder(owner);} finally {if(priorGesture===undefined)delete globalThis.Gesture;else globalThis.Gesture=priorGesture;}
 assert.ok(lazy);
 const frame=()=>lazy.rows.get(0),has=type=>frame().nodes.some(node=>node.type===type);
 const originalBusinessKey=frame().businessKey;

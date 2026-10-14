@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
+import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
 import { createDefaultReaderWindowMetrics, readerInteractiveSafeInsets } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { mangaUserError } from '../entry/src/main/ets/features/manga/MangaUserError.ts';
 
@@ -80,11 +80,16 @@ const tiles = new Map([['0:0', { image: { fileUri: 'file://stable-0.png', revisi
   ['0:1', { image: { fileUri: 'file://stable-1.png', revision: 'r1' } }]]);
 const pages = new Map([[0, { ordinal: 0, status: 'ready' }]]);
 const windows = [];
+const metadataWindows = [];
 owner.controller = {
   chapter: { manifest, chapterTitle: 'Fixture', chapterIndex: 0 }, totalPages: 5, displayedOrdinal: 0,
   recoveryRequired: false, savedLocation: null, tile: (ordinal, index) => tiles.get(`${ordinal}:${index}`),
   visiblePages: () => [...pages.values()], pageGeometry: ordinal => geometry.get(ordinal), pageAt: ordinal => manifest.pages[ordinal],
   async setVisible() {}, async setTileWindow(requested) { windows.push(requested); },
+  // This fixture already publishes terminal failed rows. Their metadata demand
+  // completes without a new decode; the actual Controller failure/retry owner
+  // is exercised independently by candidate-visible-metadata-sdk.
+  async prepareViewportPages(ordinals) { metadataWindows.push([...ordinals]); },
 };
 owner.viewportWidth = 300; owner.viewportHeight = 450;
 owner.first = 0; owner.last = 1; owner.mounted = true; owner.opened = true;
@@ -92,7 +97,7 @@ owner.publishedManifestVersion = manifest.manifestVersion;
 owner.data.projection.publish(manifest, index => geometry.get(index), undefined, 5, index => manifest.pages[index]);
 owner.publish(); // Production publishes row facts before LazyForEach mounts.
 const priorGesture = globalThis.Gesture; globalThis.Gesture = boundary;
-try { owner.initialRender(); }
+try { owner.initialRender(); mountMangaViewportBuilder(owner); }
 finally { if (priorGesture === undefined) delete globalThis.Gesture; else globalThis.Gesture = priorGesture; }
 assert.ok(lazy);
 const list = [...owner.nodes.values()].find(node => node.type === 'List');
@@ -102,7 +107,7 @@ assert.equal(typeof list.onTouch, 'function');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const snapshot = () => ({ keys: [...lazy.rows.values()].map(row => row.key),
   actors: [...lazy.rows.values()].map(row => row.image?.id), mounts: lazy.mounts,
-  reloads: lazy.reloads, changes: lazy.changes, timers: timers.length, heights: [...lazy.rows.values()].map(row => row.nodes.find(node => node.type === 'ListItem').height) });
+  reloads: lazy.reloads, changes: lazy.changes, timers: timers.length, frames: frames.length, heights: [...lazy.rows.values()].map(row => row.nodes.find(node => node.type === 'ListItem').height) });
 const failures = [];
 function check(name, action) {
   try { action(); console.log(`PASS ${name}`); }
@@ -143,7 +148,7 @@ owner.restoringAnchor = true; owner.appliedLayoutGeneration = owner.layoutGenera
 list.onScrollIndex(0, 1);
 check('same range during restore still measures and confirms its native anchor', () => {
   assert.equal(owner.restoringAnchor, true, 'native range callback must defer geometry observation');
-  while (frames.length) frames.shift().onFrame(0);
+  while (frames.length) {const frame=frames.shift();frame.onFrame(0);assert.equal(owner.restoringAnchor,true,'frame start cannot confirm native geometry');frame.onIdle(2_000_000);}
   assert.equal(owner.restoringAnchor, false);
   assert.equal(owner.confirmedPosition?.anchor.ordinal, 0);
 });
@@ -190,10 +195,11 @@ const equalBefore = snapshot();
 geometry.set(0, { ...geometry.get(0) }); owner.publish();
 check('equal-value geometry reentry must not reload the list or restore during scrolling', () => {
   assert.equal(lazy.reloads, equalBefore.reloads, 'fresh geometry identity is not a structural change');
-  assert.equal(timers.length, equalBefore.timers, 'no queued scrollToIndex/scrollBy restore is needed');
+  assert.equal(timers.length, equalBefore.timers);
+  assert.equal(frames.length, equalBefore.frames, 'no queued scrollToIndex/scrollBy restore is needed');
 });
 console.log(JSON.stringify({ case: 'equal-value-reentry', before: equalBefore, after: snapshot() }));
-timers.length = 0; owner.restoringAnchor = false;
+timers.length = 0; frames.length = 0; owner.restoringAnchor = false;
 
 // A later neighbor has one row before/after metadata arrival. Its height
 // changes outside the visible window; current row index/geometry stay exact.
@@ -201,24 +207,26 @@ const neighborBefore = snapshot();
 geometry.set(4, { width: 600, height: 1500, tileHeight: 1500 }); owner.publish();
 check('offscreen neighbor geometry must not restore stable visible Images', () => {
   assert.equal(lazy.reloads, neighborBefore.reloads + 1, 'real geometry remains published to the native data source');
-  assert.equal(timers.length, neighborBefore.timers, 'neighbor completion must not interrupt user scrolling');
+  assert.equal(timers.length, neighborBefore.timers);
+  assert.equal(frames.length, neighborBefore.frames, 'neighbor completion must not interrupt user scrolling');
 });
 check('same visible keys do retain Image actors in the strict-key SDK boundary', () => {
   assert.deepEqual(snapshot().keys, neighborBefore.keys); assert.deepEqual(snapshot().actors, neighborBefore.actors);
   assert.equal(lazy.mounts, neighborBefore.mounts); assert.deepEqual(snapshot().heights, neighborBefore.heights);
 });
 console.log(JSON.stringify({ case: 'offscreen-neighbor', before: neighborBefore, after: snapshot() }));
-timers.length = 0; owner.restoringAnchor = false;
+timers.length = 0; frames.length = 0; owner.restoringAnchor = false;
 
 const currentBefore = snapshot();
 const currentAnchor = structuredClone(owner.visibleAnchor);
 geometry.set(0, { width: 600, height: 1500, tileHeight: 750 }); owner.publish();
 check('real current-page geometry change must retain normalized anchor and request one restore', () => {
   assert.equal(lazy.reloads, currentBefore.reloads + 1);
-  assert.equal(timers.length, currentBefore.timers + 1);
+  assert.equal(timers.length, currentBefore.timers);
+  assert.equal(frames.length, currentBefore.frames + 1);
   assert.deepEqual(owner.visibleAnchor, currentAnchor);
 });
-timers.length = 0; owner.restoringAnchor = false;
+timers.length = 0; frames.length = 0; owner.restoringAnchor = false;
 
 geometry.set(2, { width: 600, height: 1200, tileHeight: 600 });
 tiles.set('2:0', { image: { fileUri: 'file://page-2-0.png', revision: 'r2' } });
@@ -228,15 +236,15 @@ nativeFirst = owner.data.projection.index(2, 0); nativeHeight = 300;
 owner.first = nativeFirst; owner.last = nativeFirst + 1;
 owner.controller.displayedOrdinal = 2;
 lazy.visible = [owner.first, owner.last]; lazy.reconcile();
-timers.length = 0; owner.restoringAnchor = false; owner.rememberVisible();
-const forwardAnchor = structuredClone(owner.visibleAnchor), forwardTimers = timers.length;
+timers.length = 0; frames.length = 0; owner.restoringAnchor = false; owner.rememberVisible();
+const forwardAnchor = structuredClone(owner.visibleAnchor), forwardFrames = frames.length;
 geometry.set(1, { width: 600, height: 2400, tileHeight: 600 }); owner.publish();
 check('real layout change before the visible page must restore the shifted row index', () => {
-  assert.equal(timers.length, forwardTimers + 1);
+  assert.equal(frames.length, forwardFrames + 1);
   assert.deepEqual(owner.visibleAnchor, forwardAnchor);
   assert.notEqual(owner.data.projection.index(2, 0), nativeFirst);
 });
-timers.length = 0; owner.restoringAnchor = false;
+timers.length = 0; frames.length = 0; owner.restoringAnchor = false;
 
 // Keep the already fixed error ownership semantics in this new fixture:
 // moving the viewport still makes the retained failure's real retry reachable.
@@ -276,19 +284,21 @@ owner.visibleAnchor = { ordinal: 2, y: 0.25, x: 0 };
 owner.restoringAnchor = true; owner.appliedLayoutGeneration = -1;
 owner.publish();
 lazy.visible = [0, 1]; lazy.reconcile(); nativeFirst = 0; nativeHeight = 300;
-timers.length = 0; owner.restoringAnchor = false;
+timers.length = 0; frames.length = 0; owner.restoringAnchor = false;
 const horizontalBefore = snapshot();
 geometry.set(1, { width: 600, height: 3000, tileHeight: 600 }); owner.publish();
 check('horizontal selected page ignores earlier neighbor geometry outside its list', () => {
   assert.equal(lazy.reloads, horizontalBefore.reloads);
   assert.equal(timers.length, horizontalBefore.timers);
+  assert.equal(frames.length, horizontalBefore.frames);
   assert.deepEqual(snapshot().actors, horizontalBefore.actors);
 });
 const horizontalCurrentBefore = snapshot();
 geometry.set(2, { width: 600, height: 1800, tileHeight: 600 }); owner.publish();
 check('horizontal selected page still restores for its own real geometry change', () => {
   assert.equal(lazy.reloads, horizontalCurrentBefore.reloads + 1);
-  assert.equal(timers.length, horizontalCurrentBefore.timers + 1);
+  assert.equal(timers.length, horizontalCurrentBefore.timers);
+  assert.equal(frames.length, horizontalCurrentBefore.frames + 1);
   assert.equal(owner.visibleAnchor.ordinal, 2);
 });
 
@@ -301,7 +311,7 @@ pages.set(1, { ordinal: 1, status: 'failed', error: 'READING_IMAGE_HTTP_FAILED' 
 owner.horizontal = false; owner.controller.displayedOrdinal = 0;
 owner.first = 0; owner.last = 1; owner.viewportRangeObserved = false;
 owner.publish(); lazy.visible = [0, 1]; lazy.reconcile();
-owner.restoringAnchor = false; timers.length = 0;
+owner.restoringAnchor = false; timers.length = 0; frames.length = 0;
 assert.ok(lazy.rows.get(0).nodes.some(node => node.type === 'Button'));
 assert.ok(!lazy.rows.get(1).nodes.some(node => node.type === 'Button'));
 const placeholderKey = lazy.rows.get(1).key, notified = [];
@@ -309,16 +319,19 @@ const realChange = lazy.onDataChange.bind(lazy);
 lazy.onDataChange = index => { notified.push(index); realChange(index); };
 list.onScrollIndex(1, 1); await tick();
 check('failed unknown-geometry viewport transfers retry ownership without a Controller publication', () => {
+  assert.deepEqual(metadataWindows.at(-1), [1], 'only the actual unknown visible logical page is demanded');
+  assert.equal(owner.error, '', 'terminal row failure must retain its retry without a duplicate global error');
   assert.deepEqual(windows.at(-1), [], 'failed unknown pages have no regional tile work');
   assert.ok(notified.includes(1), 'the existing mounted blank row must receive its presentation change');
   assert.notEqual(lazy.rows.get(1).key, placeholderKey);
   assert.ok(lazy.rows.get(1).nodes.some(node => node.type === 'Button'));
 });
-const failedChanges = lazy.changes, failedWindows = windows.length;
+const failedChanges = lazy.changes, failedWindows = windows.length, failedMetadataWindows = metadataWindows.length;
 list.onScrollIndex(1, 1); await tick();
 check('settled failed viewport remains silent on a repeated same-range callback', () => {
   assert.equal(lazy.changes, failedChanges);
   assert.equal(windows.length, failedWindows);
+  assert.equal(metadataWindows.length, failedMetadataWindows, 'same range must not repeat terminal metadata work');
 });
 if (failures.length) {
   console.error(JSON.stringify({ status: 'RED', failures, evidenceBoundary: 'production Surface/Projection + real SDK callbacks; no native Image reconstruction or painted flicker claim' }));

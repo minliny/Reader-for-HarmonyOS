@@ -34,6 +34,7 @@ export function mangaUserError(code: string): string {
     case 'MANGA_SESSION_CONTENT_CHANGED': return '章节内容或书源已更新，请重新打开本章。';
     case 'REMOTE_READING_IMAGE_NOT_DOWNLOADED': return '这张图片尚未下载。请联网后重新获取本章图片。';
     case 'MANGA_POSITION_RECOVERY_REQUIRED': return '章节内容已更新，请先确认阅读位置，再继续保存进度。';
+    case 'MANGA_SESSION_CONTENT_CHANGED': return '章节内容已更新，请重新打开本章。';
     case 'MANGA_REFRESH_REQUIRES_NETWORK': return '重新获取图片需要联网，请连接网络后重试。';
     case 'MANGA_ADMISSION_SOURCE_CHANGED':
     case 'MANGA_SWITCH_SOURCE_CHANGED': return '书源规则已更新，请重新打开详情并获取章节。';
