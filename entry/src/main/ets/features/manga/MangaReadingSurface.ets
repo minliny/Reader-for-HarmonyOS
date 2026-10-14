@@ -38,6 +38,7 @@ import { TOK_BORDER_W } from '../common/ReaderTokens';
 import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_600,
   READER_FONT_NOTO_SANS_SC_UI_900 } from '../common/ReaderFontFamilies';
 import { prepareMangaSheetFonts, prepareReaderFontFamily } from '../common/ReaderFonts';
+import { ReaderPageFrameModifier } from '../common/ReaderPageShell';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
 interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }
@@ -592,7 +593,10 @@ export struct MangaReadingSurface {
     // clamp this request to its tail. Its later height must replay the original
     // logical anchor, rather than commit that temporary clipped coordinate.
     if (this.pendingRestoreAnchor !== undefined) {
-      if (this.last - this.first > 7) return;
+      if (this.last - this.first > 7) {
+        if (this.pendingChapterTransition !== undefined) this.nativeTransitionReject?.(new Error('MANGA_TILE_WINDOW_BUDGET'));
+        return;
+      }
       for (let index = this.first; index <= this.last; index++) {
         if (!this.data.getData(index).known) return;
       }
@@ -1415,7 +1419,8 @@ export struct MangaReadingSurface {
       this.confirmedPosition?.controller !== candidate.controller || this.confirmedPosition.manifest !== candidate.controller.chapter?.manifest) return;
     try {
       if (!this.measureVisibleWindow() || !Number.isSafeInteger(this.first) || !Number.isSafeInteger(this.last) ||
-        this.first < 0 || this.last < this.first || this.last >= this.data.totalCount() || this.last - this.first > 7) return;
+        this.first < 0 || this.last < this.first || this.last >= this.data.totalCount()) return;
+      if (this.last - this.first > 7) { this.nativeTransitionReject?.(new Error('MANGA_TILE_WINDOW_BUDGET')); return; }
       // At a chapter tail, native bottom clamping may expose earlier short
       // pages at the viewport top. Its measured anchor remains authoritative.
       if (candidate.landing === 'last' ? !this.scroller.isAtEnd() : this.confirmedPosition.anchor.ordinal !== candidate.targetOrdinal) return;
@@ -1903,13 +1908,13 @@ export struct MangaReadingSurface {
         Image(pixel.uri).width(pixel.width).height(pixel.height).objectFit(ImageFit.Fill)
           .position({ x: pixel.x, y: pixel.y }).draggable(false);
       }, (pixel: MangaRetainedPixel): string => pixel.key);
-    }.width('100%').height('100%').backgroundColor(this.paperColor()).clip(true).hitTestBehavior(HitTestMode.None);
+    }.width('100%').height('100%').attributeModifier(new ReaderPageFrameModifier(this.backgroundPreference === 'ink' ? 'night' : 'day', 'reader', this.paperColor())).clip(true).hitTestBehavior(HitTestMode.None);
   }
   @Builder
   private tileImage(row: MangaStripRow, uri: string, renderKey: string,
     owner: MangaSessionController | undefined, manifest: MangaManifest | undefined) {
     Image(uri).width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width)
-      .objectFit(ImageFit.Fill).draggable(false)
+      .objectFit(ImageFit.Fill).syncLoad(true).draggable(false)
       .onComplete((event?: MangaNativeImageCompletion): void => {
         if (event?.loadingStatus === 0) this.traceBoundary('image-loaded');
         if (event?.loadingStatus === 1) this.onChapterImageComplete(row, uri, renderKey, owner, manifest);

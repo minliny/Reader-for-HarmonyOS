@@ -6,6 +6,7 @@ import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-prob
 import {mangaSurfaceSdkDependencies, mountMangaViewportBuilder} from './lib/manga-surface-sdk-probe.mjs';
 import {createDefaultReaderWindowMetrics, readerInteractiveSafeInsets} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {mangaUserError} from '../entry/src/main/ets/features/manga/MangaUserError.ts';
+import {MangaRetainedTileCache} from './lib/manga-retained-tile-cache-probe.mjs';
 
 // Real Controller/Coordinator and SDK-emitted Surface/Image callbacks. Core,
 // decoding, native rectangles, render delivery and imported children are ports;
@@ -17,8 +18,8 @@ function load(name, dependencies = {}, text = readFileSync(new URL(`${name}.ts`,
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)};return ${name}`)(...Object.values(dependencies));
 }
 const MangaSessionGateway = load('MangaSessionGateway'), MangaResourceGateway = load('MangaResourceGateway');
-const MangaChapterPreparationCoordinator = load('MangaChapterPreparationCoordinator', {MangaSessionGateway, MangaResourceGateway});
-const dependencies = {MangaSessionGateway, MangaResourceGateway, MangaChapterPreparationCoordinator};
+const MangaChapterPreparationCoordinator = load('MangaChapterPreparationCoordinator', {MangaSessionGateway, MangaResourceGateway, MangaRetainedTileCache});
+const dependencies = {MangaSessionGateway, MangaResourceGateway, MangaChapterPreparationCoordinator, MangaRetainedTileCache};
 const Controller = load('MangaSessionController', dependencies, controllerSource), Projection = load('MangaStripProjection');
 const oldSkip = controllerSource.replace('void Promise.all(Array.from(wanted).filter(index => index !== ordinal)',
   'if (!this.candidatePendingPresentation) void Promise.all(Array.from(wanted).filter(index => index !== ordinal)');
@@ -29,6 +30,11 @@ assert.ok(controllerSource.includes(failureGuard));
 const GlobalFailureController = load('MangaSessionController', dependencies, controllerSource.replace(failureGuard, 'true'));
 const PermissiveCandidateController = load('MangaSessionController', dependencies,
   controllerSource.replace(failureGuard, "['MANGA_SESSION_CANCELLED', 'MANGA_RESOURCE_CANCELLED', 'MANGA_SESSION_CONTENT_CHANGED'].includes(failure)"));
+const unfencedCandidateSource = controllerSource
+  .replaceAll('if (this.candidatePendingPresentation && !this.candidateCurrent())', 'if (false)')
+  .replaceAll('(!this.candidatePendingPresentation || this.candidateCurrent())', 'true');
+assert.notEqual(unfencedCandidateSource, controllerSource, 'counterfactual removes the exact production candidate intention fences');
+const UnfencedCandidateController = load('MangaSessionController', dependencies, unfencedCandidateSource);
 const source = readFileSync(new URL('MangaReadingSurface.ets', root), 'utf8');
 const require = createRequire(import.meta.url), sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts = require(`${sdk}/node_modules/typescript`);
@@ -53,8 +59,15 @@ async function fixture(Type = Controller, {short = false, count = 6, ordinary = 
   const entry = {chapter, targetOrdinal: 0, recoveryRequired: false, progress: {token: {epoch: 1, revision: 0}, location: null}};
   const header = deferred(), calls = [], images = [], released = [], frames = [];
   const windowHolds = new Map(), failures = new Set(failOrdinals), tileWindows = [], rejections = [];
-  let alive = true, held = holdHeader, revision = 0, nativeOffset = 0;
+  let alive = true, candidateAlive = true, preparedReady = false, held = holdHeader, revision = 0, nativeOffset = 0;
+  const preparedAcquisitions = [];
   const runtime = {supportsCoreCapability: () => true, captureReadingContentValidity: () => () => alive,
+    beginMangaDisplaySession: () => 1, endMangaDisplaySession() {},
+    tryAcquireMangaPreparedImage(_session, _scope, resourceRef, position, current) {
+      if (!preparedReady) return undefined;
+      preparedAcquisitions.push({resourceRef, position, current: current()});
+      return {...images[0], fileUri: `file://prepared-candidate-${preparedAcquisitions.length}`, position};
+    },
     isMangaPreparationForeground: () => false, allowOptionalMangaPreparation: () => false,
     requestBook: (...args) => runtime.request(...args),
     async request(method, params) {
@@ -82,7 +95,7 @@ async function fixture(Type = Controller, {short = false, count = 6, ordinary = 
   const setTiles = controller.setTileWindow.bind(controller);
   controller.setTileWindow = async requested => {tileWindows.push(structuredClone(requested)); return setTiles(requested);};
   if (ordinary) await controller.openPrepared(entry, true);
-  else await controller.openCandidate(entry, 'first', true, false, () => alive);
+  else await controller.openCandidate(entry, 'first', true, false, () => alive && candidateAlive);
   if (!short && controller.pageGeometry(0) !== undefined)
     await controller.setTileWindow(Array.from({length: Math.ceil(firstHeight / 300)}, (_, tileIndex) => ({ordinal: 0, tileIndex})));
   let generatedOwner;
@@ -151,8 +164,9 @@ async function fixture(Type = Controller, {short = false, count = 6, ordinary = 
     },
     allowPage(ordinal) {failures.delete(ordinal);},
     get commits() {return commits;}, releaseHeader() {held = false; header.resolve();}, invalidate() {alive = false;},
+    cancelCandidateIntention() {candidateAlive = false;}, enablePrepared() {preparedReady = true;}, preparedAcquisitions,
     holdWindow(ordinal, promise) {windowHolds.set(ordinal, promise);},
-    async reopen() {alive = true; controller.onChange = undefined; await controller.openCandidate(structuredClone(entry), 'first', true, false, () => alive);},
+    async reopen() {alive = true; candidateAlive = true; controller.onChange = undefined; await controller.openCandidate(structuredClone(entry), 'first', true, false, () => alive && candidateAlive);},
     async close() {controller.onChange = undefined; await controller.close('candidate'); await MangaChapterPreparationCoordinator.forRuntime(runtime).close();}};
 }
 
@@ -287,6 +301,36 @@ console.log('PASS cancel/reopen exact metadata separates same-key header owners;
 }
 console.log('PASS late canceled candidate header has no publication/admission or leaked display lease');
 
+for (const Type of [Controller, UnfencedCandidateController]) {
+  const f = await fixture(Type, {count: 2, firstHeight: 900, nextHeight: 900, viewportHeight: 200, holdHeader: false});
+  await settle(); f.controller.onChange = undefined;
+  assert.ok(f.controller.tile(0, 0)?.image); assert.equal(f.controller.tile(1, 2), undefined);
+  const before = {calls: f.calls.length, images: f.images.length, released: f.released.length,
+    ordinal: f.controller.displayedOrdinal, keys: [...f.controller.tiles.keys()], wanted: [...f.controller.wantedTiles]};
+  f.enablePrepared(); f.cancelCandidateIntention();
+  if (Type === UnfencedCandidateController) {
+    await f.controller.setTileWindow([{ordinal: 1, tileIndex: 2}]);
+    assert.equal(f.preparedAcquisitions.length, 1, 'source-negative synchronous prepared path acquires after the UI candidate intention was cancelled');
+    assert.ok(f.controller.tile(1, 2)?.image, 'source-negative exposes newly acquired pixels despite cancelled candidate ownership');
+  } else {
+    assert.equal(f.controller.tile(0, 0), undefined, 'cancelled candidate cannot expose an existing ready lease through its render getter');
+    assert.ok(f.controller.chapter, 'the Coordinator still owns candidate cleanup; a render getter does not close it');
+    for (const operation of [() => f.controller.setTileWindow([{ordinal: 1, tileIndex: 2}]),
+      () => f.controller.setVisible(1), () => f.controller.prepareViewportPages([1]),
+      () => f.controller.retry(1), () => f.controller.retryTile(0, 0)])
+      await assert.rejects(operation(), /MANGA_SESSION_CANCELLED/);
+    assert.equal(f.preparedAcquisitions.length, 0, 'cancelled candidate never reaches the synchronous Host cache acquisition');
+    assert.deepEqual({calls: f.calls.length, images: f.images.length, released: f.released.length,
+      ordinal: f.controller.displayedOrdinal, keys: [...f.controller.tiles.keys()], wanted: [...f.controller.wantedTiles]}, before,
+      'rejected viewport work creates no pending marker, changes no selection/active window and releases no Coordinator-owned lease');
+  }
+  f.noAdmission(); await f.close();
+  for (const image of f.images) assert.equal(f.released.filter(uri => uri === image.fileUri).length, 1, 'candidate close releases every acquired header/tile lease once');
+  for (const [index] of f.preparedAcquisitions.entries())
+    assert.equal(f.released.filter(uri => uri === `file://prepared-candidate-${index + 1}`).length, 1);
+}
+console.log('PASS cancelled candidate intention rejects viewport/retry work before synchronous acquisition or pending markers and hides existing pixels; close owns release; source-negative acquires and exposes a cancelled tile');
+
 for (const Type of [Controller, GlobalFailureController]) {
   const f = await fixture(Type, {ordinary: true, count: 2, firstHeight: 600, nextHeight: 300,
     viewportHeight: 200, holdHeader: false, failOrdinals: [1]});
@@ -299,10 +343,15 @@ for (const Type of [Controller, GlobalFailureController]) {
   if (Type === GlobalFailureController) {
     assert.equal(f.owner.error, 'READING_IMAGE_HTTP_FAILED', 'source-negative duplicates the row error globally');
     assert.ok(f.tileWindows.at(-1).length > 0, 'source-negative skips the required empty tile window');
-    for (const uri of oldUris) assert.equal(f.released.includes(uri), false, 'departed pixels remain until explicit close in the broken branch');
+    assert.ok([...f.controller.tiles.values()].some(tile => oldUris.includes(tile.image?.fileUri)), 'source-negative strands an old active viewport lease rather than transferring its ownership');
   } else {
     assert.equal(f.owner.error, ''); assert.deepEqual(f.tileWindows.at(-1), []);
-    for (const uri of oldUris) assert.equal(f.released.filter(value => value === uri).length, 1);
+    assert.equal(f.controller.tiles.size, 0); assert.equal(f.controller.wantedTiles.size, 0);
+    for (const [tileIndex, uri] of oldUris.entries()) {
+      assert.equal(f.controller.retainedTiles.get(`0:${tileIndex}`)?.image?.fileUri, uri, 'departed completed lease transfers into the bounded chapter owner');
+      assert.equal(f.released.filter(value => value === uri).length, 0);
+    }
+    assert.ok(f.controller.retainedTiles.length <= f.controller.retainedTiles.limits().chapterMaxCount);
     const button = f.mountRow(2); assert.ok(button?.onClick, 'the actual failed ListItem keeps its reachable retry');
     const stable = [f.images.length, f.tileWindows.length];
     f.moveToRow(2); await settle(); assert.deepEqual([f.images.length, f.tileWindows.length], stable);
@@ -311,12 +360,12 @@ for (const Type of [Controller, GlobalFailureController]) {
     assert.ok(f.controller.tile(1, 0)?.image); assert.equal(f.owner.error, '');
     const before = [...f.owner.nodes.values()].filter(node => node.type === 'Image').length;
     f.mountRow(2); assert.ok([...f.owner.nodes.values()].filter(node => node.type === 'Image').length > before, 'retry replaces the failed branch with an actual SDK Image');
-    for (const uri of oldUris) assert.equal(f.released.filter(value => value === uri).length, 1, 'retry cannot double-release departed pixels');
+    for (const uri of oldUris) assert.equal(f.released.filter(value => value === uri).length, 0, 'retry cannot release leases still owned by the chapter cache');
   }
   assert.equal(f.calls.some(call => call.method === 'reading.progress.update'), false, 'a failed viewport/retry is not a position commit');
   await f.close(); for (const uri of oldUris) assert.equal(f.released.filter(value => value === uri).length, 1);
 }
-console.log('PASS ordinary already-failed viewport retires old tiles exactly once and retains a silent SDK row retry; restored unconditional-throw source duplicates global error and strands the old leases');
+console.log('PASS ordinary failed viewport transfers completed leases to the bounded chapter cache and keeps a silent SDK retry; close releases once; unconditional-throw counterfactual strands the active viewport');
 
 {
   const f = await fixture(Controller, {ordinary: true, short: true, count: 2, viewportHeight: 600, failOrdinals: [0, 1]});

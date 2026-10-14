@@ -319,6 +319,24 @@ for(const targetHeights of [[500,50],[200,50]]){
 }
 outcomes.push('previous-chapter short last image and whole short chapter use the real bottom clamp and admit an earlier top anchor only after every visible image');
 {
+  const f=fixture(), target=f.target;
+  const pages=Array.from({length:9},(_value,ordinal)=>({ordinal,pageId:`short-${ordinal}`,resourceRef:`short:${ordinal}`}));
+  target.chapter.manifest.pages=pages;target.pageAt=ordinal=>pages[ordinal];target.totalPages=9;
+  target.pageGeometry=()=>({width:600,height:100,tileHeight:100});
+  f.native.targetHeights=Array(9).fill(50);f.native.offset=0;
+  Object.assign(f.owner,{controller:target,pendingChapterTransition:f.candidate,nativeTransitionImageReady:true,
+    confirmedPosition:{controller:target,manifest:target.chapter.manifest,anchor:{ordinal:0,y:0,x:0}}});
+  f.owner.data.projection.publish(target.chapter.manifest,()=>target.pageGeometry(),undefined,9,ordinal=>target.pageAt(ordinal));
+  let failure,admitted=false;f.owner.nativeTransitionReject=error=>{failure=error;};f.owner.nativeTransitionResolve=()=>{admitted=true;};
+  f.owner.confirmBoundaryFrame();
+  assert.equal(f.owner.last-f.owner.first,8,'actual native rectangle lookup reports all nine short images');
+  assert.equal(failure?.message,'MANGA_TILE_WINDOW_BUDGET');assert.equal(admitted,false);
+  failure=undefined;Object.assign(f.owner,{restoringAnchor:true,pendingRestoreAnchor:{ordinal:0,y:0,x:0},appliedLayoutGeneration:f.owner.layoutGeneration});
+  f.owner.onViewportScroll();assert.equal(failure?.message,'MANGA_TILE_WINDOW_BUDGET');
+  assert.equal(f.ports.presentCount,0);assert.equal(f.ports.commits.length,0);assert.equal(f.ports.timers.size,0);
+  outcomes.push('nine short visible images reject a candidate immediately during restoration or paint admission without lifting the eight-tile budget');
+}
+{
   const f=fixture();f.owner.onAdjacentChapterCommitted=()=>{throw new Error('controlled external notification failed');};
   const {pending}=await begin(f);await completeVisible(f);await pending;
   assert.equal(f.ports.presentCount,1);assert.equal(f.owner.controller,f.target);

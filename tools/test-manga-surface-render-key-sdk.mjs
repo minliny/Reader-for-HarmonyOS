@@ -18,12 +18,19 @@ const names=component.members.map(node=>node.name?.getText(tree)).filter(Boolean
 // Verify the actual production syncLoad argument against the official Image
 // declaration as well as executing its SDK-emitted Builder property below.
 const imageBuilder=component.members.find(node=>node.name?.getText(tree)==='imageViewport');
+const tileImageBuilder=component.members.find(node=>node.name?.getText(tree)==='tileImage');
+let delegatesLocalImage=false;
+function findTileImage(node){
+  if(ts.isCallExpression(node)&&node.expression?.name?.text==='tileImage')delegatesLocalImage=true;
+  ts.forEachChild(node,findTileImage);
+}
+findTileImage(imageBuilder);assert.equal(delegatesLocalImage,true,'viewport delegates its ready lease to the actual tile Image Builder');
 const syncArguments=[];
 function findSyncLoad(node){
   if(ts.isCallExpression(node)&&node.expression?.name?.text==='syncLoad')syncArguments.push(node.arguments[0].getText(tree));
   ts.forEachChild(node,findSyncLoad);
 }
-findSyncLoad(imageBuilder);assert.deepEqual(syncArguments,['true']);
+findSyncLoad(tileImageBuilder);assert.deepEqual(syncArguments,['true']);
 const officialChecker=require(`${sdk}/lib/ets_checker.js`);
 const typePath='/tmp/MangaLocalImageSyncType.ts';
 const typeOptions={...officialChecker.compilerOptions,

@@ -157,14 +157,20 @@ function fencedFixture() {
 console.log('PASS actual ordinary progress mutation does not revoke the pending tile content fence');
 {
   const f = fencedFixture(); await f.controller.openPrepared(structuredClone(entry), true);
+  const displayedUri = f.controller.tile(0, 0).image.fileUri;
   const work = f.controller.setTileWindow([{ ordinal: 0, tileIndex: 0 }, { ordinal: 0, tileIndex: 3 }]); await tick();
   let terminalPublished = false;
-  f.controller.onChange = () => { if (f.controller.tile(0, 3)?.error === 'MANGA_SESSION_CONTENT_CHANGED') terminalPublished = true; };
+  f.controller.onChange = () => {
+    const page = f.controller.visiblePages().find(value => value.ordinal === 0);
+    if (page?.status === 'failed' && page.error === 'MANGA_SESSION_CONTENT_CHANGED' && page.image === undefined) terminalPublished = true;
+  };
   f.mutate('book.detail'); f.pending[0].gate.resolve(); await work;
-  assert.equal(f.controller.tile(0, 3).image, undefined);
-  assert.equal(f.controller.tile(0, 3).error, 'MANGA_SESSION_CONTENT_CHANGED');
+  assert.equal(f.controller.tile(0, 3), undefined, 'revoked pending tile is no longer exposed through a render getter');
+  assert.equal(f.controller.tile(0, 0), undefined, 'even the already displayed tile belongs to the revoked content scope');
+  assert.ok(f.controller.visiblePages().every(page => page.status === 'failed' && page.error === 'MANGA_SESSION_CONTENT_CHANGED' && page.image === undefined));
   assert.equal(f.controller.tileLoads.has('0:3'), false); assert.equal(terminalPublished, true);
-  assert.ok(f.controller.tile(0, 0).image, 'the already displayed lease remains readable');
+  assert.equal(f.controller.tiles.size, 0); assert.equal(f.controller.wantedTiles.size, 0); assert.equal(f.controller.retainedTiles.length, 0);
+  assert.equal(f.released.filter(uri => uri === displayedUri).length, 1, 'content revocation releases the displayed acquisition once');
   assert.equal(f.released.filter(uri => uri === f.pending[0].image.fileUri).length, 1);
   const count = f.calls.length;
   await assert.rejects(f.controller.setTileWindow([{ ordinal: 0, tileIndex: 3 }]), /MANGA_SESSION_CONTENT_CHANGED/);
@@ -174,11 +180,12 @@ console.log('PASS actual ordinary progress mutation does not revoke the pending 
   assert.equal(f.calls.length, count, 'a revoked snapshot cannot loop through another decode');
   let readClockCalls = 0;
   f.controller.preparation = { startCurrent() { readClockCalls++; }, recordVisible() { readClockCalls++; return Promise.resolve(); } };
-  f.controller.acknowledgeVisible(); assert.equal(readClockCalls, 0, 'retained old pixels cannot restart the read clock');
+  f.controller.acknowledgeVisible(); assert.equal(readClockCalls, 0, 'revoked content cannot restart the read clock');
   f.controller.preparation = undefined; f.controller.onChange = undefined;
   f.controller.close(); f.preparation.close();
+  for (const uri of [displayedUri, f.pending[0].image.fileUri]) assert.equal(f.released.filter(value => value === uri).length, 1, 'close cannot release invalidated acquisitions twice');
 }
-console.log('PASS actual catalog revocation settles the visible tile as an error without bytes, retry, read clock or progress admission');
+console.log('PASS catalog revocation clears displayed/pending tiles, publishes the failed page and releases each acquisition once without retry, clock or progress admission');
 {
   const f = fencedFixture(), gate = deferred();
   f.runtime.loadReadingImage = async (...args) => {
@@ -194,12 +201,15 @@ console.log('PASS actual catalog revocation settles the visible tile as an error
   assert.equal(f.released.filter(uri => uri === 'file://cancelled-header').length, 1);
   const count = f.calls.length; await assert.rejects(f.controller.retry(0), /MANGA_SESSION_CONTENT_CHANGED/);
   assert.equal(f.calls.length, count); f.controller.close(); f.preparation.close();
+  assert.equal(f.released.filter(uri => uri === 'file://cancelled-header').length, 1, 'close cannot release the cancelled header twice');
 }
 console.log('PASS a revoked pending header publishes a failed page and rejects retry instead of leaving an orphan pending marker');
 {
   const f = fencedFixture(); await f.controller.openPrepared(structuredClone(entry), true);
+  const oldHeader = f.controller.tile(0, 0).image.fileUri;
   const old = f.controller.setTileWindow([{ ordinal: 0, tileIndex: 3 }]); await tick();
   f.mutate('book.detail'); await f.controller.close(); await f.controller.openPrepared(structuredClone(entry), true);
+  const newHeader = f.controller.tile(0, 0).image.fileUri;
   const current = f.controller.setTileWindow([{ ordinal: 0, tileIndex: 3 }]); await tick();
   assert.equal(f.pending.length, 2); const currentMarker = f.controller.tile(0, 3);
   f.pending[0].gate.resolve(); await old;
@@ -209,6 +219,8 @@ console.log('PASS a revoked pending header publishes a failed page and rejects r
   assert.equal(currentMarker.image.fileUri, f.pending[1].image.fileUri); assert.equal(currentMarker.error, undefined);
   assert.equal(f.released.filter(uri => uri === f.pending[0].image.fileUri).length, 1);
   f.controller.close(); f.preparation.close();
+  for (const uri of [oldHeader, newHeader, ...f.pending.map(attempt => attempt.image.fileUri)])
+    assert.equal(f.released.filter(value => value === uri).length, 1, 'old and reopened owners release their independent acquisitions exactly once');
 }
 console.log('PASS late revoked work cannot fail, revive or remove a reopened same-key tile owner');
 {
@@ -218,14 +230,24 @@ console.log('PASS late revoked work cannot fail, revive or remove a reopened sam
     const id = `mp1:${String(ordinal + 1).repeat(64)}`;
     return { ordinal, pageId: id, resourceRef: `manga:${id}` };
   });
-  f.runtime.request = async method => { assert.equal(method, 'manga.pages.window'); await gate.promise; return { data: {} }; };
+  let windowCalls = 0;
+  f.runtime.request = async method => { assert.equal(method, 'manga.pages.window'); windowCalls++; await gate.promise; return { data: {} }; };
   await f.controller.openPrepared(narrow, true); await tick();
-  const previousImage = f.controller.visiblePages().find(page => page.ordinal === 0).image;
+  const previousUris = f.controller.visiblePages().map(page => page.image?.fileUri).filter(Boolean);
+  assert.ok(previousUris.length > 0);
   const count = f.calls.length, selecting = f.controller.setVisible(90); await tick();
   f.mutate('book.detail'); gate.resolve();
   await assert.rejects(selecting, /MANGA_SESSION_CONTENT_CHANGED/);
   assert.equal(f.controller.pageAt(90), undefined); assert.equal(f.calls.length, count);
-  assert.equal(f.controller.visiblePages().find(page => page.ordinal === 0).image, previousImage);
+  assert.equal(windowCalls, 1);
+  assert.ok(f.controller.visiblePages().every(page => page.status === 'failed' && page.error === 'MANGA_SESSION_CONTENT_CHANGED' && page.image === undefined));
+  for (let tileIndex = 0; tileIndex < 4; tileIndex++) assert.equal(f.controller.tile(0, tileIndex), undefined);
+  assert.equal(f.controller.tiles.size, 0); assert.equal(f.controller.retainedTiles.length, 0); assert.equal(f.controller.pageLoads.size, 0);
+  for (const uri of previousUris) assert.equal(f.released.filter(value => value === uri).length, 1);
+  await assert.rejects(f.controller.setVisible(90), /MANGA_SESSION_CONTENT_CHANGED/);
+  await assert.rejects(f.controller.prepareViewportPages([90]), /MANGA_SESSION_CONTENT_CHANGED/);
+  assert.equal(windowCalls, 1); assert.equal(f.calls.length, count, 'revoked metadata cannot trigger another window request or image acquisition');
   f.controller.close(); f.preparation.close();
+  for (const uri of previousUris) assert.equal(f.released.filter(value => value === uri).length, 1, 'bounded-window cancellation and close have one release owner');
 }
 console.log('PASS a revoked bounded metadata window rejects as a content change before facts or image work can enter the chapter');

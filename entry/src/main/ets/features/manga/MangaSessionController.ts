@@ -96,6 +96,9 @@ export class MangaSessionController {
       }
       return undefined;
     }
+    // A cancelled candidate keeps its acquisitions until the transition owner
+    // drains and closes it. Those leases are no longer displayable meanwhile.
+    if (this.candidatePendingPresentation && !this.candidateCurrent()) return undefined;
     const key = `${ordinal}:${tileIndex}`;
     const tile = this.tiles.get(key) ?? this.retainedTiles.get(key);
     if (tile !== undefined) return tile;
@@ -144,7 +147,8 @@ export class MangaSessionController {
   private beginDisplaySession(chapter: MangaChapterResult): void {
     const generation = this.generation, content = this.sessionContentCurrent;
     this.resources.beginDisplaySession(this.resourceScope(chapter),
-      (): boolean => generation === this.generation && content(), this.previewMode);
+      (): boolean => generation === this.generation && content() &&
+        (!this.candidatePendingPresentation || this.candidateCurrent()), this.previewMode);
   }
 
   /** Transfer a completed header region into the chapter's display owner.
@@ -197,8 +201,8 @@ export class MangaSessionController {
     throw new Error('MANGA_SESSION_CONTENT_CHANGED');
   }
 
-  private assertSessionContent(): void {
-    if (this.chapterData !== undefined && !this.sessionContentCurrent()) throw new Error('MANGA_SESSION_CONTENT_CHANGED');
+  private assertCandidateCurrent(): void {
+    if (this.candidatePendingPresentation && !this.candidateCurrent()) throw new Error('MANGA_SESSION_CANCELLED');
   }
 
   private resetAdjacentPreparation(): void {
@@ -576,6 +580,7 @@ export class MangaSessionController {
     const chapter = this.chapterData;
     if (chapter === undefined || !Number.isSafeInteger(ordinal) || ordinal < 0 || ordinal >= this.totalPageCount) throw new Error('MANGA_PAGE_OUT_OF_RANGE');
     this.assertSessionContent();
+    this.assertCandidateCurrent();
     if (retainedTiles.length > 8) throw new Error('MANGA_TILE_WINDOW_BUDGET');
     // The first visible logical page is only the metadata window's anchor.
     // A screen of short images can still display a third page. Keep precisely
@@ -632,7 +637,10 @@ export class MangaSessionController {
       // Current page is admitted first; neighbors share the existing Host owner.
       await this.loadPage(ordinal, chapter, generation);
       if (!current()) {
-        if (generation === this.generation && this.chapterData === chapter) this.assertSessionContent();
+        // Content invalidation itself retires the generation. Preserve its
+        // terminal reason while this exact chapter still owns the view; a
+        // closed/reopened chapter keeps the ordinary cancellation boundary.
+        if (this.chapterData === chapter) this.assertSessionContent();
         if (generation === this.generation && this.displayOrdinal !== ordinal) throw new Error('MANGA_SESSION_CANCELLED');
         return generation;
       }
@@ -670,6 +678,7 @@ export class MangaSessionController {
 
   async retry(ordinal: number): Promise<void> {
     this.assertSessionContent();
+    this.assertCandidateCurrent();
     const existing = this.pages.get(ordinal);
     if (existing?.status !== 'failed' || !this.wanted.has(ordinal) || this.chapterData === undefined) return;
     this.pages.delete(ordinal);
@@ -683,6 +692,7 @@ export class MangaSessionController {
     const chapter = this.chapterData;
     if (chapter === undefined) throw new Error('MANGA_SESSION_CANCELLED');
     this.assertSessionContent();
+    this.assertCandidateCurrent();
     if (ordinals.length > 8) throw new Error('MANGA_TILE_WINDOW_BUDGET');
     if (ordinals.some(ordinal => !Number.isSafeInteger(ordinal) || ordinal < 0 || ordinal >= this.totalPageCount))
       throw new Error('MANGA_PAGE_OUT_OF_RANGE');
@@ -817,6 +827,7 @@ export class MangaSessionController {
     const chapter = this.chapterData;
     if (chapter === undefined) return;
     this.assertSessionContent();
+    this.assertCandidateCurrent();
     if (requested.length > 8) throw new Error('MANGA_TILE_WINDOW_BUDGET');
     let presentationChanged = !this.sliced;
     const wanted = new Set(requested.map(item => `${item.ordinal}:${item.tileIndex}`));
@@ -844,8 +855,10 @@ export class MangaSessionController {
     for (const page of this.pages.values()) if (this.retainPageImage(page)) presentationChanged = true;
     // Prepared files already have synchronous display descriptors. Acquire
     // them before the first window publication can mount a loading branch.
-    const preparedCurrent = (): boolean => generation === this.generation && this.sessionContentCurrent();
+    const preparedCurrent = (): boolean => generation === this.generation && this.chapterData === chapter && this.sessionContentCurrent() &&
+      (!this.candidatePendingPresentation || this.candidateCurrent());
     for (const item of requested) {
+      this.assertCandidateCurrent();
       const key = `${item.ordinal}:${item.tileIndex}`;
       const geometry = this.geometry.get(item.ordinal), fact = this.facts.get(item.ordinal);
       if (this.tiles.has(key) || geometry === undefined || fact === undefined || !Number.isSafeInteger(item.tileIndex) ||
@@ -855,6 +868,13 @@ export class MangaSessionController {
         { ...(request ?? { url: fact.resourceRef }), resourceRef: fact.resourceRef }, preparedCurrent,
         (item.tileIndex * geometry.tileHeight) / geometry.height, this.previewMode);
       if (image !== undefined) {
+        if (!preparedCurrent()) {
+          this.resources.release(image);
+          if (generation === this.generation && this.chapterData === chapter) {
+            this.assertSessionContent(); this.assertCandidateCurrent();
+          }
+          continue;
+        }
         this.tiles.set(key, { ordinal: item.ordinal, tileIndex: item.tileIndex, image });
         presentationChanged = true;
       }
@@ -866,6 +886,7 @@ export class MangaSessionController {
       if (geometry === undefined || fact === undefined || !Number.isSafeInteger(item.tileIndex) || item.tileIndex < 0 || item.tileIndex * geometry.tileHeight >= geometry.height) continue;
       const key = `${item.ordinal}:${item.tileIndex}`;
       if (generation !== this.generation || !this.wantedTiles.has(key)) continue;
+      this.assertCandidateCurrent();
       if (this.tiles.has(key)) {
         const pending = this.tileLoads.get(key);
         if (pending !== undefined) await pending;
@@ -912,6 +933,7 @@ export class MangaSessionController {
 
   async retryTile(ordinal: number, tileIndex: number): Promise<void> {
     this.assertSessionContent();
+    this.assertCandidateCurrent();
     const key = `${ordinal}:${tileIndex}`;
     if (!this.wantedTiles.has(key) || this.tiles.get(key)?.error === undefined) return;
     this.tiles.delete(key);
@@ -925,6 +947,7 @@ export class MangaSessionController {
   private loadPage(ordinal: number, chapter: MangaChapterResult, generation: number): Promise<void> {
     if (generation !== this.generation || !this.wanted.has(ordinal)) return Promise.resolve();
     this.assertSessionContent();
+    this.assertCandidateCurrent();
     // Geometry and an already completed regional lease prove this page is
     // readable. Recreating its ready metadata must not reload region zero.
     if (!this.pages.has(ordinal) && this.geometry.has(ordinal) &&
