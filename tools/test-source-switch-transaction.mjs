@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import { sourceSwitchRowSdk } from './lib/source-switch-row-sdk-probe.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const index = readFileSync(resolve(repo, 'entry/src/main/ets/pages/Index.ets'), 'utf8');
@@ -92,7 +95,59 @@ assert.doesNotMatch(detailOpen, /this\.route\s*=\s*'reading'/,
 assert.match(window,
   /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/,
   'LazyForEach must key candidates by exact composite identity');
-assert.match(window, /LazyForEach\(this\.candidateDataSource,[\s\S]*sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/);
+// Key ownership moved into the retained observed row. Execute the actual
+// emitted source key factory rather than requiring its old inline spelling.
+const require = createRequire(import.meta.url);
+const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const ts = require(`${sdk}/node_modules/typescript`);
+const tree = ts.createSourceFile('/tmp/SourceSwitchTransactionIdentity.ets', window,
+  ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
+assert.deepEqual(tree.parseDiagnostics, []);
+let nativeKeyFactory;
+const visitLazyIdentity = node => {
+  if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) &&
+    node.expression.getText(tree) === 'LazyForEach' && node.arguments[0]?.getText(tree) === 'this.candidateDataSource') {
+    assert.equal(nativeKeyFactory, undefined, 'one authoritative native candidate range');
+    nativeKeyFactory = node.arguments[2];
+  }
+  ts.forEachChild(node, visitLazyIdentity);
+};
+visitLazyIdentity(tree);
+assert.ok(nativeKeyFactory && ts.isArrowFunction(nativeKeyFactory), 'production LazyForEach supplies its actual key factory');
+const rowSdk = sourceSwitchRowSdk(createArkUIPropertyRuntimeProbe(), window);
+const lazyKey = new Function('sourceSwitchCandidateKey',
+  `return (${stripTypeScriptTypes(nativeKeyFactory.getText(tree))});`)(rowSdk.sourceSwitchCandidateKey);
+function verifyNativeCandidateIdentity(keyFactory) {
+  const data = new rowSdk.SourceSwitchCandidateDataSource();
+  const samples = [
+    { sourceId: 'same-source', bookUrl: '/book/a', latencyMs: 780 },
+    { sourceId: 'same-source', bookUrl: '/book/b', latencyMs: 5 },
+    { sourceId: 'other-source', bookUrl: '/book/a', latencyMs: 900 },
+  ];
+  data.publish(samples);
+  const retained = samples.map((_sample, position) => data.getData(position));
+  const expected = samples.map(sample => rowSdk.sourceSwitchCandidateKey(sample.sourceId, sample.bookUrl));
+  const initialKeys = retained.map(keyFactory);
+  assert.equal(new Set(initialKeys).size, samples.length, 'same-source alternate books and same-URL alternate sources are distinct');
+  const remeasured = { ...samples[0], latencyMs: 12 };
+  data.publish([samples[1], remeasured, samples[2]]);
+  assert.equal(data.getData(1), retained[0], 'remeasurement/reorder retains the exact observed row');
+  assert.equal(data.getData(1).candidate, remeasured);
+  assert.deepEqual([0, 1, 2].map(position => keyFactory(data.getData(position))), [initialKeys[1], initialKeys[0], initialKeys[2]],
+    'new latency and position cannot become selection identity');
+  const remeasuredAgain = { ...samples[0], latencyMs: 98 };
+  data.publish([samples[2], remeasuredAgain, samples[1]]);
+  assert.equal(data.getData(1), retained[0]);
+  assert.equal(data.getData(1).candidate, remeasuredAgain);
+  assert.deepEqual([0, 1, 2].map(position => keyFactory(data.getData(position))), [initialKeys[2], initialKeys[0], initialKeys[1]],
+    'a second measurement and reorder still retain the admitted keys');
+  assert.deepEqual(initialKeys, expected, 'native keys retain both source and book URL');
+}
+verifyNativeCandidateIdentity(lazyKey);
+assert.throws(() => verifyNativeCandidateIdentity(row => row.candidate.sourceId), assert.AssertionError,
+  'a sourceId-only key cannot collapse alternate URLs');
+assert.throws(() => verifyNativeCandidateIdentity(row => `${row.key}:${row.candidate.latencyMs}`), assert.AssertionError,
+  'measured latency cannot enter the native selection key');
 assert.doesNotMatch(window, /Repeat\([\s\S]*virtualScroll/);
 assert.match(window, /this\.state\.candidates\.filter\([\s\S]*candidate\.isCurrent !== true\)/,
   'the exact current identity is shown in context and excluded from alternate rows');
