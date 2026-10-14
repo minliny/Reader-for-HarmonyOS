@@ -98,9 +98,19 @@ for (const [input, percent, label, caption] of cases) {
 }
 // Compare actual frozen/current native tuples, including omitted attributes,
 // not a hand-written layout model. Legal inputs retain the existing effect.
+// The later projection-input repair adds only the root enabled attribute;
+// explicitly admit that input-only delta without changing the frozen original
+// formatter or relaxing any of its geometry, text or progress comparisons.
 for (const scheme of ['day', 'night']) for (const tablet of [false, true]) for (const value of [0, 1, 1234, 10000]) {
   const book = row(value), before = grid(frozenGrid, ShelfBookPresentation, book, tablet, scheme), after = grid(pageSource, ShelfBookPresentation, book, tablet, scheme);
-  assert.deepEqual([...after.nodes.values()], [...before.nodes.values()], 'original actual Grid native tuples');
+  const frozenTuples = [...before.nodes.values()], currentTuples = [...after.nodes.values()];
+  const frozenRoot = frozenTuples.find(node => node.type === 'Column');
+  const currentRoot = currentTuples.find(node => node.type === 'Column');
+  assert.ok(frozenRoot && currentRoot, 'both actual Grid roots are emitted');
+  assert.equal(frozenRoot.enabled, undefined, 'historical fixture predates the subtree input gate');
+  assert.equal(currentRoot.enabled, true, 'the displayed cover-mode Grid subtree remains enabled');
+  const expectedTuples = frozenTuples.map(node => node === frozenRoot ? { ...node, enabled: true } : node);
+  assert.deepEqual(currentTuples, expectedTuples, 'original actual Grid native tuples plus the explicit current input gate');
   assert.equal(after.gridBookCardHeight(book, tablet), before.gridBookCardHeight(book, tablet), 'original actual measured height');
 }
 // One real shared-spec edit reaches both actual consumers; a named variant
