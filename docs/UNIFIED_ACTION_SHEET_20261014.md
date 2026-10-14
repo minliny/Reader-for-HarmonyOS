@@ -91,3 +91,5 @@
 首次完整运行实际结算 667 项：616 PASS、51 FAIL，未发布 HAP。新工作区未生成 Core CLI／未安装 Reader-UI 锁定依赖导致耐久事务 ENOENT 及其投影、边界、空 JSON 连锁错误；已从冻结源码 locked 构建本地 CLI、按 npm 锁安装 UI 依赖，Core d407 和 Native 证据不变，九项相关异常定向复测全部通过。其余七处旧 probe 分别遗漏新 actionPanel 成员、按旧 Stack 查找共享 frame、把任何 bounded 容器误认为旧 source popup、硬匹配已迁移的 height 链、遗漏 Specs 的实值 import 端口；现适配实际 shared Frame/Header 子树与生产端口，保留旧 popup 回退禁止项、安全区、窗口生命周期、业务准入和负例，并通过定向回归。
 
 完整失败清单、逐项原始日志与依赖修复记录保留在打包工作区 `.reader-local/deployment/` 和 `.reader-local/build-dependencies-binding.json`；后续流水线必须重新执行全量，不复用先前 PASS。
+
+依赖就绪后的第二轮暴露书架 view/menu 测试被前置 CLI 失败遮住的 Specs 实值端口遗漏，以及要求“编辑分组”文案与回调同一行的旧 regex。现显式绑定生产实值，并复用已有真实 SDK Frame/Header/action renderer 回归验证 label 与四项实际派发，而非放宽字符串匹配；该测试完整通过。所有八处动态 Specs 执行端口已核查，不再遗漏生产 import。
