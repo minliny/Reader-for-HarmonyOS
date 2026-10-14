@@ -4,11 +4,12 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 const file=new URL('../entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets',import.meta.url);
 const source=readFileSync(file,'utf8');
 const specSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets',import.meta.url),'utf8');
-const { resolvePopupSpec } = new Function('TextAlign', stripTypeScriptTypes(specSource)
-  .replace(/^export /gm,'') + '; return { resolvePopupSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' });
+const { resolvePopupSpec } = new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', stripTypeScriptTypes(specSource)
+  .replace(/^import[^;]+;\s*/gm,'').replace(/^export /gm,'') + '; return { resolvePopupSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' }, SOURCE_SWITCH_VISUAL);
 const popupSpec=resolvePopupSpec('bookshelf-more-menu');
 const names=['surfaceSpec','actionEnabled','actionLabel','actionIcon','menuWidth','menuX','menuTop','visiblePanelHeight','pointerX','commitAction','collapseMenu','finishCollapse'];
 const Methods=productionMotionMethods(file,names,{resolvePopupSpec});

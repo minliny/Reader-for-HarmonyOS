@@ -1,8 +1,8 @@
 # Reader 统一动作弹窗实现（2026-10-14）
 
-本 worktree 把动作弹窗的内容层抽成
-`entry/src/main/ets/features/common/ReaderActionSheetContent.ets`，尺寸节奏由
-`ReaderSurfaceSpecs.ets` 的 `resolveActionSheetSpec()` 统一管理。宿主继续负责弹窗位置、遮罩、返回、拖拽和关闭生命周期，业务 owner 继续负责动作准入和回调。
+本 worktree 在现有弹窗框架内扩展动作样式：`ReaderActionMenuSurface` 是唯一动作渲染器，支持原有 `menu` 以及 `grouped`、`quick` 三种有限变体。`ReaderActionSheetContent` 只保留兼容入口和业务数据类型，实际委托给该渲染器，不再绘制另一套行、文字和背景。
+
+动作内容的尺寸节奏由 `ReaderSurfaceSpecs.ets` 的 `resolveActionSheetSpec()` 管理；漫画动作弹窗的外框和标题栏接入现有 `ReaderBoundedSurface`／`ReaderBoundedSurfaceHeader`，通过 `reader-action-sheet` 规格统一。宿主继续负责位置、唯一遮罩、返回、动效与关闭生命周期，业务 owner 继续负责动作准入和回调。
 
 ## 两种样式评估与实现
 
@@ -27,6 +27,8 @@
 
 漫画下载操作面板与目录中的下载操作入口复用 `grouped`，动作来自现有 Gateway 的真实状态，区分下载任务与存储清理，删除与清缓存采用危险色；加载、失败、重试和任务业务约束由原 owner 保留。
 
+书源切换实际调用链 `ReaderShell → SourceSwitchPanel → SourceSwitchWindow.novelDrawer()` 的外框接入同一个 `ReaderBoundedSurface`，使用 `source-switch-drawer` 规格，保留现有宽度上限、抽屉高度、圆角、主题色和转场。换源列表、搜索／进度状态、选择事务和安全区仍由原组件负责。旧的 `source-switch-window` 入口继续兼容原消费者，实际抽屉不回退到旧的 300×385 小弹窗。
+
 更多面板使用内容自然高度，手机上限为可用视口的 0.75；更多与下载操作显示滚动提示并使用 44vp 的关闭触达区域。书架的固定原生宿主中增加有界滚动，分组标题和操作行使用最小高度，允许系统字体放大。
 
 ## 本地验证与问题记录
@@ -42,11 +44,34 @@
 | 分隔线超出宽度、标题和内容缩进不齐 | 有界分隔线宽度和宿主水平 inset | SDK 几何属性验证通过；物理像素布局待独立验收 |
 | 独立 worktree 的邻接 Reader-UI 路径不存在；新 producer 未登记 | 只读邻接引用及精确 producer／consumer／spec 注册 | 架构和 Typography 门禁通过；历史 witness 与业务预算未改写 |
 | Scroll 直接包含 ForEach 不满足 SDK 单子节点要求 | 增加一层 Column | 官方 SDK 转换无诊断，书架内容与身份回归通过 |
+| 新动作内容与已有菜单渲染重复，漫画和实际换源抽屉仍自绘外框 | 收敛到现有菜单 renderer 和公共 bounded frame；兼容 facade 不再拥有样式 | 精确 producer／consumer／spec／delegate 注册；历史字体 witness 与业务预算保持不变 |
+| 迁移到共享标题栏时遗漏原漫画标题 0～2 倍字体缩放边界 | 把缩放范围移入 drawer 规格，手机／侧栏标题统一读取 | 漫画 More／下载共享标题的实际 SDK 属性断言；物理大字布局仍属原生视觉边界 |
+| 规格 registry 新增生产实值 import，旧 new Function 探针不能解析；共享标题栏手势端口缺失 | 测试辅助显式传入 `SOURCE_SWITCH_VISUAL`、SDK Gesture／PanGesture 端口；不修改生产行为和既有断言语义 | actions、书架和确认对话框探针能继续执行；漫画共享标题栏实际 SDK 回调转发验证 |
+| 换源测试在嵌套 worktree 寻找邻接 Core 路径失败，Index owner 回归因此没有正确清理证据 | 显式绑定现有 Reader-Core-Native 根目录；保留原断言 | 两个 Core root 环境端口绑定后重跑通过；不是换源生产逻辑失败 |
+| 漫画下载探针遗漏迁移后的外框方法，仍按旧顶层 child 查询下载内容 | 挂载真实公共容器／标题栏／下载组件／动作 renderer，并按实际子树定位 | 下载任务、清理与原 owner 业务断言全部保留并通过；`@Prop` 数组代理按公开业务投影核验 |
 
-相关本地验证通过：共享内容、书架组合与原生宿主身份、漫画面板几何与动效生命周期、漫画下载动作与目录 Popup，以及架构注册、Typography 与原生默认控件契约。详细命令与源码指纹见 `docs/architecture/unified-action-sheet-registration-20261014.md`。
+相关本地验证通过：共享动作内容、书架组合与原生宿主身份、漫画面板几何与动效生命周期、漫画下载动作与目录 Popup、换源实际抽屉组合，以及架构注册、Typography 与原生默认控件契约。当前框架收敛的命令与源码指纹见 `docs/architecture/popup-framework-reuse-registration-20261014.md`；首次实现记录见 `docs/architecture/unified-action-sheet-registration-20261014.md`。
+
+本次框架收敛另外运行并通过以下定向检查：
+
+- `node tools/test-action-menu-surface.mjs`
+- `node tools/test-reader-action-sheet-content.mjs`
+- `node tools/test-bookshelf-more-layout.mjs`
+- `node tools/test-bookshelf-sheet-shared-composition.mjs`
+- `node tools/test-bookshelf-native-sheet-owner.mjs`
+- `node tools/test-manga-surface-sdk.mjs`（包含 More／下载共享外框、单次安全区、唯一遮罩、标题缩放边界）
+- `node tools/test-manga-sheet-motion-sdk.mjs`（包含实际共享标题栏手势回调到原 owner）
+- `node tools/test-manga-download-actions.mjs`
+- `node tools/test-manga-download-popup-sdk.mjs`
+- `node tools/test-book-removal-dialog.mjs`
+- `node tools/test-json-import-dialog-real.mjs`
+- `node tools/test-source-switch-visual-sdk.mjs`
+- `node tools/test-source-switch-host.mjs`
+
+换源检查显式设置 `READER_SOURCE_SWITCH_CORE_ROOT` 和 `READER_READING_RECEIPT_CORE_ROOT` 为 `/Users/minliny/Documents/Reader/Reader-Core-Native`。测试探针使用现有生产代码与已安装的官方 ETS SDK；原生排版、焦点、手势仲裁、实际合成帧和设备字体渲染仍不属于这些本地断言。
 
 ## 统一边界
 
-这个抽象覆盖动作选择型弹窗的内容层。恢复确认 Alert、书籍移除 Dialog、全屏目录和下载任务面板分别承载确认、长列表和任务进度语义，继续使用各自宿主。后续若有新的动作选择弹窗，应只新增动作数据和宿主绑定，复用该内容组件与 spec，避免再写一套行高、字体、禁用和可访问性规则。
+统一的是公共容器、标题／关闭结构、主题与动作渲染规则，具体弹窗通过有限规格保留场景差异。恢复确认 Alert、书籍移除 Dialog、全屏目录和下载任务页面分别承载确认、长列表和任务进度语义，继续使用各自宿主。后续动作选择弹窗应新增动作数据和宿主绑定，复用 `ReaderActionMenuSurface` 和已有容器，不另建全局 ModalHost 或第二套样式框架。
 
 本 worktree 从 Harmony 子仓库基线提交创建，未复制原 checkout 的未提交改动；没有执行 HAP、安装或设备验收。设备视觉仍需在目标产物绑定后单独验证。

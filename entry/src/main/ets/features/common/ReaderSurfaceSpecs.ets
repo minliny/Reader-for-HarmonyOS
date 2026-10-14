@@ -1,4 +1,54 @@
 import type { ReaderAppColorRole } from './ReaderThemeRegistry';
+import { SOURCE_SWITCH_VISUAL } from '../source/SourceSwitchVisual';
+
+/** Actual drawer frames, including the selected source drawer. Owners supply
+ * measured geometry and safe insets; the existing bounded surface paints it. */
+export type DrawerSpecId = 'reader-action-sheet' | 'source-switch-drawer';
+export class DrawerSurfaceSpec {
+  readonly maxWidth: number;
+  readonly cornerRadius: number;
+  readonly surfaceRole: ReaderAppColorRole;
+  readonly lineRole: ReaderAppColorRole = 'TOK_DOWNLOAD_LINE';
+  readonly scrimRole: ReaderAppColorRole;
+  readonly inkRole: ReaderAppColorRole = 'TOK_INK';
+  readonly minimumContentHeight: number = 260;
+  readonly contentInset: number = 18;
+  readonly sideContentInset: number = 20;
+  readonly compactSideContentInset: number = 16;
+  readonly compactViewportWidth: number = 700;
+  readonly handleWidth: number = 42;
+  readonly handleHeight: number = 5;
+  readonly handleZone: number = 30;
+  readonly closeSize: number = 44;
+  readonly closeIcon: number = 18;
+  readonly closeTop: number = 24;
+  readonly closeRight: number = 12;
+  readonly titleFontFamily: string = 'ReaderMangaSans900';
+  readonly titleFontWeight: number = 900;
+  readonly titleFontSize: number = 18;
+  readonly titleLineHeight: number = 26;
+  readonly titleMinFontScale: number = 0;
+  readonly titleMaxFontScale: number = 2;
+  readonly titleBottom: number = 14;
+  readonly sideTitleFontFamily: string = 'ReaderMangaSans600';
+  readonly sideTitleFontWeight: number = 600;
+  readonly sideTitleFontSize: number = 15;
+  readonly sideTitleLineHeight: number = 24;
+  readonly sideHeaderHeight: number = 66;
+  readonly sideHeaderBottom: number = 17;
+  readonly handleRole: ReaderAppColorRole = 'TOK_SS_DRAWER_HANDLE';
+  constructor(id: DrawerSpecId) {
+    this.maxWidth = id === 'source-switch-drawer' ? SOURCE_SWITCH_VISUAL.drawerMaxWidth : 0;
+    this.cornerRadius = id === 'source-switch-drawer' ? SOURCE_SWITCH_VISUAL.drawerCornerRadius : 22;
+    this.surfaceRole = id === 'source-switch-drawer' ? 'TOK_SS_WINDOW_BG' : 'TOK_DOWNLOAD_SURFACE';
+    this.scrimRole = id === 'source-switch-drawer' ? 'TOK_SS_DRAWER_SCRIM' : 'TOK_DOWNLOAD_SCRIM';
+  }
+}
+const DRAWER_SPECS: Record<DrawerSpecId, DrawerSurfaceSpec> = {
+  'reader-action-sheet': new DrawerSurfaceSpec('reader-action-sheet'),
+  'source-switch-drawer': new DrawerSurfaceSpec('source-switch-drawer'),
+};
+export function resolveDrawerSpec(id: DrawerSpecId): DrawerSurfaceSpec { return DRAWER_SPECS[id]; }
 
 /**
  * Finite dialog surface specs. Data-only registry; the surface component

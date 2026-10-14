@@ -150,6 +150,31 @@ export function validateSharedSourceSwitchTypographySuccessor(successor, readSou
 }
 validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor);
 
+export const sourceSwitchFrameSuccessorPath = 'tools/fixtures/design/source-switch-frame-successor-20261014.json';
+export const sourceSwitchFrameSuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/source-switch-frame-successor-20261014.json', import.meta.url), 'utf8'));
+/** The selected source drawer keeps its complete text and business actors.
+ * Only its physical frame is delegated to the established finite container. */
+export function validateSourceSwitchFrameSuccessor(successor, readSource = directoryReadSource) {
+  assert.equal(successor.schema, 1);
+  assert.equal(successor.userAuthorization, '那就按这个方案落地', 'explicit existing-framework reuse authorization');
+  assert.equal(successor.previousFixture, sharedSourceSwitchTypographySuccessorPath, 'one exact selected shared source origin');
+  assert.equal(successor.previousFixtureSha256, 'da6e8032eaec3aa14e26d34526aff80d564dad7e9524c6f3bd82170dc346a725', 'shared source origin identity stays immutable');
+  assert.equal(directoryDigest(readSource(successor.previousFixture)), successor.previousFixtureSha256, 'shared source frame origin stays byte immutable');
+  assert.equal(successor.implementationEvidence, 'docs/architecture/popup-framework-reuse-registration-20261014.md');
+  assert.deepEqual(successor.files.map(entry => entry.path), [novelPaths[0]], 'only one exact source drawer frame successor, no wildcard');
+  assert.deepEqual(successor.retiredPreviousWindowBackgroundIndices, [5], 'only the selected drawer surface background retires');
+  assert.deepEqual(successor.backgroundMethodSuccessor, { novelDrawer: 'novelDrawerBody' }, 'one exact retained handle actor changes owner method');
+  const previous = JSON.parse(readSource(successor.previousFixture)).files[0], entry = successor.files[0];
+  assert.equal(entry.previousEntrySha256, directoryDigest(JSON.stringify(previous)), 'source drawer frame cannot recapture its origin');
+  for (const field of ['carriers', 'nativeDefaults', 'roles', 'fontFamilies']) assert.deepEqual(entry[field], previous[field], 'source frame retains every selected text tuple and AUTO actor');
+  assert.deepEqual(entry.backgrounds, previous.backgrounds.filter((_, index) => index !== 5).map(background =>
+    background.method === 'novelDrawer' ? { ...background, method: 'novelDrawerBody' } : background), 'source frame retains every unrelated background');
+  assert.deepEqual(entry.architectureCounts, { fontSize: 2, backgroundColor: 6 }, 'source frame cannot acquire a new private budget');
+  assert.deepEqual(entry.delegate, { component: 'ReaderBoundedSurface', file: 'entry/src/main/ets/features/common/ReaderBoundedSurface.ets', method: 'novelDrawer', specId: "'source-switch-drawer'" }, 'one exact existing-frame binding');
+  return successor;
+}
+validateSourceSwitchFrameSuccessor(sourceSwitchFrameSuccessor);
+
 export const unifiedActionSheetTypographySuccessorPath = 'tools/fixtures/design/unified-action-sheet-typography-successor-20261014.json';
 export const unifiedActionSheetTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/unified-action-sheet-typography-successor-20261014.json', import.meta.url), 'utf8'));
 const actionSheetOrigins = [
@@ -208,11 +233,32 @@ function validatesActionSheetDelegate(source, entry) {
   const variant = props.properties.find(property => property.name?.text === 'variant');
   assert.equal(variant?.initializer?.getText(tree), entry.delegate.variant, 'actual finite action-content variant binding');
 }
+function validatesFiniteFrameDelegate(source, entry) {
+  const tree = ts.createSourceFile(entry.path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.equal(tree.parseDiagnostics.length, 0, 'actual existing-frame delegate SDK AST');
+  const component = entry.delegate.component;
+  assert.ok(tree.statements.some(node => ts.isImportDeclaration(node) && node.moduleSpecifier.text.endsWith('/' + component) &&
+    node.importClause?.namedBindings?.elements?.some(element => element.name.text === component)), 'actual existing-frame import');
+  const owner = tree.statements.find(node => ts.isStructDeclaration(node) && node.members.some(member => member.name?.text === entry.delegate.method));
+  const method = owner?.members.find(member => ts.isMethodDeclaration(member) && member.name.text === entry.delegate.method);
+  assert.ok(method, 'actual existing-frame owner method');
+  const calls = [];
+  const walk = node => {
+    if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) && node.expression?.getText(tree) === component) calls.push(node);
+    ts.forEachChild(node, walk);
+  };
+  walk(method);
+  assert.equal(calls.length, 1, 'one actual existing-frame binding, no copied or commented actor');
+  const props = calls[0].arguments?.[0];
+  assert.ok(ts.isObjectLiteralExpression(props), 'actual existing-frame finite props');
+  const spec = props.properties.find(property => property.name?.text === 'specId');
+  assert.equal(spec?.initializer?.getText(tree), entry.delegate.specId, 'actual finite existing-frame variant binding');
+}
 export const typographyCarrierShape = node => JSON.parse(JSON.stringify({ owner: node.owner, method: node.method, kind: node.kind, text: node.text,
   modifiers: Object.fromEntries(Object.entries(node.modifiers).map(([property, value]) => [property, { expression: value.expression, extra: value.extra }])) }));
 export const approvedTypographyFile = file => {
   const fullPath = file.startsWith('entry/') ? file : 'entry/src/main/ets/' + (file.startsWith('features/') || file.startsWith('pages/') ? file : 'features/' + file);
-  return unifiedActionSheetTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? sharedSourceSwitchTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
+  return sourceSwitchFrameSuccessor.files.find(entry => entry.path === fullPath) ?? unifiedActionSheetTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? sharedSourceSwitchTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
 };
 /** A finite approved reference or selected demo contract, separate from shared roles.
  * Every concrete file/struct/method/native text carrier and all five authored
@@ -223,7 +269,10 @@ export const approvedTypographyFile = file => {
 export function approvedTypographyContract(source, file) {
   const entry = approvedTypographyFile(file);
   if (!entry) return { registered: false, has: () => false, count: 0 };
-  if (unifiedActionSheetTypographySuccessor.files.includes(entry)) {
+  if (sourceSwitchFrameSuccessor.files.includes(entry)) {
+    validateSourceSwitchFrameSuccessor(sourceSwitchFrameSuccessor);
+    validatesFiniteFrameDelegate(source, entry);
+  } else if (unifiedActionSheetTypographySuccessor.files.includes(entry)) {
     validateUnifiedActionSheetTypographySuccessor(unifiedActionSheetTypographySuccessor);
     validatesActionSheetDelegate(source, entry);
   } else if (sharedSourceSwitchTypographySuccessor.files.includes(entry)) validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor);

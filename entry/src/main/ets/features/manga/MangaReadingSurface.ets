@@ -34,6 +34,10 @@ import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR, RE
   READER_FONT_NOTO_SANS_SC_UI_900 } from '../common/ReaderFontFamilies';
 import { prepareMangaSheetFonts, prepareReaderFontFamily } from '../common/ReaderFonts';
 import { ReaderActionSheetContent, ReaderActionSheetAction, type ReaderActionSheetVariant } from '../common/ReaderActionSheetContent';
+import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
+import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
+import { resolveDrawerSpec } from '../common/ReaderSurfaceSpecs';
+import { readerAppColor } from '../common/ReaderThemeRegistry';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
 interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }
@@ -1601,9 +1605,11 @@ export struct MangaReadingSurface {
   @Builder
   private panelOverlay(directoryIdentity: string = this.directoryOuterIdentity()) {
     Stack({ alignContent: this.widePanel() ? Alignment.End : Alignment.Bottom }) {
-      Column().width('100%').height('100%').backgroundColor(this.widePanel() ? Color.Transparent : this.panel === 'directory' ? mangaDirectoryColor('scrim', this.backgroundPreference === 'ink' ? 'night' : 'day') : '#57000000')
+      Column().width('100%').height('100%').backgroundColor(this.widePanel() ? Color.Transparent : this.panel === 'directory' ? mangaDirectoryColor('scrim', this.backgroundPreference === 'ink' ? 'night' : 'day') : this.isActionPanel() ? readerAppColor(resolveDrawerSpec('reader-action-sheet').scrimRole, this.backgroundPreference === 'ink' ? 'night' : 'day') : '#57000000')
         .opacity(this.widePanel() ? 1 : this.panelScrimOpacity)
         .onClick((): void => { void this.closePanel(); });
+      if (this.isActionPanel()) { this.actionPanelSurface(); }
+      else {
       Stack({ alignContent: Alignment.TopEnd }) {
         Column() {
           if (this.widePanel()) {
@@ -1663,14 +1669,7 @@ export struct MangaReadingSurface {
               Column({ space: 24 }) {
                 if (this.panel === 'mode') { this.modePanel(); }
                 else if (this.panel === 'settings') { this.settingsPanel(); }
-                else if (this.panel === 'downloads') {
-                  MangaDownloadOperationsPanel({ actions: this.downloadActions, loading: this.downloadActionsLoading,
-                    failureMessage: this.downloadActionsFailure, panelInkColor: this.inkColor(), panelPaperColor: this.paperColor(),
-                    panelScheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
-                    onAction: (action: MangaDownloadActionId): void => this.performDownloadAction(action),
-                    onRetry: (): void => { void this.openDownloadActions(this.downloadActionsChapterIndex); } });
-                }
-                else { this.morePanel(); }
+
               }.width('100%').padding({ left: this.panelContentInset(), right: this.panelContentInset(), bottom: this.widePanel() ? 22 : 24 });
             }.width('100%').constraintSize({ maxHeight: Math.max(1, this.panelContentHeight() - (this.widePanel() ? 83 : 70)) })
               .layoutWeight(this.widePanel() ? 1 : 0).scrollBar(this.panel === 'more' || this.panel === 'downloads' ? BarState.Auto : BarState.Off);
@@ -1698,7 +1697,47 @@ export struct MangaReadingSurface {
           offsetX: this.widePanel() ? -14 : 0, offsetY: this.widePanel() ? 0 : -16 })
         .translate({ x: this.widePanel() ? this.panelOffset : 0, y: this.widePanel() ? 0 : this.panelOffset })
         .enabled(this.panelPhase === 'open' || this.panelPhase === 'dragging');
+      }
     }.width('100%').height('100%');
+  }
+  private isActionPanel(): boolean { return this.panel === 'more' || this.panel === 'downloads'; }
+  private actionPanelInsets(): ReaderInsetsVp {
+    const insets = this.panelInsets(this.windowMetricsRevision);
+    return { left: insets.left, right: insets.right, top: this.widePanel() ? insets.top : 0, bottom: insets.bottom };
+  }
+  @Builder
+  private actionPanelSurface() {
+    ReaderBoundedSurface({ specId: 'reader-action-sheet', surfaceWidth: this.panelWidth(),
+      surfaceHeight: this.widePanel() ? this.panelHeight() : 0, maxSurfaceHeight: this.panelHeight(),
+      placement: this.widePanel() ? 'side' : 'bottom', scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+      safeInsets: this.actionPanelInsets(), header: (): void => { this.actionPanelHeader(); },
+      body: (): void => { this.actionPanelBody(); },
+    }).translate({ x: this.widePanel() ? this.panelOffset : 0, y: this.widePanel() ? 0 : this.panelOffset })
+      .enabled(this.panelPhase === 'open' || this.panelPhase === 'dragging');
+  }
+  @Builder
+  private actionPanelHeader() {
+    ReaderBoundedSurfaceHeader({ specId: 'reader-action-sheet', title: this.panelTitle(), surfaceWidth: this.stageWidth,
+      placement: this.widePanel() ? 'side' : 'bottom', scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+      actionEnabled: this.panelPhase === 'open' || this.panelPhase === 'dragging',
+      onClose: (): void => { void this.closePanel(); },
+      onDragStart: (): void => this.beginPanelDrag(), onDragUpdate: (offset: number): void => this.updatePanelDrag(offset),
+      onDragEnd: (offset: number, velocity: number): void => this.finishPanelDrag(offset, velocity),
+    });
+  }
+  @Builder
+  private actionPanelBody() {
+    Scroll() {
+      Column() {
+        if (this.panel === 'downloads') {
+          MangaDownloadOperationsPanel({ actions: this.downloadActions, loading: this.downloadActionsLoading,
+            failureMessage: this.downloadActionsFailure, panelScheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+            onAction: (action: MangaDownloadActionId): void => this.performDownloadAction(action),
+            onRetry: (): void => { void this.openDownloadActions(this.downloadActionsChapterIndex); } });
+        } else { this.morePanel(); }
+      }.width('100%').padding({ left: this.panelContentInset(), right: this.panelContentInset(), bottom: this.widePanel() ? 22 : 24 });
+    }.width('100%').constraintSize({ maxHeight: Math.max(1, this.panelContentHeight() - (this.widePanel() ? 83 : 70)) })
+      .layoutWeight(this.widePanel() ? 1 : 0).scrollBar(BarState.Auto);
   }
   @Builder
   private directoryPanel(directoryIdentity: string = this.directoryOuterIdentity()) {

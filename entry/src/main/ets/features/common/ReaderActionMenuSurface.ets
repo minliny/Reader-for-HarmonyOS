@@ -1,5 +1,8 @@
-import { PopupSurfaceSpec, resolvePopupSpec } from './ReaderSurfaceSpecs';
+import { PopupSurfaceSpec, resolvePopupSpec, ActionSheetSurfaceSpec, resolveActionSheetSpec, type ActionSheetSpecId } from './ReaderSurfaceSpecs';
 import { readerAppColor } from './ReaderThemeRegistry';
+
+export type ReaderActionMenuVariant = 'menu' | ActionSheetSpecId;
+export type ReaderActionTone = 'default' | 'danger';
 
 export type ReaderActionMenuSpecId = 'bookshelf-more-menu' | 'reader-more-menu';
 
@@ -11,20 +14,31 @@ export class ReaderMenuActionView {
   readonly enabled: boolean;
   readonly icon: Resource | undefined;
   readonly accessibilityLabel: string;
+  readonly section: string;
+  readonly secondary: string;
+  readonly trailing: string;
+  readonly tone: ReaderActionTone;
+  readonly showChevron: boolean;
   constructor(
     id: string, label: string, enabled: boolean = true,
     icon: Resource | undefined = undefined, accessibilityLabel: string = label,
+    section: string = '', secondary: string = '', trailing: string = '',
+    tone: ReaderActionTone = 'default', showChevron: boolean = false,
   ) {
     this.id = id; this.label = label; this.enabled = enabled;
     this.icon = icon; this.accessibilityLabel = accessibilityLabel;
+    this.section = section; this.secondary = secondary; this.trailing = trailing;
+    this.tone = tone; this.showChevron = showChevron;
   }
 }
 
-/** Shared content of both current More menus. The platform popup and the
- * measured pointer host retain their anchor/close lifecycle; rows, dividers,
- * typography, scrolling and live action admission have one implementation. */
+/** One action renderer for anchored menus and action-sheet content. Platform
+ * hosts keep their presentation lifecycle; finite registry variants own all
+ * action layout and every physical callback reads live admission here. */
 @Component
 export struct ReaderActionMenuSurface {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @Prop variant: ReaderActionMenuVariant = 'menu';
   @Prop specId: ReaderActionMenuSpecId = 'reader-more-menu';
   @Prop scheme: string = 'day';
   @Prop actions: ReaderMenuActionView[] = [];
@@ -32,7 +46,23 @@ export struct ReaderActionMenuSurface {
   @Prop viewportHeight: number = 0;
   onAction: (id: string) => void = (): void => {};
 
+  private mounted: boolean = false;
+
+  aboutToAppear(): void { this.mounted = true; }
+  aboutToDisappear(): void { this.mounted = false; }
+
   build() {
+    if (this.variant === 'menu') {
+      this.menuActions();
+    } else if (this.variant === 'quick') {
+      this.quickActions();
+    } else {
+      this.groupedActions();
+    }
+  }
+
+  @Builder
+  private menuActions() {
     Scroll() {
       Column() {
         ForEach(this.actions, (action: ReaderMenuActionView, index: number): void => {
@@ -57,14 +87,14 @@ export struct ReaderActionMenuSurface {
           .fontFamily(this.spec().actionFontFamily).fontWeight(this.spec().actionFontWeight)
           .fontSize(this.spec().actionFontSize).lineHeight(this.spec().actionLineHeight)
           .fontColor(readerAppColor(!this.action(id).enabled && this.spec().actionMutesContent ?
-            'TOK_MUTED' : this.spec().actionTextRole, this.scheme))
+            'TOK_MUTED' : this.spec().actionTextRole, this.effectiveScheme()))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(this.spec().actionIconSize > 0 ? 1 : undefined);
       }.width('100%').height(this.spec().actionHeight)
         .padding({ left: this.spec().actionPaddingLeft, right: this.spec().actionPaddingRight });
       if (showDivider) {
         Row().width(this.dividerWidth()).height(this.spec().dividerHeight)
-          .backgroundColor(readerAppColor(this.spec().dividerRole, this.scheme))
+          .backgroundColor(readerAppColor(this.spec().dividerRole, this.effectiveScheme()))
           .position({ x: this.spec().dividerInset, y: this.spec().actionHeight - this.spec().dividerHeight });
       }
     }.width('100%').height(this.spec().actionHeight)
@@ -73,6 +103,145 @@ export struct ReaderActionMenuSurface {
       .enabled(this.action(id).enabled)
       .accessibilityText(this.action(id).accessibilityLabel)
       .onClick((): void => this.commitAction(id));
+  }
+
+  @Builder
+  private groupedActions() {
+    Column({ space: 0 }) {
+      ForEach(this.sectionIds(0), (id: string): void => {
+        this.actionGroup(id, 0);
+      }, (id: string): string => id);
+    }.width('100%');
+  }
+
+  @Builder
+  private quickActions() {
+    Column({ space: 0 }) {
+      Row({ space: this.actionSheetSpec().quickActionGap }) {
+        ForEach(this.actions, (action: ReaderMenuActionView, index: number): void => {
+          if (index < this.actionSheetSpec().quickActionCount) this.quickAction(action.id);
+        }, (action: ReaderMenuActionView, index: number): string => `quick:${index}:${action.id}`);
+      }.width('100%').constraintSize({ minHeight: this.actionSheetSpec().quickActionHeight });
+
+      if (this.actions.length > this.actionSheetSpec().quickActionCount) {
+        Row().width('100%').height(this.actionSheetSpec().dividerHeight).backgroundColor(this.color('line'))
+          .margin({ top: this.actionSheetSpec().quickSeparatorTop, bottom: this.actionSheetSpec().quickSeparatorBottom });
+        Column({ space: 0 }) {
+          ForEach(this.sectionIds(this.actionSheetSpec().quickActionCount), (id: string): void => {
+            this.actionGroup(id, this.actionSheetSpec().quickActionCount);
+          }, (id: string): string => `list:${id}`);
+        }.width('100%');
+      }
+    }.width('100%');
+  }
+
+  @Builder
+  private actionGroup(id: string, first: number) {
+    Column({ space: 0 }) {
+      this.sectionHeading(id);
+      Column({ space: 0 }) {
+        ForEach(this.groupActions(id, first), (item: ReaderMenuActionView): void => {
+          this.row(item.id, this.actionIndex(item.id));
+        }, (item: ReaderMenuActionView): string => item.id);
+      }.width('100%').backgroundColor(this.color('group')).borderRadius(this.actionSheetSpec().groupRadius);
+    }.width('100%').margin({ bottom: this.actionSheetSpec().groupGap });
+  }
+
+  @Builder
+  private sectionHeading(id: string) {
+    if (this.action(id).section.length > 0) {
+      Text(this.action(id).section).fontSize(this.actionSheetSpec().sectionHeadingFontSize).lineHeight(this.actionSheetSpec().sectionHeadingLineHeight)
+        .fontFamily(this.actionSheetSpec().emphasisFontFamily).fontWeight(this.actionSheetSpec().emphasisFontWeight)
+        .fontColor(this.color('muted')).width('100%').constraintSize({ minHeight: this.actionSheetSpec().sectionHeadingHeight }).padding({ top: 4, bottom: 4 });
+    }
+  }
+
+  @Builder
+  private quickAction(id: string) {
+    Column({ space: this.actionSheetSpec().quickActionGap + 2 }) {
+      if (this.action(id).icon !== undefined) {
+        Stack() {
+          Image(this.action(id).icon).width(this.actionSheetSpec().iconSize).height(this.actionSheetSpec().iconSize);
+        }.width(this.actionSheetSpec().quickIconContainer).height(this.actionSheetSpec().quickIconContainer)
+          .backgroundColor(this.color('group')).borderRadius(this.actionSheetSpec().groupRadius);
+      }
+      Text(this.action(id).label).fontSize(this.actionSheetSpec().quickLabelFontSize).lineHeight(this.actionSheetSpec().quickLabelLineHeight)
+        .fontFamily(this.actionSheetSpec().emphasisFontFamily).fontWeight(this.actionSheetSpec().emphasisFontWeight)
+        .fontColor(this.color(this.action(id).tone === 'danger' ? 'danger' : 'ink'))
+        .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
+      if (this.action(id).secondary.length > 0) {
+        Text(this.action(id).secondary).fontSize(this.actionSheetSpec().quickSecondaryFontSize).lineHeight(this.actionSheetSpec().quickSecondaryLineHeight)
+          .fontFamily(this.actionSheetSpec().regularFontFamily).fontWeight(this.actionSheetSpec().regularFontWeight)
+          .fontColor(this.color('muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
+      }
+    }.layoutWeight(1).constraintSize({ minHeight: this.actionSheetSpec().quickActionHeight }).padding({ top: 12, bottom: 12 })
+      .justifyContent(FlexAlign.Center).opacity(this.action(id).enabled ? 1 : 0.48).enabled(this.action(id).enabled)
+      .accessibilityGroup(true).accessibilityText(this.accessibilityLabel(this.action(id))).onClick((): void => this.commitAction(id));
+  }
+
+  @Builder
+  private row(id: string, index: number) {
+    Column({ space: 0 }) {
+      Row({ space: this.actionSheetSpec().rowGap }) {
+        if (this.action(id).icon !== undefined) {
+          Image(this.action(id).icon).width(this.actionSheetSpec().iconSize).height(this.actionSheetSpec().iconSize);
+        }
+        Column({ space: 1 }) {
+          Text(this.action(id).label).fontSize(this.actionSheetSpec().labelFontSize).lineHeight(this.actionSheetSpec().labelLineHeight)
+            .fontFamily(this.action(id).tone === 'danger' ? this.actionSheetSpec().emphasisFontFamily : this.actionSheetSpec().regularFontFamily)
+            .fontWeight(this.action(id).tone === 'danger' ? this.actionSheetSpec().emphasisFontWeight : this.actionSheetSpec().regularFontWeight)
+            .fontColor(this.color(this.action(id).tone === 'danger' ? 'danger' : 'ink'))
+            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
+          if (this.action(id).secondary.length > 0) {
+            Text(this.action(id).secondary).fontSize(this.actionSheetSpec().secondaryFontSize).lineHeight(this.actionSheetSpec().secondaryLineHeight)
+              .fontFamily(this.actionSheetSpec().regularFontFamily).fontWeight(this.actionSheetSpec().regularFontWeight)
+              .fontColor(this.color('muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
+          }
+        }.layoutWeight(1).alignItems(HorizontalAlign.Start);
+        if (this.action(id).trailing.length > 0) {
+          Text(this.action(id).trailing).fontSize(this.actionSheetSpec().trailingFontSize).lineHeight(this.actionSheetSpec().trailingLineHeight)
+            .fontFamily(this.actionSheetSpec().regularFontFamily).fontWeight(this.actionSheetSpec().regularFontWeight)
+            .fontColor(this.color('muted')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
+        if (this.action(id).showChevron) {
+          Image(this.effectiveScheme() === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))
+            .width(this.actionSheetSpec().chevronSize).height(this.actionSheetSpec().chevronSize);
+        }
+      }.width('100%').constraintSize({ minHeight: this.action(id).secondary.length > 0 ? this.actionSheetSpec().rowSecondaryHeight : this.actionSheetSpec().rowHeight })
+        .padding({ left: this.actionSheetSpec().rowInsetLeft, right: this.actionSheetSpec().rowInsetRight, top: 10, bottom: 10 })
+        .opacity(this.action(id).enabled ? 1 : 0.48).enabled(this.action(id).enabled)
+        .accessibilityGroup(true).accessibilityText(this.accessibilityLabel(this.action(id))).onClick((): void => this.commitAction(id));
+      if (index < this.actions.length - 1 && !this.startsSection(index + 1)) {
+        Row().width(`calc(100% - ${this.actionSheetSpec().dividerInset}vp)`).height(this.actionSheetSpec().dividerHeight).backgroundColor(this.color('line'))
+          .opacity(0.45).margin({ left: this.actionSheetSpec().dividerInset });
+      }
+    }.width('100%');
+  }
+
+  private startsSection(index: number): boolean {
+    if (index < 0 || index >= this.actions.length) return false;
+    return index === 0 || this.actions[index].section !== this.actions[index - 1].section;
+  }
+
+  private actionIndex(id: string): number {
+    return this.actions.findIndex((item: ReaderMenuActionView): boolean => item.id === id);
+  }
+
+  private sectionIds(first: number): string[] {
+    return this.actions.filter((_item: ReaderMenuActionView, index: number): boolean =>
+      index >= first && (index === first || this.startsSection(index)))
+      .map((item: ReaderMenuActionView): string => item.id);
+  }
+
+  private groupActions(id: string, first: number): ReaderMenuActionView[] {
+    const start = Math.max(first, this.actionIndex(id));
+    let end = start + 1;
+    while (end < this.actions.length && !this.startsSection(end)) end++;
+    return this.actions.slice(start, end);
+  }
+
+  private actionSheetSpec(): ActionSheetSurfaceSpec {
+    return resolveActionSheetSpec(this.variant === 'quick' ? 'quick' : 'grouped');
   }
 
   private spec(): PopupSurfaceSpec { return resolvePopupSpec(this.specId); }
@@ -88,7 +257,22 @@ export struct ReaderActionMenuSurface {
       `calc(100% - ${this.spec().dividerInset * 2}vp)`;
   }
 
+  private effectiveScheme(): string { return this.scheme === 'auto' ? this.appThemeScheme : this.scheme; }
+
+  private color(role: 'ink' | 'muted' | 'danger' | 'line' | 'group'): string {
+    const spec = this.actionSheetSpec();
+    return readerAppColor(role === 'ink' ? spec.inkRole : role === 'muted' ? spec.mutedRole : role === 'danger' ? spec.dangerRole : role === 'group' ? spec.groupRole : spec.lineRole,
+      this.effectiveScheme());
+  }
+
+  private accessibilityLabel(action: ReaderMenuActionView): string {
+    const state = action.enabled ? '' : '，当前不可用';
+    const detail = action.secondary.length > 0 ? `，${action.secondary}` : '';
+    const trailing = action.trailing.length > 0 ? `，${action.trailing}` : '';
+    return `${action.label}${detail}${trailing}${state}`;
+  }
+
   private commitAction(id: string): void {
-    if (this.action(id).enabled) this.onAction(id);
+    if (this.mounted && this.action(id).enabled) this.onAction(id);
   }
 }

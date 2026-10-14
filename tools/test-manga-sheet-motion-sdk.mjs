@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
+import { mangaSurfaceSdkDependencies, mangaSurfaceBoundedControls } from './lib/manga-surface-sdk-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 
@@ -21,6 +21,7 @@ const methods = [...mangaDirectoryAdaptiveMembers, 'openPanel', 'closePanel', 'i
   'preparePanelFonts', 'performPanelAction', 'beginPanelDrag', 'updatePanelDrag', 'finishPanelDrag', 'panelTravel', 'panelHeight',
   'panelWidth', 'panelContentHeight', 'windowInteractiveInsets', 'interactiveInsets', 'panelInsets', 'controlsPresentedForWindow', 'widePanel', 'persistentDirectory', 'directoryColumnWidth', 'tabletDirectory', 'panelTitle', 'panelOverlay', 'directoryPanel',
   'directoryTools', 'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'pageOrdinal', 'adjacentChapter', 'selectAdjacentChapter', 'directoryBody', 'panelContentInset', 'directoryFallback', 'modePanel', 'settingsPanel', 'morePanel', 'moreActions', 'performMoreAction', 'performMorePanelAction', 'sectionTitle', 'sheetChoice', 'fitLine', 'choiceIcon',
+  'isActionPanel', 'actionPanelInsets', 'actionPanelSurface', 'actionPanelHeader', 'actionPanelBody',
   'isSheetChoiceSelected', 'paperColor', 'surfaceColor', 'inkColor', 'mutedColor', 'faintColor', 'lineColor',
   'softSurfaceColor', 'greenColor', 'accentColor', 'aboutToDisappear', 'handleBack', 'openDirectory',
   'showDetail', 'openSourceSwitch', 'selectDirectoryTarget', 'displayedBrightnessPercent', 'resetMangaPreferences',
@@ -30,7 +31,12 @@ function deferred() {
   return { promise, resolve };
 }
 function fixture(text = source, options = {}) {
-  const properties = createArkUIPropertyRuntimeProbe(), events = [], frames = [], animations = [];
+  const properties = createArkUIPropertyRuntimeProbe(), events = [], frames = [], animations = [], pans = [];
+  const panGesture = new Proxy({}, { get: (_target, name) => (...args) => {
+    if (name === 'create') pans.push({ options: args[0] });
+    else if (String(name).startsWith('onAction')) pans.at(-1)[name] = args[0];
+  } });
+  const shared=mangaSurfaceBoundedControls(properties, { panGesture });
   let owner;
   const uiContext = {
     getFocusController: () => ({ clearFocus: () => events.push('clear-focus') }),
@@ -41,7 +47,7 @@ function fixture(text = source, options = {}) {
     },
   };
   const dependencies = {
-    ...mangaDirectoryAdaptiveDependencies, ...properties.sdk, ...mangaSurfaceSdkDependencies, ...fonts, uiContext,
+    ...mangaDirectoryAdaptiveDependencies, ...properties.sdk, ...mangaSurfaceSdkDependencies, ...shared.deps, ...fonts, uiContext,
     inputMethod: { getController: () => ({ hideTextInput: () => { events.push('hide-input'); return options.keyboard ?? Promise.resolve(); } }) },
     prepareMangaSheetFonts: () => { events.push(['prepare-font', 'required-static-receipts']); return options.font ?? Promise.resolve(true); },
     prepareReaderFontFamily: family => { events.push(['prepare-serif', family]); return options.serif ?? Promise.resolve(); },
@@ -50,8 +56,8 @@ function fixture(text = source, options = {}) {
     hilog: { warn: (...args) => events.push(['keyboard-warning', ...args]) },
     ReaderWindowCoordinator: { brightness: () => ({ release: async () => {} }), metrics: () => ({systemInsets:{left:0,top:0,right:0,bottom:0},cutoutInsets:{left:0,top:0,right:0,bottom:0},gestureInsets:{left:0,top:0,right:0,bottom:0},navigationInsets:{left:0,top:0,right:0,bottom:0},statusBarRect:{top:0,height:0}}) },
   };
-  const hooks = { ...properties.hooks, allowEmptyBranchAdmission: options.allowEmptyBranchAdmission,
-    childSources: { MangaDirectoryCurrentFooter: footerSource }, mountChildren: true };
+  const hooks = { ...shared.hooks, allowEmptyBranchAdmission: options.allowEmptyBranchAdmission,
+    childSources: { ...shared.childSources, MangaDirectoryCurrentFooter: footerSource }, mountChildren: true };
   dependencies.MangaDirectoryCurrentFooter = createReaderBuilderProbe(footerSource, boundedMembers(footerSource), dependencies, hooks).Component;
   const probe = createReaderBuilderProbe(text, [...fields, ...methods], dependencies, hooks);
   owner = probe.owner;
@@ -73,7 +79,7 @@ function fixture(text = source, options = {}) {
     toggleDirection() {}, changeFit: async () => {},
   });
   const walk = owner => [owner, ...[...owner.children.values()].flatMap(child => child.nodes ? walk(child) : [])];
-  return { owner, frames, animations, events, properties, output: probe.output,
+  return { owner, frames, animations, events, properties, pans, output: probe.output,
     nodes: () => walk(owner).flatMap(child => [...child.nodes.values()]),
     frame: () => { const next = frames.shift(); assert.ok(next, 'native next-frame boundary was requested'); next.onFrame(16); },
     enterFrames: () => { const before = animations.length; assert.equal(frames.length, 1); frames.shift().onFrame(16); assert.equal(animations.length, before, 'onFrame may precede build: admission frame cannot start animation'); assert.equal(frames.length, 1); frames.shift().onFrame(32); },
@@ -85,12 +91,12 @@ function assertOpening(f, panel) {
   assert.equal(f.owner.panelOffset, Math.round(844 * (panel === 'directory' ? .78 : panel === 'more' ? .75 : panel === 'downloads' ? .5 : .67)) + 36);
   assert.equal(f.owner.panelScrimOpacity, 0); assert.equal(f.animations.length, 0);
   f.owner.panelOverlay();
-  const sheet = f.nodes().find(node => node.type === 'Stack' && node.clip === true);
+  const sheet = f.nodes().find(node => (panel==='more'||panel==='downloads'?node.type==='__Common__':node.type==='Stack'&&node.clip===true) && node.translate);
   const scrim = f.nodes().find(node => node.type === 'Column' && node.backgroundColor === '#57000000');
   assert.deepEqual(sheet.translate, { x: 0, y: f.owner.panelOffset }, 'actual SDK lowered actor starts outside the phone');
   assert.equal(scrim.opacity, 0, 'actual SDK lowered scrim starts transparent');
   const staticWeights = { 400: fonts.READER_FONT_NOTO_SANS_SC_UI_REGULAR,
-    500: fonts.READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 600: fonts.READER_FONT_NOTO_SANS_SC_UI_600, 900: fonts.READER_FONT_NOTO_SANS_SC_UI_900 };
+    500: fonts.READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 600: fonts.READER_FONT_NOTO_SANS_SC_UI_600, 700: fonts.READER_FONT_NOTO_SANS_SC_UI_BOLD, 900: fonts.READER_FONT_NOTO_SANS_SC_UI_900 };
   assert.ok(f.nodes().filter(node => node.type === 'Text').every(node =>
     node.fontFamily === staticWeights[node.fontWeight]),
   'every mounted sheet Text explicitly owns its exact baked static face without variable flags');
@@ -128,7 +134,7 @@ async function verifyMotion(text = source) {
     await f.owner.selectDirectoryTarget(99); assert.ok(!f.events.some(event => Array.isArray(event) && event[0] === 'target'), 'late directory selection cannot navigate during exit');
     assert.equal(f.owner.panelTitle(), { directory: '章节目录', mode: '阅读方式', settings: '漫画阅读设置', more: '更多' }[panel]);
     f.properties.flush(); f.owner.replay();
-    assert.equal(f.nodes().find(node => node.type === 'Stack' && node.clip === true).enabled, false,
+    assert.equal(f.nodes().find(node => (panel==='more'?node.type==='__Common__':node.type==='Stack'&&node.clip===true) && node.translate).enabled, false,
       'native content is blocked during the closing lifecycle');
     f.finish(3); assert.equal(await closing, true); assert.equal(f.owner.panel, '');
   }
@@ -169,7 +175,11 @@ await verifyMotion(); await verifyRaces();
   const f = fixture(); f.owner.reduceMotion = true; f.owner.isReaderIdentityCurrent = () => true;
   Object.assign(f.owner, { refreshLoginRequiredForControls() {}, applyWindowChrome() {}, applyWindowPolicyForChromeOwner() {} });
   await f.owner.openPanel('more'); const token = f.owner.morePresentationGeneration;
-  f.owner.beginPanelDrag(); f.owner.updatePanelDrag(20); f.owner.finishPanelDrag(20, 0);
+  f.owner.panelOverlay();
+  assert.equal(f.pans.length, 1, 'the composed shared header registers exactly one native handle recognizer');
+  const pan = f.pans[0];
+  assert.deepEqual(pan.options, { fingers: 1, direction: 'vertical', distance: 1 });
+  pan.onActionStart(); pan.onActionUpdate({ offsetY: 20 }); pan.onActionEnd({ offsetY: 20, velocityY: 0 });
   assert.equal(f.owner.panelPhase, 'open');
   assert.notEqual(f.owner.panelGeneration, token, 'a cancelled drag advances only the motion fence');
   f.owner.performMoreAction('source', token);

@@ -640,11 +640,17 @@
     {
       "file": "entry/src/main/ets/features/common/ReaderActionMenuSurface.ets",
       "counts": {
-        "fontSize": 1,
-        "backgroundColor": 2
+        "backgroundColor": 6
       },
-      "kind": "spec-driven-shared-menu-implementation",
-      "proof": "tools/test-action-menu-surface.mjs"
+      "kind": "finite-spec-actual-shared-producer",
+      "proof": "tools/test-action-menu-surface.mjs",
+      "contractId": "shared-ReaderActionMenuSurface",
+      "successorFacts": {
+        "evidence": "docs/architecture/popup-framework-reuse-registration-20261014.md",
+        "sourceHead": "651f413c",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      },
+      "reason": "The existing action family owns exactly menu/grouped/quick variants. Original two popup spec IDs and anchored geometry remain finite. Content actions and callbacks plus measured viewport inputs are accepted; no caller typography, appearance or row-layout override. One renderer owns all action admission and native text."
     },
     {
       "file": "entry/src/main/ets/features/common/ReaderChoiceRow.ets",
@@ -674,23 +680,33 @@
     {
       "file": "entry/src/main/ets/features/common/ReaderBoundedSurface.ets",
       "counts": {
-        "backgroundColor": 4
+        "backgroundColor": 6
       },
       "kind": "finite-spec-actual-shared-producer",
       "contractId": "shared-ReaderBoundedSurface",
-      "proof": "tools/test-architecture-shared-producers.mjs",
-      "reason": "8 finite ReaderBoundedSurfaceId variants; measured width/height only; finite resolveDialog/Popup/SheetSpec or retained editor geometry."
+      "proof": "tools/test-bounded-surface-frame-header.mjs",
+      "reason": "Ten explicit existing bounded surface variants including the real source-switch-drawer and reader-action-sheet. Measured viewport and safe insets only; exact finite specs own the new frame background, corner, shadow and original variants remain governed.",
+      "successorFacts": {
+        "evidence": "docs/architecture/popup-framework-reuse-registration-20261014.md",
+        "sourceHead": "651f413c",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
     },
     {
       "file": "entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets",
       "counts": {
         "fontSize": 2,
-        "backgroundColor": 4
+        "backgroundColor": 5
       },
       "kind": "finite-spec-actual-shared-producer",
       "contractId": "shared-ReaderBoundedSurfaceHeader",
-      "proof": "tools/test-architecture-shared-producers.mjs",
-      "reason": "Same 8 finite surface IDs; existing ROLE titles or registered sheetSpec. Source/TTS AUTO omissions and sheet handle/title retained. Business title/slots/callbacks only."
+      "proof": "tools/test-bounded-surface-frame-header.mjs",
+      "reason": "Existing finite bounded headers plus reader-action-sheet bottom/side title and 44vp close; original Source/TTS/import/shelf tuples and AUTO omissions retained. Business callbacks own close and pan lifecycle.",
+      "successorFacts": {
+        "evidence": "docs/architecture/popup-framework-reuse-registration-20261014.md",
+        "sourceHead": "651f413c",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
     },
     {
       "file": "entry/src/main/ets/features/common/ReaderBoundedSurfaceActions.ets",
@@ -810,15 +826,13 @@
       "file": "entry/src/main/ets/features/common/ReaderActionSheetContent.ets",
       "kind": "finite-spec-actual-shared-producer",
       "owner": "ReaderActionSheetContent",
-      "reason": "Only grouped and quick ActionSheetSpecId recipes. Business actions, finite auto/day/night scheme and callbacks are inputs. The exact spec owns typography, colors, grouped cards, geometry and three quick slots; no caller appearance or layout override.",
-      "counts": {
-        "backgroundColor": 4
-      },
+      "reason": "Compatibility business DTO and facade only: grouped/quick caller bindings delegate every native row, typography and click to the existing finite action-menu producer. It has no physical styling or private fonts.",
+      "counts": {},
       "contractId": "shared-ReaderActionSheetContent",
       "proof": "tools/test-reader-action-sheet-content.mjs",
       "successorFacts": {
-        "evidence": "docs/architecture/unified-action-sheet-registration-20261014.md",
-        "sourceHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+        "evidence": "docs/architecture/popup-framework-reuse-registration-20261014.md",
+        "sourceHead": "651f413c",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     }
@@ -1109,7 +1123,7 @@
       "reason": "User explicitly requested the unchanged source-switch operations to share the selected novel drawer. The finite shared successor removes only the retired manga local actors, keeps every selected novel/public text tuple and retained recovery actor, and binds exact backgrounds plus the original legacy-budget witness. Native visual and acceptance remain separate.",
       "counts": {
         "fontSize": 2,
-        "backgroundColor": 7
+        "backgroundColor": 6
       },
       "supersededLegacyCounts": {
         "fontSize": 15,
@@ -1120,7 +1134,12 @@
       "designSource": "paired Reader-UI/design/manga-ui-20261002/; docs/MANGA_UI_DEMO_PARITY_AUDIT_20261003.md",
       "approvedSourceHead": "19be89908333ee8074d2624e9d7fb938e0b011d3",
       "proof": "tools/test-source-switch-host.mjs",
-      "visualSuccessorContract": "tools/fixtures/design/shared-source-switch-typography-successor-20261007.json"
+      "visualSuccessorContract": "tools/fixtures/design/source-switch-frame-successor-20261014.json",
+      "successorFacts": {
+        "evidence": "docs/architecture/popup-framework-reuse-registration-20261014.md",
+        "sourceHead": "651f413c",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
     },
     {
       "file": "entry/src/main/ets/pages/Index.ets",

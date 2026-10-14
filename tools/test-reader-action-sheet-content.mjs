@@ -19,8 +19,9 @@ for (const variant of ['grouped', 'quick']) {
   const calls = [];
   const owner = sdk.consumer(source, boundedMembers(source), {}, { variant, actions,
     onAction: id => calls.push(id) });
-  owner.aboutToAppear();
   owner.initialRender();
+  const renderer = sdk.walk(owner).find(child => child instanceof sdk.deps.ReaderActionMenuSurface);
+  assert.ok(renderer, `${variant}: compatibility facade constructs the existing action renderer`);
   const nodes = sdk.walk(owner).flatMap(child => [...child.nodes.values()]);
   const text = nodes.filter(node => node.type === 'Text').map(node => node.create);
   for (const label of ['更换书源', '重新打开本话', '漫画详情', '下载本话', '下载管理', '移出书架']) {
@@ -54,8 +55,11 @@ for (const variant of ['grouped', 'quick']) {
   // Check dispatch against current data without claiming removed-node layout.
   oldClick();
   assert.equal(calls.length, 1, `${variant}: removed action cannot dispatch through its retained callback`);
-  owner.aboutToDisappear(); buttons[0].onClick();
+  renderer.aboutToDisappear(); buttons[0].onClick();
   assert.equal(calls.length, 1, `${variant}: retired component refuses action dispatch`);
 }
+
+assert.doesNotMatch(source, /private (row|quickAction|action|commit)\s*\(/, 'facade owns no second renderer or admission implementation');
+assert.equal(new sdk.deps.ReaderActionSheetAction('compat', '兼容动作') instanceof sdk.deps.ReaderMenuActionView, true, 'compatibility DTO belongs to the existing action family');
 
 console.log('PASS actual SDK shared action-sheet content: grouped section headings, quick top-row grouping, state detail, chevron slots, danger treatment, and one callback per action');

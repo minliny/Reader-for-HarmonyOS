@@ -1,6 +1,7 @@
 import {approvedTypographyContract, approvedTypographyFile, approvedMangaTypography, novelSourceSwitchSuccessor, mangaDirectoryTypographySuccessor, mangaDirectoryTypographySuccessorPath, validateMangaDirectoryTypographySuccessor,
  sharedSourceSwitchTypographySuccessor, sharedSourceSwitchTypographySuccessorPath, validateSharedSourceSwitchTypographySuccessor,
- unifiedActionSheetTypographySuccessor, unifiedActionSheetTypographySuccessorPath, validateUnifiedActionSheetTypographySuccessor} from './lib/approved-manga-typography-carriers.mjs';
+ unifiedActionSheetTypographySuccessor, unifiedActionSheetTypographySuccessorPath, validateUnifiedActionSheetTypographySuccessor,
+ sourceSwitchFrameSuccessor, sourceSwitchFrameSuccessorPath, validateSourceSwitchFrameSuccessor} from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
@@ -31,6 +32,17 @@ assert.ok(approvedMangaTypography.files.find(entry=>entry.path===approvedSource)
 assert.equal(sharedSourceSwitchTypographySuccessorPath,'tools/fixtures/design/shared-source-switch-typography-successor-20261007.json');
 assert.equal(validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor),sharedSourceSwitchTypographySuccessor);
 assert.equal(approvedTypographyContract(novelWindow,approvedSource).count,21,'exact selected novel drawer carriers are shared, with the original two recovery tuples retained');
+assert.equal(sourceSwitchFrameSuccessorPath,'tools/fixtures/design/source-switch-frame-successor-20261014.json');
+assert.equal(validateSourceSwitchFrameSuccessor(sourceSwitchFrameSuccessor),sourceSwitchFrameSuccessor);
+assert.equal(sourceSwitchFrameSuccessor.files[0].architectureCounts.backgroundColor,6,'only the source frame background retires');
+assert.throws(()=>validateSourceSwitchFrameSuccessor(sourceSwitchFrameSuccessor,path=>path===sourceSwitchFrameSuccessor.previousFixture?read(path)+'\n':read(path)),/frame origin stays byte immutable/,'frame reuse cannot recapture the prior selected shared drawer');
+const copiedFrame=structuredClone(sourceSwitchFrameSuccessor);copiedFrame.files.push(structuredClone(copiedFrame.files[0]));
+assert.throws(()=>validateSourceSwitchFrameSuccessor(copiedFrame),/only one exact source drawer frame successor/,'no copied source frame actor can gain admission');
+const textChangedFrame=structuredClone(sourceSwitchFrameSuccessor);textChangedFrame.files[0].carriers.pop();
+assert.throws(()=>validateSourceSwitchFrameSuccessor(textChangedFrame),/retains every selected text tuple/,'moving the frame cannot silently remove source content');
+const budgetChangedFrame=structuredClone(sourceSwitchFrameSuccessor);budgetChangedFrame.files[0].architectureCounts.backgroundColor++;
+assert.throws(()=>validateSourceSwitchFrameSuccessor(budgetChangedFrame),/cannot acquire a new private budget/,'frame successor cannot preserve the retired background as new private debt');
+assert.throws(()=>approvedTypographyContract(novelWindow.replace("specId: 'source-switch-drawer'","specId: 'source-switch-window'"),approvedSource),/actual finite existing-frame variant binding/,'the real drawer cannot fall back to the old unused popup variant');
 assert.doesNotMatch(novelWindow,/struct SourceSwitchLiveRow\b/,'retired local manga row is not kept as a second production implementation');
 const sharedPreviousChanged=path=>path===sharedSourceSwitchTypographySuccessor.previousFixture?read(path)+'\n':read(path);
 assert.throws(()=>validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor,sharedPreviousChanged),/selected novel fixture stays byte immutable/,'the shared successor cannot recapture selected novel history');

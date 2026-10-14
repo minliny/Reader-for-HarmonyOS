@@ -334,19 +334,34 @@ const readingSource=component('MangaReadingSurface','../entry/src/main/ets/featu
  // execute the unchanged download branch and keep all transform diagnostics.
  for(const member of surface.members) if(member.getText(tree).includes('@Builder'))
   require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(member.name.getText(tree));
- const {mangaSurfaceSdkDependencies}=await import('./lib/manga-surface-sdk-probe.mjs');
- const called=[],{owner}=createReaderBuilderProbe(readingSource,[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,'panelOverlay'],{...mangaDirectoryAdaptiveDependencies,...fonts,...mangaSurfaceSdkDependencies,MangaDownloadOperationsPanel:Child});
+ const {mangaSurfaceSdkDependencies,mangaSurfaceBoundedControls}=await import('./lib/manga-surface-sdk-probe.mjs');
+ const {boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
+ const shared=mangaSurfaceBoundedControls();
+ shared.hooks.childSources.MangaDownloadOperationsPanel=panelSource;
+ shared.deps.MangaDownloadOperationsPanel=createReaderBuilderProbe(panelSource,boundedMembers(panelSource),shared.deps,shared.hooks).Component;
+ const called=[],{owner}=createReaderBuilderProbe(readingSource,[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,
+  'panelOverlay','isActionPanel','actionPanelInsets','actionPanelSurface','actionPanelHeader','actionPanelBody'],
+  {...mangaDirectoryAdaptiveDependencies,...fonts,...mangaSurfaceSdkDependencies,...shared.deps},shared.hooks);
  const actions=[{id:'pause',label:'暂停下载'}];
  Object.assign(owner,{panel:'downloads',panelOffset:0,panelScrimOpacity:1,downloadActions:actions,
-  downloadActionsLoading:false,downloadActionsFailure:'',downloadActionsChapterIndex:7,backgroundPreference:'paper',
+  downloadActionsLoading:false,downloadActionsFailure:'',downloadActionsChapterIndex:7,backgroundPreference:'paper',panelPhase:'open',stageWidth:400,windowMetricsRevision:0,
   widePanel:()=>false,panelTitle:()=> '下载管理',panelContentInset:()=>18,panelContentHeight:()=>600,panelWidth:()=>400,
+  panelHeight:()=>600,
   panelInsets:()=>({left:0,right:0,top:0,bottom:0}),inkColor:()=> '#ink',paperColor:()=> '#paper',surfaceColor:()=> '#surface',
   performDownloadAction:id=>called.push(['action',id]),openDownloadActions:index=>called.push(['retry',index])});
- owner.panelOverlay();const props=[...owner.children.values()].find(child=>child.params?.actions===actions)?.params;
- assert.ok(props,'the actual reading sheet renders its download child');
- assert.equal(props.panelInkColor,'#ink');assert.equal(props.panelPaperColor,'#paper');
- assert.equal(props.loading,false);assert.equal(props.failureMessage,'');
- props.onAction('pause');props.onRetry();assert.deepEqual(called,[['action','pause'],['retry',7]]);
+ owner.panelOverlay();const panel=shared.walk(owner).find(child=>child instanceof shared.deps.MangaDownloadOperationsPanel);
+ assert.ok(panel,'the actual reading sheet mounts its download child through the shared frame');
+ assert.deepEqual(Array.from(panel.actions,item=>({id:item.id,label:item.label})),actions,
+  'official @Prop observation preserves the admitted business projection');assert.equal(panel.panelScheme,'day');
+ assert.equal(panel.loading,false);assert.equal(panel.failureMessage,'');
+ const frame=shared.walk(owner).find(child=>child instanceof shared.deps.ReaderBoundedSurface);
+ const header=shared.walk(owner).find(child=>child instanceof shared.deps.ReaderBoundedSurfaceHeader);
+ assert.ok(frame);assert.ok(header);assert.equal(frame.specId,'reader-action-sheet');assert.equal(header.title,'下载管理');
+ const frameNode=[...frame.nodes.values()].find(row=>row.type==='Column'&&row.width===400);
+ assert.ok(frameNode);assert.equal(frameNode.constraintSize.maxHeight,600);
+ assert.equal(frameNode.backgroundColor,shared.deps.readerAppColor(shared.deps.resolveDrawerSpec('reader-action-sheet').surfaceRole,'day'));
+ const row=shared.nodes(panel).find(node=>node.accessibilityText==='暂停下载');assert.ok(row);row.onClick();
+ panel.onRetry();assert.deepEqual(called,[['action','pause'],['retry',7]]);
 }
 const downloadMethods=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets',import.meta.url),['canDownloadTarget','downloadTarget']);
 const targetNode={nodeId:'target',kind:'target',title:'Chapter',depth:1,chapterIndex:7,hasChildren:false,expanded:false};

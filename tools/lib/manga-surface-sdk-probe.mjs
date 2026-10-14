@@ -1,5 +1,6 @@
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
+import { boundedSurfaceSdk } from './bounded-surface-sdk-probe.mjs';
 import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from '../../entry/src/main/ets/features/manga/MangaLayoutPolicy.ts';
 import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 import * as readerWindowMetrics from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
@@ -33,15 +34,17 @@ const nativeGesture = new Proxy({}, { get: () => () => {} });
 class ImportedChildBoundary {
   constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
 }
-const actionSheetSource = readFileSync(new URL('../../entry/src/main/ets/features/common/ReaderActionSheetContent.ets', import.meta.url), 'utf8');
-const actionClassSource = actionSheetSource.slice(actionSheetSource.indexOf('export class ReaderActionSheetAction'), actionSheetSource.indexOf('@Component'));
-const ReaderActionSheetAction = new Function(`${stripTypeScriptTypes(actionClassSource).replace(/^export /gm, '')};return ReaderActionSheetAction;`)();
+const actionControls = boundedSurfaceSdk();
+const ReaderActionSheetAction = actionControls.deps.ReaderActionSheetAction;
+export function mangaSurfaceBoundedControls(properties, options = {}) { return boundedSurfaceSdk({ ...options, properties, allowEmptyBranchAdmission: true }); }
 for (const [name, relative] of [
   ['ReaderIconButton', '../../entry/src/main/ets/features/common/ReaderIconButton.ets'],
   ['ReaderDirectoryNavigationSurface', '../../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets'],
   ['MangaReadingDirectoryFallback', '../../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets'],
   ['MangaDownloadOperationsPanel', '../../entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets'],
   ['ReaderActionSheetContent', '../../entry/src/main/ets/features/common/ReaderActionSheetContent.ets'],
+  ['ReaderBoundedSurface', '../../entry/src/main/ets/features/common/ReaderBoundedSurface.ets'],
+  ['ReaderBoundedSurfaceHeader', '../../entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets'],
   ['MangaDirectoryCurrentFooter', '../../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets'],
 ]) {
   const source = readFileSync(new URL(relative, import.meta.url), 'utf8');
@@ -54,6 +57,7 @@ export const mangaSurfaceSdkDependencies = {
   READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SANS_SC_UI_900, MangaSheetFrame,
   ReaderActionSheetAction,
+  resolveDrawerSpec: actionControls.deps.resolveDrawerSpec, readerAppColor: actionControls.deps.readerAppColor,
   ...mangaDirectoryVisual, visual: mangaDirectoryVisual.MANGA_DIRECTORY_VISUAL,
   PanGesture: nativeGesture, PanDirection: { Vertical: 'vertical' },
   GesturePriority: { Low: 'low' },
@@ -63,6 +67,8 @@ export const mangaSurfaceSdkDependencies = {
   MangaReadingDirectoryFallback: ImportedChildBoundary,
   MangaDownloadOperationsPanel: ImportedChildBoundary,
   ReaderActionSheetContent: ImportedChildBoundary,
+  ReaderBoundedSurface: ImportedChildBoundary,
+  ReaderBoundedSurfaceHeader: ImportedChildBoundary,
   MangaDirectoryCurrentFooter: ImportedChildBoundary,
   MangaBookPresentation,
   ...readerWindowMetrics, isReaderProductSurfaceEnabled, isReaderMainTabEnabled, readerWidthClass,

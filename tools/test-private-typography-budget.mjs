@@ -37,7 +37,7 @@ function currentPrivateCount(source,file){
 }
 function rejectsPrivate(source,file){try{return currentPrivateCount(source,file)>0;}catch(error){assert.match(error.message,/finite shared physical inputs\/role bindings changed/);return true;}}
 const common='entry/src/main/ets/features/common/';
-for(const name of ['ReaderActionMenuSurface','ReaderChoiceRow','ReaderDialogSurface','ReaderSearchField','ReaderActionSheetContent']){
+for(const name of ['ReaderActionMenuSurface','ReaderChoiceRow','ReaderDialogSurface','ReaderSearchField']){
   const actualFile=common+name+'.ets',source=readFileSync(new URL('../'+actualFile,import.meta.url),'utf8');
   assert.equal(currentPrivateCount(source,actualFile),0,name+': current genuine finite getter remains admitted');
   const getter=name==='ReaderSearchField'?'textStyle':'spec';
@@ -52,6 +52,13 @@ for(const name of ['ReaderActionMenuSurface','ReaderChoiceRow','ReaderDialogSurf
   const wrongImport=source.replace("'./ReaderSurfaceSpecs'","'./PrivateSurfaceSpecs'").replace("'./ReaderChoiceSpecs'","'./PrivateChoiceSpecs'").replace("'./ReaderTypography'","'./PrivateTypography'");
   assert.ok(rejectsPrivate(wrongImport,actualFile),name+': imported name from private module is not shared');
 }
+const compatibilityFile=common+'ReaderActionSheetContent.ets',compatibilitySource=readFileSync(new URL('../'+compatibilityFile,import.meta.url),'utf8');
+assert.equal(auditTypographyConsumers(compatibilitySource,compatibilityFile).length,0,'compatibility action-sheet facade owns zero text tuples');
+const privateFacade=compatibilitySource.replace('build() {',"build() { Text('private').fontSize(this.spec().labelFontSize);");
+assert.notEqual(privateFacade,compatibilitySource);assert.ok(rejectsPrivate(privateFacade,compatibilityFile),'retired content getter cannot regain admission through the facade');
+const menuFile=common+'ReaderActionMenuSurface.ets',menuSource=readFileSync(new URL('../'+menuFile,import.meta.url),'utf8');
+assert.equal(isSharedTypographyExpression('this.actionSheetSpec().labelFontSize',typographyExpressionContext(menuSource,menuFile),'ReaderActionMenuSurface'),true,'existing menu family binds its second finite sheet resolver');
+assert.ok(rejectsPrivate(menuSource.replace("resolveActionSheetSpec(this.variant === 'quick' ? 'quick' : 'grouped')",'{ labelFontSize: 99 }'),menuFile),'same secondary getter cannot return a private typography bag');
 const actionOwnerFile=common+'ReaderSheetActionList.ets',actionOwnerSource=readFileSync(new URL('../'+actionOwnerFile,import.meta.url),'utf8');
 assert.equal(auditTypographyConsumers(actionOwnerSource,actionOwnerFile).length,0,'bookshelf presentation owner delegates all text to the shared content producer');
 const retiredOwnerText=actionOwnerSource.replace('Stack({ alignContent: Alignment.TopStart }) {',"Stack({ alignContent: Alignment.TopStart }) { Text('private').fontSize(this.surfaceSpec().actionLabelFontSize);");

@@ -24,9 +24,9 @@ const uiContext={getFont:()=>({}),animateTo(_options,action){action();},postFram
  animations.push(a);return a;
 }};
 const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics},uiContext,setTimeout(){return 1;},clearTimeout(){}});
-function scene(width,height,scale,state={kind:'candidates',candidates:[candidate('a'),candidate('a','/alternate'),candidate('b')],refreshing:true},contentKind='text',scheme='day',extra={}){
+function scene(width,height,scale,state={kind:'candidates',candidates:[candidate('a'),candidate('a','/alternate'),candidate('b')],refreshing:true},contentKind='text',scheme='day',extra={},safeInsets=[0,24,0,24]){
  metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,width,height);
- metrics.systemFontScale=scale;metrics.systemInsets=new metricsApi.ReaderInsetsVp(0,24,0,24);
+ metrics.systemFontScale=scale;metrics.systemInsets=new metricsApi.ReaderInsetsVp(...safeInsets);
  const selected=[];
  const o=new deps.SourceSwitchPanel(undefined,{contentKind,readerWindowMetricsRevision:1,bookTitle:'书名',author:'作者',coverUrl:'owned-cover',currentSourceName:'当前书源',latestChapterTitle:'第 20 章',
   state,onSelectCandidate:c=>selected.push(c),...extra},undefined,++serial);
@@ -68,7 +68,15 @@ function assertScene(x,width,height,s){
  for(const [method,value] of Object.entries({drawerWidth:e.drawerWidth,narrowWindow:e.narrow,compactWindow:e.short,drawerHeight:e.drawer,rowHeight:e.row,headingHeight:e.heading,discoveryHeight:e.discovery,discoveryToolbarHeight:e.toolbar,compactDiscoveryAction:e.compactAction,discoveryPrefixVisible:e.prefix,discoveryActionWidth:e.actionWidth,discoveryActionVisibleHeight:e.actionVisible,discoveryActionHitHeight:e.actionHit,columnsHeight:e.columns,footerHeight:e.footer,flowChrome:e.flow,bookHeight:e.book,scrollBook:e.scrollBook,timingWidth:e.timing}))assert.equal(o[method](),value,`${width}x${height}@${s} actual ${method}`);
  const list=x.nodes.find(n=>n.type==='List');assert.ok(list);assert.equal(list.height,'100%');assert.equal(list.scrollBar,'BarState.Auto');assert.equal(list.scrollBarWidth,v.scrollbarWidth);
  assert.equal(list.scrollBarColor,readerAppColor('TOK_SS_SCROLLBAR',scheme));
- const drawer=x.nodes.find(n=>n.constraintSize?.maxWidth===v.drawerMaxWidth);assert.equal(drawer.height,e.drawer);assert.equal(drawer.clip,true);
+ const frames=p.walk(o).filter(child=>child instanceof p.deps.ReaderBoundedSurface);
+ assert.equal(frames.length,1,'the current drawer mounts exactly one existing shared frame');
+ assert.equal(frames[0].specId,'source-switch-drawer','the live drawer uses its explicit variant rather than the retired popup');
+ const drawer=[...frames[0].nodes.values()].find(n=>n.constraintSize?.maxWidth===v.drawerMaxWidth);
+ assert.equal(drawer.width,'100%');assert.equal(drawer.height,e.drawer);assert.equal(drawer.clip,true);
+ assert.deepEqual(drawer.borderRadius,{topLeft:v.drawerCornerRadius,topRight:v.drawerCornerRadius});
+ assert.equal(drawer.backgroundColor,readerAppColor('TOK_SS_WINDOW_BG',scheme));
+ assert.equal(drawer.padding,undefined,'shared frame does not add a second safe-area inset');
+ assert.equal(x.nodes.filter(n=>n.backgroundColor===readerAppColor('TOK_SS_WINDOW_BG',scheme)).length,1,'only the shared frame paints the drawer surface');
  const chrome=[...o.nodes.values()].filter(n=>n.type==='Row'&&typeof n.create?.space==='number');
  assert.equal(chrome.length,5,'only one bounded action-content row joins the existing four chrome rows');
  assert.deepEqual(chrome.filter(n=>n.create.space===v.headingGap).map(n=>n.height),[e.heading,e.columns],'actual SDK heading and column heights consume selected dimensions');
@@ -133,7 +141,8 @@ function assertScene(x,width,height,s){
  tuple(x.nodes.find(n=>n.create==='正在查找'),'discoveryPhase');
  assert.equal(x.nodes.find(n=>n.create==='搜索耗时').width,e.timing);
  assert.equal(x.nodes.find(n=>n.create==='停止').lineHeight,v.discoveryActionLineHeight);
- const transition=drawer.transition;assert.equal(transition.kind,'asymmetric');
+ assert.equal(drawer.transition,undefined,'shared frame leaves transition scheduling with the existing owner');
+ const transition=[...o.nodes.values()].find(n=>n.type==='__Common__'&&n.transition!==undefined).transition;assert.equal(transition.kind,'asymmetric');
  assert.equal(transition.parameters.appear.options.duration,v.openDurationMs);assert.equal(transition.parameters.disappear.options.duration,v.closeDurationMs);
  assert.deepEqual(transition.parameters.appear.options.curve.values,[v.easingX1,v.easingY1,v.easingX2,v.easingY2]);
  const latest={...candidate('a','/alternate'),latencyMs:1,latestChapterTitle:'更新章节'};
@@ -150,6 +159,23 @@ for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])fo
 assertScene(scene(390,844,1),390,844,1);
 assertScene(scene(270,180,2),270,180,2);
 for(const width of [310,265])assertScene(scene(width,844,1),width,844,1);
+// The shared frame clips the existing measured drawer. The business owner
+// continues applying each residual interactive inset once, including wide
+// windows whose centered drawer already absorbs a side obstruction.
+for(const width of [390,720])for(const scheme of ['day','night']){
+ const x=scene(width,844,1,undefined,'text',scheme,{reduceMotion:true},[36,24,48,32]);
+ const frame=p.walk(x.o).find(child=>child instanceof p.deps.ReaderBoundedSurface);
+ const drawer=p.nodes(frame).find(node=>node.constraintSize?.maxWidth===v.drawerMaxWidth);
+ const outside=Math.max(0,width-Math.min(width,v.drawerMaxWidth))/2;
+ const left=Math.max(0,36-outside),right=Math.max(0,48-outside);
+ const side=Math.min(width,v.drawerMaxWidth)-left-right<v.narrowWidthThreshold?v.narrowSideInset:v.normalSideInset;
+ assert.equal(drawer.padding,undefined);
+ const content=x.nodes.filter(node=>node.type==='Column'&&node.layoutWeight===1&&node.padding?.bottom===32);
+ assert.equal(content.length,1,'only the drawer content owns the safe-area padding');
+ assert.deepEqual(content[0].padding,{left:left+side,right:right+side,bottom:32});
+ assert.equal([...x.o.nodes.values()].find(node=>node.type==='__Common__'&&node.transition!==undefined).transition.kind,'identity','owner preserves reduced-motion policy around the shared frame');
+ x.o.aboutToDisappear();
+}
 // The same native track remains reserved before remeasurement supplies a
 // latency. Only content is inset; the row's border and hit extent stay full width.
 {
