@@ -22,11 +22,22 @@ function walk(dir) { for (const e of readdirSync(dir, { withFileTypes: true })) 
 walk(root);
 const trees = new Map(), components = new Map();
 const parseFailures = [];
+function registerObservedClasses(tree) {
+    for (const node of tree.statements) {
+        if (ts.isClassDeclaration(node) && node.name && ts.getAllDecorators(node).some(decorator =>
+            (ts.isCallExpression(decorator.expression) ? decorator.expression.expression : decorator.expression).getText(tree) === 'Observed'))
+            syntax.observedClassCollection.add(node.name.getText(tree));
+    }
+}
 for (const file of files) {
     const tree = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, extname(file) === '.ets' ? ts.ScriptKind.ETS : ts.ScriptKind.TS, options);
     trees.set(file, tree);
     for (const d of tree.parseDiagnostics)
         parseFailures.push({ file, line: tree.getLineAndCharacterOfPosition(d.start ?? 0).line + 1, message: ts.flattenDiagnosticMessageText(d.messageText, ' ') });
+    // The normal frontend collects non-component @Observed classes too.
+    // ObjectLink lowering must use actual declaration metadata, not a type
+    // exemption or a hand-written list of candidate class names.
+    registerObservedClasses(tree);
     for (const n of tree.statements) {
         if (!n.members || !n.name || !n.members.some(m => m.name?.getText(tree) === 'build'))
             continue;
@@ -71,17 +82,49 @@ for (const relative of selected) {
 assert.deepEqual(bindingFailures, [], 'real component initializer fields exist');
 console.log(`PASS ${bindings} actual custom-component field bindings in Index/Shell/manga/bookshelf/detail/directory/source/Native directory assembly`);
 main.partialUpdateConfig.partialUpdateMode = true;
+function transformComponent(tree, node) {
+    utils.storedFileInfo.setCurrentArkTsFile();
+    syntax.componentCollection.currentClassName = node.name.getText(tree);
+    ui.transformLog.sourceFile = tree;
+    const diagnostics = [];
+    const transformed = ts.transform(tree, [context => file => {
+        ui.contextGlobal = context;
+        compiler.processComponentClass(node, context, diagnostics, false);
+        return file;
+    }]);
+    transformed.dispose();
+    return diagnostics;
+}
+// Negative control: removing the actual retained-row decorator still fails
+// the installed SDK's ObjectLink admission, even when its field names exist.
+const sourceWindow = trees.get(resolve(root, 'features/source/SourceSwitchWindow.ets'));
+const retainedRow = sourceWindow.statements.find(node => ts.isClassDeclaration(node) &&
+    node.name?.getText(sourceWindow) === 'SourceSwitchCandidateRow');
+assert.ok(retainedRow);
+const observed = ts.getAllDecorators(retainedRow).find(decorator => decorator.expression.getText(sourceWindow) === 'Observed');
+assert.ok(observed, 'retained production row has its actual Observed decorator');
+const mutatedText = sourceWindow.text.slice(0, observed.getStart(sourceWindow)) +
+    sourceWindow.text.slice(observed.end);
+const mutatedWindow = ts.createSourceFile(sourceWindow.fileName, mutatedText,
+    ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+assert.deepEqual(mutatedWindow.parseDiagnostics, []);
+syntax.observedClassCollection.delete(retainedRow.name.getText(sourceWindow));
+try {
+    registerObservedClasses(mutatedWindow);
+    const mutatedConsumer = mutatedWindow.statements.find(node => node.name?.getText(mutatedWindow) === 'SourceSwitchNovelRow');
+    assert.deepEqual(transformComponent(mutatedWindow, mutatedConsumer).map(diagnostic => ({ type: diagnostic.type, code: diagnostic.code })),
+        [{ type: 'ERROR', code: '10905307' }],
+        'actual SDK rejects ObjectLink when the production Observed decorator is removed');
+} finally {
+    registerObservedClasses(sourceWindow);
+}
+console.log('PASS actual SDK ObjectLink metadata comes from production Observed classes; missing decorator is rejected');
 for (const relative of selected) {
     const tree = trees.get(resolve(root, relative));
     const nodes = tree.statements.filter(n => n.members && n.name && n.members.some(m => m.name?.getText(tree) === 'build'));
     assert.ok(nodes.length > 0, `${relative}: actual production components`);
     for (const node of nodes) {
-        utils.storedFileInfo.setCurrentArkTsFile();
-        syntax.componentCollection.currentClassName = node.name.getText(tree);
-        ui.transformLog.sourceFile = tree;
-        const diagnostics = [];
-        const transformed = ts.transform(tree, [context => file => { ui.contextGlobal = context; compiler.processComponentClass(node, context, diagnostics, false); return file; }]);
-        transformed.dispose();
+        const diagnostics = transformComponent(tree, node);
         assert.deepEqual(diagnostics, [], `${relative}/${node.name.getText(tree)}: real SDK component transform`);
         console.log(`PASS SDK component transform ${relative}/${node.name.getText(tree)}`);
     }
