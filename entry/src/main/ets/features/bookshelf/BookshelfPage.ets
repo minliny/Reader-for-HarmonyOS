@@ -934,6 +934,7 @@ export struct BookshelfPage {
     .alignItems(HorizontalAlign.Start)
     .translate({ y: this.bookCardHeight(this.shelfBookCardWidth(isTablet), isTablet) + 6 })
     .opacity(this.viewSwitchGridContentOpacity)
+    .enabled(this.viewMode === 'cover')
     .hitTestBehavior(this.viewMode === 'cover' ? HitTestMode.Default : HitTestMode.None);
   }
 
@@ -957,6 +958,9 @@ export struct BookshelfPage {
     .alignItems(VerticalAlign.Center)
     .translate({ x: this.listCoverWidth(isTablet) + TOK_SPACE_CONTROL_INLINE })
     .opacity(this.viewSwitchListContentOpacity)
+    // None skips only this Row. Disable its retained More button whenever the
+    // list projection is hidden so it cannot intercept a neighboring cover.
+    .enabled(this.viewMode === 'list')
     .hitTestBehavior(this.viewMode === 'list' ? HitTestMode.Default : HitTestMode.None);
   }
 
