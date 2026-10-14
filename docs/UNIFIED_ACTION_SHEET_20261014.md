@@ -87,3 +87,7 @@
 旧 worktree 的 HAP 控制器未在测试前绑定源码／真实工具链，也没有归档逐项合同结果和日志凭证。现复用项目现行 `hap-pipeline.mjs`、runner、凭证 policy 和配套 guard／真实负例；保留本分支 667 项完整分类，不引入本分支缺失的 scope 清单，且继续限制 110 秒 deadline 与 1 秒终止宽限。HAP 凭证、输入／工具链／日志篡改负例、测试 runner、source inputs 和 build input safety 的本地检查通过；正式 full 构建仍须重新执行全部清单。
 
 新 Core 目录曾出现七个与选定现行源码不同的旧 HEAD 副本（其中四个 Rust 副本被快照扫描纳入），导致 Native preflight 拒绝。副本已移入新工作区的 `.reader-local/core-input-quarantine/` 并保存字节／哈希／时间记录；真实源码、identity、snapshot、manifest、Native SO 均未改变，重新核验恢复到原 d407 指纹。副本的创建进程尚未证明，未归因于构建或治理脚本。
+
+首次完整运行实际结算 667 项：616 PASS、51 FAIL，未发布 HAP。新工作区未生成 Core CLI／未安装 Reader-UI 锁定依赖导致耐久事务 ENOENT 及其投影、边界、空 JSON 连锁错误；已从冻结源码 locked 构建本地 CLI、按 npm 锁安装 UI 依赖，Core d407 和 Native 证据不变，九项相关异常定向复测全部通过。其余七处旧 probe 分别遗漏新 actionPanel 成员、按旧 Stack 查找共享 frame、把任何 bounded 容器误认为旧 source popup、硬匹配已迁移的 height 链、遗漏 Specs 的实值 import 端口；现适配实际 shared Frame/Header 子树与生产端口，保留旧 popup 回退禁止项、安全区、窗口生命周期、业务准入和负例，并通过定向回归。
+
+完整失败清单、逐项原始日志与依赖修复记录保留在打包工作区 `.reader-local/deployment/` 和 `.reader-local/build-dependencies-binding.json`；后续流水线必须重新执行全量，不复用先前 PASS。

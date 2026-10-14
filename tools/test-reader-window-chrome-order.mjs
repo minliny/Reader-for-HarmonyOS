@@ -10,7 +10,7 @@ import {readerAppearanceThemeStyle, readerAppearanceChromeTone} from '../entry/s
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
-import {mangaSurfaceSdkDependencies} from './lib/manga-surface-sdk-probe.mjs';
+import {mangaSurfaceSdkDependencies,mangaSurfaceBoundedControls} from './lib/manga-surface-sdk-probe.mjs';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
 const require=createRequire(import.meta.url);
@@ -88,6 +88,7 @@ const mangaChromeMembers=['windowChromeActive','windowChromeOverlayActive','isRe
  'paperColor','inkColor','loginRequired','imageError','notifyPublishedRows','requestedLast','measureVisibleWindow','onRowAppear',
  'viewportWidth','viewportHeight','stageWidth','stageHeight','widePanel','persistentDirectory','directoryColumnWidth'];
 const mangaMaskSceneMembers=[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,'build','panelOverlay','panelOffset','panelScrimOpacity','panelPhase','panelGeneration',
+ 'isActionPanel','actionPanelInsets','actionPanelSurface','actionPanelHeader','actionPanelBody',
  'panelActionGeneration','panelCloseTask','panelCloseResolve','reduceMotion','windowMetricsRevision','onDirectoryMetricsChanged',
  'quickHeaderMeasured','quickToolsMeasured','quickFooterMeasured','openPanel','closePanel','invalidatePanelMotion','settlePanel',
  'beginPanelDrag','updatePanelDrag','finishPanelDrag','panelTravel','panelHeight','panelWidth','panelContentHeight',
@@ -116,12 +117,15 @@ function mangaSdkFixture(f,text=mangaSource,properties=createArkUIPropertyRuntim
   for(const member of declaration.component.members)if(ts.getAllDecorators(member).some(d=>d.getText(declaration.file)==='@Builder'))
    map.CUSTOM_BUILDER_METHOD.add(member.name.getText(declaration.file));
  }
- const deps={...mangaDirectoryAdaptiveDependencies,...mangaSurfaceSdkDependencies,...properties.sdk,ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,ReaderWindowPolicy:f.P,
+ const shared=mangaSurfaceBoundedControls(properties);
+ const deps={...mangaDirectoryAdaptiveDependencies,...mangaSurfaceSdkDependencies,...shared.deps,ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,ReaderWindowPolicy:f.P,
   hilog:{warn(){}},AppStorage:globalThis.AppStorage,
   uiContext,curves:{interpolatingSpring:(...args)=>({kind:'native-spring',args})},Curve:{EaseInOut:'easeInOut'},
   MangaBookPresentation:{revision:0,useOwner(){}},MangaSessionController:SessionPort};
  const built=createReaderBuilderProbe(text,[...mangaChromeMembers,...(maskScene?mangaMaskSceneMembers:[])].filter(n=>available.has(n)),deps,
-  {...properties.hooks,
+  // Preserve the existing retained-scene boundary: native occupied-branch
+  // removal is outside this chrome probe; shared children use actual code.
+  {...shared.hooks,allowEmptyBranchAdmission:false,
    initialParams:{windowChromeActive:true,windowChromeOverlayActive:false,isReaderIdentityCurrent:()=>identity}});
  owner=built.owner;const {Component,output}=built;
  if(text===mangaSource&&maskScene&&!sdkEvidence.mangaMaskEmittedSHA)sdkEvidence.mangaMaskEmittedSHA=sha256(output);

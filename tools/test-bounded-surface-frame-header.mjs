@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
+import {SOURCE_SWITCH_VISUAL} from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
+import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}`,import.meta.url),'utf8');
 const source=read('features/source/SourceSwitchWindow.ets'),tts=read('features/reading/ReaderTtsConfigOverlay.ets');
 for(const [specId,width,height,radius,type] of [['source-switch-window',300,385,20,'Column'],['tts-config-manager','100%',574,22,'Column'],['tts-config-picker',260,172,14,'Column'],['local-import-selection',350,399.75,20,'Column'],['local-import-progress',350,228,20,'Stack'],['local-import-result-content',350,500,undefined,'Column'],['reader-replace-editor',338,666,12,'Column']]){
@@ -11,6 +13,21 @@ for(const [specId,width,height,radius,type] of [['source-switch-window',300,385,
   f.updateStateVars({specId,surfaceWidth: width,surfaceHeight:height-40});probe.properties.flush();assert.equal(shell.height,height-40,'actual SDK property update keeps the same frame node');
   if(specId==='source-switch-window')for(const property of ['constraintSize','shadow','clip'])assert.ok(!f.attributeCalls.some(c=>c.property===property),`${property} stays absent rather than explicit undefined`);
   if(specId==='local-import-result-content'){assert.equal(shell.backgroundColor,undefined);assert.equal(shell.alignItems,'HorizontalAlign.Start');}
+}
+// The live source drawer is a distinct registered frame. Its measured height
+// is supplied by the source owner; the retired popup above retains its own
+// legacy geometry and cannot substitute for this drawer.
+for(const scheme of ['day','night']){
+  const probe=boundedSurfaceSdk();
+  const f=new probe.deps.ReaderBoundedSurface(undefined,{specId:'source-switch-drawer',surfaceWidth:'100%',surfaceHeight:699,scheme});f.initialRender();
+  const shell=[...f.nodes.values()].find(n=>n.type==='Column'),id=shell.id;
+  assert.equal(shell.width,'100%');assert.equal(shell.height,699);
+  assert.deepEqual(shell.constraintSize,{maxWidth:SOURCE_SWITCH_VISUAL.drawerMaxWidth});
+  assert.deepEqual(shell.borderRadius,{topLeft:SOURCE_SWITCH_VISUAL.drawerCornerRadius,topRight:SOURCE_SWITCH_VISUAL.drawerCornerRadius});
+  assert.equal(shell.backgroundColor,readerAppColor('TOK_SS_WINDOW_BG',scheme));assert.equal(shell.clip,true);
+  assert.equal(shell.padding,undefined);assert.equal(shell.transition,undefined);
+  f.updateStateVars({specId:'source-switch-drawer',surfaceWidth:'100%',surfaceHeight:320,scheme});probe.properties.flush();
+  assert.equal(shell.height,320);assert.equal(shell.id,id,'actual measured drawer update retains its frame actor');
 }
 for(const specId of ['source-switch-window','tts-config-manager','tts-config-picker']){
   const probe=boundedSurfaceSdk();let close=0;
@@ -41,7 +58,8 @@ for(const specId of ['local-file-selection','local-import-result','tts-manager',
 }
 // All style inputs are finite. Native node reuse between incompatible family IDs
 // is intentionally absent: callers retain same-family instances per opening.
-assert.doesNotMatch(source,/ReaderBoundedSurface\(\{/,'approved fullviewport source picker no longer consumes the retained legacy popup spec');
+assert.match(source,/ReaderBoundedSurface\(\{\s*specId: 'source-switch-drawer', surfaceWidth: '100%', surfaceHeight: this\.drawerHeight\(\)/,'approved source picker consumes the explicitly registered measured drawer frame');
+assert.doesNotMatch(source,/ReaderBoundedSurface\(\{\s*specId: 'source-switch-window'|resolvePopupSpec\('source-switch-window'\)/,'approved source picker cannot consume the retained legacy popup spec');
 assert.match(source,/export struct SourceSwitchWindow/);assert.match(source,/\.width\('100%'\)\.height\('100%'\)/);
 assert.match(tts,/ReaderBoundedSurface\(\{[^]*header: \(\): void => \{ this\.boundedHeader\(\); \}, body: \(\): void => \{ this\.boundedContent\(\); \}, actions: \(\): void => \{ this\.boundedActions\(\); \}/);
 assert.doesNotMatch(source,/\.backgroundColor\(readerAppColor\(this\.surfaceSpec\(\)\.surfaceBackgroundRole/);

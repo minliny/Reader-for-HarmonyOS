@@ -1,15 +1,17 @@
 import assert from 'node:assert/strict';
 import { stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
+import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const specs = read('entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets');
 const overlay = read('entry/src/main/ets/features/reading/ReaderTtsConfigOverlay.ets');
 const frame = read('entry/src/main/ets/features/common/ReaderBoundedSurface.ets');
 
-const { resolvePopupSpec } = new Function('TextAlign',
-  `${stripTypeScriptTypes(specs).replace(/^export /gm, '')}; return { resolvePopupSpec };`)(
+const { resolvePopupSpec } = new Function('TextAlign', 'SOURCE_SWITCH_VISUAL',
+  `${stripTypeScriptTypes(specs).replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '')}; return { resolvePopupSpec };`)(
   { Start: 'TextAlign.Start', Center: 'TextAlign.Center' },
+  SOURCE_SWITCH_VISUAL,
 );
 const manager = resolvePopupSpec('tts-config-manager');
 

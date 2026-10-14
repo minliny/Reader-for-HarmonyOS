@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
-import {mangaSurfaceSdkDependencies} from './lib/manga-surface-sdk-probe.mjs';
+import {mangaSurfaceSdkDependencies,mangaSurfaceBoundedControls} from './lib/manga-surface-sdk-probe.mjs';
 import {createDefaultReaderWindowMetrics,ReaderInsetsVp,ReaderRectVp,readerInteractiveSafeInsets,readerContentSafeTop} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -44,6 +44,7 @@ function mangaFixture(text=source,values={}){
  const dataText=tree.statements.find(n=>n.name?.getText(tree)==='MangaStripDataSource').getText(tree);
  const DataSource=new Function('MangaStripProjection',`${stripTypeScriptTypes(dataText)};return MangaStripDataSource`)(Projection);
  const properties=createArkUIPropertyRuntimeProbe(),scrolls=[],areaRequests=[],rows=[];
+ const shared=mangaSurfaceBoundedControls(properties);
  let metrics=createDefaultReaderWindowMetrics(),owner,admitted=false;
  metrics.systemInsets=new ReaderInsetsVp(0,48,0,0);metrics.gestureInsets=new ReaderInsetsVp(0,0,0,24);
  metrics.statusBarRect=new ReaderRectVp(0,0,390,48);
@@ -54,7 +55,7 @@ function mangaFixture(text=source,values={}){
  }
  class Scroller{currentOffset(){return{xOffset:31,yOffset:0};}scrollTo(...args){scrolls.push(['horizontal',...args]);}}
  const built=createReaderBuilderProbe(text,names,{
-  ...properties.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class{},
+  ...properties.sdk,...mangaSurfaceSdkDependencies,...shared.deps,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class{},
   ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeInsets,
   ScrollAlign:{START:'start'},ImageFit:{Fill:'fill'},ScrollDirection:{Horizontal:'horizontal'},TouchType:{Down:0},
   LazyForEach:{create(_id,generatedOwner,data,item,key){
@@ -65,7 +66,10 @@ function mangaFixture(text=source,values={}){
   Gesture:nativeBoundary,GestureGroup:nativeBoundary,PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,TapGesture:nativeBoundary,
   globalThis:{Gesture:nativeBoundary,PanGesture:nativeBoundary,GestureGroup:nativeBoundary,PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,TapGesture:nativeBoundary},
   GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
- },properties.hooks);
+ // Preserve this probe's existing retained-actor boundary for live controls:
+ // native removal of an occupied branch is outside its model. Shared frame,
+ // header and action children still mount from their actual production code.
+ },{...shared.hooks,allowEmptyBranchAdmission:false});
  owner=built.owner;owner.isReaderIdentityCurrent=()=>false; // Geometry has no native Window owner; order test covers production Window intent.
  const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:'c'},manifestVersion:'r7',pages:[{ordinal:0,pageId:'p0'}]};
  owner.controller={chapter:{manifest,chapterIndex:5},tile:()=>({image:{fileUri:'file://r7-ready.png',revision:'pixels'}}),visiblePages:()=>[],
@@ -80,7 +84,7 @@ function mangaFixture(text=source,values={}){
  const list=[...owner.nodes.values()].find(n=>n.type==='List');
  const stage=[...owner.nodes.values()].find(n=>n.type==='Row'&&typeof n.onAreaChange==='function');
  assert.ok(image&&listItem&&scroll&&list&&stage,'actual emitted LazyForEach callback admits an image and row');
- return{owner,properties,rows,image,listItem,scroll,list,stage,scrolls,areaRequests,output:built.output,
+ return{owner,properties,shared,rows,image,listItem,scroll,list,stage,scrolls,areaRequests,output:built.output,
   get metrics(){return metrics;},set metrics(value){metrics=value;},
   flush(){properties.flush();},
   area(){areaRequests.push([390,844]);stage.onAreaChange({}, {width:390,height:844});scroll.onAreaChange({}, {width:390,height:844});properties.flush();}};
@@ -176,10 +180,23 @@ function verifyShell(){
 const mangaEvidence=verifyManga(),indexEvidence=verifyIndex(),shellEvidence=verifyShell();
 for(const panel of ['directory','mode','settings','more']){
  const f=mangaFixture(source,{viewportWidth:240,stageWidth:240,viewportHeight:280,stageHeight:280,panel,controlsVisible:false});
- const shell=[...f.owner.nodes.values()].find(n=>n.type==='Stack'&&n.clip===true&&n.width==='100%');
- const size=[...f.owner.nodes.values()].find(n=>n.type==='Column'&&n.constraintSize?.maxHeight===f.owner.panelContentHeight());
- assert.ok(shell&&size);assert.ok(size.constraintSize.minHeight<=size.constraintSize.maxHeight,'short phone has consistent measured content bounds');
- assert.equal(size.constraintSize.maxHeight,f.owner.panelHeight()-24);assert.deepEqual({...shell.padding},{left:0,top:0,right:0,bottom:24});
+ if(panel==='more'){
+  const frame=f.shared.walk(f.owner).find(child=>child instanceof f.shared.deps.ReaderBoundedSurface);
+  assert.ok(frame,'More mounts the actual shared frame rather than a private Stack');assert.equal(frame.specId,'reader-action-sheet');
+  const shell=[...frame.nodes.values()].find(n=>n.type==='Column'&&n.clip===true&&n.width==='100%');
+  assert.ok(shell);assert.ok(shell.constraintSize.minHeight<=shell.constraintSize.maxHeight,'short shared phone frame has consistent measured bounds');
+  assert.equal(shell.constraintSize.maxHeight,f.owner.panelHeight(),'shared frame ceiling includes its reserved navigation band once');
+  assert.equal(shell.constraintSize.minHeight,Math.min(260,f.owner.panelContentHeight())+24);
+  assert.deepEqual({...shell.padding},{left:0,top:0,right:0,bottom:24});
+  const body=f.shared.nodes(f.owner).find(n=>n.type==='Scroll'&&n.scrollBar==='BarState.Auto');
+  assert.ok(body);assert.equal(f.owner.panelContentHeight(),shell.constraintSize.maxHeight-24);
+  assert.equal(body.constraintSize.maxHeight,f.owner.panelContentHeight()-70,'action body removes the navigation band and shared phone header once');
+ }else{
+  const shell=[...f.owner.nodes.values()].find(n=>n.type==='Stack'&&n.clip===true&&n.width==='100%');
+  const size=[...f.owner.nodes.values()].find(n=>n.type==='Column'&&n.constraintSize?.maxHeight===f.owner.panelContentHeight());
+  assert.ok(shell&&size);assert.ok(size.constraintSize.minHeight<=size.constraintSize.maxHeight,'short phone has consistent measured content bounds');
+  assert.equal(size.constraintSize.maxHeight,f.owner.panelHeight()-24);assert.deepEqual({...shell.padding},{left:0,top:0,right:0,bottom:24});
+ }
  assertFullWindow(f.owner.nodes.get(0),'short phone image root');
 }
 {
