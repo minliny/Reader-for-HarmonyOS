@@ -183,7 +183,7 @@ console.log('PASS narrow cold entry: 3 of 10000 real page facts, no full manifes
  await assert.rejects(new Controller(broken).awaitPendingProgress('s','b'),/durable write failed/,'reopen observes prior failure');
 }
 console.log('PASS nonblocking disposal: pixel leases released immediately, admitted CAS survives owner close, rapid reopen waits, failed tail stays observable');
-// The actual surface opens narrow pixels before starting the slow wide catalog.
+// The actual surface opens narrow pixels before starting the slow cached catalog query.
 {
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
  const phases=[];let finishCatalog;
@@ -197,7 +197,7 @@ console.log('PASS nonblocking disposal: pixel leases released immediately, admit
  const ControllerSurface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
  const controller=new Controller(rt);
  const surface=Object.assign(new ControllerSurface(),{mounted:true,controller,runtime:rt,sourceId:'s',bookId:'b',offline:false,
-  remoteBookSeed:{},opened:false,publish:()=>phases.push('published'),restore:()=>phases.push('restored'),onRemoteSessionReady:()=>phases.push('catalog-ready')});
+  remoteBookSeed:{},opened:false,acquirePreparedCatalog:()=>{phases.push('catalog-start');return catalog;},publish:()=>phases.push('published'),restore:()=>phases.push('restored'),onRemoteSessionReady:()=>phases.push('catalog-ready')});
  await surface.open(controller);assert.equal(surface.opened,true);assert.ok(phases.indexOf('published')<phases.indexOf('catalog-start'));assert.equal(phases.includes('catalog-ready'),false);
  surface.mounted=false;controller.close();finishCatalog({});await new Promise(r=>setImmediate(r));assert.equal(phases.includes('catalog-ready'),false);
 }
@@ -601,6 +601,8 @@ console.log('PASS real Surface/Gateway/Controller failed changed-content reopen 
  const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
  const {createRequire}=await import('node:module');
+ const {ReadingEntryPreparation}=await import('./lib/reading-entry-owner-probe.mjs');
+ const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
  const surfaceSource=readFileSync(new URL('MangaReadingSurface.ets',root),'utf8');
  const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/ReaderShell.ets',import.meta.url),'utf8');
  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -609,11 +611,11 @@ console.log('PASS real Surface/Gateway/Controller failed changed-content reopen 
  syntax.propCollection.set('MangaReadingSurface',new Set([...surfaceSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match=>match[1])));
  const properties=createArkUIPropertyRuntimeProbe();
  const childSdk=createReaderBuilderProbe(surfaceSource,
-   ['remoteSession','onSelectDirectoryTarget','open','acquireCatalog','effectiveFit','configureAdjacentChapter','adjacentChapter','directoryEntries','selectDirectoryTarget',
+   ['remoteSession','onSelectDirectoryTarget','open','acquireCatalog','acquirePreparedCatalog','effectiveFit','configureAdjacentChapter','adjacentChapter','directoryEntries','selectDirectoryTarget',
     'performPanelAction','closePanel','dismissPanelKeyboard','panelTravel','panelWidth','panelHeight','widePanel',
     'panel','panelPhase','panelGeneration','panelActionGeneration','panelCloseTask','panelCloseResolve','panelOffset','panelScrimOpacity','reduceMotion',
     'onWindowChromeChanged'],
-   {...properties.sdk,MangaSessionGateway,MangaBookPresentation,AppStorage:{setOrCreate(){}},
+   {...properties.sdk,MangaSessionGateway,MangaBookPresentation,RemoteReadingFlowGateway,AppStorage:{setOrCreate(){}},
     inputMethod:{getController:()=>({hideTextInput:async()=>{}})},
     uiContext:{getFocusController:()=>({clearFocus(){}})}},properties.hooks);
  const parentSdk=createReaderBuilderProbe(shellSource,['remoteSession','mangaSurface','mangaIdentityKey'],
@@ -628,17 +630,19 @@ console.log('PASS real Surface/Gateway/Controller failed changed-content reopen 
  const catalog={contentKind:'manga',sourceVersion:'r',identity:{sourceId:'s',bookId:'b'},book:{title:'cold manga'},
    entries:[{index:0,url:'/c',title:'chapter'},{index:1,url:'/next',title:'next chapter'}]};
  let finishCatalog,writes=0;const catalogs=new Promise(resolve=>finishCatalog=resolve),requests=[];
- const rt={supportsCoreCapability:()=>true,async request(method,params){
+ const preparation=new ReadingEntryPreparation({},false);
+ const rt={supportsCoreCapability:()=>true,captureReadingContentValidity:(s,b)=>preparation.captureContentValidity(s,b),async request(method,params){
    requests.push([method,params]);
+   if(method==='cache.book.status'){const loaded=await catalogs;return {data:{sourceId:'s',bookId:'b',tocAvailable:true,sourceVersion:'r',catalogVersion:'c1',contextVersion:'x1',continuationVariables:{},chapters:loaded.entries.map(e=>({chapterIndex:e.index,title:e.title,url:e.url,variables:{},proofState:'verified'}))}}}
    if(method==='manga.entry.get')return {data:{entry:{chapter:{...structuredClone(chapter),cached:true,totalPages:8,pageStart:0},targetOrdinal:0,recoveryRequired:false,progress:{token:{epoch:93,revision:0},location:null}}}};
    if(method==='manga.chapter.get'){assert.equal(params.chapterIndex,1,'only optional canonical next-chapter preparation may follow cached entry');return {data:structuredClone(next)}};
    writes++;throw Error('cold catalog publication cannot write user data');
  },async loadReadingImage(){return {fileUri:'file://cold-entry',width:600,height:800,revision:'pixels'}},releaseReadingImage(){},
-   bookAcquisitions:()=>({acquireBook:()=>catalogs})};
+   bookAcquisitions:()=>({acquireBook:()=>assert.fail('cached reader bootstrap cannot mutate its catalog')})};
  const controller=new Controller(rt);
  parent.onRemoteSessionReady=session=>{parent.updateStateVars({remoteSession:session});properties.flush();};
  Object.assign(surface,{mounted:true,controller,runtime:rt,sourceId:'s',bookId:'b',offline:false,
-   remoteBookSeed:{sourceId:'s',bookId:'b',contentKind:'manga'},fitPreference:'width',horizontal:false,
+   remoteBookSeed:{sourceId:'s',bookId:'b',contentKind:'manga',title:'cold manga',author:'Writer',detailUrl:'/b'},fitPreference:'width',horizontal:false,
    publish(){},restore(){},updateViewport(){},onRemoteSessionReady:session=>parent.onRemoteSessionReady(session)});
  await surface.open(controller);
  assert.equal(surface.opened,true);assert.equal(surface.remoteSession,undefined);
@@ -679,6 +683,6 @@ console.log('PASS real Surface/Gateway/Controller failed changed-content reopen 
  assert.equal(indexOwner.requestedChapterIndex,0);assert.equal(indexOwner.mangaChapterRequestGeneration,2,
    'Index canonical/navigable checks still reject a non-readable group on the fallback path');
  assert.equal(saves,3,'both directory adapters retain Surface save-before-navigation');
- assert.equal(writes,0);controller.close();
+ assert.equal(writes,0);assert.equal(controller.sessionContentCurrent(),true);controller.close();preparation.close();
 }
 console.log('PASS actual SDK Shell/retained Surface/property runtime plus cold Controller entry: later catalog updates directory and next chapter; flat/proof-backed picks reach existing Index guards, preserve proof and save ordering; no remount or user-data writes');

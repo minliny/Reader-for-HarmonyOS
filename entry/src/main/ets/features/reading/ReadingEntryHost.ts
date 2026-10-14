@@ -287,20 +287,20 @@ export class ReadingEntryHost {
     const toc = session.contentKind === 'manga' ? this.mangaDirectoryProjection(session, previous) : this.catalog(session);
     this.state = { ...this.state, book: this.sessionDetail(session, book.sourceName), toc, loadingMessage: '' };
     this.publish(scope, lease);
-    if (session.contentKind === 'manga') void this.refreshMangaDirectoryDisplay(refreshDirectoryDisplay);
+    if (session.contentKind === 'manga') void this.refreshMangaDirectoryDisplay(refreshDirectoryDisplay, false);
     return true;
   }
 
   /** One directory-only request for this owner. Prepared-pixel reuse and
    * explicit directory opening join the same task; page turns do not call it. */
-  refreshMangaDirectoryDisplay(forceRead: boolean = false): Promise<void> {
+  refreshMangaDirectoryDisplay(forceRead: boolean = false, allowCatalogNetwork: boolean = true): Promise<void> {
     const lease = this.lease, scope = this.state.scopeId, session = this.state.session;
     if (lease === undefined || session?.contentKind !== 'manga' || !this.current(scope, lease)()) return Promise.resolve();
     if (this.mangaDisplayRefreshSession === session && this.mangaDisplayRefreshTask !== undefined) return this.mangaDisplayRefreshTask;
     if (!forceRead && this.mangaDisplayRefreshedSession === session) return Promise.resolve();
     const generation = this.state.sessionGeneration;
     const current = (): boolean => this.current(scope, lease)() && generation === this.state.sessionGeneration && this.state.session === session;
-    const allowNetwork = session.acquisitionMode !== 'offline' &&
+    const allowNetwork = allowCatalogNetwork && session.acquisitionMode !== 'offline' &&
       this.runtime.mangaOfflineProbeFor?.(session.identity.sourceId, session.identity.bookId) !== true;
     this.mangaDisplayRefreshSession = session;
     const task: Promise<void> = new RemoteReadingFlowGateway(this.runtime).refreshMangaDirectoryDisplaySession(session, current, allowNetwork)

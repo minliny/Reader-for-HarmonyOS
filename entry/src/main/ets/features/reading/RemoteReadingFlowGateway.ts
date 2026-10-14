@@ -349,9 +349,9 @@ export class RemoteReadingFlowGateway {
   }
 
   private async readCachedCatalogAdmission(seed: RemoteReadingBookSeed, isCurrent: (() => boolean) | undefined,
-    allowMangaCatalog: boolean): Promise<RemoteReadingSession> {
+    allowMangaCatalog: boolean, requireDirectoryProof: boolean = false): Promise<RemoteReadingSession> {
     try {
-      return await this.readCachedSession(seed, isCurrent, false, allowMangaCatalog);
+      return await this.readCachedSession(seed, isCurrent, requireDirectoryProof, allowMangaCatalog);
     } catch (error) {
       if (error instanceof RemoteReadingGatewayError && error.code === 'invalidResponse') {
         throw new RemoteReadingGatewayError('cacheDerivedCorrupt', error.message, 'cache.book.status',
@@ -480,8 +480,10 @@ export class RemoteReadingFlowGateway {
     contextIsCurrent: boolean = false,
     /** Catalog metadata for an already admitted manga reader; no body authority. */
     allowMangaCatalog: boolean = false,
+    /** A live prepared manifest cannot borrow missing proof values from its seed. */
+    requireDirectoryProof: boolean = false,
   ): Promise<RemoteReadingSession> {
-    const cached = await this.readCachedCatalogAdmission(seed, isCurrent, allowMangaCatalog);
+    const cached = await this.readCachedCatalogAdmission(seed, isCurrent, allowMangaCatalog, requireDirectoryProof);
     if (allowMangaCatalog && seed.contentKind === 'manga') cached.contentKind = 'manga';
     return {
       ...cached,

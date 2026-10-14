@@ -307,6 +307,7 @@
     "test-manga-chapter-first-entry.mjs",
     "test-manga-chapter-preparation.mjs",
     "test-manga-chapter-transition.mjs",
+    "test-manga-cached-catalog-fence.mjs",
     "test-manga-candidate-visible-metadata-sdk.mjs",
     "test-manga-cross-chapter-counter-sdk.mjs",
     "test-manga-directory-demo-parity-sdk.mjs",

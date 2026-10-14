@@ -5285,7 +5285,7 @@ struct Index {
   private loadDirectoryOperationProjections(): void {
     const owner = this.mountedRuntimeOwner, book = this.detailBook, session = this.remoteReadingSession;
     if (owner === undefined || book === undefined) return;
-    if (session?.contentKind === 'manga') void this.getReadingEntryHost()?.refreshMangaDirectoryDisplay(true);
+    if (session?.contentKind === 'manga') void this.getReadingEntryHost()?.refreshMangaDirectoryDisplay(true, !this.readingSessionActive);
     const directory = this.getReaderDirectoryHost(owner);
     if (directory !== undefined) void directory.load(this.directoryBinding(owner, book)).catch((): void => {});
     const offline = this.getReadingOfflineHost(owner);
@@ -5964,7 +5964,7 @@ struct Index {
       // A Quick-open intent comes from ArkUI's copied @Prop. Refresh the
       // already owned session without reinstalling that DTO or invalidating
       // the same in-flight full/reader directory projection.
-      void host.refreshMangaDirectoryDisplay(true);
+      void host.refreshMangaDirectoryDisplay(true, false);
       return;
     }
     if (!host.readerSessionReady(session, refreshDirectoryDisplay)) return;

@@ -16,7 +16,7 @@ import type { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
 import type { ReadingGatewayRuntime } from '../reading/ReadingGatewayRuntime';
 import { RemoteReadingFlowGateway, type RemoteReadingBookSeed, type RemoteReadingSession, type RemoteReadingTocEntry } from '../reading/RemoteReadingFlowGateway';
 import { MangaSessionGateway } from './MangaSessionGateway';
-import type { MangaManifest } from './MangaContract';
+import type { MangaManifest, MangaChapterResult } from './MangaContract';
 import { MangaSessionController, MangaTileRequest } from './MangaSessionController';
 import { MangaChapterTransitionCoordinator, MangaChapterTransitionCandidate } from './MangaChapterTransitionCoordinator';
 import { PullToRefresh, PullDirection } from './vendor/pulltorefresh/PullToRefresh';
@@ -361,7 +361,9 @@ export struct MangaReadingSurface {
               this.configureAdjacentChapter(session, controller); this.onRemoteSessionReady(session);
             }
             else if (this.remoteBookSeed !== undefined && !catalogRecoveryAttempted) {
-              void this.acquireCatalog(current).then((catalog: RemoteReadingSession | undefined): void => {
+              // Cached pixels already own their content fence. Metadata-only
+              // bootstrap cannot reparse a catalog and revoke that owner.
+              void this.acquirePreparedCatalog(prepared.chapter, current).then((catalog: RemoteReadingSession | undefined): void => {
                 if (catalog !== undefined && current() && catalog.identity.sourceId === this.sourceId && catalog.identity.bookId === this.bookId && catalog.contentKind === 'manga') {
                   this.configureAdjacentChapter(catalog, controller); this.onRemoteSessionReady(catalog);
                 }
@@ -411,6 +413,25 @@ export struct MangaReadingSurface {
       if (this.mounted) this.error = error instanceof Error ? error.message : '漫画加载失败';
       if (this.offline) { controller.close(); this.runtime?.finishMangaOfflineProbe?.(this.sourceId, this.bookId); }
     }
+  }
+
+  private async acquirePreparedCatalog(chapter: MangaChapterResult, current: () => boolean): Promise<RemoteReadingSession | undefined> {
+    if (this.runtime === undefined || this.remoteBookSeed === undefined) return undefined;
+    const manifest = chapter.manifest;
+    const seed = this.remoteBookSeed;
+    const cachedSeed: RemoteReadingBookSeed = { sourceId: seed.sourceId, bookId: seed.bookId, detailUrl: seed.detailUrl,
+      title: seed.title, author: seed.author, authorIdentity: seed.authorIdentity, contentKind: 'manga',
+      kind: seed.kind, coverUrl: seed.coverUrl, intro: seed.intro, lastChapter: seed.lastChapter,
+      sourceVersion: manifest.sourceRuleVersion, searchVariables: seed.searchVariables };
+    const catalog = await new RemoteReadingFlowGateway(this.runtime).openCachedCatalogSession(
+      cachedSeed, current, !this.offline, true, true);
+    if (!current() || catalog.identity.sourceId !== manifest.chapter.sourceId || catalog.identity.bookId !== manifest.chapter.bookId ||
+      catalog.sourceVersion !== manifest.sourceRuleVersion || (!this.offline && catalog.requiresContextRefresh === true) ||
+      [catalog.catalogVersion, catalog.contextVersion].some((version: string | undefined): boolean => version === undefined || version.trim().length === 0) ||
+      catalog.entries.some((entry: RemoteReadingTocEntry): boolean => entry.proofState !== 'verified')) return undefined;
+    const matches = catalog.entries.filter((entry: RemoteReadingTocEntry): boolean => entry.index === chapter.chapterIndex &&
+      entry.url === manifest.chapter.chapterId && (entry.navigable !== false || entry.resumeOnly === true));
+    return matches.length === 1 ? catalog : undefined;
   }
 
   private async acquireCatalog(current: () => boolean, forceRefresh: boolean = false): Promise<RemoteReadingSession | undefined> {
