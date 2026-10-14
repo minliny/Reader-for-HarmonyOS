@@ -45,7 +45,7 @@ Final registered production fingerprints:
 - `entry/src/main/ets/features/common/ReaderActionSheetContent.ets`: `6c1e306a740de2642f31db6d419bb76a6bd6aee8a268c3b65c3c89bc1ceec47c`
 - `entry/src/main/ets/features/common/ReaderBoundedSurface.ets`: `54434a4649babb9e00a4bc3117790321f735fddd9e18f74e7cfd411f8087d986`
 - `entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets`: `ef5432111d9e1700dd72fb6b2bc28b2473f79b6d59893a83873e7d6fde2595bb`
-- `entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets`: `3860f0200daab4f57856247ed8a9d824805e4941ac13f6f0604f50ee3b61258f`
+- `entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets`: `c6687add623397fc0dd9055e96171d0482817aac0f85e09fe31c920e2fabf2e7`
 
 These are code and local SDK facts. HAP packaging, installation, native visual acceptance and user acceptance remain separate and unclaimed.
 
@@ -54,3 +54,5 @@ These are code and local SDK facts. HAP packaging, installation, native visual a
 The canonical build at 3261180a passed all 667 Host contracts and then reported three ArkTS errors. The action recipe registry now uses an explicit interface with grouped/quick fields instead of the mapped Record type; all recipe values and lookup behavior remain unchanged. The shared handle callbacks use onHandlePanStart/Update/End, avoiding CustomComponent drag API collisions. The Manga owner still receives the same start, offset update, offset/velocity end and cancellation events. Exact producer/spec/caller contracts were refreshed; packaging and device verification remain with the canonical pipeline.
 
 Targeted local verification passed: bounded-surface-frame-header, reader-action-sheet-content, manga-sheet-motion-sdk and manga-surface-sdk. These include real lowered pan start/update/end/cancel forwarding and unchanged full owner motion/token fences. Formal whole-app ArkTS compilation remains pending the next canonical build.
+
+The next canonical build at 05d093ce passed all 667 Host contracts and confirmed the earlier three ArkTS errors were removed, then rejected dynamic indexing against the new explicit recipe interface (arkts-no-props-by-index). The action selector now reads quick/grouped fields directly with the original finite ID choice. The existing registry guard rejects the old indexed selector, and both actual SDK variant paths remain exercised. No recipe values or gesture behavior change.

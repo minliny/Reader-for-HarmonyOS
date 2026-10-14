@@ -517,7 +517,7 @@ const ACTION_SHEET_SPECS: ActionSheetSpecs = {
 };
 
 export function resolveActionSheetSpec(id: ActionSheetSpecId): ActionSheetSurfaceSpec {
-  return ACTION_SHEET_SPECS[id];
+  return id === 'quick' ? ACTION_SHEET_SPECS.quick : ACTION_SHEET_SPECS.grouped;
 }
 
 /**

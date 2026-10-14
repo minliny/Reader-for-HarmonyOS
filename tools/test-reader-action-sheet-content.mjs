@@ -17,9 +17,19 @@ function verifyRegistryContext(candidate){
   assert.ok(declaration,'action-sheet registry object literal requires an explicit declared interface');
   assert.deepEqual(declaration.members.map(member=>[member.name.getText(parsed),member.type.getText(parsed)]),[['grouped','ActionSheetSurfaceSpec'],['quick','ActionSheetSurfaceSpec']]);
   assert.deepEqual(registry.initializer.properties.map(property=>property.name.getText(parsed)),['grouped','quick'],'both finite recipes remain present without widening the registry');
+  const resolver=parsed.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==='resolveActionSheetSpec');
+  assert.equal(resolver?.body?.statements.length,1,'actual finite selector has one return');
+  const returned=resolver.body.statements[0];assert.ok(ts.isReturnStatement(returned)&&ts.isConditionalExpression(returned.expression),'the explicit interface selector must use direct fields instead of dynamic indexing');
+  const selection=returned.expression;
+  assert.equal(selection.condition.getText(parsed),"id === 'quick'");
+  assert.ok(ts.isPropertyAccessExpression(selection.whenTrue)&&ts.isPropertyAccessExpression(selection.whenFalse),'both finite branches read declared fields directly');
+  assert.deepEqual([selection.whenTrue.getText(parsed),selection.whenFalse.getText(parsed)],['ACTION_SHEET_SPECS.quick','ACTION_SHEET_SPECS.grouped'],'both variant recipes retain their original admission');
 }
 const specSource=read('features/common/ReaderSurfaceSpecs.ets');verifyRegistryContext(specSource);
 assert.throws(()=>verifyRegistryContext(specSource.replace('const ACTION_SHEET_SPECS: ActionSheetSpecs =','const ACTION_SHEET_SPECS: Record<ActionSheetSpecId, ActionSheetSurfaceSpec> =')),/requires an explicit declared interface/,'the original mapped-type object literal is rejected before packaging');
+const indexedSelector=specSource.replace("return id === 'quick' ? ACTION_SHEET_SPECS.quick : ACTION_SHEET_SPECS.grouped;",'return ACTION_SHEET_SPECS[id];');
+assert.notEqual(indexedSelector,specSource,'negative control mutates the actual production selector');
+assert.throws(()=>verifyRegistryContext(indexedSelector),/direct fields instead of dynamic indexing/,'the old index access against the explicit interface is rejected before packaging');
 const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
 const actions = [
   new sdk.deps.ReaderActionSheetAction('source', '更换书源', '阅读', '', '', true, undefined, 'default', true),
