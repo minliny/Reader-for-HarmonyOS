@@ -75,3 +75,11 @@
 统一的是公共容器、标题／关闭结构、主题与动作渲染规则，具体弹窗通过有限规格保留场景差异。恢复确认 Alert、书籍移除 Dialog、全屏目录和下载任务页面分别承载确认、长列表和任务进度语义，继续使用各自宿主。后续动作选择弹窗应新增动作数据和宿主绑定，复用 `ReaderActionMenuSurface` 和已有容器，不另建全局 ModalHost 或第二套样式框架。
 
 本 worktree 从 Harmony 子仓库基线提交创建，未复制原 checkout 的未提交改动；没有执行 HAP、安装或设备验收。设备视觉仍需在目标产物绑定后单独验证。
+
+## VM 打包补充（2026-10-14）
+
+用户随后授权安装到 VM。打包预检发现 `test-reader-action-sheet-content.mjs` 未加入合同分类清单；现已按实际 SDK 组装归入 integration，清单完整性为 667 项（source 202、integration 465）。旧 runner 的 300 秒默认／上限也与现行 HAP 合同不符，现统一为 110 秒，TERM 到 KILL 的宽限上限为 1 秒。真实短 deadline、TERM 处理后 exit0 仍失败、忽略 TERM 后 KILL、全部 selected 必须 settle 的既有回归及超限 API 负例通过；清单验证不代表全量测试已运行。
+
+原嵌套 worktree 缺少相邻 Core 与本地 SO，符号链接补齐又被 workspace 输入合同拒绝，故使用真实三仓目录的 `/Users/minliny/Documents/Reader/.reader-isolated/unified-popup-vm-20261014` 打包。弹窗生产实现保持提交 `021f338e` 的内容，后续提交只补交付门禁。Core 使用现行已验证的 `2166576` dirty 快照，fingerprint 为 `d4073b8e59b4c4763fdb6ccd744f190c6474fe6bd4bff4647414272eb7555299`；其 Native／SDK／构建证据匹配，六项 SDK 字节与本弹窗分支一致，按 iteration 如实记录，不声明 clean acceptance。
+
+部署前已记录现有 Mate 80 Pro VM 的启动完成与稳定 SceneBoard 证据；20:33 的系统 `THREAD_BLOCK_6S` 发生在本弹窗包安装前，未归因于本次实现。最终 HAP、安装与启动结果以不可变 manifest 及部署回执为准。

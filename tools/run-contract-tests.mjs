@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync, spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 
+export const MAX_CONTRACT_TIMEOUT_MS = 110_000;
+export const MAX_CONTRACT_KILL_GRACE_MS = 1_000;
+
 export function contractTests(root, tier) {
   assert.ok(['source', 'full'].includes(tier));
   const manifest = JSON.parse(readFileSync(resolve(root, 'tools/contract-test-tiers.json'), 'utf8'));
@@ -24,7 +27,7 @@ export function runContracts(root, tier) {
   const { selected, integrationCount } = contractTests(root, tier);
   for (const name of selected) {
     const result = spawnSync(process.execPath, [resolve(root, 'tools', name)], {
-      cwd: root, stdio: 'inherit', timeout: 300_000,
+      cwd: root, stdio: 'inherit', timeout: MAX_CONTRACT_TIMEOUT_MS,
     });
     if (result.error || result.status !== 0) throw new Error(`${name} failed (${result.error?.code ?? result.status ?? result.signal})`);
   }
@@ -37,10 +40,10 @@ export function runContracts(root, tier) {
 export async function runContractsBounded(root, tier, workers = 1, testOptions = {}) {
   assert.ok(Number.isInteger(workers) && workers >= 1 && workers <= 4, 'workers must be an integer in 1..4');
   // Shorter deadlines are only an imported test seam, never a CLI/env option.
-  const timeoutMs = testOptions.timeoutMs ?? 300_000;
-  const killGraceMs = testOptions.killGraceMs ?? 1_000;
-  assert.ok(Number.isInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= 300_000, 'invalid test deadline');
-  assert.ok(Number.isInteger(killGraceMs) && killGraceMs > 0 && killGraceMs <= 10_000, 'invalid termination grace');
+  const timeoutMs = testOptions.timeoutMs ?? MAX_CONTRACT_TIMEOUT_MS;
+  const killGraceMs = testOptions.killGraceMs ?? MAX_CONTRACT_KILL_GRACE_MS;
+  assert.ok(Number.isInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= MAX_CONTRACT_TIMEOUT_MS, 'invalid test deadline');
+  assert.ok(Number.isInteger(killGraceMs) && killGraceMs > 0 && killGraceMs <= MAX_CONTRACT_KILL_GRACE_MS, 'invalid termination grace');
   const { selected, integrationCount } = contractTests(root, tier);
   const logRoot = mkdtempSync(resolve(tmpdir(), 'reader-contract-run-'));
   const results = []; let cursor = 0;

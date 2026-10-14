@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runContracts, runContractsBounded, contractTests } from './run-contract-tests.mjs';
+import { runContracts, runContractsBounded, contractTests, MAX_CONTRACT_TIMEOUT_MS, MAX_CONTRACT_KILL_GRACE_MS } from './run-contract-tests.mjs';
 
 contractTests(fileURLToPath(new URL('..', import.meta.url)), 'full');
 
@@ -21,6 +21,12 @@ try {
     'bounded full gate must retain the actual failure exit');
   await assert.rejects(runContractsBounded(root, 'full', 0), /workers/);
   await assert.rejects(runContractsBounded(root, 'full', 5), /workers/);
+  assert.equal(MAX_CONTRACT_TIMEOUT_MS, 110_000, 'formal per-test deadline stays at 110 seconds');
+  assert.equal(MAX_CONTRACT_KILL_GRACE_MS, 1_000, 'formal termination grace stays at one second');
+  await assert.rejects(runContractsBounded(root, 'full', 1, { timeoutMs: 110_001 }), /invalid test deadline/,
+    'imported options cannot extend the formal 110-second test deadline');
+  await assert.rejects(runContractsBounded(root, 'full', 1, { killGraceMs: 1_001 }), /invalid termination grace/,
+    'imported options cannot extend the formal one-second termination grace');
   writeFileSync(join(root, 'tools/test-new.mjs'), 'process.exit(0)');
   assert.throws(() => runContracts(root, 'source'), /every discovered test must be classified/);
   rmSync(join(root, 'tools/test-new.mjs'));
@@ -137,5 +143,5 @@ try {
   assert.equal(readFileSync(sentinel, 'utf8'), 'preserve');
   assert.ok(cleanRows.find(row => row.timedOut).temporaryStorageRemoved === false, 'expired exit0 cannot trigger successful scratch cleanup');
   assert.ok(ignoredRows.find(row => row.timedOut).temporaryStorageRemoved === false);
-  console.log('PASS: failed/unclassified/duplicate/empty tiers, timeout cleanup exit0, TERM ignore/KILL, actual concurrency bound and every selected settlement');
+  console.log('PASS: failed/unclassified/duplicate/empty tiers, formal 110-second/one-second caps, timeout cleanup exit0, TERM ignore/KILL, actual concurrency bound and every selected settlement');
 } finally { rmSync(root, { recursive: true, force: true }); }
