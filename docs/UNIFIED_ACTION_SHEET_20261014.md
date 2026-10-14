@@ -83,3 +83,7 @@
 原嵌套 worktree 缺少相邻 Core 与本地 SO，符号链接补齐又被 workspace 输入合同拒绝，故使用真实三仓目录的 `/Users/minliny/Documents/Reader/.reader-isolated/unified-popup-vm-20261014` 打包。弹窗生产实现保持提交 `021f338e` 的内容，后续提交只补交付门禁。Core 使用现行已验证的 `2166576` dirty 快照，fingerprint 为 `d4073b8e59b4c4763fdb6ccd744f190c6474fe6bd4bff4647414272eb7555299`；其 Native／SDK／构建证据匹配，六项 SDK 字节与本弹窗分支一致，按 iteration 如实记录，不声明 clean acceptance。
 
 部署前已记录现有 Mate 80 Pro VM 的启动完成与稳定 SceneBoard 证据；20:33 的系统 `THREAD_BLOCK_6S` 发生在本弹窗包安装前，未归因于本次实现。最终 HAP、安装与启动结果以不可变 manifest 及部署回执为准。
+
+旧 worktree 的 HAP 控制器未在测试前绑定源码／真实工具链，也没有归档逐项合同结果和日志凭证。现复用项目现行 `hap-pipeline.mjs`、runner、凭证 policy 和配套 guard／真实负例；保留本分支 667 项完整分类，不引入本分支缺失的 scope 清单，且继续限制 110 秒 deadline 与 1 秒终止宽限。HAP 凭证、输入／工具链／日志篡改负例、测试 runner、source inputs 和 build input safety 的本地检查通过；正式 full 构建仍须重新执行全部清单。
+
+新 Core 目录曾出现七个与选定现行源码不同的旧 HEAD 副本（其中四个 Rust 副本被快照扫描纳入），导致 Native preflight 拒绝。副本已移入新工作区的 `.reader-local/core-input-quarantine/` 并保存字节／哈希／时间记录；真实源码、identity、snapshot、manifest、Native SO 均未改变，重新核验恢复到原 d407 指纹。副本的创建进程尚未证明，未归因于构建或治理脚本。
