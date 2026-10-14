@@ -64,6 +64,13 @@ for(const retirement of ['navigation','route','runtime-unset','runtime-replaceme
  const result=await new BookshelfReadOwner(owner,async()=>{reads++;return state;})
   .read(1,()=>true,undefined,true,()=>{throw Error('ArkUI publication unavailable');});
  assert.equal(reads,1);assert.equal(result.facts.fact,'current');assert.equal(result.facts.value,state);assert.equal(result.presentationFailed,true);}
+{const failures=[];let reads=0;const owner={};
+ const result=await new BookshelfReadOwner(owner,async()=>{reads++;throw Error('private user path');},
+  (error,attempt)=>{failures.push({attempt,message:error.message});throw Error('diagnostic unavailable');})
+  .read(1,()=>true,undefined,true,()=>{});
+ assert.equal(reads,2,'diagnostic exceptions do not change the retry count');
+ assert.equal(result.facts.fact,'failed');
+ assert.deepEqual(failures.map(item=>item.attempt),[1,2]);}
 {const f=fixture(),apply=f.index.applyBookshelfProjection.bind(f.index);f.index.applyBookshelfProjection=(snapshot,...args)=>{if(snapshot.facts?.fact==='current')throw Error('presentation unavailable');return apply(snapshot,...args);};f.index.refreshBookshelf();
  await until(()=>f.index.bookshelfReadFacts.fact==='partial');await tick();assert.equal(f.calls.length,1);
  assert.equal(f.index.bookshelfLoadFailed,true);assert.match(f.index.bookshelfReadFacts.message,/读取已完成.*显示更新未完成/);

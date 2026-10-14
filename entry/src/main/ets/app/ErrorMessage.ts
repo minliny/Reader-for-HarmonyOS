@@ -37,6 +37,35 @@ export function errorMessageOf(error: unknown): string {
   return `${error}`;
 }
 
+/** Bounded local startup/read diagnostic. Never publish Core messages, paths,
+ * book identities, transaction ids, SQL text or user content into hilog. */
+export function localReadFailureSummary(error: unknown): string {
+  const raw = errorObject(error);
+  const event = errorObject(raw?.['event']);
+  const failure = errorObject(event?.['error']) ?? errorObject(raw?.['error']) ?? raw;
+  const details = errorObject(failure?.['details']);
+  const rawCode = failure?.['code'];
+  const code = typeof rawCode === 'string' && /^(INTERNAL|INVALID_PARAMS|BUSY|TIMEOUT|CANCELLED|RESOURCE_EXHAUSTED)$/.test(rawCode)
+    ? rawCode : 'unknown';
+  const field = details?.['field'] === 'transaction_state' ? 'transaction_state' : 'none';
+  const rawCategory = details?.['category'];
+  const category = rawCategory === 'STORAGE_FAILURE' ? 'STORAGE_FAILURE' : 'none';
+  const message = errorMessageOf(error);
+  let cause = 'other';
+  if (message.includes('migration backup slots exhausted')) cause = 'migration-backup-slots';
+  else if (message.includes('migration backup time budget exhausted')) cause = 'migration-backup-time';
+  else if (message.includes('failed to open Core SQLite database')) cause = 'native-sqlite-open';
+  else if (message.includes('source switch rollback conflict') ||
+    message.includes('source switch transaction state is stale')) cause = 'source-switch-rollback-conflict';
+  else if (message.includes('source switch transaction conflict')) cause = 'source-switch-transaction-conflict';
+  else if (message.includes('invalid source switch field')) cause = 'source-switch-invalid-journal';
+  else if (message.includes('source switch storage failed')) cause = message.includes('sqlite:') ?
+    'source-switch-sqlite' : 'source-switch-storage';
+  else if (message.includes('bookshelf.list returned invalid')) cause = 'host-bookshelf-projection';
+  else if (message.includes('Reader-Core request timed out')) cause = 'core-timeout';
+  return `code=${code} category=${category} cause=${cause} field=${field}`;
+}
+
 /** Core rejects an unsafe catalog replacement while retaining the original
  * catalog and progress. The exact structured reason authorizes this copy;
  * source text and unrelated INVALID_PARAMS errors do not. */

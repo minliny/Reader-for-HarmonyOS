@@ -11,10 +11,12 @@ export interface BookshelfReadResult {
 export class BookshelfReadOwner {
   private readonly owner: ReaderRuntimeOwner;
   private readonly load: (current: () => boolean) => Promise<BookshelfDataState>;
+  private readonly reportFailure?: (error: unknown, attempt: number) => void;
   private active: number = 0;
 
-  constructor(owner: ReaderRuntimeOwner, load: (current: () => boolean) => Promise<BookshelfDataState>) {
-    this.owner = owner; this.load = load;
+  constructor(owner: ReaderRuntimeOwner, load: (current: () => boolean) => Promise<BookshelfDataState>,
+    reportFailure?: (error: unknown, attempt: number) => void) {
+    this.owner = owner; this.load = load; this.reportFailure = reportFailure;
   }
 
   owns(owner: ReaderRuntimeOwner): boolean { return owner === this.owner; }
@@ -38,8 +40,9 @@ export class BookshelfReadOwner {
       let state: BookshelfDataState;
       try {
         state = await this.load(live);
-      } catch (_error) {
+      } catch (error) {
         if (!live()) return;
+        try { this.reportFailure?.(error, attempt + 1); } catch (_diagnostic) { /* Diagnostics cannot change retry. */ }
         if (attempt === 0 && retryBlank && retained === undefined) continue;
         return publish(projectOperationFacts({ phase: retained === undefined ? 'failed' : 'refreshFailed', value: retained,
           generation, canRetry: true, message: retained === undefined ? '无法读取书架内容，请重试。' : '刷新失败，保留上次读取结果' }));

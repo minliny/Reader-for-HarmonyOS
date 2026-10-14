@@ -12,7 +12,18 @@ const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 const helperSource = read('entry/src/main/ets/app/ErrorMessage.ts');
 const executable = stripTypeScriptTypes(helperSource);
 const helperUrl = `data:text/javascript;base64,${Buffer.from(executable).toString('base64')}`;
-const { errorMessageOf, catalogCurrentChapterRecoveryMessage, isDomainResolutionFailure, isNetworkEnvironmentFailure, httpResponseFailureSummary } = await import(helperUrl);
+const { errorMessageOf, localReadFailureSummary, catalogCurrentChapterRecoveryMessage, isDomainResolutionFailure, isNetworkEnvironmentFailure, httpResponseFailureSummary } = await import(helperUrl);
+
+assert.equal(localReadFailureSummary({event:{error:{code:'INVALID_PARAMS',
+  message:'source switch transaction state is stale', details:{field:'transaction_state',
+  transactionId:'secret-user-transaction'}}}}),
+  'code=INVALID_PARAMS category=none cause=source-switch-rollback-conflict field=transaction_state');
+assert.equal(localReadFailureSummary(new Error('source switch storage failed: invalid storage snapshot field: sqlite: no such table: private_table')),
+  'code=unknown category=none cause=source-switch-sqlite field=none');
+assert.equal(localReadFailureSummary(new Error('failed to open Core SQLite database /private/user/books.sqlite: migration backup slots exhausted')),
+  'code=unknown category=none cause=migration-backup-slots field=none');
+assert.ok(!localReadFailureSummary({event:{error:{code:'INTERNAL',message:'book title secret',
+  details:{category:'STORAGE_FAILURE',field:'private-book-title'}}}}).includes('secret'));
 
 const catalogRecoveryCopy='目录更新无法对应当前章节，已保留原目录和阅读进度，可重试或换源';
 for(const cause of ['previousChapterMissing','chapterIdentityMissingOrAmbiguous','cachedChapterCoordinateChanged','cachedCatalogCoordinatesChanged']) {

@@ -10,6 +10,7 @@ import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, 
 import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
+import { errorMessageOf, localReadFailureSummary } from '../app/ErrorMessage';
 import { ReaderStartupContentOwner } from '../app/ReaderStartupContentOwner';
 import { installMangaAtomicPayloadReader } from '../app/MangaAtomicPayloadReader';
 import { ReaderSystemFileOpenHost } from '../app/ReaderSystemFileOpenHost';
@@ -136,7 +137,8 @@ export default class EntryAbility extends UIAbility {
         }
       }).catch((error: Error): void => {
         // The persistent receipt/journal remains pending; opening the UI permits retry.
-        hilog.error(DOMAIN, 'Reader', 'Core or confirmed restore recovery failed: %{private}s', error.message);
+        hilog.error(DOMAIN, 'Reader', 'Core or confirmed restore recovery failed summary=%{public}s detail=%{private}s',
+          localReadFailureSummary(error), errorMessageOf(error));
       });
     // Method-level probes may execute onCreate without private helpers; the
     // production class still owns the concrete scheduler below.

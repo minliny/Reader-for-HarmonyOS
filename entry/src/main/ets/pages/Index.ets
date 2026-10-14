@@ -24,7 +24,7 @@ import { BookshelfViewState } from '../features/bookshelf/BookshelfViewState';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
 import { ReaderStartupTrace } from '../app/ReaderStartupTrace';
 import { ReaderSystemFileOpenNavigationHost, type SystemFileOpenNavigationView, type SystemFileOpenReaderIdentity } from '../app/ReaderSystemFileOpenNavigationHost';
-import { errorMessageOf } from '../app/ErrorMessage';
+import { errorMessageOf, localReadFailureSummary } from '../app/ErrorMessage';
 import { readingOfflineFailureHint } from '../features/reading/ReadingOfflineFailurePresentation';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
 import { readerContentSafeTop } from '../features/common/ReaderWindowMetrics';
@@ -6498,7 +6498,10 @@ struct Index {
           if (state.kind === 'populated') { this.scheduleBookshelfBackgroundRefresh(state.shelf.books); this.preparePersistedShelfBooks(); }
           else this.traceStartupStage?.('shelf.empty-model-ready', 'ready');
         },
-        failed: (error: Error): void => hilog.warn(DOMAIN, 'Reader', 'Bookshelf projection: %{private}s', error.message) };
+        failed: (error: Error): void => hilog.warn(DOMAIN, 'Reader', 'Bookshelf projection: %{private}s', error.message),
+        readFailure: (error: unknown, attempt: number): void => hilog.error(DOMAIN, 'Reader',
+          'Bookshelf main read failed attempt=%{public}d summary=%{public}s detail=%{private}s',
+          attempt, localReadFailureSummary(error), errorMessageOf(error)) };
       this.bookshelfProjectionOwner = projection; this.bookshelfProjectionBinding = binding;
       projection.attach(binding);
     }

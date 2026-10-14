@@ -32,6 +32,7 @@ export interface BookshelfProjectionBinding {
   membershipNeeded?: () => boolean;
   accepted?: (state: BookshelfDataState) => void;
   failed?: (error: Error) => void;
+  readFailure?: (error: unknown, attempt: number) => void;
 }
 
 /** Finite shelf read/window/source-metadata owner. Core owns durable rows and
@@ -73,7 +74,8 @@ export class BookshelfProjectionOwner {
     const current = (): boolean => this.current(binding) && generation === this.value.generation;
     const retained = this.value.value;
     const admittedBeforeRead = this.value.visualAdmitted;
-    const read = new BookshelfReadOwner(this.owner, (live): Promise<BookshelfDataState> => this.gateway(captured).load(live));
+    const read = new BookshelfReadOwner(this.owner, (live): Promise<BookshelfDataState> => this.gateway(captured).load(live),
+      (error: unknown, attempt: number): void => { if (current()) binding.readFailure?.(error, attempt); });
     const result = await read.read(generation, current, retained, retryBlank, (facts): void => {
       if (!current()) return;
       this.value = { ...this.value, facts };
