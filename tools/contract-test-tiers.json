@@ -656,6 +656,7 @@
     "test-source-switch-index-owner-sdk.mjs",
     "test-source-switch-presented-progress.mjs",
     "test-source-switch-reader-ack.mjs",
+    "test-source-switch-row-refresh.mjs",
     "test-source-switch-visual-sdk.mjs",
     "test-source-tools-original-recovery-sdk.mjs",
     "test-source-tools-receipt-consumers.mjs",

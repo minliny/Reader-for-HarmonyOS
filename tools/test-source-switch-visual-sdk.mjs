@@ -160,18 +160,18 @@ for(const width of [310,265])assertScene(scene(width,844,1),width,844,1);
    {...candidate('other'),sourceName:'其他书源',providerFamily:'other',bookUrl:'/other'},
  ]});
  assert.equal(familyScene.rows.length,3,'same provider family keeps every rule selectable');
- assert.equal(familyScene.rows[0].candidate.sourceId,'qimao-md');
- assert.equal(familyScene.rows[1].candidate.sourceId,'qimao-yc');
- assert.equal(familyScene.rows[2].candidate.sourceId,'other');
- assert.equal(familyScene.rows[0].candidate.bookUrl,'/md');
- assert.equal(familyScene.rows[1].candidate.bookUrl,'/yc');
+ assert.equal(familyScene.rows[0].row.candidate.sourceId,'qimao-md');
+ assert.equal(familyScene.rows[1].row.candidate.sourceId,'qimao-yc');
+ assert.equal(familyScene.rows[2].row.candidate.sourceId,'other');
+ assert.equal(familyScene.rows[0].row.candidate.bookUrl,'/md');
+ assert.equal(familyScene.rows[1].row.candidate.bookUrl,'/yc');
  familyScene.o.aboutToDisappear();
 }
 // The same native track remains reserved before remeasurement supplies a
 // latency. Only content is inset; the row's border and hit extent stay full width.
 {
  const cached={...candidate('cached'),latencyKind:undefined,latencyMs:undefined};
- const row=new deps.SourceSwitchNovelRow(undefined,{candidate:cached,timingColumnWidth:v.narrowTimingColumnWidth},undefined,++serial);row.initialRender();
+ const row=new deps.SourceSwitchNovelRow(undefined,{row:new deps.SourceSwitchCandidateRow(cached),timingColumnWidth:v.narrowTimingColumnWidth},undefined,++serial);row.initialRender();
  const native=p.nodes(row),box=native.find(n=>n.type==='Row'),dash=native.find(n=>n.create==='—');
  assert.equal(box.width,'100%');assert.equal(box.height,50);assert.equal(box.padding.right,8);
  assert.equal(dash.width,v.narrowTimingColumnWidth);assert.equal(dash.textAlign,'TextAlign.End');
@@ -180,7 +180,7 @@ for(const width of [310,265])assertScene(scene(width,844,1),width,844,1);
 // lifecycle. Native disabled hit dispatch remains the platform boundary.
 {
  let presses=0,clicks=0;
- const row=new deps.SourceSwitchNovelRow(undefined,{candidate:candidate('press'),onPress:()=>presses++,onSelect:()=>clicks++},undefined,++serial);row.initialRender();
+ const row=new deps.SourceSwitchNovelRow(undefined,{row:new deps.SourceSwitchCandidateRow(candidate('press')),onPress:()=>presses++,onSelect:()=>clicks++},undefined,++serial);row.initialRender();
  const hit=p.nodes(row).find(n=>n.type==='Row'),soft=readerAppColor(design.strings.selectedRowRole,'day');
  assert.equal(hit.backgroundColor,'Color.Transparent');assert.equal(hit.enabled,true);
  for(const end of [deps.TouchType.Move,deps.TouchType.Up,deps.TouchType.Cancel]){
@@ -188,14 +188,14 @@ for(const width of [310,265])assertScene(scene(width,844,1),width,844,1);
   hit.onTouch({type:end});p.properties.flush();assert.equal(row.pressed,false);assert.equal(hit.backgroundColor,'Color.Transparent');assert.equal(presses,before+1);
  }
  hit.onTouch({type:deps.TouchType.Down});p.properties.flush();
- row.updateStateVars({candidate:row.candidate,rowEnabled:false,selected:false});p.properties.flush();
+ row.updateStateVars({row:row.row,rowEnabled:false,selected:false});p.properties.flush();
  assert.equal(row.pressed,false,'disabling a retained row clears active feedback');assert.equal(hit.enabled,false);assert.equal(hit.backgroundColor,'Color.Transparent');
  let before=presses;hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(row.pressed,false);assert.equal(presses,before,'disabled rows cannot emit a press identity');
- row.updateStateVars({candidate:{...candidate('current'),isCurrent:true},rowEnabled:true,selected:false});p.properties.flush();
+ row.row.update({...candidate('press'),isCurrent:true});row.updateStateVars({row:row.row,rowEnabled:true,selected:false});p.properties.flush();
  assert.equal(hit.enabled,false);hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(row.pressed,false);assert.equal(presses,before,'current source cannot enter the active state');assert.equal(hit.backgroundColor,'Color.Transparent');
- row.updateStateVars({candidate:candidate('press'),rowEnabled:true,selected:true});p.properties.flush();assert.equal(hit.enabled,true);assert.equal(hit.backgroundColor,soft);
+ row.row.update(candidate('press'));row.updateStateVars({row:row.row,rowEnabled:true,selected:true});p.properties.flush();assert.equal(hit.enabled,true);assert.equal(hit.backgroundColor,soft);
  hit.onTouch({type:deps.TouchType.Cancel});p.properties.flush();assert.equal(hit.backgroundColor,soft,'selection feedback is retained independently of a cancelled press');
- row.updateStateVars({candidate:row.candidate,rowEnabled:true,selected:false});p.properties.flush();hit.onClick();assert.equal(clicks,1,'enabled native row retains its original selection callback');
+ row.updateStateVars({row:row.row,rowEnabled:true,selected:false});p.properties.flush();hit.onClick();assert.equal(clicks,1,'enabled native row retains its original selection callback');
 }
 // Actual action hit callbacks retain the pressed recipe independently of
 // candidate enrichment, and restore it on pointer/cancellation/state changes.
@@ -302,7 +302,7 @@ for(const contentKind of ['text','manga']){
  assert.doesNotThrow(()=>o.publishOrder(),'mounted List with an unbound controller still publishes the current candidates');
  assert.equal(offsetReads,1);assert.equal(o.displayedCandidates.length,1);
  assert.equal(o.candidateKey(o.displayedCandidates[0]),o.candidateKey(original.at(-1)));
- assert.equal(o.candidateDataSource.totalCount(),1);assert.equal(o.candidateKey(o.candidateDataSource.getData(0)),o.candidateKey(original.at(-1)));
+ assert.equal(o.candidateDataSource.totalCount(),1);assert.equal(o.candidateDataSource.getData(0).key,o.candidateKey(original.at(-1)));
  assert.equal(o.firstVisibleIndex,1);assert.equal(o.restoringAnchor,false);
  // This controlled builder probe does not model non-empty branch removal.
  // Restore the original range before flushing; native removal remains VM evidence.

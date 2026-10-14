@@ -53,15 +53,33 @@ class SourceSwitchLayoutFrame extends FrameCallback {
   onIdle(_remaining: number): void { this.action(); }
 }
 
+/** A retained native row observes immutable gateway snapshots for its identity.
+ * LazyForEach can reuse its child on CHANGE/reload without resetting @Prop. */
+@Observed
+class SourceSwitchCandidateRow {
+  readonly key: string;
+  candidate: SourceSwitchCandidate;
+
+  constructor(candidate: SourceSwitchCandidate) {
+    this.key = sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
+    this.candidate = candidate;
+  }
+
+  update(candidate: SourceSwitchCandidate): void {
+    if (this.candidate !== candidate) this.candidate = candidate;
+  }
+}
+
 /** V1-compatible native lazy admission. The owner supplies the full, already
  * ordered successful-result projection; ArkUI owns viewport virtualization. */
 class SourceSwitchCandidateDataSource implements IDataSource {
-  private rows: SourceSwitchCandidate[] = [];
+  private rows: SourceSwitchCandidateRow[] = [];
   private keys: string[] = [];
   private listeners: DataChangeListener[] = [];
+  private input: SourceSwitchCandidate[] | undefined = undefined;
 
   totalCount(): number { return this.rows.length; }
-  getData(index: number): SourceSwitchCandidate { return this.rows[index]; }
+  getData(index: number): SourceSwitchCandidateRow { return this.rows[index]; }
   registerDataChangeListener(listener: DataChangeListener): void {
     if (this.listeners.indexOf(listener) < 0) this.listeners.push(listener);
   }
@@ -69,20 +87,28 @@ class SourceSwitchCandidateDataSource implements IDataSource {
     this.listeners = this.listeners.filter((value: DataChangeListener): boolean => value !== listener);
   }
   publish(rows: SourceSwitchCandidate[]): void {
-    if (rows === this.rows) return;
+    if (rows === this.input) return;
     const keys = rows.map((row: SourceSwitchCandidate): string => sourceSwitchCandidateKey(row.sourceId, row.bookUrl));
     const prefix = this.keys.length <= keys.length &&
       this.keys.every((key: string, index: number): boolean => key === keys[index]);
     const previous = this.rows;
-    this.rows = rows;
+    const retained = new Map<string, SourceSwitchCandidateRow>();
+    for (const row of previous) retained.set(row.key, row);
+    this.rows = rows.map((candidate: SourceSwitchCandidate, index: number): SourceSwitchCandidateRow => {
+      const row = retained.get(keys[index]);
+      if (row === undefined) return new SourceSwitchCandidateRow(candidate);
+      row.update(candidate);
+      return row;
+    });
     this.keys = keys;
+    this.input = rows;
     for (const listener of this.listeners) {
       if (!prefix) {
         listener.onDataReloaded();
       } else {
-        for (let index = 0; index < previous.length; index += 1) {
-          if (previous[index] !== rows[index]) listener.onDataChange(index);
-        }
+        // @ObjectLink delivers metadata to the mounted same-key child. Native
+        // notifications only admit structural changes; CHANGE does not reset
+        // the retained child's one-way @Prop initialization.
         // The empty prefix is admitted too: a picker can mount before its
         // first successful search arrives without retaining an empty range.
         for (let index = previous.length; index < rows.length; index += 1) listener.onDataAdd(index);
@@ -95,7 +121,8 @@ class SourceSwitchCandidateDataSource implements IDataSource {
 @Component
 struct SourceSwitchNovelRow {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @Prop candidate: SourceSwitchCandidate;
+  @ObjectLink @Watch('rowChanged') row: SourceSwitchCandidateRow;
+  @State private candidate: SourceSwitchCandidate = this.row.candidate;
   @Prop @Watch('pressAdmissionChanged') rowEnabled: boolean = true;
   @Prop selected: boolean = false;
   @State private pressed: boolean = false;
@@ -105,9 +132,12 @@ struct SourceSwitchNovelRow {
   onSelect: () => void = (): void => {};
   onPress: () => void = (): void => {};
 
+  // Keep the approved text carriers unchanged. Native ObjectLink delivers
+  // every immutable gateway snapshot into this row's existing text actors.
+  private rowChanged(): void { this.candidate = this.row.candidate; }
   private pressAdmissionChanged(): void { if (!this.rowEnabled) this.pressed = false; }
   private rowTouch(event: TouchEvent): void {
-    this.pressed = this.rowEnabled && this.candidate.isCurrent !== true && event.type === TouchType.Down;
+    this.pressed = this.rowEnabled && this.row.candidate.isCurrent !== true && event.type === TouchType.Down;
     if (this.pressed) this.onPress();
   }
   private dividerColor(): ResourceColor {
@@ -471,15 +501,15 @@ export struct SourceSwitchWindow {
           ListItem() { this.novelDiscovery(); }.height(this.discoveryHeight());
           ListItem() { this.novelColumns(); }.height(this.columnsHeight());
         }
-        LazyForEach(this.candidateDataSource, (candidate: SourceSwitchCandidate) => {
+        LazyForEach(this.candidateDataSource, (row: SourceSwitchCandidateRow) => {
           ListItem() {
-            SourceSwitchNovelRow({ candidate: candidate, rowHeight: this.rowHeight(), timingColumnWidth: this.timingWidth(), reduceMotion: this.reduceMotion,
+            SourceSwitchNovelRow({ row: row, rowHeight: this.rowHeight(), timingColumnWidth: this.timingWidth(), reduceMotion: this.reduceMotion,
               rowEnabled: this.state.kind === 'candidates' && !this.busy(),
-              selected: this.selectedKey === this.candidateKey(candidate),
-              onPress: (): void => { this.heldKey = this.candidateKey(candidate); },
-              onSelect: (): void => this.selectCandidate(this.candidateKey(candidate)) });
+              selected: this.selectedKey === row.key,
+              onPress: (): void => { this.heldKey = row.key; },
+              onSelect: (): void => this.selectCandidate(row.key) });
           }.width('100%').height(this.rowHeight());
-        }, (candidate: SourceSwitchCandidate): string => sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl));
+        }, (row: SourceSwitchCandidateRow): string => row.key);
         if (this.scrollBook() && this.displayedCandidates.length === 0) {
           ListItem() { this.novelEmptyMessage(); }.height(this.emptyHeight());
         }

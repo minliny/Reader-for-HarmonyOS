@@ -6,6 +6,7 @@ import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {searchListLazyRequests} from './reader-content-search-list-probe.mjs';
+import {sourceSwitchRowSdk} from './source-switch-row-sdk-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {fixture,settle as settleOwner,deferred,origin,target,session,Runtime,read,gatewayExports,setCurrentRuntime,Core} from './source-switch-owner-probe.mjs';
 const {ProductionHost:ReadingEntryHost,setRuntime:setEntryRuntime}=await import('./reading-entry-owner-probe.mjs');
@@ -74,9 +75,8 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  const tree=ts.createSourceFile('/tmp/SourceSwitchLiveFixture.ets',windowSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  const frame=tree.statements.find(node=>node.name?.getText(tree)==='SourceSwitchLayoutFrame');
  const SourceSwitchLayoutFrame=new Function('FrameCallback',stripTypeScriptTypes(frame.getText(tree))+';return SourceSwitchLayoutFrame;')(class FrameCallback{});
- const dataSource=tree.statements.find(node=>node.name?.getText(tree)==='SourceSwitchCandidateDataSource');
- assert.ok(dataSource,'the real V1 lazy data source is part of the production window');
- const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey',stripTypeScriptTypes(dataSource.getText(tree))+';return SourceSwitchCandidateDataSource;')(gatewayExports.sourceSwitchCandidateKey);
+ const {SourceSwitchCandidateRow,SourceSwitchCandidateDataSource}=sourceSwitchRowSdk(p.properties,windowSource);
+ require(sdk+'/lib/validate_ui_syntax.js').objectLinkCollection.set('SourceSwitchNovelRow',new Set(['row']));
  const gatewayTree=ts.createSourceFile('/tmp/SourceCountFixture.ts',read('features/source/SourceSwitchGateway.ts'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
  const count=gatewayTree.statements.find(node=>node.name?.getText(gatewayTree)==='sourceSwitchSourceCount');
  const sourceSwitchSourceCount=new Function(stripTypeScriptTypes(count.getText(gatewayTree)).replace(/^export /,'')+';return sourceSwitchSourceCount;')();
@@ -87,7 +87,7 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
    searchListLazyRequests(indices).LazyForEach.create(id,owner,source,generate,key);
  },pop(){}};
  const effect=(kind,parameters)=>({kind,parameters,animation(options){return{...this,options,animation:this.animation};}});
- const deps={...p.deps,...horizontal,...metricsApi,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...providerFamily,...gatewayExports,SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
+ const deps={...p.deps,SynchedPropertyNesedObjectPU:p.properties.sdk.SynchedPropertyNestedObjectPU,...horizontal,...metricsApi,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...providerFamily,...gatewayExports,SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateRow,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
    curves:{cubicBezierCurve(...values){return{kind:'cubic-bezier',values};}},
    ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},
    Scroller:class Scroller{},ScrollAlign:{START:'start'},TouchType:{Down:'down',Move:'move',Up:'up',Cancel:'cancel'},
@@ -103,7 +103,10 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  for(const [name,path] of [['NoCoverCover','features/bookshelf/NoCoverCover.ets'],['SearchSpinner','features/search/SearchSpinner.ets'],['SourceSwitchSpinner','features/source/SourceSwitchSpinner.ets'],['SourceSwitchProgress','features/source/SourceSwitchProgress.ets'],['ReaderPaperBackground','features/reading/ReaderPaperBackground.ets'],['SourceSwitchCompletionOverlay','features/source/SourceSwitchCompletionOverlay.ets']]){
    p.hooks.childSources[name]=sources[name]??read(path);deps[name]=createReaderBuilderProbe(p.hooks.childSources[name],boundedMembers(p.hooks.childSources[name]),deps,p.hooks).Component;
  }
- deps.SourceSwitchNovelRow=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchNovelRow'),deps,{...p.hooks,componentName:'SourceSwitchNovelRow'}).Component;
+ // The compiler probe also constructs an unused owner. Supply its required
+ // ObjectLink input; real mounted rows still receive the native data-source row.
+ const compilerRow=new SourceSwitchCandidateRow({sourceId:'sdk-unmounted-row',bookUrl:'/sdk-unmounted-row'});
+ deps.SourceSwitchNovelRow=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchNovelRow'),deps,{...p.hooks,componentName:'SourceSwitchNovelRow',initialParams:{row:compilerRow}}).Component;
  deps.SourceSwitchPanel=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchWindow'),deps,{...p.hooks,componentName:'SourceSwitchWindow'}).Component;
  return deps;
 }
