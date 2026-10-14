@@ -4,6 +4,7 @@ import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module'
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
+import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
 import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
 import { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } from '../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts';
@@ -66,6 +67,7 @@ for(const [debug,mode,value,disabled,selectionFlag,expectedSelection] of [[true,
       return ReaderStartupTrace.install(clock,record,enabled);
     }},readerMotionNowMs:()=>performance.now(),
     DEBUG:debug,BUILD_MODE_NAME:mode,readerControlVerificationColdStartPage,readerDisableOptionalEntryMemory,readerMangaOfflineProbeScope,readerMangaReadingProbeScope,readerMangaProbeSelectionMode,
+    errorMessageOf,localReadFailureSummary,
     installMangaAtomicPayloadReader,
     ReaderMangaPlatformDiagnostic:{install:()=>undefined}, // Separate focused production-module probe owns SDK diagnostics.
     readerEventLoopProbeEnabled:()=>false,ReaderRuntimeOwner:Runtime,

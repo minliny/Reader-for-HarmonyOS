@@ -13,6 +13,7 @@ import { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerManga
 import { MangaImageDecodeHost } from '../entry/src/main/ets/app/MangaImageDecodeHost.ts';
 import { createMangaAtomicPayloadReaderFixture, createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
 
 const url = name => new URL('../entry/src/main/ets/' + name, import.meta.url);
 const scope = { sourceId:'source-A', bookId:'book-A' };
@@ -726,6 +727,7 @@ for(const [debug,buildMode,parameters,expectedOffline,expectedReading,expectedSe
  const installAtomic=createMangaAtomicPayloadInstallerFixture({});let atomicInstalls=0;
  const Ability=productionMotionMethods(url('entryability/EntryAbility.ets'),['onCreate','onNewWant'],{
   DEBUG:debug,BUILD_MODE_NAME:buildMode,readerControlVerificationColdStartPage,readerDisableOptionalEntryMemory,readerMangaOfflineProbeScope,readerMangaReadingProbeScope,readerMangaProbeSelectionMode,
+  errorMessageOf,localReadFailureSummary,
   installMangaAtomicPayloadReader(){installAtomic();atomicInstalls++;},
   ReaderMangaPlatformDiagnostic:{install:()=>undefined}, // Official adapter behavior has its focused production-module probe.
   ReaderStartupTrace:{install:()=>({mark(){},measure:(_name,run)=>Promise.resolve().then(run)})},readerMotionNowMs:()=>0,

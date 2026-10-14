@@ -5,6 +5,7 @@ import { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerManga
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
+import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
 import * as settings from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
 
 const base = new URL('../entry/src/main/ets/', import.meta.url);
@@ -133,6 +134,7 @@ for (const failRead of [false, true]) {
   f.store.get = () => { trace.push('settings-read'); return read.promise; };
   const Ability = productionMotionMethods(abilityFile, ['onCreate', 'onWindowStageCreate'], {
     ReaderStartupTrace, readerMotionNowMs: () => performance.now(),
+    errorMessageOf, localReadFailureSummary,
     DEBUG: true, BUILD_MODE_NAME: 'debug', DOMAIN: 0x5244,
     installMangaAtomicPayloadReader,
     ReaderMangaPlatformDiagnostic: { install: () => undefined }, // Separate focused production-module probe owns SDK diagnostics.

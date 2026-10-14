@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
+import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
 import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
 import { createDefaultReaderAppearanceSnapshot, setReaderAppearanceFont, setReaderAppearanceCustomFont,
   ReaderCustomFontDescriptor } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
@@ -131,6 +132,7 @@ for (const [syncRecovered, resetRecovered, scenario, expected] of [
     '/files/reader-fonts/' + 'b'.repeat(64) + '.ttf', 'b'.repeat(64));
   const Ability = productionMotionMethods(path, ['onCreate', 'prepareSelectedReadingFont', 'sameSelectedReadingFont'], {
     DEBUG: false, BUILD_MODE_NAME: 'release', DOMAIN: 0,
+    errorMessageOf, localReadFailureSummary,
     installMangaAtomicPayloadReader,
     ReaderMangaPlatformDiagnostic: { install: () => undefined }, // Separate focused production-module probe owns SDK diagnostics.
     ReaderStartupTrace: {install: () => ({mark() {}, measure: (_stage, task) => task()})}, readerMotionNowMs: () => 0,

@@ -6,6 +6,7 @@ import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemor
   readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
 import { ReaderStartupContentOwner } from '../entry/src/main/ets/app/ReaderStartupContentOwner.ts';
 import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
+import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
 const installMangaAtomicPayloadReader=createMangaAtomicPayloadInstallerFixture({});
@@ -33,6 +34,7 @@ function fixture(debug=true,mode='debug',parameters={readerStartupMainLoadFailur
     ['coldStartPage','windowStageGeneration','startupContent','runtimeOwner','themeReady','recoveryReady','bookshelfModeReady','shelfFontsReady','eventLoopProbe',
       'onCreate','onNewWant','onWindowStageCreate','onWindowStageDestroy','onDestroy','loadMainContent'],{
       DEBUG:debug,BUILD_MODE_NAME:mode,ReaderStartupTrace,ReaderStartupContentOwner,readerMotionNowMs:()=>performance.now(),
+      errorMessageOf,localReadFailureSummary,
       readerControlVerificationColdStartPage,readerDisableOptionalEntryMemory,readerEventLoopProbeEnabled:()=>false,
       readerMangaOfflineProbeScope,readerMangaReadingProbeScope,readerMangaProbeSelectionMode,
       installMangaAtomicPayloadReader,ReaderMangaPlatformDiagnostic:{install:()=>undefined},
