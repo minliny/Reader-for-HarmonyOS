@@ -247,28 +247,44 @@ console.log('PASS actual Owner select/finish/release and Ability background/fore
 
 // Execute the real Surface open/helper. Cached catalog access is its only
 // offline dependency, and a missing cached catalog never reaches acquireBook.
-let catalogReads=0,onlineAcquires=0,catalogFails=false;
+let catalogReads=0,onlineAcquires=0,catalogFails=false;const catalogReadInputs=[];
 const entry={targetOrdinal:0,recoveryRequired:false,chapter:{chapterIndex:0,chapterTitle:'本章',totalPages:1,pageStart:0,cached:true,resources:[],manifest:{chapter:{sourceId:scope.sourceId,bookId:scope.bookId,chapterId:'/chapter'},sourceRuleVersion:'r',manifestVersion:'v',decodeRevision:'v',pages:[{ordinal:0,pageId:'page-0'}],displayHints:{}}},progress:{token:{epoch:1,revision:0},location:null}};
-const Surface=productionMotionMethods(url('features/manga/MangaReadingSurface.ets'),['rollbackChapterImages','open','acquireCatalog','aboutToDisappear'],{
+const Surface=productionMotionMethods(url('features/manga/MangaReadingSurface.ets'),['rollbackChapterImages','open','acquireCatalog','acquirePreparedCatalog','aboutToDisappear'],{
   MangaSessionGateway:class{async entry(){return entry;}},
   RemoteReadingFlowGateway:class{
-   async openCachedCatalogSession(){catalogReads++;if(catalogFails)throw Error('no cached catalog');return {identity:scope,entries:[],acquisitionMode:'offline'};}
+   async openCachedCatalogSession(seed,current,contextIsCurrent,allowMangaCatalog,requireDirectoryProof=false){
+    catalogReads++;catalogReadInputs.push({seed,contextIsCurrent,allowMangaCatalog,requireDirectoryProof});
+    assert.equal(current(),true);assert.equal(contextIsCurrent,false,'offline metadata cannot grant online context');
+    assert.equal(allowMangaCatalog,true);assert.equal(typeof requireDirectoryProof,'boolean');
+    if(catalogFails)throw Error('no cached catalog');
+    return {identity:scope,contentKind:'manga',sourceVersion:'r',catalogVersion:'c1',contextVersion:'x1',
+     entries:[{index:0,title:'本章',url:'/chapter',navigable:true,proofState:'verified'}],
+     acquisitionMode:'offline',requiresContextRefresh:true,hostRequirements:[]};
+   }
    async openCachedSession(){return this.openCachedCatalogSession();}
   },
   MangaBookPresentation, AppStorage: { setOrCreate() {} },
 });
 const makeSurface=()=>{
-  const s=new Surface(), events=[];
-  s.controller={async awaitPendingProgress(){},async setPreviewMode(){},async openPrepared(_entry,offline){assert.equal(offline,true);events.push('open');},savedLocation:null,displayedOrdinal:0,recoveryRequired:false,async close(){events.push('close');}};
-  Object.assign(s,{...scope,offline:true,mounted:true,remoteBookSeed:{...scope,contentKind:'manga'},fitPreference:'width',
+  const s=new Surface(), events=[],openedEntries=[],publishedCatalogs=[];
+  s.controller={async awaitPendingProgress(){},async setPreviewMode(){},async openPrepared(_entry,offline){assert.equal(offline,true);assert.equal(_entry,entry);openedEntries.push(_entry);events.push('open');},savedLocation:null,displayedOrdinal:0,recoveryRequired:false,async close(){events.push('close');}};
+  Object.assign(s,{...scope,offline:true,mounted:true,remoteBookSeed:{...scope,contentKind:'manga',title:'Offline book',author:'Writer',detailUrl:'/book'},fitPreference:'width',
     runtime:{bookAcquisitions:()=>({acquireBook:async()=>{onlineAcquires++;throw Error('online');}}),finishMangaOfflineProbe(){events.push('finish');},subscribeMangaOfflineProbe(listener){listener('receipt');return()=>events.push('detach');}},
-    retainPreparationOnDisappear:()=>false,publish(){},restore(){},configureAdjacentChapter(){events.push('catalog');},onRemoteSessionReady(){},layoutGeneration:0,viewportGeneration:0,loginGeneration:0});
-  return {s,events};
+    retainPreparationOnDisappear:()=>false,publish(){},restore(){},configureAdjacentChapter(){events.push('catalog');},onRemoteSessionReady(session){publishedCatalogs.push(session);},layoutGeneration:0,viewportGeneration:0,loginGeneration:0});
+  return {s,events,openedEntries,publishedCatalogs};
 };
-const {s,events}=makeSurface();await s.open(s.controller);await tick();assert.equal(s.opened,true);assert.equal(catalogReads,1);assert.equal(onlineAcquires,0);
+const {s,events,openedEntries,publishedCatalogs}=makeSurface();await s.open(s.controller);await tick();assert.equal(s.opened,true);assert.equal(catalogReads,1);assert.equal(onlineAcquires,0);
+assert.deepEqual(openedEntries,[entry],'cached first entry stays owned by the original controller');
+assert.equal(publishedCatalogs.length,1);assert.equal(publishedCatalogs[0].requiresContextRefresh,true);
+assert.equal(publishedCatalogs[0].acquisitionMode,'offline');assert.deepEqual(publishedCatalogs[0].hostRequirements,[]);
+assert.deepEqual(publishedCatalogs[0].entries.map(row=>[row.index,row.url]),[[0,'/chapter']]);
+assert.deepEqual([catalogReadInputs[0].contextIsCurrent,catalogReadInputs[0].allowMangaCatalog,catalogReadInputs[0].requireDirectoryProof],[false,true,true],
+ 'prepared offline bootstrap explicitly requires Core proof with no online context');
+assert.equal(catalogReadInputs[0].seed.sourceVersion,'r');assert.equal(catalogReadInputs[0].seed.detailUrl,'/book');
 s.aboutToDisappear();assert.equal(s.mounted,false);assert.deepEqual(events.slice(-3),['close','finish','detach'],'reader/controller fences precede probe release');
 catalogFails=true;const f=makeSurface();await assert.rejects(f.s.acquireCatalog(()=>true),/no cached catalog/);assert.equal(onlineAcquires,0);
 await f.s.open(f.s.controller);await tick();assert.equal(f.s.opened,true,'missing optional catalog does not hide downloaded pixels');assert.equal(onlineAcquires,0);
+assert.deepEqual(f.openedEntries,[entry]);assert.equal(f.publishedCatalogs.length,0,'missing cache cannot publish invented directory facts');
 console.log('PASS production offline Surface uses only cached catalog, preserves downloaded entry on absent optional TOC, and fences controller before releasing probe');
 // The real cached gateway creates a new mutable session for every read. The
 // Surface may tag its owned result without mutating Core data or another owner.
