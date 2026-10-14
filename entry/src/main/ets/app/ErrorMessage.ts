@@ -53,15 +53,34 @@ export function catalogCurrentChapterRecoveryMessage(error: unknown): string | u
   return '目录更新无法对应当前章节，已保留原目录和阅读进度，可重试或换源';
 }
 
-/** Only the NAPI send rejection carries these codes with this exact message. */
+// The SDK appends only these fixed native admission diagnostics. Keep this
+// boundary exact: arbitrary native/source text must never reach public logs.
+const CORE_ADMISSION_REASONS = new Set<string>([
+  'command exceeds the wire byte limit',
+  'runtime input byte budget is occupied',
+  'runtime result reservation contract failed; drain and recreate',
+  'runtime input class byte budget is occupied',
+  'runtime request or terminal budget is occupied',
+  'runtime lane is occupied',
+]);
+
+/** Only a NAPI send rejection and its SDK-qualified fixed reason are admitted. */
 export function coreAdmissionFailureSummary(error: unknown, method: string): string | undefined {
   const failure = errorObject(error);
-  if (failure?.['message'] !== 'Reader-Core command was not admitted') return undefined;
-  const code = failure['code'];
+  const message = failure?.['message'];
+  const base = 'Reader-Core command was not admitted';
+  let reason: string | undefined;
+  if (message !== base) {
+    const prefix = `${base}: `;
+    if (typeof message !== 'string' || !message.startsWith(prefix)) return undefined;
+    reason = message.substring(prefix.length);
+    if (!CORE_ADMISSION_REASONS.has(reason)) return undefined;
+  }
+  const code = failure?.['code'];
   if (code !== 'BUSY' && code !== 'RESOURCE_EXHAUSTED') return undefined;
   // Never include params, error details, or an untrusted method in public logs.
   const safeMethod = /^[a-z][a-zA-Z0-9.-]{0,95}$/.test(method) ? method : 'unknown';
-  return `method=${safeMethod} code=${code}`;
+  return `method=${safeMethod} code=${code}${reason === undefined ? '' : ` reason=${reason}`}`;
 }
 
 /** Safe association for an observed native HTTP rejection, never response data. */
