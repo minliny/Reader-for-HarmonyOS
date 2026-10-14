@@ -6499,7 +6499,7 @@ struct Index {
           else this.traceStartupStage?.('shelf.empty-model-ready', 'ready');
         },
         failed: (error: Error): void => hilog.warn(DOMAIN, 'Reader', 'Bookshelf projection: %{private}s', error.message),
-        readFailure: (error: unknown, attempt: number): void => hilog.error(DOMAIN, 'Reader',
+        readFailure: (error: Object, attempt: number): void => hilog.error(DOMAIN, 'Reader',
           'Bookshelf main read failed attempt=%{public}d summary=%{public}s detail=%{private}s',
           attempt, localReadFailureSummary(error), errorMessageOf(error)) };
       this.bookshelfProjectionOwner = projection; this.bookshelfProjectionBinding = binding;
