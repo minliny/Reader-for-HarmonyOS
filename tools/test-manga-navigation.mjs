@@ -91,7 +91,7 @@ assert.match(surfaceSource,/onExitRequestHandler\([\s\S]*?this\.handleBack\(\)/)
 assert.match(surfaceSource,/iconAction\([\s\S]*?'返回',[\s\S]*?this\.handleBack\(\)/);
 console.log('PASS unified system/button back: first leaves zoom, second awaits accepted progress before exit');
 
-assert.equal(mangaUserError('MANGA_SESSION_CONTENT_CHANGED'),'章节内容已更新，请重新打开本章。');
+assert.equal(mangaUserError('MANGA_SESSION_CONTENT_CHANGED'),'章节内容或书源已更新，请重新打开本章。');
 assert.match(mangaUserError('MANGA_REGION_ANIMATION_UNSUPPORTED'),/动画/);
 assert.match(mangaUserError('REMOTE_READING_IMAGE_NOT_DOWNLOADED'),/联网/);
 assert.equal(mangaUserError('READING_IMAGE_REPROCESS_REQUIRED'),'图片处理规则已更新，需联网重新下载');

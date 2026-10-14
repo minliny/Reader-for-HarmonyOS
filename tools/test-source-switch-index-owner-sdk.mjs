@@ -348,9 +348,11 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
 {
  const source=read('features/reading/LocalReadingExperience.ets');
  const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
- const make=fields=>{
-  const p=boundedSurfaceSdk(),deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});
-  const o=p.consumer(source,['sourceSwitchTransactionId','phase','visibleFragments','sourceSwitchFailureMessage','reduceMotion','onSessionLaunchReduceMotionChanged',
+ // The SDK output depends on this fixed source/member/dependency graph, not
+ // on scenario fields. Reuse its constructor while retaining a fresh actor,
+ // actual property objects and callback ownership for every matrix entry.
+ const p=boundedSurfaceSdk(),deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});
+ const compiled=createReaderBuilderProbe(source,['sourceSwitchTransactionId','phase','visibleFragments','sourceSwitchFailureMessage','reduceMotion','onSessionLaunchReduceMotionChanged',
     'shouldShowSourceSwitchPreparation','sourceSwitchPreparationContent',
     'sourceSwitchCompletion','readingReadyGeneration','sourceSwitchCompletionVisible','sourceSwitchRevealOpacity','sourceSwitchToastText',
     'sourceSwitchCompletionEpoch','sourceSwitchRevealAnimator','sourceSwitchToastTimer','consumedSourceSwitchCompletions',
@@ -358,7 +360,17 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
     'sourceSwitchPresentedRevision','sourceSwitchPresentedSelectionToken','sourceSwitchPresentedContinuous',
     'sourceSwitchCanonicalPageCurrent','onSourceSwitchPagePresented','hasContinuousRenderContent',
     'sourceSwitchCompletionKey','sourceSwitchCompletionCurrent','finishSourceSwitchReveal','cancelSourceSwitchCompletion',
-    'sourceSwitchCompletionVisibleChanged','sourceSwitchCompletionChanged'],deps);
+    'sourceSwitchCompletionVisibleChanged','sourceSwitchCompletionChanged'],{...p.deps,...deps},p.hooks);
+ const actors=[];
+ const make=fields=>{
+  const o=new compiled.Component(undefined,{});
+  assert.equal(o.sourceSwitchToastText,'','each scenario starts with its own pristine completion state');
+  for(const previous of actors){
+   assert.notEqual(o,previous);assert.notEqual(o.nodes,previous.nodes);assert.notEqual(o.keys,previous.keys);
+   assert.notEqual(o.watches,previous.watches);
+   assert.notEqual(o.consumedSourceSwitchCompletions,previous.consumedSourceSwitchCompletions,'completion history is actor-local');
+  }
+  actors.push(o);
   Object.assign(o,{sourceSwitchTransactionId:'tx',phase:'loading',visibleFragments:[],visiblePage:undefined,
     sourceSwitchFailureMessage:'',visiblePageSelectionToken:-1,chapterSelectionToken:2,sessionGateway:undefined,
     isReaderIdentityCurrent:()=>true,sourceName:'新书源',chapterTitle:'第 20 章',chapter:undefined,reduceMotion:false,
@@ -399,6 +411,7 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
  ready.o.onSourceSwitchPagePresented(ready.o.pageTurnRenderRevision);
  assert.equal(ready.o.sourceSwitchToastText,'已切换至 新书源','real production canonical and current-revision guards admit completion');
  ready.o.cancelSourceSwitchCompletion();
+ assert.equal(actors.length,13,'every positive, negative and rendered reader case retains an independent actor');
  checks.push('actual-target-reader-prepare-current-selection-ready-failure-stale-prop-foreground-reduced-motion');
 }
 // Exercise the metadata and overlay host on the actual SDK-emitted builders.
@@ -411,9 +424,19 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
  }
  const panelSource=read('features/reading/SourceSwitchPanel.ets'),shellSource=read('features/shell/ReaderShell.ets');
  const windowSource=read('features/source/SourceSwitchWindow.ets'),indexSource=read('pages/Index.ets');
+ const p=boundedSurfaceSdk(),deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metricsApi.createDefaultReaderWindowMetrics()}});
+ const factories=new Map(),actors=[];
  const capture=(source,names,childName,childSource,fields)=>{
-  const p=boundedSurfaceSdk(),deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metricsApi.createDefaultReaderWindowMetrics()}});p.hooks.childSources[childName]=childSource;
-  const o=p.consumer(source,names,{...deps,[childName]:ChildPort});Object.assign(o,fields);
+  const key=JSON.stringify([source,names,childName,childSource]);
+  let compiled=factories.get(key);
+  if(compiled===undefined){
+   compiled=createReaderBuilderProbe(source,names,{...p.deps,...deps,[childName]:ChildPort},
+    {...p.hooks,childSources:{...p.hooks.childSources,[childName]:childSource}});
+   factories.set(key,compiled);
+  }
+  const o=new compiled.Component(undefined,{});
+  for(const previous of actors){assert.notEqual(o,previous);assert.notEqual(o.nodes,previous.nodes);assert.notEqual(o.children,previous.children);}
+  actors.push(o);Object.assign(o,fields);
   return{p,o,child:()=>[...o.children.values()].find(c=>c instanceof ChildPort)};
  };
  const book={sourceId:'old',bookId:'book',title:'书名',author:'作者',sourceName:'当前书源',coverUrl:'cover',lastChapter:'最新章节 第 120 章'};
@@ -472,6 +495,8 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
   ['payload'],'ReaderShell',shellSource,{detailBook:book,readingContentKind:'text'});
  carrier.o.payload();assert.equal(carrier.child().params.latestChapterTitle,book.lastChapter);
  carrier.o.detailBook={...book,lastChapter:undefined};carrier.o.replay();assert.equal(carrier.child().params.latestChapterTitle,'','missing latest metadata stays empty');
+ assert.equal(factories.size,4,'the exact Index/Shell/Panel/payload source graphs compile once each');
+ assert.equal(actors.length,25,'both formats, both schemes and both motion states still execute all 24 independent host actors plus the metadata carrier');
  checks.push('actual-Index-ReaderShell-Panel-latest-chapter-payload-and-shared-drawer-both-content-hosts');
 }
 console.log(JSON.stringify({status:'PASS',checks,scope:'actual Host/Gateway/full durable intent + Index delegates/seam + SDK Window/shared Row and metadata/drawer host builders; controlled runtime/native file boundary. Native layout/removal/focus/device remain separate.'}));
