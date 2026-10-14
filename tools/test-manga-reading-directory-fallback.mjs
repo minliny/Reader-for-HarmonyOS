@@ -375,7 +375,7 @@ for (const [label, candidate, listCandidate, failure] of [
 const responsiveParts = [{ index: 7, title: '41 上', navigable: true },
   { index: 19, title: '41 中', navigable: true }, { index: 31, title: '41 下', navigable: true }];
 function checkViewport(candidate = source) {
-  for (const [initial, next, expected] of [[360, 580, [2, 2]], [580, 360, [1, 1, 1]], [0, 353, [1, 1, 1]]]) {
+  for (const [initial, next, expected] of [[580, 1000, [3]], [1000, 580, [1, 1, 1]], [0, 353, [1, 1, 1]]]) {
     const probe = actualListProbe(candidate, 3.2), { owner } = probe;
     Object.assign(owner, fixture(responsiveParts).owner, { viewportWidth: initial, windowMetricsRevision: 0 });
     owner.aboutToAppear(); flush(); owner.initialRender();
@@ -516,6 +516,7 @@ assert.throws(() => checkRetainedGroupFold(source, disabledGroup), /proved canon
   assert.equal(owner.projectedEntries.at(-1).title, '7 下', 'Quick keeps the end of the complete canonical parts catalog');
   assert.equal(owner.projectedEntries.length, parts.length, 'Quick never truncates a parts catalog to nearby targets');
   assert.ok(owner.layoutRows.every(row => row.kind === 'parts' && row.columns === 3));
+  assert.ok(owner.layoutRows.every(row => row.entries.length === 3 && row.entries.map(entry => entry.title.replace(/ [上中下]$/, '')).every(title => title === row.entries[0].title.replace(/ 上$/, ''))), 'Quick keeps all three parts of a source group in one native row');
   owner.aboutToDisappear(); flush();
 }
 const wideOpening = fixture(); wideOpening.owner.currentOpenInset = 7; wideOpening.owner.aboutToAppear(); wideOpening.owner.onFirstLayout(); flush();

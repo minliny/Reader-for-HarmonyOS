@@ -28,6 +28,48 @@ syntax.builderParamObjectCollection.set('BookshelfShell',new Set(['content']));
 for(const n of ['bookshelfContent','topBar'])require(sdk+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add(n);
 const indexNames=[...projectionIndexMethods,'beginImport','isCurrentImport','closeImportDialog','openImportDialog','canRemoveShelfBook','canRemoveDetailBook','removeShelfBook','removeShelfBooks','removeDetailBook','applyShelfBookRemoval','applyDetailBookRemoval','hasUnknownShelfWrite','shelfRecovery','shelfReadRecovery','emptyShelfRecovery','reconcileShelfWrite','continueShelfRemoval','canContinueShelfRemoval','registerTemporaryBackBridge','hasVisibleImportDialog','visibleImportDialogState','visibleImportBatch','currentImportPresentation','reconcileImportPresentation'];
 
+// Compile only the invariant visual graph once. Every render still receives
+// its own SDK actor/Props, while each fixture below keeps its independently
+// bound production Host, AtomicFile and cold SQLite authority unchanged.
+const indexRenderFactories=new Map(),renderActors=new WeakSet(),renderNodes=new WeakSet(),renderChildren=new WeakSet();
+const durableRoots=new Set();
+let shelfComposition,shelfFactory,importComposition,importFooterFactory,importSelectionFactory,renderActorCount=0;
+function freshActor(factory,params={}){
+ const actor=new factory.Component(undefined,params);
+ assert.equal(renderActors.has(actor),false);assert.equal(renderNodes.has(actor.nodes),false);assert.equal(renderChildren.has(actor.children),false);
+ renderActors.add(actor);renderNodes.add(actor.nodes);renderChildren.add(actor.children);renderActorCount++;
+ assert.equal(actor.observers.length,0,'a fresh render does not inherit native observers or old physical callbacks');
+ return actor;
+}
+function indexRenderActor(method){
+ let factory=indexRenderFactories.get(method);
+ if(factory===undefined){
+  factory=createReaderBuilderProbe(source('pages/Index.ets'),[method,'localImportSurface'],
+   {BookshelfShell:Child,LocalImportDialog:Child,ReaderRuntimeOwner},{allowEmptyBranchAdmission:true});
+  indexRenderFactories.set(method,factory);
+ }
+ return freshActor(factory);
+}
+function shelfRenderSdk(){
+ if(shelfComposition===undefined){
+  shelfComposition=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+  const text=source('features/bookshelf/BookshelfShell.ets');
+  shelfFactory=createReaderBuilderProbe(text,boundedMembers(text),
+   {...shelfComposition.deps,bookshelfTemporaryGeneration:0,registerReaderShelfFonts:()=>{}},shelfComposition.hooks);
+ }
+ return{composition:shelfComposition,factory:shelfFactory};
+}
+function importRenderSdk(selection=false){
+ importComposition??=boundedSurfaceSdk();
+ const names=selection?['fileSelectionActions']:['resultFooter','resultRecovery'];
+ let factory=selection?importSelectionFactory:importFooterFactory;
+ if(factory===undefined){
+  factory=createReaderBuilderProbe(source('features/bookshelf/LocalImportDialog.ets'),names,importComposition.deps,importComposition.hooks);
+  if(selection)importSelectionFactory=factory;else importFooterFactory=factory;
+ }
+ return{composition:importComposition,factory};
+}
+
 const clone=v=>structuredClone(v),tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{resolve,promise};};
 const book=id=>({sourceId:'local',bookId:id,title:id,author:'author',kind:'TXT',sortIndex:0,addedAt:1});
@@ -43,6 +85,10 @@ function rpc(){return{calls:[],rows:[book('a'),book('b')],readFail:0,writeFail:f
  },count(m){return this.calls.filter(x=>x===m).length;}};}
 async function fixture({runtime,stored='',reconstruct=false}={}) {
  const durable=runtime?.durable??await removalFixture();
+ if(runtime===undefined){
+  assert.equal(durableRoots.has(durable.root),false,'a fresh scenario retains its own cold SQLite/AtomicFile directory');
+  durableRoots.add(durable.root);
+ }else assert.equal(durable,runtime.durable,'same-Runtime reconstruction keeps only its original file authority');
  const operationTypes=durable;
  // Current/isCurrent are the actual production identity methods. Their sole
  // injected storage is shared across these real reconstructed Host instances.
@@ -92,15 +138,13 @@ async function fixture({runtime,stored='',reconstruct=false}={}) {
  index.applyBookshelfState({kind:r.rows.length?'populated':'empty',shelf:{books:clone(r.rows),total:r.rows.length},continueReading:undefined});
  index.reconcileImportPresentation();
  await until(()=>!index.bookshelfHost.operations(r).current().reconcileBusy);
- const renderIndex=method=>{const p=createReaderBuilderProbe(source('pages/Index.ets'),[method,'localImportSurface'],{BookshelfShell:Child,LocalImportDialog:Child,ReaderRuntimeOwner},{allowEmptyBranchAdmission:true});Object.assign(p.owner,index,{isCurrentBookshelfPresentation:index.isCurrentBookshelfPresentation.bind(index),shelfRecovery:()=>index.shelfRecovery(),shelfReadRecovery:()=>index.shelfReadRecovery(),emptyShelfRecovery:()=>index.emptyShelfRecovery(),reconcileShelfWrite:g=>index.reconcileShelfWrite(g),registerTemporaryBackBridge:(...args)=>index.registerTemporaryBackBridge(...args),canContinueShelfRemoval:()=>index.canContinueShelfRemoval(),continueShelfRemoval:g=>index.continueShelfRemoval(g),isCurrentImport:(...args)=>index.isCurrentImport(...args),beginImport:()=>index.beginImport(),closeImportDialog:()=>index.closeImportDialog(),visibleImportDialogState:()=>index.visibleImportDialogState(),visibleImportBatch:()=>index.visibleImportBatch()});p.owner[method]();return [...p.owner.children.values()].at(-1).params;};
- const renderNotice=params=>{const p=createReaderBuilderProbe(source('features/common/ReaderRecoveryNotice.ets'),['build'],{ReaderRecoveryAction:Child}).owner;Object.assign(p,{actionLabel:'刷新列表'},params,{appThemeScheme:'day'});p.initialRender();const child=[...p.children.values()].at(-1);if(child){const action=createReaderBuilderProbe(source('features/common/ReaderRecoveryAction.ets'),['build']).owner;Object.assign(action,{actionEnabled:true},child.params,{appThemeScheme:'day'});action.initialRender();for(const [id,node] of action.nodes)p.nodes.set(-id,node);}return p;};
- const render=()=>{const props=renderIndex('bookshelfShellContent'),composition=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
- const p=composition.consumer(source('features/bookshelf/BookshelfShell.ets'),boundedMembers(source('features/bookshelf/BookshelfShell.ets')),
-  {bookshelfTemporaryGeneration:0,registerReaderShelfFonts:()=>{}},props);
+ const renderIndex=method=>{const actor=indexRenderActor(method);Object.assign(actor,index,{isCurrentBookshelfPresentation:index.isCurrentBookshelfPresentation.bind(index),shelfRecovery:()=>index.shelfRecovery(),shelfReadRecovery:()=>index.shelfReadRecovery(),emptyShelfRecovery:()=>index.emptyShelfRecovery(),reconcileShelfWrite:g=>index.reconcileShelfWrite(g),registerTemporaryBackBridge:(...args)=>index.registerTemporaryBackBridge(...args),canContinueShelfRemoval:()=>index.canContinueShelfRemoval(),continueShelfRemoval:g=>index.continueShelfRemoval(g),isCurrentImport:(...args)=>index.isCurrentImport(...args),beginImport:()=>index.beginImport(),closeImportDialog:()=>index.closeImportDialog(),visibleImportDialogState:()=>index.visibleImportDialogState(),visibleImportBatch:()=>index.visibleImportBatch()});actor[method]();return [...actor.children.values()].at(-1).params;};
+ const render=()=>{const props=renderIndex('bookshelfShellContent'),{composition,factory}=shelfRenderSdk();
+ const p=freshActor(factory,props);
  p.aboutToAppear();p.recoveryNoticeContent(props.recovery,false);
  const notice=composition.walk(p).find(owner=>owner instanceof composition.deps.ReaderRecoveryNotice);
  assert.ok(notice,'actual decorated Shell -> shared Notice mounted');return{view:notice.view,nodes:new Map(composition.nodes(p).map((node,id)=>[id,node]))};};
- const importRender=()=>{const props=renderIndex('localImportContent'),composition=boundedSurfaceSdk(),p=composition.consumer(source('features/bookshelf/LocalImportDialog.ets'),['resultFooter','resultRecovery']);Object.assign(p,props,{appThemeScheme:'day',resultButtonWidth:()=>100,availableHeight:()=>400});p.resultFooter();const notice=composition.walk(p).find(owner=>owner instanceof composition.deps.ReaderRecoveryNotice);assert.ok(notice,'actual shared Footer -> RecoveryNotice child mounted');return{view:notice.view,nodes:new Map(composition.nodes(p).map((node,id)=>[id,node]))};};
+ const importRender=()=>{const props=renderIndex('localImportContent'),{composition,factory}=importRenderSdk(),p=freshActor(factory);Object.assign(p,props,{appThemeScheme:'day',resultButtonWidth:()=>100,availableHeight:()=>400});p.resultFooter();const notice=composition.walk(p).find(owner=>owner instanceof composition.deps.ReaderRecoveryNotice);assert.ok(notice,'actual shared Footer -> RecoveryNotice child mounted');return{view:notice.view,nodes:new Map(composition.nodes(p).map((node,id)=>[id,node]))};};
  const retry=async p=>{const action=[...p.nodes.values()].find(n=>n.type==='Text'&&n.height===36);assert.ok(action,'actual SDK shared recovery action exists');action.onClick();action.onClick();await until(()=>!index.bookshelfHost.operations(r).current().reconcileBusy);};
  const remove=async(kind='single')=>{if(kind==='batch'){index.route='bookshelfMultiSelect';index.removeShelfBooks(clone(index.shelfBooks));}else if(kind==='detail'){index.route='detail';index.detailBook=clone(index.shelfBooks[0]);index.detailInBookshelf=true;index.detailToc=[{index:324,title:'第325章',navigable:true}];index.detailMembershipOriginal={book:index.detailBook,toc:index.detailToc};index.removeDetailBook(index.detailBook);}else index.removeShelfBook(index.shelfBooks[0]);await until(()=>!index.bookshelfHost.operations(r).current().busy);};
  return{r,index,remove,render,importRender,retry,import:async()=>{index.openImportDialog();await index.beginImport();},receipt:()=>index.shelfOperation.receipt,presentation:()=>index.currentImportPresentation(),serialized:()=>serialized,owner:()=>index.bookshelfHost.operations(r),renderIndex};}
@@ -203,12 +247,12 @@ for(const serialized of ['', 'invalid', '{}', JSON.stringify({state:'result',bat
  assert.equal(x.presentation().batch.imported,1);assert.equal(x.receipt(),undefined,'a restored UI result is not an ACK for a new mutation');assert.equal(x.r.count('bookshelf.add'),0);}
 for(const state of ['pickerOpening','importing']){const x=await fixture({stored:JSON.stringify({state})});assert.equal(x.presentation().state,'fileSelection');assert.equal(x.owner().current().busy,false);assert.equal(x.receipt(),undefined);}
 {const x=await fixture();x.index.openImportDialog();const props=x.renderIndex('localImportContent');
- const composition=boundedSurfaceSdk(),actor=composition.consumer(source('features/bookshelf/LocalImportDialog.ets'),['fileSelectionActions']);
+ const {composition,factory}=importRenderSdk(true),actor=freshActor(factory);
  Object.assign(actor,props,{appThemeScheme:'day'});actor.fileSelectionActions();const oldButtons=composition.nodes(actor).filter(n=>n.onClick);
  assert.ok(oldButtons.length>=2,'actual SDK shared primary+cancel native inputs');x.index.closeImportDialog();x.index.openImportDialog();
  const id=x.index.shelfOperation.importIdentity,before=x.r.calls.length;for(const node of oldButtons)node.onClick();await tick();
  assert.equal(x.index.shelfOperation.importIdentity,id);assert.equal(x.presentation().state,'fileSelection');assert.equal(x.r.calls.length,before,'actual old leaf physical callbacks cannot choose or close successor opening');
- const freshProps=x.renderIndex('localImportContent'),fresh=composition.consumer(source('features/bookshelf/LocalImportDialog.ets'),['fileSelectionActions']);
+ const freshProps=x.renderIndex('localImportContent'),fresh=freshActor(factory);
  Object.assign(fresh,freshProps,{appThemeScheme:'day'});fresh.fileSelectionActions();const cancel=composition.nodes(fresh).find(n=>n.type==='Row'&&n.height===44&&n.border&&n.onClick);
  assert.ok(cancel);cancel.onClick();assert.equal(x.presentation(),undefined,'current shared native action can close live opening');
  x.index.openImportDialog();const original=x.index.isCurrentImport;x.index.isCurrentImport=()=>true;oldButtons.find(n=>n.border).onClick();assert.equal(x.presentation(),undefined,'negative control: removing captured opening guard allows old physical cancel to close successor');x.index.isCurrentImport=original;
@@ -254,4 +298,8 @@ for(const result of ['confirmed','unknown','cancelled','legacy-navigation-negati
  assert.deepEqual(x.p.properties.copies.slice(copies).filter(sample=>sample.object&&['book','toc'].includes(sample.name)),[],
   'confirmed/unknown/cancelled remove must not reset actual detail body props');
 }
+assert.equal(indexRenderFactories.size,2,'both actual Index render source graphs are retained');
+assert.ok(shelfFactory&&importFooterFactory&&importSelectionFactory,'all shared Shell/footer/selection visual families still execute');
+assert.ok(renderActorCount>40,'all render invocations still receive their own independent SDK actors');
+console.log(JSON.stringify({sdkRenderActors:renderActorCount,durableScenarioDirectories:durableRoots.size,indexRenderFactories:indexRenderFactories.size,sharedVisualFactories:3}));
 console.log('Bookshelf/import actual gateway → finite Host owner → Index → SDK notice/actions: PASS (ACK/read/cleanup/unknown/admission/partial/only-read, close/reopen, same-Runtime Index reconstruction, retired Runtime inspection, concurrency/reentry, actual old physical callbacks and negative control; actual decorated detail add/remove membership retains body/scroll and scoped dialog across genuine SQLite confirmed/unknown/cancelled removal).');
