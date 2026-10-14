@@ -290,6 +290,8 @@ export struct BookDirectoryPage {
       headerInsetLeft: this.headerFrame().left, headerInsetRight: this.headerFrame().right,
       footerInsetLeft: this.contentFrame().left, footerInsetRight: this.contentFrame().right,
       footerBottom: this.mangaBottomInset() + this.mangaFooterBottomOffset(),
+      footerSurface: this.mangaFlowFooter() ? 'transparent' : 'solid',
+      contentEndInset: this.mangaFlowFooter() ? 0 : this.mangaBottomClearance(),
       content: (): void => { this.mangaContent(); },
       header: (): void => { this.mangaHeader(); },
       footer: (): void => { this.mangaFixedFooter(); },
@@ -322,7 +324,8 @@ export struct BookDirectoryPage {
           rowHeight: visual.gridHeight, listPaddingX: this.contentFrame().left,
           listPaddingRight: this.contentFrame().right,
           listPaddingY: visual.gridGap, listPaddingTop: this.mangaContentTopInset(),
-          listPaddingBottom: this.mangaBottomClearance(),
+          listPaddingBottom: this.mangaListBottomClearance(),
+          contentEndInset: Math.max(0, this.mangaListBottomClearance() - 18),
           edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
           chapterEntries: this.admittedEntries,
           chapterDownloadEnabled: this.mangaDownloadEnabled,
@@ -460,6 +463,9 @@ export struct BookDirectoryPage {
   /** The footer follows the safe area closely; the released 4vp is usable list space. */
   private mangaFooterBottomOffset(): number { return Math.max(0, visual.footerBottom - 4); }
   private mangaBottomClearance(): number { return this.mangaBottomInset() + (this.mangaFlowFooter() ? 0 : this.mangaFooterHeight()) + this.mangaFooterBottomOffset() * 2; }
+  /** The fixed dock is already outside the clipped viewport. Catalog Grid owns
+   * an 18vp tail; flowing chrome still needs its existing bottom safe clearance. */
+  private mangaListBottomClearance(): number { return this.mangaFlowFooter() ? this.mangaBottomClearance() : 18; }
 
   private headerFrame(): SurfaceHorizontalFrame {
     const frame = this.contentFrame();
@@ -501,7 +507,7 @@ export struct BookDirectoryPage {
       entries: this.mangaLayoutEntries(), rowHeight: visual.gridHeight, naturalRowHeight: true,
       listPaddingX: this.contentFrame().left, listPaddingY: 8,
       listPaddingRight: this.contentFrame().right,
-      listPaddingTop: this.mangaContentTopInset(), listPaddingBottom: this.mangaBottomClearance(),
+      listPaddingTop: this.mangaContentTopInset(), listPaddingBottom: this.mangaListBottomClearance(),
       edgeEffectMode: EdgeEffect.Spring, scroller: this.listScroller,
       onFirstLayout: (): void => this.onListFirstLayout(identity),
       onScrollOffset: (offset: number): void => this.onMangaScrollOffset(offset + this.mangaContentTopInset()),

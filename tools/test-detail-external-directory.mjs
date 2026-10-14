@@ -4,6 +4,8 @@ import { createRequire, stripTypeScriptTypes, registerHooks } from 'node:module'
 import { fileURLToPath } from 'node:url';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(s+'.ts',c);throw e;}}});
 const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
+const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
+const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 const file=p=>fileURLToPath(new URL(`../entry/src/main/ets/${p}`,import.meta.url));
@@ -163,3 +165,67 @@ console.log('PH119 independent catalog routing, retained detail Builder and exac
  owner.replayOnly([child.id]);
  assert.equal(child.params.bookTitle,'Renamed','retained child receives the updated detail identity');
 }
+
+// A standalone novel directory has no mounted reader to publish its chapter.
+// Execute the actual Index opener, both strict progress gateways, SDK-emitted
+// Index -> ReaderFullDirectory -> FullDirectoryPanel builders and panel footer.
+const fullSource=readFileSync(file('features/reading/ReaderFullDirectory.ets'),'utf8');
+syntax.componentCollection.customComponents.add('FullDirectoryPanel');
+syntax.propCollection.set('FullDirectoryPanel',new Set(['entries','catalogMessage','onRetryCatalog','currentChapterIndex','allowUnanchoredBrowse','chapterDownloadEnabled','mangaSearch','isTablet','panelWidthOverride','panelHeightOverride','onSelectChapter','onSelectNavigationTarget','onSelectBookmark','bookmarkIdentity','onDownloadChapter','onDeleteBookmarks','chapterStartBookmarkCreationEnabled','onCreateChapterStartBookmark','onExit']));
+const Footer=productionMotionMethods(file('features/reading/FullDirectoryPanel.ets'),['currentEntry','isCurrent','currentTitle','currentPosition']);
+const tick=()=>new Promise(resolve=>setImmediate(resolve));
+const projectionStart=source.indexOf("    if (this.detailBook.contentKind === 'manga') return;\n    // Text detail");
+const projectionEnd=source.indexOf('\n  }\n\n  private openReaderControlDirectory',projectionStart);
+assert.ok(projectionStart>0&&projectionEnd>projectionStart);
+const oldSource=source.slice(0,projectionStart)+source.slice(projectionEnd);
+function standalone(sourceId='local',{legacy=false,shelfIndex=19,shelfSource=sourceId,contentKind='text',emptyToc=false}={}){
+ let resolve,live=true;const result=new Promise(done=>{resolve=done;});const calls=[];
+ const runtime={supportsCoreCapability:()=>true,async request(method,params,options){
+  calls.push({method,params,options});assert.equal(method,'reading.progress.get','directory viewing cannot acquire a body or save progress');
+  return {data:await result};
+ }};
+ const {owner}=createReaderBuilderProbe(legacy?oldSource:source,['openFullDirectory','closeDirectory','externalDirectory','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{
+  BookDirectoryPage:DirectoryChild,ReaderFullDirectory:DirectoryChild,readingDirectoryRecovery,LocalReadingFlowGateway,RemoteReadingFlowGateway,LOCAL_SOURCE_ID:'local',
+  ReaderRuntimeOwner:{current:()=>runtime},...enums});
+ Object.assign(owner,index(sourceId),{mountedRuntimeOwner:runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:2,directoryPresentationGeneration:1,
+  settingsSnapshot:{reduceMotion:false},offlineMutationActiveKey:'',appThemeScheme:'day',loadDirectoryOperationProjections(){},isCurrentRuntime:value=>value===runtime&&live,
+  shelfBooks:shelfIndex===undefined?[]:[{sourceId:shelfSource,bookId:'book',currentChapterIndex:shelfIndex,currentChapterTitle:'untrusted display alias',addedAt:1}],
+  detailBookmarkIdentity:()=>({sourceId,bookId:'book'})});
+ owner.detailBook.contentKind=contentKind;if(contentKind==='manga')owner.detailBook.mangaPosition={chapterIndex:2,chapterTitle:'Manga chapter',pageOrdinal:0};
+ if(emptyToc)owner.detailToc=[];
+ return {owner,calls,release({found=true,index=19,source=sourceId,bookId='book'}={}){resolve({found,progressRevision:'cas-7',progress:found?{sourceId:source,bookId,chapterIndex:index,chapterOffset:37,chapterProgress:.02,updatedAt:7}:null});},retireRuntime(){live=false;}};
+}
+function footer(owner){
+ let detail=[...owner.children.values()].find(child=>child.params.catalogContext==='detail');
+ if(detail)owner.replayOnly([detail.id]);else{owner.externalDirectory();detail=[...owner.children.values()].find(child=>child.params.catalogContext==='detail');}
+ assert.ok(detail,'text keeps the standalone complete directory route');
+ const {owner:full}=createReaderBuilderProbe(fullSource,['directoryContent'],{FullDirectoryPanel:DirectoryChild});
+ Object.assign(full,detail.params,{directoryRecovery:EMPTY_READING_DIRECTORY_RECOVERY,panelWidth:()=>364,panelLeft:()=>12,panelTop:()=>88,fullPanelHeight:()=>736,activeRecoveryHeight:()=>0,panelViewportHeight:()=>736,usesExpandedLayout:()=>false,shouldAnimatePanel:()=>false});
+ full.directoryContent();const panel=[...full.children.values()][0];assert.ok(panel);assert.equal(panel.params.currentChapterIndex,owner.directoryCurrentChapterIndex,'wrapper forwards the exact Core anchor');
+ const display=Object.assign(new Footer(),panel.params,{admittedEntries:panel.params.entries});
+ return [display.currentTitle(),display.currentPosition()];
+}
+for(const sourceId of ['local','remote']){
+ const f=standalone(sourceId);f.owner.openFullDirectory();
+ assert.deepEqual(footer(f.owner),['Chapter 20','20 / 25'],'exact shelf progress is visible before the read settles');
+ assert.equal(f.owner.route,'directory');assert.equal(f.owner.readingSessionActive,false);assert.equal(f.owner.requestedChapterIndex,undefined);
+ assert.deepEqual(f.calls.map(call=>[call.method,call.params.sourceId,call.params.bookId]),[['reading.progress.get',sourceId,'book']]);
+ assert.equal(f.calls[0].options.shouldCancel(),false);f.release({index:2});await tick();
+ assert.deepEqual(footer(f.owner),['Chapter 3','3 / 25'],'canonical read refreshes only the directory display');
+ assert.equal(f.owner.requestedChapterIndex,undefined);assert.equal(f.owner.readingSessionActive,false);assert.equal(f.calls.length,1);
+ const old=standalone(sourceId,{legacy:true});old.owner.openFullDirectory();
+ assert.deepEqual(footer(old.owner),['尚未开始阅读','—'],'negative control reproduces the old already-read novel footer');assert.equal(old.calls.length,0);
+ const hidden=standalone(sourceId,{shelfSource:'another-source'});hidden.owner.openFullDirectory();assert.deepEqual(footer(hidden.owner),['尚未开始阅读','—']);
+ hidden.release();await tick();assert.deepEqual(footer(hidden.owner),['Chapter 20','20 / 25'],'same bookId in another source cannot supply progress; canonical identity can');
+ const missing=standalone(sourceId);missing.owner.openFullDirectory();missing.release({found:false});await tick();assert.deepEqual(footer(missing.owner),['尚未开始阅读','—']);
+ const wrong=standalone(sourceId,{shelfIndex:undefined});wrong.owner.shelfBooks=[];wrong.owner.openFullDirectory();wrong.release({source:'another-source'});await tick();assert.deepEqual(footer(wrong.owner),['尚未开始阅读','—'],'gateway rejects mismatched Core progress identity');
+ const unknown=standalone(sourceId);unknown.owner.openFullDirectory();unknown.release({index:999});await tick();assert.deepEqual(footer(unknown.owner),['尚未开始阅读','—'],'an absent chapter is never clamped to a known row');
+ const delayed=standalone(sourceId,{emptyToc:true});delayed.owner.openFullDirectory();delayed.release();await tick();assert.deepEqual(footer(delayed.owner),['尚未开始阅读','—']);
+ delayed.owner.detailToc=index(sourceId).detailToc;assert.deepEqual(footer(delayed.owner),['Chapter 20','20 / 25'],'late admitted TOC resolves the retained canonical index');
+ for(const [name,retire] of [['close',f=>f.owner.closeDirectory()],['navigation',f=>f.owner.navigationGeneration++],['mount',f=>f.owner.detailShelfAdmissionMount++],['directory',f=>f.owner.directoryPresentationGeneration++],['owner',f=>f.owner.mountedRuntimeOwner={}],['runtime',f=>f.retireRuntime()],['reader',f=>f.owner.readingSessionActive=true],['identity',f=>f.owner.detailBook={...f.owner.detailBook,bookId:'other'}]]){
+  const stale=standalone(sourceId,{shelfIndex:1});stale.owner.openFullDirectory();retire(stale);assert.equal(stale.calls[0].options.shouldCancel(),true,`${sourceId}/${name}: RPC receives the presentation fence`);
+  stale.release({index:19});await tick();assert.equal(stale.owner.directoryCurrentChapterIndex,1,`${sourceId}/${name}: late progress cannot publish`);
+ }
+}
+const manga=standalone('remote',{contentKind:'manga'});manga.owner.openFullDirectory();assert.equal(manga.calls.length,0);assert.equal(manga.owner.directoryCurrentChapterIndex,2);
+console.log('PASS actual standalone novel directory: exact shelf/canonical progress through both SDK builders and footer, missing/foreign/late TOC and all presentation fences; old-code negative and manga exclusion');

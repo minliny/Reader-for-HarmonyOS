@@ -189,7 +189,7 @@ const multiList = fullList(multi);
 assert.equal(multiList.contentStartOffset, 70);
 assert.equal(multiList.contentEndOffset, 12 + 22 + 6 + 13.31 + 34 + 20);
 const remove = nodes(multi).find(n => n.borderRadius?.topLeft === 24);
-const removeHost = allNodes(multi).find(n => n.type === 'Column' && n.onAreaChange && n.margin?.bottom === 0);
+const removeHost = allNodes(multi).find(n => n.type === 'Column' && n.onAreaChange && n.padding?.left === 0 && n.padding?.right === 0);
 assert.ok(removeHost);
 assert.equal(removeHost.height, undefined, 'the footer can grow naturally with scaled or wrapped labels');
 assert.equal(allNodes(multi).find(n => n.type === 'Stack' && n.zIndex === 20).hitTestBehavior, 'HitTestMode.Transparent');
@@ -289,7 +289,7 @@ for (const [safeTop, safeBottom] of [[0, 0], [48, 34], [10, 80]]) {
   let rawMangaOffset = 0;
   const nativeMangaScroller = { currentOffset: () => ({ xOffset: 0, yOffset: rawMangaOffset }) };
   const catalog = fixture('directory', ['build', 'mangaPage', 'mangaToolbar', 'mangaFlatList', 'mangaEmptyState', 'mangaDownloadMenuButton',
-    'mangaCurrentFooter', 'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'mangaContentTopInset', 'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaSortIcon', 'headerFrame', 'onMangaScrollOffset', 'topInset', 'bottomInset'], {
+    'mangaCurrentFooter', 'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'mangaContentTopInset', 'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaListBottomClearance', 'mangaSortIcon', 'headerFrame', 'onMangaScrollOffset', 'topInset', 'bottomInset'], {
     contentKind: 'manga', sourceId: 'source', bookId: 'book', admittedIdentity: 'source\u0000book',
     admittedEntries: entries, projectedEntries: entries, rulesRevision: 0, currentChapterIndex: 7,
     locateCurrentRevision: 0, navigationInteracted: false, mangaDownloadEnabled: false,
@@ -305,20 +305,22 @@ for (const [safeTop, safeBottom] of [[0, 0], [48, 34], [10, 80]]) {
   const flatChild = [...catalog.children.values()].find(child => child.params?.entries);
   assert.ok(flatChild, 'the actual manga fallback publishes its natural-row List');
   const toolbar = nodes(catalog).find(node => node.type === 'Column' && node.position?.y === safeTop + 80 && typeof node.onAreaChange === 'function');
-  const footer = allNodes(catalog).find(node => node.type === 'Column' && node.margin?.bottom === safeBottom + 8);
+  const footer = allNodes(catalog).find(node => node.type === 'Column' && node.padding?.bottom === safeBottom + 8);
+  const frame = [...catalog.children.values()].find(child => child.params?.variant === 'mangaDirectory');
   const actualFooter = [...catalog.children.values()].find(child => child.nodes && child.availableWidth === 330);
   assert.ok(actualFooter, 'the real shared footer supplies the full catalog clearance contract');
   assert.equal(nodes(actualFooter).find(node => node.accessibilityText === '当前阅读位置').constraintSize.minHeight, 48);
   assert.ok(toolbar); assert.ok(footer);
   assert.equal(toolbar.position.y, safeTop + 80);
-  assert.equal(footer.margin.bottom, safeBottom + 8);
+  assert.equal(footer.padding.bottom, safeBottom + 8);
+  assert.equal(footer.clip, true);
   const toolbarEnd = toolbar.position.y + catalog.mangaToolsHeight;
-  const footerClearance = catalog.mangaFooterHeight() + footer.margin.bottom + 8;
+  const footerClearance = catalog.mangaFooterHeight() + footer.padding.bottom + 8;
+  assert.equal(frame.params.contentEndInset, footerClearance, 'the common clipped viewport owns the complete fixed-dock clearance');
   for (const [key, child] of [['tree', treeChild], ['flat', flatChild]]) {
     assert.equal(child.params.listPaddingTop, safeTop + 255);
     assert.equal(child.params.listPaddingTop, toolbarEnd, `${key} first row clears the measured floating tools`);
-    assert.equal(child.params.listPaddingBottom, safeBottom + 64);
-    assert.equal(child.params.listPaddingBottom, footerClearance, `${key} final row clears the actual footer plus its 8vp gap`);
+    assert.equal(child.params.listPaddingBottom, 18, `${key} tail cannot reserve the dock a second time`);
     const { owner, list } = nativeDirectoryFixture(key, child.params);
     if (key === 'tree') {
       assert.equal(list.padding.top, 0);

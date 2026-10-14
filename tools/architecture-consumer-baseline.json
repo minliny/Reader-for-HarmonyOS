@@ -817,7 +817,7 @@
       "file": "entry/src/main/ets/features/common/ReaderPageShell.ts",
       "contractId": "shared-ReaderPageShellPolicy",
       "counts": {
-        "backgroundColor": 6
+        "backgroundColor": 7
       }
     },
     {

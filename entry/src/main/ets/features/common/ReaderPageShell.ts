@@ -8,6 +8,7 @@ import { readerFloatingBarBottomInset, readerFloatingTabContentInset } from './R
 export type ReaderPageShellKind = 'standard' | 'mainTab' | 'settings' | 'detail' | 'mangaDetail' | 'directory' | 'readerDirectory' | 'mangaDirectory' | 'search' | 'selection' | 'download' | 'reader';
 export type ReaderHeaderKind = 'standard' | 'home' | 'floating' | 'mangaDirectory' | 'selection' | 'search' | 'rss' | 'directoryTools' | 'download' | 'reader';
 export type ReaderHeaderSurface = 'solid' | 'transparent';
+export type ReaderFooterSurface = 'solid' | 'transparent';
 export type ReaderStandardPageVariant = 'management' | 'settings' | 'rssManagement' | 'rssEditor' | 'rssFeed' | 'rssDetail' | 'tools' | 'sync' | 'sourceManagement' | 'settingsHome' | 'settingsGeneral';
 
 export class ReaderStandardPageSpec {
@@ -109,5 +110,25 @@ export class ReaderHeaderFrameModifier implements AttributeModifier<CommonAttrib
     if (this.surface === 'solid') instance.backgroundColor(readerAppColor(
       this.kind === 'standard' || this.kind === 'directoryTools' ? 'TOK_SURFACE_SOLID' : this.kind === 'download' ? 'TOK_DOWNLOAD_PAPER' : 'TOK_PAPER', this.scheme));
     else instance.backgroundColor(Color.Transparent);
+  }
+}
+
+/** A fixed dock masks the complete footer lane, including horizontal gutters
+ * and bottom safe area. Floating/flowing footers keep their bounded card paint. */
+export class ReaderFooterFrameModifier implements AttributeModifier<CommonAttribute> {
+  private readonly kind: ReaderPageShellKind;
+  private readonly surface: ReaderFooterSurface;
+  private readonly scheme: string;
+  private readonly readingUnderlayColor: string;
+  constructor(kind: ReaderPageShellKind, surface: ReaderFooterSurface, scheme: string, readingUnderlayColor: string = '') {
+    this.kind = kind; this.surface = surface; this.scheme = scheme; this.readingUnderlayColor = readingUnderlayColor;
+  }
+  applyNormalAttribute(instance: CommonAttribute): void {
+    if (this.surface === 'solid') {
+      new ReaderPageFrameModifier(this.scheme, this.kind, this.readingUnderlayColor).applyNormalAttribute(instance);
+      instance.clip(true);
+    } else {
+      instance.clip(false).backgroundColor(Color.Transparent).zIndex(0);
+    }
   }
 }

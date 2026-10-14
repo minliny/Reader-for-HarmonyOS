@@ -13,6 +13,7 @@ import { verifyFullDirectoryLayoutSuccession } from './lib/reader-full-directory
 import { verifyIndexSyncColdLayoutSuccession } from './lib/index-sync-cold-layout-successor.mjs';
 import { sharedProducerShape } from './lib/architecture-shared-producer-contract.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { mangaDirectoryColor } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import { createDefaultReaderWindowMetrics, readerContentSafeTop } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const read = name => readFileSync(`entry/src/main/ets/features/common/${name}.ets`, 'utf8');
@@ -112,6 +113,38 @@ for (const variant of ['standard', 'mainTab', 'settings', 'detail', 'mangaDetail
   footer.onAreaChange({}, { height: 54 });
   assert.deepEqual(headerHeights, [97]); assert.deepEqual(footerHeights, [54]);
 }
+
+function footerProof(scaffoldSource = read('ReaderPageScaffold'), dependencies = {}, scheme = 'day') {
+  const probe = actual('ReaderPageScaffold', dependencies, {}, scaffoldSource);
+  const heights = []; let mounts = 0;
+  Object.assign(probe.owner, { variant: 'mangaDirectory', footerSurface: 'solid', appThemeScheme: scheme,
+    contentEndInset: 98, footerBottom: 42, footerInsetLeft: 20, footerInsetRight: 20,
+    content: () => mounts++, footer: () => {}, onFooterHeightChange: height => heights.push(height) });
+  probe.owner.initialRender();
+  const nodes = [...probe.owner.nodes.values()];
+  const viewport = nodes.find(node => node.type === 'Stack' && node.height === 'calc(100% - 98vp)');
+  assert.ok(viewport, 'the public frame owns a bounded native content viewport above the fixed dock');
+  assert.equal(viewport.clip, true, 'rows cannot paint or receive input below that viewport');
+  const backing = nodes.find(node => node.type === 'Column' && node.padding?.bottom === 42);
+  assert.ok(backing, 'the paper lane includes the complete bottom safe area rather than a transparent margin');
+  assert.equal(backing.width, '100%', 'paper covers both card gutters'); assert.equal(backing.clip, true);
+  assert.equal(backing.backgroundColor, mangaDirectoryColor('paper', scheme));
+  const measurement = nodes.find(node => node.type === 'Column' && node.onAreaChange);
+  measurement.onAreaChange({}, { height: '54vp' }); assert.deepEqual(heights, [54], 'dock measurement excludes the already reserved bottom safe lane');
+  probe.owner.footerSurface = 'transparent'; probe.owner.contentEndInset = 0; probe.properties.flush();
+  assert.equal(backing.backgroundColor, 'Color.Transparent'); assert.equal(backing.clip, false);
+  assert.deepEqual(backing.padding, { bottom: 0 }); assert.deepEqual(backing.margin, { bottom: 42 });
+  assert.equal(viewport.height, '100%'); assert.equal(viewport.clip, false); assert.equal(mounts, 1, 'footer style/inset updates retain the body actor');
+}
+footerProof();
+footerProof(undefined, {}, 'night');
+const scaffoldSource = read('ReaderPageScaffold');
+const noViewportClip = scaffoldSource.replace('.clip(this.contentEndInset > 0)', '.clip(false)');
+assert.notEqual(noViewportClip, scaffoldSource); assert.throws(() => footerProof(noViewportClip), assert.AssertionError);
+const noSafeLane = scaffoldSource.replace("bottom: this.footerSurface === 'solid' ? this.footerBottom : 0", 'bottom: 0');
+assert.notEqual(noSafeLane, scaffoldSource); assert.throws(() => footerProof(noSafeLane), assert.AssertionError);
+const noFooterPaint = policySource.replace('new ReaderPageFrameModifier(this.scheme, this.kind, this.readingUnderlayColor).applyNormalAttribute(instance);', 'instance.backgroundColor(Color.Transparent);');
+assert.notEqual(noFooterPaint, policySource); assert.throws(() => footerProof(scaffoldSource, actualReaderPageShell(noFooterPaint)), assert.AssertionError);
 
 {
   const policy = actualReaderPageShell();

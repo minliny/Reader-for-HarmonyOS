@@ -9,6 +9,7 @@ import * as geometryApi from '../entry/src/main/ets/features/common/SurfaceHoriz
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { mangaDirectoryPresentation } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
 import * as directoryVisual from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import { mangaGridBuilderMembers, mangaGridProbeDependencies, emptyMangaGridState } from './lib/manga-directory-grid-probe.mjs';
 
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}.ets`, import.meta.url), 'utf8');
 const fieldSource = read('features/common/ReaderSearchField');
@@ -91,7 +92,7 @@ const palettes = {
 };
 const pageNames = ['mangaPage', 'mangaToolbar', 'mangaCurrentFooter', 'mangaFlowFooter', 'mangaVisibleTopInset', 'mangaNarrow', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaSummaryLabel', 'mangaIsGroup',
   'mangaCurrentTitle', 'mangaCurrentPosition', 'mangaToolsHeight', 'mangaViewportHeight', 'searchDraft', 'ascending',
-  'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaSortIcon',
+  'mangaFontScale', 'mangaToolHeight', 'mangaFooterHeight', 'mangaBottomInset', 'mangaFooterBottomOffset', 'mangaBottomClearance', 'mangaListBottomClearance', 'mangaSortIcon',
   'headerFrame', 'onMangaScrollOffset', 'mangaScrollOffset', 'readerWindowMetricsRevision', 'onMangaMetricsChanged',
   'mangaDownloadMenuButton', 'mangaFooterMeasured'];
 const headerNames = ['build', 'leftInset', 'rightInset', 'mangaFontScale', 'variant', 'centered', 'floating',
@@ -106,6 +107,19 @@ const pageFrame = owner => {
   assert.ok(frame?.nodes, 'manga directory mounts the actual SDK public page scaffold');
   return frame;
 };
+function actualCatalogGridEnd(params) {
+  const properties = createArkUIPropertyRuntimeProbe();
+  const { owner } = createReaderBuilderProbe(read('features/reading/ReaderDirectoryNavigationList'),
+    ['build', ...mangaGridBuilderMembers], { ...fonts, ...mangaGridProbeDependencies, ...properties.sdk,
+      LazyForEach: new Proxy({}, { get: () => () => {} }) }, properties.hooks);
+  Object.assign(owner, emptyMangaGridState(), params, { view: { visibleTotal: 1 },
+    mangaDisplay: true, mangaCatalogDisplay: true, mangaScheme: 'day', appThemeScheme: 'day',
+    listPaddingY: 8, contentStartInset: 0, interactionEnabled: true });
+  owner.initialRender();
+  const grid = [...owner.nodes.values()].find(node => node.type === 'Grid');
+  assert.ok(grid, 'the real SDK-compiled catalog Grid consumes the page/Surface scroll facts');
+  return grid.contentEndOffset;
+}
 
 function checkFullChrome(candidate = pageSource, headerCandidate = headerSource, exhaustive = true, footerCandidate = footerSource) {
   const cases = exhaustive ? [0, 24, 48].flatMap(safeTop => [12, 34].flatMap(safeBottom =>
@@ -148,7 +162,7 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     assert.ok(field?.nodes && header?.nodes, 'mount both actual SDK-compiled shared input and header');
     // Storage dispatch is a platform boundary. Deliver its published values to
     // the actual child links instead of replacing their production role logic.
-    for (const child of [field, header]) { child.appThemeScheme = scheme; child.readerWindowMetricsRevision = 0; }
+    for (const child of [field, header, pageFrame(owner)]) { child.appThemeScheme = scheme; child.readerWindowMetricsRevision = 0; }
     properties.flush();
     const nodes = [...owner.nodes.values()];
     const palette = palettes[scheme];
@@ -205,9 +219,12 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     assert.deepEqual(headerWrapper.padding, { left: 16, right: 16 },
       'header uses 16px edges while summary/catalog content uses 20px edges');
     assert.deepEqual(headerWrapper.margin, { top: safeTop + 8 }, 'public header preserves the original safe-top offset');
-    const footerWrapper = frameNodes.find(node => node.type === 'Column' && node.margin?.bottom === safeBottom + 8);
-    assert.ok(footerWrapper, 'the public fixed-footer slot preserves the original bottom offset');
-    assert.deepEqual(footerWrapper.padding, { left: 20, right: 20 }, 'the footer retains the catalog content frame');
+    const footerWrapper = frameNodes.find(node => node.type === 'Column' && node.padding?.bottom === safeBottom + 8);
+    assert.ok(footerWrapper, 'the public fixed-footer paper lane includes the original safe-bottom offset');
+    assert.equal(footerWrapper.backgroundColor, directoryVisual.mangaDirectoryColor('paper', scheme));
+    assert.equal(footerWrapper.clip, true);
+    const footerContent = frameNodes.find(node => node.type === 'Column' && node.onAreaChange);
+    assert.deepEqual(footerContent.padding, { left: 20, right: 20 }, 'the inner card retains the catalog content frame');
     assert.equal(owner.headerFrame().width, contentWidth + 8, 'SurfaceHorizontalFrame constructor preserves width and right offset');
     const navigation = children.find(child => child.params?.chapterEntries);
     const initialContentTop = safeTop + headerHeight + 28;
@@ -216,7 +233,9 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     near(navigation.params.listPaddingTop, initialContentTop + 175);
     const stackedFooter = scale === 3.2;
     const footerHeight = stackedFooter ? (15 + 18 + 15) * scale + 8 + 22 : Math.max(48, 18 * scale + 22);
-    near(navigation.params.listPaddingBottom, safeBottom + footerHeight + 16);
+    near(navigation.params.listPaddingBottom, 18, 'the clipped viewport already reserves the dock, so the catalog retains only its18vp tail');
+    near(pageFrame(owner).params.contentEndInset, safeBottom + footerHeight + 16);
+    assert.equal(pageFrame(owner).params.footerSurface, 'solid');
     const footer = children.find(child => child.availableWidth === contentWidth && child.title === '48');
     assert.ok(footer?.nodes, 'mount the actual shared current-position footer producer');
     const footerNodes = [...footer.nodes.values()];
@@ -236,8 +255,9 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
       assert.ok(!footerNodes.some(node => node.type === 'Row' && node.layoutWeight === 1));
     } else assert.ok(footerNodes.some(node => node.type === 'Row' && node.layoutWeight === 1));
     footerSurface.onAreaChange({}, { width: `${contentWidth}vp`, height: `${footerHeight + 5}vp` }); properties.flush();
-    near(navigation.params.listPaddingBottom, safeBottom + footerHeight + 5 + 16,
-      'actual footer measurement replaces estimates in Core/list/grid bottom clearance');
+    near(pageFrame(owner).params.contentEndInset, safeBottom + footerHeight + 5 + 16,
+      'actual footer measurement replaces the shared native viewport clearance');
+    near(navigation.params.listPaddingBottom, 18, 'measurement cannot double the viewport dock budget in the scroll tail');
     const toolbar = nodes.find(node => node.type === 'Column' && node.onAreaChange);
     assert.equal(toolbar.width, contentWidth); assert.equal(toolbar.position.x, 20); near(toolbar.position.y, initialContentTop);
     const actorCount = owner.children.size; const nodeCount = owner.nodes.size;
@@ -269,8 +289,9 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     properties.flush();
     assert.equal(owner.mangaFooterMeasured, 0, 'font/width revision invalidates measurements from the old footer layout');
     const nextFooterHeight = nextScale === 3.2 ? 48 * nextScale + 8 + 22 : 48;
-    near(navigation.params.listPaddingBottom, safeBottom + nextFooterHeight + 16,
-      'new scale immediately uses its admitted estimated clearance while awaiting fresh native footer measurement');
+    near(pageFrame(owner).params.contentEndInset, safeBottom + nextFooterHeight + 16,
+      'new scale immediately uses its admitted estimated viewport clearance while awaiting fresh native footer measurement');
+    near(navigation.params.listPaddingBottom, 18);
     assert.equal([...owner.children.values()].find(child => child.params?.chapterEntries), navigation);
   }
 }
@@ -344,14 +365,19 @@ function checkFullAdaptive(candidate = pageSource) {
     assert.equal([...footer.nodes.values()].find(node => node.accessibilityText === '当前阅读位置').backgroundColor, palettes[scheme].soft);
     assert.equal(nav.params.mangaCatalogNarrow, true, '320vp full parent publishes the explicit narrow class rather than inner content guesses');
     near(nav.params.mangaVisibleTopInset, 159.6, 'parent publishes its actual fixed header bottom');
-    near(nav.params.listPaddingBottom, flow ? 50 : 233.6);
+    near(nav.params.listPaddingBottom, flow ? 50 : 18);
+    near(frame.params.contentEndInset, flow ? 0 : 233.6);
+    assert.equal(frame.params.footerSurface, flow ? 'transparent' : 'solid');
+    near(nav.params.contentEndInset, flow ? 32 : 0);
     assert.equal(nav.params.scroller, scroller);
     const admitted = nav.params.chapterEntries, nativeOwner = nav;
     toolbar.onAreaChange({}, { height: 453 }); properties.flush();
     near(nav.params.listPaddingTop, 632.6, 'measured flow footer is admitted through the existing toolbar area');
     const nativeFooter = [...footer.nodes.values()].find(node => node.accessibilityText === '当前阅读位置');
     nativeFooter.onAreaChange({}, { width: 280, height: 201 }); properties.flush();
-    near(nav.params.listPaddingBottom, flow ? 50 : 251, 'flow height never reintroduces the bottom overlay clearance');
+    near(nav.params.listPaddingBottom, flow ? 50 : 18, 'fixed viewport and scroll tail never reserve the dock twice');
+    near(frame.params.contentEndInset, flow ? 0 : 251);
+    near(actualCatalogGridEnd(nav.params), flow ? 50 : 18, 'actual SDK Grid receives the flowing safe clearance and fixed18vp tail');
     owner.mounted = true; owner.pendingMangaCurrentScroll = true; owner.navigationActive = false;
     owner.mangaLayoutRows = [{ entries: [rows[1]] }];
     owner.onListFirstLayout('s\0b');
@@ -426,6 +452,14 @@ checkVpHost();
 const rawArea=pageSource.replaceAll('readerPageAreaLength(', 'Number(');
 assert.notEqual(rawArea,pageSource);assert.throws(()=>checkVpHost(rawArea),assert.AssertionError,'raw Number parsing cannot pass the actual SDK vp-host fixture');
 checkFullAdaptive();
+for (const [label, candidate] of [
+  ['missing fixed viewport clearance', pageSource.replace('contentEndInset: this.mangaFlowFooter() ? 0 : this.mangaBottomClearance()', 'contentEndInset: 0')],
+  ['transparent fixed dock', pageSource.replace("footerSurface: this.mangaFlowFooter() ? 'transparent' : 'solid'", "footerSurface: 'transparent'")],
+  ['lost flowing Grid safe inset', pageSource.replace('contentEndInset: Math.max(0, this.mangaListBottomClearance() - 18)', 'contentEndInset: 0')],
+]) {
+  assert.notEqual(candidate, pageSource, label);
+  assert.throws(() => checkFullAdaptive(candidate), assert.AssertionError, `reject ${label}`);
+}
 for (const [label, candidate] of [
   ['fixed footer in short window', pageSource.replace('return mangaDirectoryFullFlowFooter(height,', 'return false && mangaDirectoryFullFlowFooter(height,')],
   ['footer double clearance', pageSource.replace('(this.mangaFlowFooter() ? 0 : this.mangaFooterHeight())', 'this.mangaFooterHeight()')],

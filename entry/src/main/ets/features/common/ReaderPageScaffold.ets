@@ -1,6 +1,6 @@
 import { readerAppColor } from './ReaderThemeRegistry';
 import { ReaderFixedHeaderHost } from './ReaderFixedHeaderHost';
-import { ReaderHeaderKind, ReaderPageFrameModifier, ReaderPageShellKind, readerPageAreaLength } from './ReaderPageShell';
+import { ReaderFooterFrameModifier, ReaderFooterSurface, ReaderHeaderKind, ReaderPageFrameModifier, ReaderPageShellKind, readerPageAreaLength } from './ReaderPageShell';
 
 /** One native frame for finite categories. Geometry inputs are measured safe,
  * rail or card offsets. Visual surfaces and layers stay at the shared owner. */
@@ -21,6 +21,9 @@ export struct ReaderPageScaffold {
   @Prop footerInsetLeft: number = 0;
   @Prop footerInsetRight: number = 0;
   @Prop footerBottom: number = 0;
+  @Prop footerSurface: ReaderFooterSurface = 'transparent';
+  /** Native viewport clearance, separate from a Scroll/Grid's tail offset. */
+  @Prop contentEndInset: number = 0;
   @Prop frameInsetLeft: number = 0;
   @Prop frameInsetRight: number = 0;
   onHeaderHeightChange: (height: number, presentedKey: number) => void = (_height: number, _presentedKey: number): void => {};
@@ -34,7 +37,8 @@ export struct ReaderPageScaffold {
   build() {
     Stack({ alignContent: this.variant === 'detail' || this.variant === 'mangaDetail' || this.variant === 'mangaDirectory' ? Alignment.Top : Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) { this.content(); }
-        .width('100%').height('100%').zIndex(0);
+        .width('100%').height(this.contentEndInset > 0 ? `calc(100% - ${this.contentEndInset}vp)` : '100%')
+        .clip(this.contentEndInset > 0).zIndex(0);
       Column() {
         ReaderFixedHeaderHost({ kind: this.headerKind, measurementKey: this.headerMeasurementKey,
           content: (): void => { this.header(); },
@@ -42,13 +46,17 @@ export struct ReaderPageScaffold {
       }.width('100%').padding({ left: this.headerInsetLeft, right: this.headerInsetRight })
         .margin({ top: this.headerTop }).zIndex(10).hitTestBehavior(HitTestMode.Transparent);
       Stack({ alignContent: Alignment.Bottom }) {
-        Column() { this.footer(); }
-          .width('100%').padding({ left: this.footerInsetLeft, right: this.footerInsetRight })
-          .margin({ bottom: this.footerBottom })
-          .onAreaChange((_old: Area, next: Area): void => {
-            const height = readerPageAreaLength(next.height);
-            if (Number.isFinite(height) && height >= 0) this.onFooterHeightChange(height);
-          });
+        Column() {
+          Column() { this.footer(); }
+            .width('100%').padding({ left: this.footerInsetLeft, right: this.footerInsetRight })
+            .onAreaChange((_old: Area, next: Area): void => {
+              const height = readerPageAreaLength(next.height);
+              if (Number.isFinite(height) && height >= 0) this.onFooterHeightChange(height);
+            });
+        }.width('100%')
+          .padding({ bottom: this.footerSurface === 'solid' ? this.footerBottom : 0 })
+          .margin({ bottom: this.footerSurface === 'solid' ? 0 : this.footerBottom })
+          .attributeModifier(new ReaderFooterFrameModifier(this.variant, this.footerSurface, this.appThemeScheme, this.readingUnderlayColor));
       }.width('100%').height('100%').zIndex(20).hitTestBehavior(HitTestMode.Transparent);
       Stack({ alignContent: Alignment.TopStart }) { this.overlayContent(); }
         .width('100%').height('100%').zIndex(30).hitTestBehavior(HitTestMode.Transparent);

@@ -22,7 +22,7 @@ const DirectoryListDataSource = new Function('sameReaderDirectoryData', 'snapsho
   `${stripTypeScriptTypes(dataSourceDeclaration.getText(tree))}; return DirectoryListDataSource;`)
   (sameReaderDirectoryData, snapshotReaderDirectoryData);
 class ChildrenMainSize { constructor(size) { this.childDefaultSize = size; } }
-const names = ['mangaFlatList', 'mangaEmptyState', 'mangaFontScale', 'mangaContentTopInset',
+const names = ['mangaFlatList', 'mangaEmptyState', 'mangaFontScale', 'mangaContentTopInset', 'mangaListBottomClearance',
   'searchDraft', 'searchQuery', 'mangaToolsHeight', 'readerWindowMetricsRevision', 'onMangaMetricsChanged'];
 
 function check(candidate = pageSource, listCandidate = listSource, exhaustive = true) {
@@ -40,7 +40,7 @@ function check(candidate = pageSource, listCandidate = listSource, exhaustive = 
     Object.assign(owner, { appThemeScheme: scheme, searchDraft: '找不到', searchQuery: '找不到',
       mangaToolsHeight: 175, readerWindowMetricsRevision: 0, mounted: false,
       contentFrame: () => ({ left: 20, right: 20, width: 280 }), topInset: () => 24,
-      mangaLayoutEntries: () => [], mangaBottomClearance: () => 82,
+      mangaLayoutEntries: () => [], mangaFlowFooter: () => true, mangaBottomClearance: () => 82,
       emptyMessage: () => '没有匹配章节', applySearch() { searches.push(this.searchDraft); },
       onListFirstLayout() {}, onMangaScrollOffset() {}, onListUserScroll() {}, mangaFlatRow() {} });
     owner.mangaFlatList('source\0book');

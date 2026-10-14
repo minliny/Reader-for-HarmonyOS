@@ -85,6 +85,8 @@ import { ReaderPageScaffold } from '../features/common/ReaderPageScaffold';
 import { backfillRetainedReaderDirectoryNavigation, readerDirectoryObserveMissingNavigation,
   readerDirectoryTakeMissingNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import {
+  LocalReadingFlowGateway,
+  type LocalReadingProgressState,
   type LocalReadingTocEntry,
 } from '../features/reading/LocalReadingFlowGateway';
 import type { ReadingBookDetail } from '../features/reading/ReadingBookDetail';
@@ -98,6 +100,7 @@ import {
   RemoteChapterCacheRefreshError,
   RemoteReadingFlowGateway,
   type RemoteReadingBookSeed,
+  type RemoteReadingProgressState,
   type RemoteReadingSession,
   type RemoteReadingTocEntry,
 } from '../features/reading/RemoteReadingFlowGateway';
@@ -4931,6 +4934,30 @@ struct Index {
     this.route = 'directory';
     this.directoryPresentationGeneration += 1;
     this.loadDirectoryOperationProjections();
+    if (this.detailBook.contentKind === 'manga') return;
+    // Text detail has no reader instance to emit a chapter callback. Reuse
+    // only its exact Core shelf projection, then refresh the display anchor
+    // from the canonical read-only progress row without selecting or saving.
+    const sourceId = this.detailBook.sourceId, bookId = this.detailBook.bookId;
+    const shelf = this.shelfBooks?.find((book: ShelfBook): boolean => book.sourceId === sourceId && book.bookId === bookId);
+    const initialIndex = shelf?.readingPosition?.chapterIndex ?? shelf?.currentChapterIndex;
+    this.directoryCurrentChapterIndex = initialIndex !== undefined && Number.isSafeInteger(initialIndex) && initialIndex >= 0 ? initialIndex : -1;
+    this.directoryChapterTitle = this.detailToc.find((entry: LocalReadingTocEntry): boolean => entry.index === this.directoryCurrentChapterIndex)?.title ?? '';
+    const owner = this.mountedRuntimeOwner, navigation = this.navigationGeneration,
+      mounting = this.detailShelfAdmissionMount, presentation = this.directoryPresentationGeneration;
+    if (owner === undefined || !this.isCurrentRuntime(owner)) return;
+    const current = (): boolean => this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) && !this.shelfReceiptRetired &&
+      this.navigationGeneration === navigation && this.detailShelfAdmissionMount === mounting &&
+      this.directoryPresentationGeneration === presentation && this.route === 'directory' && this.directoryReturnTarget === 'detail' &&
+      !this.readingSessionActive && this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
+      this.detailBook.contentKind !== 'manga';
+    const progress = sourceId === LOCAL_SOURCE_ID ? new LocalReadingFlowGateway(owner).loadProgress(bookId, current) :
+      new RemoteReadingFlowGateway(owner).loadProgress({ sourceId, bookId }, current);
+    void progress.then((state: LocalReadingProgressState | RemoteReadingProgressState): void => {
+      if (!current()) return;
+      this.directoryCurrentChapterIndex = state.kind === 'restored' ? state.progress.chapterIndex : -1;
+      this.directoryChapterTitle = this.detailToc.find((entry: LocalReadingTocEntry): boolean => entry.index === this.directoryCurrentChapterIndex)?.title ?? '';
+    }).catch((): void => { /* Optional display refresh retains the last exact Core shelf projection. */ });
   }
 
   private openReaderControlDirectory(): void {
