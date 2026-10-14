@@ -33,6 +33,7 @@ import { TOK_BORDER_W } from '../common/ReaderTokens';
 import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_600,
   READER_FONT_NOTO_SANS_SC_UI_900 } from '../common/ReaderFontFamilies';
 import { prepareMangaSheetFonts, prepareReaderFontFamily } from '../common/ReaderFonts';
+import { ReaderActionSheetContent, ReaderActionSheetAction, type ReaderActionSheetVariant } from '../common/ReaderActionSheetContent';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
 interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }
@@ -112,6 +113,9 @@ export struct MangaReadingSurface {
   onDownloadChapter: () => void = (): void => {};
   onDownloadBook: () => void = (): void => {};
   @Prop downloadEnabled: boolean = false;
+  /** Default is the grouped action sheet; ReaderShell can opt into the quick
+   * shortcut variant for fixed high-frequency reading actions. */
+  @Prop moreMenuVariant: ReaderActionSheetVariant = 'grouped';
   @Prop directoryProjection: LocalReadingTocEntry[] = [];
   @Prop directoryCurrentChapterIndex: number = -1;
   onLoadDownloadActions: (chapterIndex?: number) => Promise<MangaDownloadAction[]> = async (): Promise<MangaDownloadAction[]> => [];
@@ -180,11 +184,13 @@ export struct MangaReadingSurface {
   @State private panelScrimOpacity: number = 0;
   @State private panelPhase: string = 'closed';
   private panelGeneration: number = 0;
+  private morePresentationGeneration: number = 0;
   private panelActionGeneration: number = 0;
   private panelCloseTask: Promise<boolean> | undefined;
   private panelCloseResolve: ((closed: boolean) => void) | undefined;
   @State private panelFontsReady: boolean = false;
   private panelFontGeneration: number = 0;
+  @State private refreshing: boolean = false;
   @State @Watch('onWindowChromeChanged') private chapterEnd: boolean = false;
   @State private displayedPage: number = 0;
   @State @Watch('onWindowChromeChanged') private backgroundPreference: 'paper' | 'white' | 'ink' = 'paper';
@@ -232,7 +238,7 @@ export struct MangaReadingSurface {
     this.restoreAppWindowChrome();
     this.invalidatePanelMotion();
     this.panel = ''; this.panelPhase = 'closed'; this.panelOffset = 0; this.panelScrimOpacity = 0;
-    this.panelFontGeneration++; this.panelFontsReady = false;
+    this.panelFontGeneration++; this.panelFontsReady = false; this.refreshing = false;
     const brightnessOwner = this.brightnessOwner; this.brightnessOwner = 0; this.brightnessGeneration++;
     if (brightnessOwner > 0) void ReaderWindowCoordinator.brightness().release(brightnessOwner).catch((): void => {});
     this.layoutGeneration++; this.viewportGeneration++; this.loginGeneration++; this.presentationGeneration++;
@@ -1092,6 +1098,7 @@ export struct MangaReadingSurface {
     if (!this.mounted || generation !== this.panelGeneration) return;
     this.controlsVisible = true; this.chapterEnd = false;
     if (panel === 'directory') { this.directoryQuery = ''; this.directoryOpenRevision += 1; this.resetDirectoryOuterLayout(); }
+    if (panel === 'more') this.morePresentationGeneration = generation;
     this.panel = panel;
     this.panelPhase = 'opening';
     this.panelOffset = this.panelTravel(); this.panelScrimOpacity = 0;
@@ -1244,7 +1251,7 @@ export struct MangaReadingSurface {
   private panelContentInset(): number { return this.widePanel() ? this.stageWidth <= 700 ? 16 : 20 : 18; }
   // The demo snap is a maximum, not a forced empty sheet height.
   private panelHeight(): number {
-    const snap = this.panel === 'directory' ? 0.78 : this.panel === 'mode' || this.panel === 'settings' ? 0.67 : 0.5;
+    const snap = this.panel === 'directory' ? 0.78 : this.panel === 'more' ? 0.75 : this.panel === 'mode' || this.panel === 'settings' ? 0.67 : 0.5;
     return this.widePanel() ? this.viewportHeight : Math.min(this.viewportHeight, Math.max(260, Math.round(this.viewportHeight * snap)));
   }
   private panelContentHeight(): number {
@@ -1610,7 +1617,7 @@ export struct MangaReadingSurface {
                 .maxFontScale(this.panel === 'directory' ? Math.max(1, this.directoryFontScale()) : 2).layoutWeight(1);
               Row() {
                 Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close')).width(18).height(18);
-              }.width(this.panel === 'directory' ? visual.wideCloseSize : 34).height(this.panel === 'directory' ? visual.wideCloseSize : 34).justifyContent(FlexAlign.Center)
+              }.width(this.panel === 'directory' ? visual.wideCloseSize : this.panel === 'more' || this.panel === 'downloads' ? 44 : 34).height(this.panel === 'directory' ? visual.wideCloseSize : this.panel === 'more' || this.panel === 'downloads' ? 44 : 34).justifyContent(FlexAlign.Center)
                 .attributeModifier(new MangaDirectoryPressFeedback(true, this.panel === 'directory', this.backgroundPreference === 'ink' ? 'night' : 'day'))
                 .onClick((): void => { void this.closePanel(); }).accessibilityText('关闭宽屏面板');
             }.width('100%').height(this.panel === 'directory' ? undefined : 66)
@@ -1659,13 +1666,14 @@ export struct MangaReadingSurface {
                 else if (this.panel === 'downloads') {
                   MangaDownloadOperationsPanel({ actions: this.downloadActions, loading: this.downloadActionsLoading,
                     failureMessage: this.downloadActionsFailure, panelInkColor: this.inkColor(), panelPaperColor: this.paperColor(),
+                    panelScheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
                     onAction: (action: MangaDownloadActionId): void => this.performDownloadAction(action),
                     onRetry: (): void => { void this.openDownloadActions(this.downloadActionsChapterIndex); } });
                 }
                 else { this.morePanel(); }
               }.width('100%').padding({ left: this.panelContentInset(), right: this.panelContentInset(), bottom: this.widePanel() ? 22 : 24 });
             }.width('100%').constraintSize({ maxHeight: Math.max(1, this.panelContentHeight() - (this.widePanel() ? 83 : 70)) })
-              .layoutWeight(this.widePanel() ? 1 : 0).scrollBar(BarState.Off);
+              .layoutWeight(this.widePanel() ? 1 : 0).scrollBar(this.panel === 'more' || this.panel === 'downloads' ? BarState.Auto : BarState.Off);
           }
         }.width('100%').height(this.widePanel() ? this.panelContentHeight() : undefined)
           .constraintSize({ minHeight: this.widePanel() ? 0 : Math.min(260, this.panelContentHeight()),
@@ -1673,7 +1681,7 @@ export struct MangaReadingSurface {
         if (!this.widePanel()) {
           Row() {
             Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close')).width(this.panel === 'directory' ? visual.closeIcon : 18).height(this.panel === 'directory' ? visual.closeIcon : 18);
-          }.width(this.panel === 'directory' ? visual.closeSize : 36).height(this.panel === 'directory' ? visual.closeSize : 36).justifyContent(FlexAlign.Center).borderRadius(12)
+          }.width(this.panel === 'directory' ? visual.closeSize : this.panel === 'more' || this.panel === 'downloads' ? 44 : 36).height(this.panel === 'directory' ? visual.closeSize : this.panel === 'more' || this.panel === 'downloads' ? 44 : 36).justifyContent(FlexAlign.Center).borderRadius(12)
             .attributeModifier(new MangaDirectoryPressFeedback(true, this.panel === 'directory', this.backgroundPreference === 'ink' ? 'night' : 'day'))
             .margin({ top: this.panel === 'directory' ? visual.closeTop : 24, right: this.panel === 'directory' ? visual.closeRight : 12 }).onClick((): void => { void this.closePanel(); }).accessibilityText('关闭面板');
         }
@@ -1973,12 +1981,6 @@ export struct MangaReadingSurface {
       .accessibilityText(`${label}，${this.fitPreference === fit ? '已选择' : '未选择'}`);
   }
   @Builder
-  private option(label: string, selected: boolean, action: () => void, widthPercent: number = 100) {
-    Button(label).height(48).width(`${widthPercent}%`).fontSize(13).fontFamily(selected ? READER_FONT_NOTO_SANS_SC_UI_600 : READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(selected ? 600 : 400)
-      .fontColor(selected ? '#FFFFFF' : this.inkColor()).backgroundColor(selected ? '#1F3528' : this.paperColor())
-      .borderRadius(14).onClick(action);
-  }
-  @Builder
   private settingsPanel() {
     Column({ space: 12 }) {
       this.sectionTitle('阅读底色');
@@ -2010,17 +2012,70 @@ export struct MangaReadingSurface {
   }
   @Builder
   private morePanel() {
-    this.option('更换书源', false, (): void => { void this.openSourceSwitch(); });
-    Button(this.title.includes('卷') ? '重新打开本卷' : '重新打开本话').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).width('100%').height(48).enabled(this.opened && !this.offline).fontColor(this.inkColor()).backgroundColor(this.paperColor())
-      .onClick((): void => { void this.performPanelAction((): Promise<void> => this.refreshImages())
-        .catch((error: Error): void => { if (this.mounted) this.error = error.message; }); });
-    this.option('漫画详情', false, (): void => { void this.showDetail(); });
+    ForEach([this.morePresentationGeneration], (generation: number): void => {
+      ReaderActionSheetContent({
+        variant: this.moreMenuVariant, actions: this.moreActions(),
+        scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+        onAction: (id: string): void => this.performMoreAction(id, generation),
+      });
+    }, (generation: number): string => `more:${generation}`);
+  }
+
+  private moreActions(): ReaderActionSheetAction[] {
+    const refreshLabel = this.title.includes('卷') ? '重新打开本卷' : '重新打开本话';
+    const refreshSecondary = this.refreshing ? '正在重新加载…' : !this.opened ? '章节尚未打开' : this.offline ? '离线时不可用' : '';
+    const actions: ReaderActionSheetAction[] = [
+      new ReaderActionSheetAction('source', '更换书源', '阅读', '', '', true,
+        this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch'), 'default', true),
+      new ReaderActionSheetAction('refresh', refreshLabel, '阅读', refreshSecondary, '', this.opened && !this.offline && !this.refreshing,
+        this.backgroundPreference === 'ink' ? $r('app.media.download_visual_retry_theme_night') : $r('app.media.download_visual_retry')),
+      new ReaderActionSheetAction('detail', '漫画详情', '阅读', '', '', true,
+        this.backgroundPreference === 'ink' ? $r('app.media.import_info_theme_night') : $r('app.media.import_info'), 'default', true),
+    ];
     if (this.downloadEnabled) {
-      this.option('下载本话', false, (): void => { void this.performPanelAction((): void => this.onDownloadChapter()); });
-      this.option('下载全部章节', false, (): void => { void this.performPanelAction((): void => this.onDownloadBook()); });
-      this.option('下载管理', false, (): void => { void this.openDownloadActions(); });
+      actions.push(
+        new ReaderActionSheetAction('downloadChapter', '下载本话', '下载', this.opened && this.directoryCurrentChapterIndex >= 0 ? '' : '章节尚未打开', '', this.opened && this.directoryCurrentChapterIndex >= 0,
+          this.backgroundPreference === 'ink' ? $r('app.media.download_visual_download_theme_night') : $r('app.media.download_visual_download')),
+        new ReaderActionSheetAction('downloadBook', '下载全部章节', '下载', '', '', true,
+          this.backgroundPreference === 'ink' ? $r('app.media.download_visual_storage_theme_night') : $r('app.media.download_visual_storage')),
+        new ReaderActionSheetAction('downloadManager', '下载管理', '下载', '', '', true,
+          this.backgroundPreference === 'ink' ? $r('app.media.download_visual_more_theme_night') : $r('app.media.download_visual_more'), 'default', true),
+      );
     }
-    this.option(this.inBookshelf ? '移出书架' : '加入书架', false, (): void => { void this.performPanelAction((): void => this.onToggleShelf()); });
+    actions.push(new ReaderActionSheetAction('shelf', this.inBookshelf ? '移出书架' : '加入书架', '书架',
+      this.inBookshelf ? '退出阅读，前往详情确认' : '', '', true,
+      this.inBookshelf
+        ? (this.backgroundPreference === 'ink' ? $r('app.media.download_visual_trash_theme_night') : $r('app.media.download_visual_trash'))
+        : (this.backgroundPreference === 'ink' ? $r('app.media.bookshelf_more_import_theme_night') : $r('app.media.bookshelf_more_import')),
+      this.inBookshelf ? 'danger' : 'default', this.inBookshelf));
+    return actions;
+  }
+
+  private performMoreAction(id: string, generation: number): void {
+    if (!this.mounted || this.exiting || !this.isReaderIdentityCurrent() || generation !== this.morePresentationGeneration ||
+      this.panel !== 'more' || this.panelPhase !== 'open') return;
+    const action = this.moreActions().find((item: ReaderActionSheetAction): boolean => item.id === id);
+    if (action === undefined || !action.enabled) return;
+    if (id === 'source') { void this.performMorePanelAction((): void => this.onSwitchSource()); return; }
+    if (id === 'refresh') {
+      if (this.refreshing) return;
+      this.refreshing = true;
+      void this.performMorePanelAction((): Promise<void> => this.refreshImages())
+        .catch((error: Error): void => { if (this.mounted) this.error = error.message; })
+        .finally((): void => { if (this.mounted) this.refreshing = false; });
+      return;
+    }
+    if (id === 'detail') { void this.performMorePanelAction((): void => this.onDetail()); return; }
+    if (id === 'downloadChapter') { void this.performMorePanelAction((): void => this.onDownloadChapter()); return; }
+    if (id === 'downloadBook') { void this.performMorePanelAction((): void => this.onDownloadBook()); return; }
+    if (id === 'downloadManager') { void this.openDownloadActions(); return; }
+    if (id === 'shelf') { void this.performMorePanelAction((): void => this.onToggleShelf()); }
+  }
+
+  private performMorePanelAction(action: () => void | Promise<void>): Promise<boolean> {
+    return this.performPanelAction((): void | Promise<void> => {
+      if (this.mounted && !this.exiting && this.isReaderIdentityCurrent()) return action();
+    });
   }
   @Builder
   private chapterEndContent() {

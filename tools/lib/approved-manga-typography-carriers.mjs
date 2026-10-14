@@ -149,11 +149,70 @@ export function validateSharedSourceSwitchTypographySuccessor(successor, readSou
   return successor;
 }
 validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor);
+
+export const unifiedActionSheetTypographySuccessorPath = 'tools/fixtures/design/unified-action-sheet-typography-successor-20261014.json';
+export const unifiedActionSheetTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/unified-action-sheet-typography-successor-20261014.json', import.meta.url), 'utf8'));
+const actionSheetOrigins = [
+  { path: 'entry/src/main/ets/features/manga/MangaReadingSurface.ets', fixture: mangaDirectoryTypographySuccessorPath,
+    retired: [23, 28], method: 'morePanel', variant: 'this.moreMenuVariant' },
+  { path: 'entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets', fixture: novelSourceSwitchSuccessor.historicalFixture,
+    retired: [3], method: 'build', variant: "'grouped'" },
+];
+/** An exact successor retires only the two old More actors and the download
+ * item Button. It cannot recapture historical bytes or broaden another page's
+ * private typography budget. Actual shared child edges are checked separately. */
+export function validateUnifiedActionSheetTypographySuccessor(successor, readSource = directoryReadSource) {
+  assert.equal(successor.schema, 1);
+  assert.equal(successor.userAuthorization, '你在独立 worktree 实现', 'exact unified action-sheet implementation authorization');
+  assert.equal(successor.previousDirectoryFixture, mangaDirectoryTypographySuccessorPath, 'only the exact selected directory-era reader may receive an action-sheet successor');
+  assert.equal(successor.previousDirectoryFixtureSha256, '9f5a354ed6b8e74c8c935575d5edd6e82c42f56cce0014d3b0c7b80cdfb5f1de', 'directory witness identity stays immutable');
+  assert.equal(directoryDigest(readSource(successor.previousDirectoryFixture)), successor.previousDirectoryFixtureSha256, 'previous directory witness stays byte immutable');
+  assert.equal(successor.historicalFixture, novelSourceSwitchSuccessor.historicalFixture, 'action sheet cannot replace historical manga approval');
+  assert.equal(successor.historicalFixtureSha256, novelSourceSwitchSuccessor.historicalFixtureSha256, 'action sheet cannot change historical manga identity');
+  assert.equal(directoryDigest(readSource(successor.historicalFixture)), successor.historicalFixtureSha256, 'historical manga typography fixture stays immutable');
+  assert.equal(successor.implementationEvidence, 'docs/architecture/unified-action-sheet-registration-20261014.md', 'explicit action-sheet implementation record');
+  assert.deepEqual(successor.files.map(entry => entry.path), actionSheetOrigins.map(origin => origin.path), 'only the two exact manga action-content successors, no wildcard or copy');
+  for (const [index, entry] of successor.files.entries()) {
+    const origin = actionSheetOrigins[index];
+    assert.equal(entry.previousFixture, origin.fixture, 'one action actor cannot inherit another approval');
+    const previous = JSON.parse(readSource(origin.fixture)).files.find(file => file.path === origin.path);
+    assert.ok(previous, 'exact previous action actor exists');
+    assert.equal(entry.previousEntrySha256, directoryDigest(JSON.stringify(previous)), 'one action actor cannot rewrite its exact origin');
+    assert.deepEqual(entry.retiredCarrierIndices, origin.retired, 'only the three exact replaced action text occurrences retire');
+    assert.deepEqual(entry.carriers, previous.carriers.filter((_, occurrence) => !origin.retired.includes(occurrence)), 'every unrelated manga text tuple remains retained');
+    for (const field of ['nativeDefaults', 'roles', 'fontFamilies']) assert.deepEqual(entry[field], previous[field], 'action sheet retains exact manga AUTO defaults, public roles and physical families');
+    assert.deepEqual(entry.delegate, { component: 'ReaderActionSheetContent', file: 'entry/src/main/ets/features/common/ReaderActionSheetContent.ets', method: origin.method, variant: origin.variant }, 'replacement is one exact finite shared content edge');
+  }
+  return successor;
+}
+validateUnifiedActionSheetTypographySuccessor(unifiedActionSheetTypographySuccessor);
+
+function validatesActionSheetDelegate(source, entry) {
+  const tree = ts.createSourceFile(entry.path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.equal(tree.parseDiagnostics.length, 0, 'actual action-sheet delegate SDK AST');
+  const imported = tree.statements.some(node => ts.isImportDeclaration(node) && /ReaderActionSheetContent$/.test(node.moduleSpecifier.text) &&
+    node.importClause?.namedBindings?.elements?.some(element => element.name.text === entry.delegate.component));
+  assert.ok(imported, 'actual shared action-content import');
+  const owner = tree.statements.find(node => ts.isStructDeclaration(node) && node.members.some(member => member.name?.text === entry.delegate.method));
+  const method = owner?.members.find(member => ts.isMethodDeclaration(member) && member.name.text === entry.delegate.method);
+  assert.ok(method, 'actual action-sheet binding method');
+  const calls = [];
+  const walk = node => {
+    if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) && node.expression?.getText(tree) === entry.delegate.component) calls.push(node);
+    ts.forEachChild(node, walk);
+  };
+  walk(method);
+  assert.equal(calls.length, 1, 'one actual shared action-content binding, no copied or commented actor');
+  const props = calls[0].arguments?.[0];
+  assert.ok(ts.isObjectLiteralExpression(props), 'actual finite action-content props');
+  const variant = props.properties.find(property => property.name?.text === 'variant');
+  assert.equal(variant?.initializer?.getText(tree), entry.delegate.variant, 'actual finite action-content variant binding');
+}
 export const typographyCarrierShape = node => JSON.parse(JSON.stringify({ owner: node.owner, method: node.method, kind: node.kind, text: node.text,
   modifiers: Object.fromEntries(Object.entries(node.modifiers).map(([property, value]) => [property, { expression: value.expression, extra: value.extra }])) }));
 export const approvedTypographyFile = file => {
   const fullPath = file.startsWith('entry/') ? file : 'entry/src/main/ets/' + (file.startsWith('features/') || file.startsWith('pages/') ? file : 'features/' + file);
-  return mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? sharedSourceSwitchTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
+  return unifiedActionSheetTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? sharedSourceSwitchTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
 };
 /** A finite approved reference or selected demo contract, separate from shared roles.
  * Every concrete file/struct/method/native text carrier and all five authored
@@ -164,7 +223,10 @@ export const approvedTypographyFile = file => {
 export function approvedTypographyContract(source, file) {
   const entry = approvedTypographyFile(file);
   if (!entry) return { registered: false, has: () => false, count: 0 };
-  if (sharedSourceSwitchTypographySuccessor.files.includes(entry)) validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor);
+  if (unifiedActionSheetTypographySuccessor.files.includes(entry)) {
+    validateUnifiedActionSheetTypographySuccessor(unifiedActionSheetTypographySuccessor);
+    validatesActionSheetDelegate(source, entry);
+  } else if (sharedSourceSwitchTypographySuccessor.files.includes(entry)) validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor);
   else if (novelPaths.includes(entry.path)) retainsHistoricalCarriers(entry);
   const actual = auditTypographyConsumers(source, entry.path).map(typographyCarrierShape);
   assert.deepEqual(actual, entry.carriers, 'exact approved typography carrier/tuple changed: ' + entry.path);

@@ -12,15 +12,15 @@ const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaR
 const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
 const subsetTitles = new Set(['章节目录', '阅读方式', '漫画阅读设置', '更多', '本书下载', '本话下载']);
 const fields = [...mangaDirectoryAdaptiveFields, 'mounted', 'panel', 'panelOffset', 'panelScrimOpacity', 'panelPhase', 'panelGeneration',
-  'panelActionGeneration', 'panelCloseTask', 'panelCloseResolve', 'reduceMotion', 'directoryQuery',
+  'panelActionGeneration', 'morePresentationGeneration', 'panelCloseTask', 'panelCloseResolve', 'reduceMotion', 'directoryQuery',
   'directoryRevision', 'directoryOpenRevision', 'chapterEnd', 'controlsVisible', 'backgroundPreference',
-  'panelFontsReady', 'panelFontGeneration', 'brightnessOwner', 'exiting', 'zoom', 'directoryAscending', 'brightnessPercent', 'showPageNumbers', 'fitPreference', 'horizontal',
+  'panelFontsReady', 'panelFontGeneration', 'refreshing', 'moreMenuVariant', 'brightnessOwner', 'exiting', 'zoom', 'directoryAscending', 'brightnessPercent', 'showPageNumbers', 'fitPreference', 'horizontal',
   'quickHeaderMeasured', 'quickToolsMeasured', 'quickFooterMeasured', 'windowMetricsRevision',
   'downloadActionsChapterIndex', 'downloadActions', 'downloadActionsLoading', 'downloadActionsFailure'];
 const methods = [...mangaDirectoryAdaptiveMembers, 'openPanel', 'closePanel', 'invalidatePanelMotion', 'dismissPanelKeyboard', 'settlePanel',
   'preparePanelFonts', 'performPanelAction', 'beginPanelDrag', 'updatePanelDrag', 'finishPanelDrag', 'panelTravel', 'panelHeight',
   'panelWidth', 'panelContentHeight', 'windowInteractiveInsets', 'interactiveInsets', 'panelInsets', 'controlsPresentedForWindow', 'widePanel', 'persistentDirectory', 'directoryColumnWidth', 'tabletDirectory', 'panelTitle', 'panelOverlay', 'directoryPanel',
-  'directoryTools', 'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'pageOrdinal', 'adjacentChapter', 'selectAdjacentChapter', 'directoryBody', 'panelContentInset', 'directoryFallback', 'modePanel', 'settingsPanel', 'morePanel', 'option', 'sectionTitle', 'sheetChoice', 'fitLine', 'choiceIcon',
+  'directoryTools', 'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'pageOrdinal', 'adjacentChapter', 'selectAdjacentChapter', 'directoryBody', 'panelContentInset', 'directoryFallback', 'modePanel', 'settingsPanel', 'morePanel', 'moreActions', 'performMoreAction', 'performMorePanelAction', 'sectionTitle', 'sheetChoice', 'fitLine', 'choiceIcon',
   'isSheetChoiceSelected', 'paperColor', 'surfaceColor', 'inkColor', 'mutedColor', 'faintColor', 'lineColor',
   'softSurfaceColor', 'greenColor', 'accentColor', 'aboutToDisappear', 'handleBack', 'openDirectory',
   'showDetail', 'openSourceSwitch', 'selectDirectoryTarget', 'displayedBrightnessPercent', 'resetMangaPreferences',
@@ -82,7 +82,7 @@ function fixture(text = source, options = {}) {
 }
 function assertOpening(f, panel) {
   assert.equal(f.owner.panel, panel); assert.equal(f.owner.panelPhase, 'opening');
-  assert.equal(f.owner.panelOffset, Math.round(844 * (panel === 'directory' ? .78 : panel === 'more' || panel === 'downloads' ? .5 : .67)) + 36);
+  assert.equal(f.owner.panelOffset, Math.round(844 * (panel === 'directory' ? .78 : panel === 'more' ? .75 : panel === 'downloads' ? .5 : .67)) + 36);
   assert.equal(f.owner.panelScrimOpacity, 0); assert.equal(f.animations.length, 0);
   f.owner.panelOverlay();
   const sheet = f.nodes().find(node => node.type === 'Stack' && node.clip === true);
@@ -165,6 +165,20 @@ async function verifyRaces(text = source) {
   assert.equal(pendingFrame.events.filter(event => event === 'save').length, beforeSave, 'late action does not enter an unmounted save owner');
 }
 await verifyMotion(); await verifyRaces();
+{
+  const f = fixture(); f.owner.reduceMotion = true; f.owner.isReaderIdentityCurrent = () => true;
+  Object.assign(f.owner, { refreshLoginRequiredForControls() {}, applyWindowChrome() {}, applyWindowPolicyForChromeOwner() {} });
+  await f.owner.openPanel('more'); const token = f.owner.morePresentationGeneration;
+  f.owner.beginPanelDrag(); f.owner.updatePanelDrag(20); f.owner.finishPanelDrag(20, 0);
+  assert.equal(f.owner.panelPhase, 'open');
+  assert.notEqual(f.owner.panelGeneration, token, 'a cancelled drag advances only the motion fence');
+  f.owner.performMoreAction('source', token);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.events.filter(event => event === 'source').length, 1, 'the retained More opening still accepts actions after a cancelled drag');
+  await f.owner.openPanel('more'); f.owner.performMoreAction('source', token);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.events.filter(event => event === 'source').length, 1, 'a reopened More sheet rejects the old opening token');
+}
 
 async function verifyDownloadPanelTitles(text = source) {
   for (const [chapterIndex, expected] of [[undefined, '本书下载'], [0, '本话下载'], [17, '本话下载']]) {

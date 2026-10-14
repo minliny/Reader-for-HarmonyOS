@@ -15,8 +15,29 @@ for(const novelFile of ['entry/src/main/ets/features/source/SourceSwitchWindow.e
  const missingWitness=structuredClone(baseline);delete missingWitness.uiPolicies.find(row=>row.file===novelFile).visualSuccessorContract;
  assert.throws(()=>verifyArchitectureRegistration(inventory,missingWitness,contract,root),/binds exact witness/,'new selected actor keeps an explicit finite successor contract');
 }
-assert.equal(result.budgetRows,93,'original retained business budgets');assert.equal(result.transferredBudgetRows,7);assert.equal(result.historicalBudgetRows,100,'93 + seven exact reversible approved transfers preserve all original100');assert.equal(result.producers,16);
-assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup','MangaDirectoryEntryRow','MangaDirectoryCurrentFooter'].sort(),'only exact finite shared producers gain owner treatment');
+assert.equal(result.budgetRows,93,'original retained business budgets');assert.equal(result.transferredBudgetRows,7);assert.equal(result.historicalBudgetRows,100,'93 + seven exact reversible approved transfers preserve all original100');assert.equal(result.producers,17);
+assert.deepEqual(contract.producers.map(row=>row.component).sort(),['ReaderBoundedSurface','ReaderBoundedSurfaceActions','ReaderBoundedSurfaceHeader','ReaderButton','ReaderFormField','ReaderLabeledIconAction','ReaderSheetActionList','ReaderActionSheetContent','ReaderChoiceRow','RssOriginalRecoverySurface','ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup','MangaDirectoryEntryRow','MangaDirectoryCurrentFooter'].sort(),'only exact finite shared producers gain owner treatment');
+const actionContentPath='entry/src/main/ets/features/common/ReaderActionSheetContent.ets',actionContentSource=readFileSync(actionContentPath,'utf8');
+const actionContentProducer=contract.producers.find(row=>row.component==='ReaderActionSheetContent');
+assert.deepEqual(actionContentProducer.consumers.map(edge=>[edge.file,edge.specId]),[
+ ['features/common/ReaderSheetActionList.ets',"'quick'"],
+ ['features/manga/MangaDownloadOperationsPanel.ets',"'grouped'"],
+ ['features/manga/MangaReadingSurface.ets','this.moreMenuVariant'],
+],'three implemented owners consume explicit finite grouped/quick variants');
+for(const property of ['inkColor','quickActionCount','fontSize','radius']){
+ const bad=structuredClone(inventory),site=bad.rows.find(row=>row.file==='features/manga/MangaReadingSurface.ets').elements.find(element=>element.kind==='ReaderActionSheetContent');
+ site.args[0]=site.args[0].replace(/\{\s*/,'{ '+property+': 99, ');
+ assert.throws(()=>verifyArchitectureRegistration(bad,baseline,contract,root),/illegal shared input shared-ReaderActionSheetContent/,'caller action data cannot regain a private style input '+property);
+}
+const privateActionVariant=structuredClone(inventory),actionVariantCall=privateActionVariant.rows.find(row=>row.file==='features/common/ReaderSheetActionList.ets').elements.find(element=>element.kind==='ReaderActionSheetContent');
+actionVariantCall.args[0]=actionVariantCall.args[0].replace("'quick'","'private99'");
+assert.throws(()=>verifyArchitectureRegistration(privateActionVariant,baseline,contract,root),/actual shared delegate edges changed|producer\/consumer\/spec edges changed/,'finite action-content variant edge cannot become a private recipe');
+const privateActionFont=actionContentSource.replace('.fontSize(this.spec().labelFontSize)','.fontSize(99)');assert.notEqual(privateActionFont,actionContentSource);
+assert.throws(()=>verifyArchitectureRegistration(inventory,baseline,contract,root,file=>file===actionContentPath?privateActionFont:readFileSync(file,'utf8')),/finite shared physical inputs|actual shared delegate implementation changed/,'shared content cannot hide literal99 at the same native call count');
+const raisedActionCounts=structuredClone(baseline);raisedActionCounts.sharedOwners.find(row=>row.file===actionContentPath).counts.fontSize=99;
+assert.throws(()=>verifyArchitectureRegistration(inventory,raisedActionCounts,contract,root),/exact architecture counts/,'new action producer cannot gain a private typography budget');
+const missingActionWitness=structuredClone(baseline);delete missingActionWitness.uiPolicies.find(row=>row.file.endsWith('/MangaReadingSurface.ets')).actionSheetSuccessorContract;
+assert.throws(()=>verifyArchitectureRegistration(inventory,missingActionWitness,contract,root),/policy binds exact successor witness/,'replacement remains traced to its immutable typography origins');
 const mangaRowPath='entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets',mangaRowSource=readFileSync(mangaRowPath,'utf8');
 const mangaRowProducer=contract.producers.find(row=>row.component==='MangaDirectoryEntryRow');
 assert.deepEqual(mangaRowProducer.consumers.map(edge=>edge.file).sort(),['features/bookshelf/BookDirectoryPage.ets','features/bookshelf/LocalBookDetail.ets','features/manga/MangaReadingDirectoryFallback.ets'].sort());

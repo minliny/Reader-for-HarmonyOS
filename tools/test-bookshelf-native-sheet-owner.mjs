@@ -28,7 +28,7 @@ function fixture(){
   });
   for(const name of names)owner[name]=Methods.prototype[name].bind(owner);
   owner.bookshelfTabContent();const host=[...owner.nodes.values()].find(n=>n.bindSheet);
-  const render=()=>{owner.bookActionSheetContent();const leaf=[...owner.children.values()].at(-1),rows=p.walk(leaf).find(c=>c instanceof p.deps.ReaderSheetActionList);return{leaf,rows,buttons:[...rows.nodes.values()].filter(n=>n.onClick)};};
+  const render=()=>{owner.bookActionSheetContent();const leaf=[...owner.children.values()].at(-1),rows=p.walk(leaf).find(c=>c instanceof p.deps.ReaderSheetActionList);return{leaf,rows,buttons:p.walk(rows).flatMap(child=>[...child.nodes.values()]).filter(n=>n.onClick)};};
   const options=()=>{owner.replay();return host.bindSheet[2];};
   return{p,owner,calls,render,options,host};
 }
@@ -42,7 +42,7 @@ for(const [index,name]of[['0','multi'],['1','info'],['2','group'],['3','remove']
   const f=fixture();f.owner.presentBookActionSheet(A);const old=f.render(),oldOptions=f.options(),oldId=f.owner.actionSheetId;
   f.owner.presentBookActionSheet(B);f.owner.replay();const freshLeaf=[...f.owner.children.values()].at(-1),freshRows=f.p.walk(freshLeaf).find(c=>c instanceof f.p.deps.ReaderSheetActionList);
   assert.notEqual(freshLeaf,old.leaf,'small native Sheet child actually remounts for a new ID');assert.notEqual(f.owner.actionSheetId,oldId);oldOptions.onDisappear();assert.equal(f.owner.actionBook,B,'late disappear cannot clear newer same-bookId/different-source presentation');
-  old.buttons[3].onClick();assert.equal(f.calls.length,0);[...freshRows.nodes.values()].filter(n=>n.onClick)[1].onClick();assert.deepEqual(f.calls,[['info',B]],'fresh regular callback captures new entity');
+  old.buttons[3].onClick();assert.equal(f.calls.length,0);f.p.walk(freshRows).flatMap(child=>[...child.nodes.values()]).filter(n=>n.onClick)[1].onClick();assert.deepEqual(f.calls,[['info',B]],'fresh regular callback captures new entity');
 }
 {
   const f=fixture();f.owner.presentBookActionSheet(A);const old=f.render(),oldOptions=f.options();oldOptions.onDisappear();f.owner.presentBookActionSheet(A);f.owner.replay();const id=f.owner.actionSheetId;

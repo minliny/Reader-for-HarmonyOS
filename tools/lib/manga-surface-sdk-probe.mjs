@@ -33,11 +33,15 @@ const nativeGesture = new Proxy({}, { get: () => () => {} });
 class ImportedChildBoundary {
   constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
 }
+const actionSheetSource = readFileSync(new URL('../../entry/src/main/ets/features/common/ReaderActionSheetContent.ets', import.meta.url), 'utf8');
+const actionClassSource = actionSheetSource.slice(actionSheetSource.indexOf('export class ReaderActionSheetAction'), actionSheetSource.indexOf('@Component'));
+const ReaderActionSheetAction = new Function(`${stripTypeScriptTypes(actionClassSource).replace(/^export /gm, '')};return ReaderActionSheetAction;`)();
 for (const [name, relative] of [
   ['ReaderIconButton', '../../entry/src/main/ets/features/common/ReaderIconButton.ets'],
   ['ReaderDirectoryNavigationSurface', '../../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets'],
   ['MangaReadingDirectoryFallback', '../../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets'],
   ['MangaDownloadOperationsPanel', '../../entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets'],
+  ['ReaderActionSheetContent', '../../entry/src/main/ets/features/common/ReaderActionSheetContent.ets'],
   ['MangaDirectoryCurrentFooter', '../../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets'],
 ]) {
   const source = readFileSync(new URL(relative, import.meta.url), 'utf8');
@@ -49,6 +53,7 @@ export const mangaSurfaceSdkDependencies = {
     .map(name => [name, new Proxy({}, { get: (_target, key) => `${name}.${String(key)}` })])),
   READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SANS_SC_UI_900, MangaSheetFrame,
+  ReaderActionSheetAction,
   ...mangaDirectoryVisual, visual: mangaDirectoryVisual.MANGA_DIRECTORY_VISUAL,
   PanGesture: nativeGesture, PanDirection: { Vertical: 'vertical' },
   GesturePriority: { Low: 'low' },
@@ -57,6 +62,7 @@ export const mangaSurfaceSdkDependencies = {
   ReaderDirectoryNavigationSurface: ImportedChildBoundary,
   MangaReadingDirectoryFallback: ImportedChildBoundary,
   MangaDownloadOperationsPanel: ImportedChildBoundary,
+  ReaderActionSheetContent: ImportedChildBoundary,
   MangaDirectoryCurrentFooter: ImportedChildBoundary,
   MangaBookPresentation,
   ...readerWindowMetrics, isReaderProductSurfaceEnabled, isReaderMainTabEnabled, readerWidthClass,

@@ -704,13 +704,16 @@
     },
     {
       "file": "entry/src/main/ets/features/common/ReaderSheetActionList.ets",
-      "counts": {
-        "backgroundColor": 1
-      },
+      "counts": {},
       "kind": "finite-spec-actual-shared-producer",
       "contractId": "shared-ReaderSheetActionList",
       "proof": "tools/test-architecture-shared-producers.mjs",
-      "reason": "One bookshelf-book-action SheetSurfaceSpec; 4 keyed physical actions and danger variant. Presentation admission/once-only dispatch remains leaf feature-local."
+      "reason": "Finite bookshelf presentation admission and once-only dispatch around the shared quick action content. The original native host owns lifecycle and per-book identity; the leaf owns zero typography or backgrounds.",
+      "successorFacts": {
+        "evidence": "docs/architecture/unified-action-sheet-registration-20261014.md",
+        "sourceHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
     },
     {
       "file": "entry/src/main/ets/features/common/ReaderButton.ets",
@@ -800,6 +803,22 @@
       "successorFacts": {
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
         "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+        "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
+      }
+    },
+    {
+      "file": "entry/src/main/ets/features/common/ReaderActionSheetContent.ets",
+      "kind": "finite-spec-actual-shared-producer",
+      "owner": "ReaderActionSheetContent",
+      "reason": "Only grouped and quick ActionSheetSpecId recipes. Business actions, finite auto/day/night scheme and callbacks are inputs. The exact spec owns typography, colors, grouped cards, geometry and three quick slots; no caller appearance or layout override.",
+      "counts": {
+        "backgroundColor": 4
+      },
+      "contractId": "shared-ReaderActionSheetContent",
+      "proof": "tools/test-reader-action-sheet-content.mjs",
+      "successorFacts": {
+        "evidence": "docs/architecture/unified-action-sheet-registration-20261014.md",
+        "sourceHead": "493e631560088f342daef6a8f2535b2cfeec2907",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
     }
@@ -900,7 +919,8 @@
       "approvalEvidence": "evidence/2026-10-02-manga-ui-implementation/SCOPE.md",
       "designSource": "paired Reader-UI/design/manga-ui-20261002/; docs/MANGA_UI_DEMO_PARITY_AUDIT_20261003.md",
       "approvedSourceHead": "19be89908333ee8074d2624e9d7fb938e0b011d3",
-      "proof": "docs/MANGA_OVERALL_IMPLEMENTATION_20261003.md"
+      "proof": "docs/MANGA_OVERALL_IMPLEMENTATION_20261003.md",
+      "actionSheetSuccessorContract": "tools/fixtures/design/unified-action-sheet-typography-successor-20261014.json"
     },
     {
       "file": "entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets",
@@ -939,7 +959,8 @@
         "evidence": "docs/MANGA_DIRECTORY_DEMO_DELIVERY_20261006.md",
         "sourceHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
-      }
+      },
+      "actionSheetSuccessorContract": "tools/fixtures/design/unified-action-sheet-typography-successor-20261014.json"
     },
     {
       "file": "entry/src/main/ets/features/reading/BookTurnTextureBuilder.ets",

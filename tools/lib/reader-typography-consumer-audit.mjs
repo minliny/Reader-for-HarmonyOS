@@ -48,7 +48,12 @@ export function auditTypographyConsumers(source, file = '/tmp/TypographyConsumer
 const getterPolicies = {
   'ReaderActionMenuSurface.ets': { owner: 'ReaderActionMenuSurface', getter: 'spec', resolver: 'resolvePopupSpec', module: 'ReaderSurfaceSpecs', argument: 'this.specId', fields: ['actionFontFamily','actionFontWeight','actionFontSize','actionLineHeight'] },
   'ReaderDialogSurface.ets': { owner: 'ReaderDialogSurface', getter: 'spec', resolver: 'resolveDialogSpec', module: 'ReaderSurfaceSpecs', argument: 'this.specId', fields: ['headerFontFamily','headerFontWeight','headerFontSize','headerLineHeight'] },
-  'ReaderSheetActionList.ets': { owner: 'ReaderSheetActionList', getter: 'surfaceSpec', resolver: 'resolveSheetSpec', module: 'ReaderSurfaceSpecs', argument: "'bookshelf-book-action'", fields: ['actionLabelFontFamily','actionLabelFontWeight','actionLabelFontSize','actionLabelLineHeight'] },
+  'ReaderActionSheetContent.ets': { owner: 'ReaderActionSheetContent', getter: 'spec', resolver: 'resolveActionSheetSpec', module: 'ReaderSurfaceSpecs', argument: 'this.variant', fields: [
+    'sectionHeadingFontSize', 'sectionHeadingLineHeight', 'quickLabelFontSize', 'quickLabelLineHeight',
+    'quickSecondaryFontSize', 'quickSecondaryLineHeight', 'labelFontSize', 'labelLineHeight',
+    'secondaryFontSize', 'secondaryLineHeight', 'trailingFontSize', 'trailingLineHeight',
+    'regularFontFamily', 'emphasisFontFamily', 'regularFontWeight', 'emphasisFontWeight',
+  ] },
   'ReaderChoiceRow.ets': { owner: 'ReaderChoiceRow', getter: 'spec', resolver: 'resolveReaderChoiceSpec', module: 'ReaderChoiceSpecs', argument: 'this.specId', fields: ['selectedWeight','text','selectedText'], textGetter: 'textStyle' },
   'ReaderSearchField.ets': { owner: 'ReaderSearchField', getter: 'textStyle', roles: ['TYPE_SEARCH_SOURCE_INPUT','TYPE_SEARCH_DIRECTORY_INPUT','TYPE_SEARCH_MANGA_DIRECTORY_INPUT','TYPE_SEARCH_READER_QUICK_INPUT'], fields: ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'] },
 };

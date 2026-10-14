@@ -199,9 +199,9 @@ for(const panel of ['directory','mode','settings','more']) for(const backgroundP
   assert.equal(sheet.backgroundColor,backgroundPreference==='ink'?'#282C25':'#FFFCF8');
   const sizeOwner=nodes.find(node=>node.type==='Column'&&node.constraintSize?.minHeight===(landscape?0:260));
   assert.equal(sizeOwner.height,landscape?390:undefined,'phone height is measured from actual content');
-  assert.equal(sizeOwner.constraintSize.maxHeight,landscape?390:Math.round(844*(panel==='directory'?.78:panel==='more'?.5:.67)));
+  assert.equal(sizeOwner.constraintSize.maxHeight,landscape?390:Math.round(844*(panel==='directory'?.78:panel==='more'?.75:.67)));
   assert.equal(nodes.some(node=>node.type==='Column'&&node.width===42&&node.height===5),!landscape,'only phone has the demo grabber');
-  assert.ok(nodes.some(node=>node.type==='Row'&&node.width===(landscape?34:36)&&node.height===(landscape?34:36)&&
+  assert.ok(nodes.some(node=>node.type==='Row'&&node.width===(panel==='more'?44:landscape?34:36)&&node.height===(panel==='more'?44:landscape?34:36)&&
     node.accessibilityText===(landscape?'关闭宽屏面板':'关闭面板')),'close cross has an explicit touch target');
   if(landscape){
     const header=nodes.find(node=>node.type==='Row'&&(panel==='directory'?node.constraintSize?.minHeight===66:node.height===66));

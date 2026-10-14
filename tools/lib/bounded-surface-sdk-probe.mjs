@@ -4,6 +4,7 @@ import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
+import * as readerFonts from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 const read=name=>readFileSync(new URL(`../../entry/src/main/ets/features/common/${name}.ets`,import.meta.url),'utf8');
 const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const require=createRequire(import.meta.url),ts=require(`${sdk}/node_modules/typescript`);
@@ -21,7 +22,7 @@ export function boundedMembers(source,componentName){
 const stripped=source=>stripTypeScriptTypes(source).replace(/^export /gm,'');
 const tokenSource=read('ReaderTokens'),tokenNames=[...tokenSource.matchAll(/^export const (\w+)/gm)].map(m=>m[1]);
 const tokens=new Function('readerAppColor','readerThemeDefinition',`${stripped(tokenSource).replace(/^import[^;]+;\s*/gm,'')};return{${tokenNames.join(',')}};`)(readerAppColor,readerThemeDefinition);
-const specs=new Function('TextAlign',`${stripped(read('ReaderSurfaceSpecs'))};return{resolvePopupSpec,resolveSheetSpec,resolveDialogSpec};`)({Start:'TextAlign.Start',Center:'TextAlign.Center'});
+const specs=new Function('TextAlign',`${stripped(read('ReaderSurfaceSpecs'))};return{resolvePopupSpec,resolveSheetSpec,resolveDialogSpec,resolveActionSheetSpec};`)({Start:'TextAlign.Start',Center:'TextAlign.Center'});
 function classOf(source,name,deps){const start=source.indexOf(`export class ${name}`),end=source.indexOf('@Component',start);
   return new Function(...Object.keys(deps),`${stripped(source.slice(start,end))};return ${name};`)(...Object.values(deps));}
 /** Test-specific composition: actual SDK emitted children, V1 property classes,
@@ -29,12 +30,13 @@ function classOf(source,name,deps){const start=source.indexOf(`export class ${na
  * unchanged. Native scheduling/removal/layout/focus are explicitly outside proof. */
 export function boundedSurfaceSdk(options={}){
   const properties=createArkUIPropertyRuntimeProbe();
-  const childSources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice','ReaderBoundedSurface','ReaderBoundedSurfaceHeader','ReaderBoundedSurfaceActions'].map(n=>[n,options[n]??read(n)]));
+  const childSources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice','ReaderBoundedSurface','ReaderBoundedSurfaceHeader','ReaderBoundedSurfaceActions','ReaderActionSheetContent'].map(n=>[n,options[n]??read(n)]));
   const typography = {...readerTypographyRoles,...options.typographyRoles};
-  const deps={...properties.sdk,...specs,...tokens,...typography,readerAppColor,
+  const deps={...properties.sdk,...specs,...tokens,...typography,...readerFonts,readerAppColor,
     ReaderBoundedFrameModifier:classOf(childSources.ReaderBoundedSurface,'ReaderBoundedFrameModifier',{...specs,readerAppColor}),
     ReaderBoundedTitleModifier:classOf(childSources.ReaderBoundedSurfaceHeader,'ReaderBoundedTitleModifier',{readerAppColor,...typography}),
     ReaderBoundedFileActionModifier:classOf(childSources.ReaderBoundedSurfaceActions,'ReaderBoundedFileActionModifier',{}),
+    ReaderActionSheetAction:classOf(childSources.ReaderActionSheetContent,'ReaderActionSheetAction',{}),
   };
   const hooks={...properties.hooks,childSources,mountChildren:true,allowEmptyBranchAdmission:options.allowEmptyBranchAdmission===true};
   for(const name of Object.keys(childSources))deps[name]=createReaderBuilderProbe(childSources[name],boundedMembers(childSources[name]),deps,hooks).Component;
