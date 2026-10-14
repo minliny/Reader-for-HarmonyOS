@@ -269,6 +269,21 @@ export class ReadingEntryHost {
     if (session !== undefined && !this.sameBook(session, book)) throw new Error('READING_ENTRY_SESSION_IDENTITY_MISMATCH');
     this.begin(lease, book, inBookshelf, '', undefined, session, toc);
   }
+
+  /** Read-only display anchor for a standalone text directory. Canonical
+   * progress decoding stays in the gateways; this never prepares or saves. */
+  async loadDirectoryChapterIndex(sourceId: string, bookId: string, isCurrent: () => boolean): Promise<number | undefined> {
+    const lease = this.lease, scope = this.state.scopeId;
+    if (lease === undefined) return undefined;
+    const owns = this.current(scope, lease);
+    const current = (): boolean => owns() && isCurrent() && this.state.book?.sourceId === sourceId &&
+      this.state.book?.bookId === bookId && (this.state.book.contentKind === undefined || this.state.book.contentKind === 'text');
+    if (!current()) return undefined;
+    const state = sourceId === LOCAL_SOURCE_ID ? await new LocalReadingFlowGateway(this.runtime).loadProgress(bookId, current) :
+      await new RemoteReadingFlowGateway(this.runtime).loadProgress({ sourceId, bookId }, current);
+    return current() ? (state.kind === 'restored' ? state.progress.chapterIndex : -1) : undefined;
+  }
+
   acceptSession(session: RemoteReadingSession | undefined, readableRevision?: number,
     projection?: BookAcquisitionDetailProjection): void {
     const lease = this.lease, scope = this.state.scopeId;

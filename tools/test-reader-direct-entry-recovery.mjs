@@ -7,6 +7,8 @@ import {directoryIndexReadProbe} from './lib/directory-index-read-probe.mjs';
 const directoryReadProbe=await directoryIndexReadProbe();
 import {compileHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
 const {RemoteReadingGatewayError}=await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
+const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
+const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 const evidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
 const settle=async()=>{await ownerSettled();await new Promise(setImmediate);await ownerSettled();};
 const checks=[];
@@ -16,8 +18,8 @@ let canonicalShelf,localConstructions=0;
 function fixture(options={}){
  const f=sourceFixture({shared:true,open:false,targetSession:session,matchedChapterIndex:17,...options});
  const x=makeIndex(f),h=x.index,requests=f.runtime.request.bind(f.runtime);
- const reading=compileHost(undefined,{LocalReadingFlowGateway:class{constructor(){localConstructions++;}async loadToc(){return{entries:[{index:0,title:'本地第一章',url:'/0'}]};}async loadProgress(){return{kind:'missing'};}},
-  RemoteReadingFlowGateway:class{async loadProgress(){return{kind:'missing'};}async loadChapter(s,n){return{sourceId:s.identity.sourceId,bookId:s.identity.bookId,chapterIndex:n,chapterUrl:s.entries.find(e=>e.index===n)?.url,content:'正文',contentVersion:'v',images:[]};}},
+ const reading=compileHost(undefined,{LocalReadingFlowGateway:class extends LocalReadingFlowGateway{constructor(...args){super(...args);localConstructions++;}async loadToc(){return{entries:[{index:0,title:'本地第一章',url:'/0'}]};}},
+  RemoteReadingFlowGateway:class extends RemoteReadingFlowGateway{async loadChapter(s,n){return{sourceId:s.identity.sourceId,bookId:s.identity.bookId,chapterIndex:n,chapterUrl:s.entries.find(e=>e.index===n)?.url,content:'正文',contentVersion:'v',images:[]};}},
   ReaderCoreGateway:class{async loadShelfBook(){return canonicalShelf;}},ReadingOfflineGateway:class{async loadDirectoryProjection(s){return s.entries;}}});
  setRuntime(f.runtime);h.readingEntryHost=new reading(f.runtime);
  const Methods=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),[
@@ -26,7 +28,7 @@ function fixture(options={}){
   'currentReaderPresentationIdentity','consumeSystemFileOpen'],{...gatewayExports,...evidence,ReaderRuntimeOwner:Runtime,LOCAL_SOURCE_ID:'local',DOMAIN:0,
   hilog:{info(){},warn(){},error(){}},errorMessageOf:e=>e.message,ReadingEntryHost:reading,EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'}});
  for(const [n,d] of Object.entries(Object.getOwnPropertyDescriptors(Methods.prototype)))if(n!=='constructor'&&typeof d.value==='function')h[n]=d.value;
- Object.assign(h,{route:'detail',readingOriginRoute:'detail',detailReturnRoute:'search',navigationGeneration:0,detailToc:[],readingEntryScopeId:-1,
+ Object.assign(h,{route:'detail',readingOriginRoute:'detail',detailReturnRoute:'search',navigationGeneration:0,directoryPresentationGeneration:0,detailToc:[],readingEntryScopeId:-1,
   sourceSwitchVisible:false,sourceSwitchState:{kind:'discovering'},searchPublicationRevision:0,
   searchHost:{searchedSourceIds:()=>[],visibilityChanged(){},publication:{shelfAt:()=>[]}},
   remoteCatalogRefreshAt:new Map(),directoryBookmarkMutationGeneration:0,offlineMutationGeneration:0,
@@ -71,7 +73,15 @@ await check('body-failure-and-late-session-stay-on-original-reader',async()=>{
  assert.equal(h.route,'reading');assert.equal(h.pendingSourceSwitch,pending);assert.equal(h.detailLoadingMessage,'正文处理设置已改变');
  h.onReadingFailure('other','other','stale');assert.equal(h.detailLoadingMessage,'正文处理设置已改变');
 });
-await check('empty-independent-directory-route',async()=>{const h=fixture().h;h.openFullDirectory();assert.equal(h.route,'directory');assert.equal(h.readingSessionActive,false);assert.equal(h.directoryReturnTarget,'detail');});
+await check('empty-independent-directory-route',async()=>{
+ const t=fixture(),h=t.h;h.bindReadingEntryReader();h.openFullDirectory();
+ assert.equal(h.route,'directory');assert.equal(h.readingSessionActive,false);assert.equal(h.directoryReturnTarget,'detail');
+ await settle();const reads=t.calls.filter(([method])=>method==='reading.progress.get');
+ assert.equal(reads.length,1);assert.deepEqual(reads[0][1],{sourceId:book.sourceId,bookId:book.bookId});
+ assert.equal(h.directoryCurrentChapterIndex,11,'empty TOC retains only the original Host/Gateway canonical display anchor');
+ assert.equal(h.requestedChapterIndex,undefined);assert.equal(h.readingSessionActive,false);
+ assert.equal(t.calls.some(([method])=>['reading.progress.update','book.detail','book.toc','chapter.content'].includes(method)),false,'directory display cannot acquire body/catalog or save progress');
+});
 for(const toc of [[],[{index:2,title:'可见章节',navigable:true}]])await check('durable-anchor-with-paged-or-empty-toc-'+toc.length,async()=>{
  const t=fixture();t.h.detailToc=toc;t.h.shelfBooks=[];await t.pick();const p=t.calls.find(([m])=>m==='source.switch.commit')[1];
  assert.equal(p.from.sourceId,book.sourceId);assert.equal(p.currentChapterIndex,11);assert.equal(p.currentChapterTitle,'');

@@ -4,8 +4,7 @@ import { createRequire, stripTypeScriptTypes, registerHooks } from 'node:module'
 import { fileURLToPath } from 'node:url';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(s+'.ts',c);throw e;}}});
 const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
-const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
-const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+import { ProductionHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 const file=p=>fileURLToPath(new URL(`../entry/src/main/ets/${p}`,import.meta.url));
@@ -180,12 +179,12 @@ assert.ok(projectionStart>0&&projectionEnd>projectionStart);
 const oldSource=source.slice(0,projectionStart)+source.slice(projectionEnd);
 function standalone(sourceId='local',{legacy=false,shelfIndex=19,shelfSource=sourceId,contentKind='text',emptyToc=false}={}){
  let resolve,live=true;const result=new Promise(done=>{resolve=done;});const calls=[];
- const runtime={supportsCoreCapability:()=>true,async request(method,params,options){
+ const runtime={supportsCoreCapability:()=>true,bookAcquisitions:()=>({setPreparationVisible(){}}),async request(method,params,options){
   calls.push({method,params,options});assert.equal(method,'reading.progress.get','directory viewing cannot acquire a body or save progress');
   return {data:await result};
  }};
- const {owner}=createReaderBuilderProbe(legacy?oldSource:source,['openFullDirectory','closeDirectory','externalDirectory','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{
-  BookDirectoryPage:DirectoryChild,ReaderFullDirectory:DirectoryChild,readingDirectoryRecovery,LocalReadingFlowGateway,RemoteReadingFlowGateway,LOCAL_SOURCE_ID:'local',
+ const {owner}=createReaderBuilderProbe(legacy?oldSource:source,['openFullDirectory','closeDirectory','getReadingEntryHost','externalDirectory','directoryRecovery','directoryOperationPresentationId','directoryOperationBindingId'],{
+  BookDirectoryPage:DirectoryChild,ReaderFullDirectory:DirectoryChild,readingDirectoryRecovery,ReadingEntryHost:ProductionHost,LOCAL_SOURCE_ID:'local',
   ReaderRuntimeOwner:{current:()=>runtime},...enums});
  Object.assign(owner,index(sourceId),{mountedRuntimeOwner:runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:2,directoryPresentationGeneration:1,
   settingsSnapshot:{reduceMotion:false},offlineMutationActiveKey:'',appThemeScheme:'day',loadDirectoryOperationProjections(){},isCurrentRuntime:value=>value===runtime&&live,
@@ -193,7 +192,11 @@ function standalone(sourceId='local',{legacy=false,shelfIndex=19,shelfSource=sou
   detailBookmarkIdentity:()=>({sourceId,bookId:'book'})});
  owner.detailBook.contentKind=contentKind;if(contentKind==='manga')owner.detailBook.mangaPosition={chapterIndex:2,chapterTitle:'Manga chapter',pageOrdinal:0};
  if(emptyToc)owner.detailToc=[];
- return {owner,calls,release({found=true,index=19,source=sourceId,bookId='book'}={}){resolve({found,progressRevision:'cas-7',progress:found?{sourceId:source,bookId,chapterIndex:index,chapterOffset:37,chapterProgress:.02,updatedAt:7}:null});},retireRuntime(){live=false;}};
+ setRuntime(runtime);const entry=ProductionHost.forRuntime(runtime);
+ const lease={isCurrent:()=>live&&owner.mountedRuntimeOwner===runtime,projectionAllowed:()=>false,currentDirectory:()=>owner.detailToc,
+  offlineGeneration:()=>0,membership:()=>({generation:0,blocked:false,value:true}),changed(){},cacheDecision:async()=>false,notice(){},refreshShelf(){},diagnostic(){}};
+ entry.bindReader(owner.detailBook,undefined,owner.detailToc,true,lease);
+ return {owner,entry,lease,calls,release({found=true,index=19,source=sourceId,bookId='book'}={}){resolve({found,progressRevision:'cas-7',progress:found?{sourceId:source,bookId,chapterIndex:index,chapterOffset:37,chapterProgress:.02,updatedAt:7}:null});},retireRuntime(){live=false;}};
 }
 function footer(owner){
  let detail=[...owner.children.values()].find(child=>child.params.catalogContext==='detail');
@@ -222,7 +225,7 @@ for(const sourceId of ['local','remote']){
  const unknown=standalone(sourceId);unknown.owner.openFullDirectory();unknown.release({index:999});await tick();assert.deepEqual(footer(unknown.owner),['尚未开始阅读','—'],'an absent chapter is never clamped to a known row');
  const delayed=standalone(sourceId,{emptyToc:true});delayed.owner.openFullDirectory();delayed.release();await tick();assert.deepEqual(footer(delayed.owner),['尚未开始阅读','—']);
  delayed.owner.detailToc=index(sourceId).detailToc;assert.deepEqual(footer(delayed.owner),['Chapter 20','20 / 25'],'late admitted TOC resolves the retained canonical index');
- for(const [name,retire] of [['close',f=>f.owner.closeDirectory()],['navigation',f=>f.owner.navigationGeneration++],['mount',f=>f.owner.detailShelfAdmissionMount++],['directory',f=>f.owner.directoryPresentationGeneration++],['owner',f=>f.owner.mountedRuntimeOwner={}],['runtime',f=>f.retireRuntime()],['reader',f=>f.owner.readingSessionActive=true],['identity',f=>f.owner.detailBook={...f.owner.detailBook,bookId:'other'}]]){
+ for(const [name,retire] of [['close',f=>f.owner.closeDirectory()],['navigation',f=>f.owner.navigationGeneration++],['mount',f=>f.owner.detailShelfAdmissionMount++],['directory',f=>f.owner.directoryPresentationGeneration++],['owner',f=>f.owner.mountedRuntimeOwner={}],['runtime',f=>f.retireRuntime()],['reader',f=>f.owner.readingSessionActive=true],['identity',f=>f.owner.detailBook={...f.owner.detailBook,bookId:'other'}],['entry-scope',f=>f.entry.retire()],['entry-book',f=>f.entry.bindReader({...f.owner.detailBook,bookId:'other'},undefined,[],true,f.lease)]]){
   const stale=standalone(sourceId,{shelfIndex:1});stale.owner.openFullDirectory();retire(stale);assert.equal(stale.calls[0].options.shouldCancel(),true,`${sourceId}/${name}: RPC receives the presentation fence`);
   stale.release({index:19});await tick();assert.equal(stale.owner.directoryCurrentChapterIndex,1,`${sourceId}/${name}: late progress cannot publish`);
  }

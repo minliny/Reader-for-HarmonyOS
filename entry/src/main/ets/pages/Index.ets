@@ -85,8 +85,6 @@ import { ReaderPageScaffold } from '../features/common/ReaderPageScaffold';
 import { backfillRetainedReaderDirectoryNavigation, readerDirectoryObserveMissingNavigation,
   readerDirectoryTakeMissingNavigation } from '../features/reading/ReaderDirectoryNavigation';
 import {
-  LocalReadingFlowGateway,
-  type LocalReadingProgressState,
   type LocalReadingTocEntry,
 } from '../features/reading/LocalReadingFlowGateway';
 import type { ReadingBookDetail } from '../features/reading/ReadingBookDetail';
@@ -100,7 +98,6 @@ import {
   RemoteChapterCacheRefreshError,
   RemoteReadingFlowGateway,
   type RemoteReadingBookSeed,
-  type RemoteReadingProgressState,
   type RemoteReadingSession,
   type RemoteReadingTocEntry,
 } from '../features/reading/RemoteReadingFlowGateway';
@@ -4951,11 +4948,11 @@ struct Index {
       this.directoryPresentationGeneration === presentation && this.route === 'directory' && this.directoryReturnTarget === 'detail' &&
       !this.readingSessionActive && this.detailBook?.sourceId === sourceId && this.detailBook?.bookId === bookId &&
       this.detailBook.contentKind !== 'manga';
-    const progress = sourceId === LOCAL_SOURCE_ID ? new LocalReadingFlowGateway(owner).loadProgress(bookId, current) :
-      new RemoteReadingFlowGateway(owner).loadProgress({ sourceId, bookId }, current);
-    void progress.then((state: LocalReadingProgressState | RemoteReadingProgressState): void => {
-      if (!current()) return;
-      this.directoryCurrentChapterIndex = state.kind === 'restored' ? state.progress.chapterIndex : -1;
+    const host = this.getReadingEntryHost();
+    if (host === undefined) return;
+    void host.loadDirectoryChapterIndex(sourceId, bookId, current).then((chapterIndex: number | undefined): void => {
+      if (!current() || chapterIndex === undefined) return;
+      this.directoryCurrentChapterIndex = chapterIndex;
       this.directoryChapterTitle = this.detailToc.find((entry: LocalReadingTocEntry): boolean => entry.index === this.directoryCurrentChapterIndex)?.title ?? '';
     }).catch((): void => { /* Optional display refresh retains the last exact Core shelf projection. */ });
   }
