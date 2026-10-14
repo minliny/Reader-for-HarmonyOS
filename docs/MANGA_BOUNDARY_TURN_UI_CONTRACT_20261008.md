@@ -45,13 +45,17 @@ background and zero private font calls. No literal font-size slot,
 native-default label exemption, duplicate role or rewrite of the historical
 manga/selected directory typography fixtures is introduced.
 
-MangaReadingSurface retains one additional background for retainedChapterPixels:
+MangaReadingSurface delegates the retainedChapterPixels backing to the existing
+ReaderPageFrameModifier (`reader` category with the current paper colour):
 it covers gaps around the old visible images while candidate images are being
 admitted. This is the existing paper colour behind a specific native retained
 image actor, required so unconfirmed candidate pixels cannot show through.
-The Surface policy explicitly records 19 previous backgrounds plus this single
-native render backing (20 total), while its original 36 font budget and all
-historical exact Text/native-default carriers remain unchanged.
+The Surface policy remains at its original 19 private backgrounds. The shared
+modifier owns this backing; the retained actor keeps explicit clipping and
+HitTestMode.None. Its original font budget and historical exact
+Text/native-default carriers remain unchanged. The SDK regression exercises
+the actual Builder and shared modifier, including transparency, missing clip
+and pointer interception counterexamples.
 
 ## Verification boundary
 
