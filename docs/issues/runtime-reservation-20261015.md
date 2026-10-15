@@ -26,4 +26,6 @@ SDK只保留最近16个终态的 requestId、固定白名单方法或unknown、r
 
 用户补充目录点选、章节滑条与跨章翻页都会失败。首轮完整HAP门禁在 `test-architecture-shared-producers.mjs` 超过110秒时限，已记录失败并停止该轮，未发布或安装HAP。必须重新通过全部门禁，不复用首轮PASS或放宽时限。
 
+第二轮随执行中断，完成106项后停止，未发布HAP。第三轮完整执行692项，691项通过，唯一失败为 `test-manga-offline-network-probe.mjs` 的类型检查替身缺少新增的 `reservationQuarantineDiagnosticLogged` 字段。仅为替身增加与生产一致的false初值，保留原断言、范围及时限；修正后重新执行完整流水线。
+
 实施在 `.reader-isolated/runtime-reservation-repair-20261015`，Host基线 `c982cf24`、Core基线 `41e62155`，排除主目录同期进行中的工具链/阅读WIP。原始现场证据保存在主Host忽略目录 `.reader-local/device-current-error-20261015/`，最终产物与回执另附不可变manifest。
