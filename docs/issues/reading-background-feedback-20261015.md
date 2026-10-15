@@ -106,3 +106,10 @@
 - 新 HAP 构建/签名与 manifest 绑定：待进行，**OPEN**。
 - 新包保数据物理安装与交互验证：待目标恢复连接后进行，**OPEN**。
 - 原始时长失败的具体底层原因、写入永不完成/ready 永不到达的最终恢复活性、用户验收：**OPEN**；不能与旧 Core 首次隔离问题混同。
+
+### 反馈版本第一次完整门禁（2026-10-16 00:16 本地）
+
+- 冻结 Host `b3770653`，完整执行 692 项：690 PASS、2 FAIL，耗时 888397ms；未发布新 HAP，未安装。日志 `.reader-local/runtime-reservation/hap-feedback-r1.log`，逐项日志目录 `/var/folders/53/6tc2ktbd19dbwxd5pmbp0d_w0000gn/T/reader-contract-run-WnK6MR`。
+- `test-manga-storage-owner.mjs`、`test-reader-startup-boundaries.mjs` 直接执行 Runtime 生产方法，其夹具未提供新增的 `getReadingRecordGateway()`，均以 TypeError 失败。不是将未确认保存视为成功，也不是删除旧保护断言。
+- 补齐两处夹具并增加后台/关闭不恢复、ready 前台恢复、时长恢复不阻塞启动和关闭停止恢复的断言；所有旧断言保留。Astra 已用内存加载补丁执行两项通过；应用补丁后再执行实际文件 targeted，然后从头完整重跑门禁，不复用第一次的 690 个 PASS。
+- 补丁应用后的两项实际文件 targeted 均 PASS，`git diff --check` PASS；生产源码未在本次夹具修复中变化。

@@ -6,7 +6,9 @@ const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve
 function fixture(capabilities=[]){
  const clock=[],events=[],requests=[],native=deferred(),cleanup=deferred();let createError=false, opens=0;
  let migrationStarted=false, migrationResult=Promise.resolve(false), downloadMigration=Promise.resolve(), sourceTask=Promise.resolve();
- const background=[];
+ const background=[],durationEvents=[],durationPending=deferred();
+ const durationGateway={recover(){assert.equal(owner.state,'ready');assert.equal(owner.runtime,runtime);
+   durationEvents.push('recover');return durationPending.promise;},stopBackground(){durationEvents.push('stop');}};
  let inspector, metadataCalls=0, cacheClosed=false;
  const runtime={assetBridge:()=>({}),setCapabilityRouter(){},close(){events.push('native.close');},
   async request(method,params){events.push(method);requests.push({method,params:structuredClone(params)});return{data:{capabilities,buildIdentity:{},recovered:0}};}};
@@ -19,6 +21,7 @@ function fixture(capabilities=[]){
    if(!current()){runtime.close();throw Error('startup cancelled');}return runtime;
   }});
  const owner=Object.assign(new Owner(),{state:'starting',coreCapabilities:new Set(),predecessorClose:Promise.resolve(),
+  readingRecordGateway:durationGateway,getReadingRecordGateway:()=>durationGateway,
   readingEntryPreparations:()=>({beginRequest:()=>false}),
   preparationWakeTimer:-1,readingImageDiskCache:{close(){cacheClosed=true;}},async closeRuntime(){this.state='closed';},
   host:{getContext:()=>({filesDir:'/controlled'}),setResponseAssetBridge(){},createCapabilityRouter:()=>({}),
@@ -31,7 +34,7 @@ function fixture(capabilities=[]){
   getDownloadCoordinator:()=>({restore:async()=>{background.push('download-restore');}}),
   async installBundledBookSourceCollection(){assert.equal(this.state,'ready');assert.equal(this.runtime,runtime);background.push('source-start');
     await sourceTask;return{collectionRecords:0,uniqueSourceIds:0,processed:0,installedOrUpgraded:0,failed:0,interrupted:false};}});
- return{owner,runtime,native,cleanup,events,requests,clock,background,
+ return{owner,runtime,native,cleanup,events,requests,clock,background,durationEvents,
   downloadMigration:value=>{downloadMigration=value;},sourceTask:value=>{sourceTask=value;},fail(){createError=true;},recover(){createError=false;},opens:()=>opens,
   inspector:()=>inspector,metadataCalls:()=>metadataCalls,cacheClosed:()=>cacheClosed,
   migrationStarted:()=>migrationStarted, migration(value){migrationResult=value;}};
@@ -40,6 +43,7 @@ function fixture(capabilities=[]){
  const f=fixture();const start=f.owner.startRuntime();await tick();assert.deepEqual(f.events,[]);
  assert.equal(f.migrationStarted(),true,'read-only Host marker I/O overlaps outstanding native open');
  f.native.resolve();await start;assert.equal(f.owner.state,'ready');assert.equal(f.owner.runtime,f.runtime);
+ assert.deepEqual(f.durationEvents,['recover'],'pending duration recovery starts after ready without gating startup');
  assert.ok(!f.events.includes('cleanup'),'confirmed import cleanup cannot gate ready');
  f.clock.shift()();await tick();assert.equal(f.events.at(-1),'cleanup');
  let settled=false;f.owner.importFinalizeTask.then(()=>{settled=true;});await tick();assert.equal(settled,false);
@@ -49,6 +53,7 @@ function fixture(capabilities=[]){
  const f=fixture();const start=f.owner.startRuntime();f.owner.state='closing';f.native.resolve();
  await assert.rejects(start,/cancelled/);assert.equal(f.owner.runtime,undefined);
  assert.deepEqual(f.events,['native.close']);assert.equal(f.clock.length,0);
+ assert.deepEqual(f.durationEvents,[],'cancelled startup never starts duration recovery');
 }
 {
  const f=fixture();f.fail();await assert.rejects(f.owner.startRuntime(),/open failed/);
@@ -114,6 +119,7 @@ console.log('search entry concurrent startup failure, shared retry, recovery bar
  assert.equal(f.metadataCalls(),1);assert.ok(f.events.includes('manga.resource.inspect'),'the installed callback uses the exact owned runtime');
  await f.owner.close();assert.equal(f.inspector(),undefined,'public close detaches metadata inspection before releasing owned resources');
  assert.equal(f.cacheClosed(),true);
+ assert.deepEqual(f.durationEvents,['recover','stop'],'public close stops the independently pending duration recovery');
 }
 console.log('PASS production metadata lifecycle: startup injects inspector, callback uses owned Core request, public close detaches and closes image cache');
 

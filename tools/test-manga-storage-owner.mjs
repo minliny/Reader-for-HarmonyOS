@@ -306,7 +306,12 @@ pass('snapshot failures preserve the original error and reconciliation; coordina
       assert.equal(actual, owner); return { networkChanged() { events.push('manga.wake'); } };
     } },
   });
+  const durationRecoveries = [];
   owner = Object.assign(new Owner(), { state: 'ready', preparationForeground: false, preparationCatalogAllowed: false,
+    getReadingRecordGateway: () => ({ recover() {
+      assert.equal(owner.state, 'ready'); assert.equal(owner.preparationForeground, true);
+      durationRecoveries.push('foreground'); return Promise.resolve();
+    } }),
     bookCoordinator: { visibilityChanged() { events.push('novel.visibility'); } },
     wakeReadingPreparations() { events.push('owner.wake'); },
     readingImageDiskCache: { async maintainMangaStorage(...args) { maintenance.push(args); } },
@@ -329,12 +334,15 @@ pass('snapshot failures preserve the original error and reconciliation; coordina
   assert.deepEqual(foregroundNotifications, [false]);
   assert.deepEqual(events.splice(0), ['novel.visibility', 'owner.wake']);
   assert.equal(owner.preparationCatalogAllowed, true); assert.equal(maintenance.length, 0);
+  assert.equal(durationRecoveries.length, 0, 'background context does not start duration recovery');
   owner.setReadingPreparationContext(true, false);
+  assert.equal(durationRecoveries.length, 1, 'ready foreground wakes the separate duration recovery port');
   assert.deepEqual(events.splice(0), ['manga.wake', 'novel.visibility', 'owner.wake']);
   assert.deepEqual(foregroundNotifications, [false, true]);
   assert.equal(owner.isMangaPreparationForeground(), true); assert.equal(owner.allowOptionalMangaPreparation(), false);
   assert.equal(owner.preparationCatalogAllowed, false); assert.deepEqual(maintenance, [['expiry']]);
   owner.setReadingPreparationContext(true, true);
+  assert.equal(durationRecoveries.length, 2, 'ready foreground refresh may wake duration recovery again');
   assert.deepEqual(events.splice(0), ['novel.visibility', 'owner.wake'], 'unchanged visibility still reaches the existing novel coordinator');
   assert.deepEqual(foregroundNotifications, [false, true]);
   owner.setReadingPreparationContext(false, false);
@@ -356,6 +364,7 @@ pass('snapshot failures preserve the original error and reconciliation; coordina
     assert.equal(owner.isMangaPreparationForeground(), false); assert.deepEqual(events, []);
     assert.equal(foregroundNotifications.length, beforeForeground); assert.equal(maintenance.length, beforeMaintenance);
   }
+  assert.equal(durationRecoveries.length, 2, 'background and closing contexts do not wake duration recovery');
   await tick();
   pass('closing and closed Owners reject foreground context updates without wake, visibility, network or maintenance side effects');
 }
