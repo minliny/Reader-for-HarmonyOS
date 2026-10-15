@@ -31,7 +31,7 @@ const Index=productionMotionMethods(file,['showIndexAlert','showSourceImportResu
 });
 const ActualBookshelfHost=bookshelfOperationClass('features/bookshelf/BookshelfHost.ets','BookshelfHost');
 function fixture(route='source'){
- unavailable=false;let shown,fail=false;const calls=[];
+ unavailable=false;let shown,fail=false;const calls=[],notices=[];
  const owner={calls,revision:3,supportsCoreCapability:()=>false,bookAcquisitions(){return{readingProjectionRevision:()=>owner.revision,endSearch(){},setPreparationVisible(){}};},readingEntryPreparations:()=>({setPaused(){}})};currentOwner=owner;
  const host={deleteSelected(ids){calls.push(['deleteSources',ids]);},removeSubscription(id){calls.push(['deleteRss',id]);},importSources(_replace,done,failed){calls.push('rss.confirmed-write');try{done({imported:2});}catch(error){failed(error);}},exportSources(){}};
  const p=Object.assign(new Index(),{bookshelfHost:new ActualBookshelfHost(()=>{},()=>false),nativeAlertOwner:new ReaderNativeAlertOwner(),route,navigationGeneration:1,shelfReceiptRetired:false,
@@ -43,7 +43,8 @@ function fixture(route='source'){
    entries:[{index:0,title:'章',url:'/0',variables:[]}],acquisitionMode:'online',hostRequirements:[],continuationVariables:[]},offlineMutationActiveKey:'',
   getSourceToolsOrchestrator:()=>host,getRssOrchestrator:()=>host,returnFromSourceManagement:()=>calls.push('returnSearch'),
   openJsonImport:context=>{calls.push(context);p.jsonImportVisible=true;},clearDirectoryBookOffline:()=>calls.push('clearOffline'),
-  getUIContext:()=>({showAlertDialog(options){if(fail)throw Error('platform unavailable');shown=options;}}),
+  getUIContext:()=>({showAlertDialog(options){if(fail)throw Error('platform unavailable');shown=options;},
+   getPromptAction:()=>({showToast(options){if(fail)throw Error('platform unavailable');notices.push(options);}})}),
   shelfWriteGeneration:0,searchHost:{close(){}},dismissBookRemovalDialog(){}});
  // The original test observes native effect dispatch rather than a mutation
  // ACK. Attachment/selection are the actual whole domain class; the new cold
@@ -59,7 +60,7 @@ function fixture(route='source'){
  rss.importSources=(_replace,done,failed)=>{calls.push('rss.confirmed-write');try{done({imported:2});}catch(error){failed(error);}};
  host.detachPresentation=()=>{};
  p.bindReadingEntryReader();
- return{p,calls,host,owner,shown:()=>shown,nativeFail:()=>{fail=true;}};
+ return{p,calls,notices,host,owner,shown:()=>shown,nativeFail:()=>{fail=true;}};
 }
 const cases=[
  {name:'sourceDelete',route:'sourceTools',show:f=>f.p.requestSourceDelete(['s']),button:'secondaryButton',value:'删除',effect:'deleteSources',
@@ -85,10 +86,19 @@ for(const c of cases){
  const old=fixture(c.route);c.show(old);const native=old.shown();c.show(old);native[c.button].action();assert.equal(old.calls.length,0,`${c.name}: replaced presentation cannot act`);
  const closed=fixture(c.route);c.show(closed);closed.shown().cancel();closed.shown()[c.button].action();assert.equal(closed.calls.length,0,`${c.name}: cancel settles and retires action`);
 }
-for(const [route,method]of[['source','showSourceImportResult'],['rssSubscriptionManagement','showRssOperationResult'],['reading','showReadingFailure']]){
+for(const [route,method]of[['source','showSourceImportResult'],['rssSubscriptionManagement','showRssOperationResult']]){
  const f=fixture(route);f.p[method]('title','message');const shown=f.shown();assert.equal(shown.title,'title');assert.equal(shown.primaryButton.value,'知道了');assert.equal(shown.autoCancel,true);
  f.p.nextNavigationGeneration();shown.primaryButton.action();assert.deepEqual(f.calls,[]);
  f.nativeFail();assert.doesNotThrow(()=>f.p[method]('confirmed','platform failure'));
+}
+for(const failedToast of [false,true]){
+ const f=fixture('reading');if(failedToast)f.nativeFail();
+ const route=f.p.route,generation=f.p.navigationGeneration,session=f.p.remoteReadingSession;
+ assert.doesNotThrow(()=>f.p.showReadingFailure('raw private title','raw exception with private data'));
+ assert.equal(f.shown(),undefined,'pure reading failure never presents an Alert');
+ assert.deepEqual(f.notices,failedToast?[]:[{message:'阅读暂未完成，请稍后重试',duration:2000}]);
+ assert.equal(f.p.route,route);assert.equal(f.p.navigationGeneration,generation);assert.equal(f.p.remoteReadingSession,session);
+ assert.deepEqual(f.calls,[],'optional feedback neither mutates business state nor owns navigation');
 }
 {const f=fixture('source');f.p.sourceManagementSearchKeyword='';f.p.showSourceImportResultFromSearch('title','message');assert.equal(f.shown().secondaryButton,undefined);}
 {const f=fixture('rssSubscriptionManagement');f.nativeFail();f.p.importRssSources(false);assert.deepEqual(f.calls,['rss.confirmed-write'],'native result notice failure must not invoke import failure callback');}
@@ -115,5 +125,5 @@ for(const timing of ['before-show','after-show','retired','confirmed-import']){
  unavailable=false;
 }
 const raw=readFileSync(file,'utf8');assert.equal((raw.match(/\.showAlertDialog\(/g)??[]).length,1,'Index has one actual native host implementation');
-assert.equal((raw.match(/this\.showIndexAlert\(/g)??[]).length,9,'all nine current actual Index consumers use finite host');
-console.log('PASS Index all nine real SDK-parsed native Alert consumers: exact identity/lifecycle, once-only actions, replacement/cancel/close/late owner, cache Promise settlement and native failure independent from confirmed writes');
+assert.equal((raw.match(/this\.showIndexAlert\(/g)??[]).length,8,'eight remaining actual Index consumers use finite host');
+console.log('PASS Index eight remaining SDK-parsed native Alert consumers and nonblocking reading failure Toast: exact identity/lifecycle, once-only actions, replacement/cancel/close/late owner, cache Promise settlement and native failure independent from confirmed writes');

@@ -88,6 +88,7 @@ function fixture({ capability = true, sourceSwitch = false, gatewaySwitch = fals
     activeGateway: () => gateway, coreLayout: () => ({ width: 390, height: 844 }),
     paginationLayoutSignature: () => 'layout', knownContentVersion: () => 'content-v1',
     isReaderIdentityCurrent: () => true, usesBookTurnSimulation: () => simulation,
+    showReaderBackgroundNotice: noop,
     getUIContext: () => ({ postFrameCallback: callback => frames.push(callback),
       showAlertDialog: dialog => calls.dialogs.push(dialog) }),
     bookTurnSession: {

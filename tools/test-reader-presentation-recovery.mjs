@@ -38,10 +38,10 @@ let deadline;
 const Recovery = productionMotionMethods(file, ['requestBookTurn2DFallback', 'completeBookTurn2DFallback',
   'onBookTurnArkUIContentReady', 'armPageTurnSettlementDeadline'], {
   setTimeout: callback => { deadline = callback; return 1; },
-  PAGE_TURN_SETTLEMENT_DEADLINE_MS: 2000, hilog: { warn() {} },
+  ReaderUIFrameCallback: Frame, PAGE_TURN_SETTLEMENT_DEADLINE_MS: 2000, hilog: { warn() {} },
 });
 function recovery(ready) {
-  const calls = [];
+  const calls = [], frames = [];
   const value = Object.assign(new Recovery(), { mounted: true, exitRequested: false, pageTurnSettlementActive: true,
     pageTurnSettlementGeneration: 4, bookTurnSurfaceGeneration: 4, pageTurnRenderRevision: 9,
     bookTurnArkUIReadyRevision: ready ? 9 : 8, bookTurnSurfaceOpacity: 1, bookTurnAwaitingSlotCommit: true,
@@ -50,8 +50,10 @@ function recovery(ready) {
       releaseTerminalFrame: () => calls.push('release'), clearSurface: () => calls.push('clear') },
     clearBookTurnCapturedIdentities() {}, cancelPageTurnSettlementDeadline() {},
     finishSuccessfulPageTurnPresentation() { calls.push('durable-2d'); this.pageTurnSettlementActive = false; },
-    finishPageTurnRollback() { calls.push('rollback'); }, getUIContext: () => ({ showAlertDialog: () => calls.push('retry-ui') }) });
-  return { value, calls };
+    finishPageTurnRollback() { calls.push('rollback'); },
+    showReaderBackgroundNotice() { calls.push('notice'); },
+    getUIContext: () => ({ postFrameCallback: frame => frames.push(frame), showAlertDialog: () => assert.fail('automatic fallback must not open an Alert') }) });
+  return { value, calls, drain() { while (frames.length) frames.shift().callback(); } };
 }
 {
   const h = recovery(true); h.value.armPageTurnSettlementDeadline(4); deadline();
@@ -60,9 +62,24 @@ function recovery(ready) {
 }
 {
   const h = recovery(false); h.value.armPageTurnSettlementDeadline(4); deadline();
-  assert.deepEqual(h.calls, ['retry-ui']); assert.equal(h.value.bookTurnSurfaceOpacity, 1);
+  assert.deepEqual(h.calls, ['notice']); assert.equal(h.value.bookTurnSurfaceOpacity, 1);
   assert.equal(h.value.pageTurnRenderRevision, 10);
-  h.value.onBookTurnArkUIContentReady(9); assert.deepEqual(h.calls, ['retry-ui']);
-  h.value.onBookTurnArkUIContentReady(10); assert.deepEqual(h.calls, ['retry-ui', 'release', 'clear', 'durable-2d']);
+  h.drain(); assert.deepEqual(h.calls, ['notice'], 'frame callback cannot release an unready target');
+  h.value.onBookTurnArkUIContentReady(9); assert.deepEqual(h.calls, ['notice']);
+  h.value.onBookTurnArkUIContentReady(10); assert.deepEqual(h.calls, ['notice', 'release', 'clear', 'durable-2d']);
 }
 console.log('production dropped-native-ACK, unadmitted revision and stable 2D recovery: PASS');
+
+for (const invalidation of ['unmounted', 'generation', 'exit']) {
+  const h = recovery(false); h.value.requestBookTurn2DFallback(4);
+  h.value.bookTurnArkUIReadyRevision = h.value.pageTurnRenderRevision;
+  if (invalidation === 'unmounted') h.value.mounted = false;
+  if (invalidation === 'generation') h.value.pageTurnSettlementGeneration++;
+  if (invalidation === 'exit') h.value.exitRequested = true;
+  h.drain(); assert.deepEqual(h.calls, ['notice'], invalidation + ' keeps fallback inert');
+}
+{
+  const h = recovery(false); h.value.requestBookTurn2DFallback(4);
+  h.value.bookTurnArkUIReadyRevision = h.value.pageTurnRenderRevision;
+  h.drain(); assert.deepEqual(h.calls, ['notice', 'release', 'clear', 'durable-2d']);
+}

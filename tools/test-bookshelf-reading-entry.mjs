@@ -306,7 +306,7 @@ function exitCallbacksAt(tree, receiverTree, childName, owner) {
     return [name, factory.call(owner)];
   }));
 }
-const Reading = productionMotionMethods(readingFile, ['requestExit', 'beginExit', 'finishExit', 'controlTiming'], {
+const Reading = productionMotionMethods(readingFile, ['requestExit', 'beginExit', 'finishExit', 'showReaderBackgroundNotice', 'controlTiming'], {
   ...readerControlState, ...readerControlHost, ...readerControlKeyboard, ...readerTiming, ...readerRapid, ...readerAuto,
   ReaderWindowCoordinator: { metrics: () => ({ ready: true, keyboardInsets: { bottom: 0 } }) },
 });
@@ -322,7 +322,7 @@ async function infoExitHarness(state) {
   assert.equal(index.remoteReadingSession.identity.bookId, t.book.bookId);
   assert.equal(index.detailToc[1].index, 7, 'Info retains the actual reader-admitted catalog');
   index.route = 'reading';
-  const calls = [], stop = deferred(), record = deferred(), progress = deferred();
+  const calls = [], notices = [], stop = deferred(), record = deferred(), progress = deferred();
   const onExited = index.onReaderExited.bind(index), onCancelled = index.cancelReaderExitDestination.bind(index);
   index.onReaderExited = identity => { calls.push('route'); onExited(identity); };
   index.cancelReaderExitDestination = identity => { calls.push('exit-cancelled'); onCancelled(identity); };
@@ -349,7 +349,8 @@ async function infoExitHarness(state) {
     commitVisiblePage: () => { calls.push('progress'); return progress.promise; },
     ...readingCallbacks,
     beginReadingRecordClock: () => calls.push('resume-record'),
-    getUIContext: () => ({ showAlertDialog: dialog => t.alerts.push(dialog) }),
+    getUIContext: () => ({ showAlertDialog: dialog => t.alerts.push(dialog),
+      getPromptAction: () => ({ showToast: notice => notices.push(notice) }) }),
   });
   registerExit.call(reading);
   const panel = Object.assign(new MorePanel(), {
@@ -357,7 +358,7 @@ async function infoExitHarness(state) {
     onTemporaryLayerChange: visible => { reading.controlTemporaryLayer = visible; },
     onOpenBookInfo: () => invokeInfo.call(reading),
   });
-  return { ...t, index, reading, panel, calls, stop, record, progress };
+  return { ...t, index, reading, panel, calls, notices, stop, record, progress };
 }
 
 for (const state of [homeControl(), autoControl(), readerControlState.expandReaderControlSession(autoControl(), 0)]) {
@@ -379,64 +380,41 @@ for (const state of [homeControl(), autoControl(), readerControlState.expandRead
   assert.equal(t.probes.length, 0, 'shelf entry and Info do not duplicate the reader chapter request');
 }
 
-{
+for (const failureStage of ['record', 'progress']) {
   const t = await infoExitHarness(autoControl());
-  t.panel.performMoreAction('info'); t.stop.resolve(); t.record.resolve(); await settle();
-  t.progress.reject(new Error('durable save failed')); await settle();
-  assert.equal(t.index.route, 'reading'); assert.equal(t.index.readingSessionActive, true);
-  assert.equal(t.reading.exitRequested, false);
-  assert.equal(t.alerts.at(-1).title, '阅读进度尚未保存');
-  assert.equal(t.alerts.at(-1).message, '请重试保存后退出。当前阅读位置已保留。');
-  assert.equal(t.calls.includes('route'), false, 'failed save never grants route ownership');
-  const retried = deferred(); t.reading.commitVisiblePage = () => retried.promise;
-  const failureDialog = t.alerts.at(-1);
-  failureDialog.primaryButton.action(); await settle(); assert.equal(t.index.route, 'reading');
-  retried.resolve(); await settle(); assert.equal(t.index.route, 'detail', 'retry retains Info destination');
-  assert.equal(t.calls.includes('exit-cancelled'), false, 'retry and successful save never cancel navigation');
-  const callsAfterExit = [...t.calls]; failureDialog.secondaryButton.action();
-  assert.deepEqual(t.calls, callsAfterExit, 'old cancellation cannot revive reading after retry success');
+  const unconfirmed = { chapterOffset: 17, confirmation: 'unknown' };
+  t.reading.lastCommittedProgress = unconfirmed;
+  t.panel.performMoreAction('info'); t.stop.resolve(); await settle();
+  if (failureStage === 'record') t.record.reject(new Error('duration receipt unknown'));
+  else {
+    t.record.resolve(); await settle();
+    t.progress.reject(new Error('durable save failed'));
+  }
+  await settle();
+  assert.equal(t.index.route, 'detail', 'save failure preserves the original Info destination without requiring a modal decision');
+  assert.equal(t.index.readingSessionActive, false);
+  assert.equal(t.reading.exitRequested, true); assert.equal(t.reading.exitDelivered, true);
+  assert.deepEqual(t.alerts, [], 'background save failure has no modal');
+  assert.deepEqual(t.notices, [{ message: '部分阅读记录保存尚未确认', duration: 2000 }]);
+  assert.equal(t.calls.includes('exit-cancelled'), false, 'failure must not cancel the original destination');
+  assert.equal(t.calls.includes('resume-record'), false, 'leaving must not reopen the retired reading clock');
+  assert.equal(t.reading.lastCommittedProgress, unconfirmed, 'navigation is not a durable ACK');
+  assert.equal(unconfirmed.confirmation, 'unknown');
+  assert.equal(t.calls.filter(value => value === 'route').length, 1);
+  await t.reading.finishExit(9);
+  assert.equal(t.calls.filter(value => value === 'route').length, 1, 'late duplicate finish cannot deliver navigation twice');
 }
 
-for (const cancelKind of ['continue', 'dismiss']) {
+for (const retired of ['mount', 'attempt']) {
   const t = await infoExitHarness(homeControl());
   t.panel.performMoreAction('info'); t.stop.resolve(); t.record.resolve(); await settle();
-  t.progress.reject(new Error('durable save failed')); await settle();
-  const failureDialog = t.alerts.at(-1);
-  if (cancelKind === 'continue') failureDialog.secondaryButton.action();
-  else failureDialog.cancel?.();
-  assert.equal(t.index.route, 'reading');
-  const closed = readerControlState.createReaderControlSessionState();
-  t.reading.latestControlVisualSession = closed; t.reading.controlSession = closed;
-  t.reading.commitVisiblePage = async () => {};
-  t.index.readingExitRequest(); await settle();
-  assert.equal(t.index.route, 'bookshelf', 'cancelled Info request must not redirect a later ordinary reading exit');
-  assert.equal(t.calls.filter(value => value === 'exit-cancelled').length, 1);
-  assert.equal(t.calls.filter(value => value === 'resume-record').length, 1);
-  const settledCalls = [...t.calls];
-  failureDialog.primaryButton.action(); failureDialog.secondaryButton.action(); failureDialog.cancel?.();
-  assert.deepEqual(t.calls, settledCalls, 'cancelled dialog cannot retry or cancel twice');
-}
-
-{
-  const t = await infoExitHarness(homeControl());
-  t.panel.performMoreAction('info'); t.stop.resolve(); t.record.resolve(); await settle();
-  t.progress.reject(new Error('durable save failed')); await settle();
-  const oldDialog = t.alerts.at(-1), newProgress = deferred();
-  t.reading.commitVisiblePage = () => newProgress.promise;
-  t.index.requestReaderBookInfo(); await settle();
-  oldDialog.secondaryButton.action(); oldDialog.primaryButton.action(); oldDialog.cancel?.();
-  assert.equal(t.calls.includes('exit-cancelled'), false, 'old dialog cannot cancel a newer explicit exit request');
-  newProgress.resolve(); await settle(); assert.equal(t.index.route, 'detail');
-}
-
-{
-  const t = await infoExitHarness(homeControl());
-  t.panel.performMoreAction('info'); t.stop.resolve(); t.record.resolve(); await settle();
-  t.progress.reject(new Error('durable save failed')); await settle();
-  const oldDialog = t.alerts.at(-1), calls = [...t.calls];
-  t.reading.isMountedToken = () => false;
-  oldDialog.secondaryButton.action(); oldDialog.primaryButton.action(); oldDialog.cancel?.();
-  assert.deepEqual(t.calls, calls, 'unmounted reader cannot cancel a different lifecycle navigation');
+  if (retired === 'mount') t.reading.isMountedToken = () => false;
+  else t.reading.exitAttemptGeneration++;
+  t.progress.reject(new Error('late old save failure')); await settle();
+  assert.equal(t.index.route, 'reading', 'stale persistence completion must not navigate a newer owner');
+  assert.equal(t.calls.includes('exit-cancelled'), false);
+  assert.equal(t.calls.includes('resume-record'), false);
+  assert.deepEqual(t.alerts, []); assert.deepEqual(t.notices, []);
 }
 
 for (const state of [homeControl(), autoControl(), readerControlState.expandReaderControlSession(autoControl(), 0)]) {
@@ -446,4 +424,4 @@ for (const state of [homeControl(), autoControl(), readerControlState.expandRead
   assert.equal(t.index.route, 'reading'); assert.equal(t.calls.length, 0);
   assert.notDeepEqual(t.reading.controlSession, state, 'Back changes one control layer');
 }
-console.log('Reader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS');
+console.log('Reader Info production chain: explicit navigation, serialized stop/record/progress, nonblocking save failure with original destination, stale completion guards and layered Back PASS');

@@ -6172,15 +6172,12 @@ struct Index {
     }
   }
 
-  private showReadingFailure(title: string, message: string): void {
-    this.showIndexAlert('notice', {
-      title,
-      message: message.trim().length > 0 ? message : '阅读会话未能继续，请稍后重试。',
-      primaryButton: {
-        value: '知道了',
-        action: (): void => {},
-      },
-    });
+  private showReadingFailure(_title: string, _message: string): void {
+    try {
+      this.getUIContext().getPromptAction().showToast({ message: '阅读暂未完成，请稍后重试', duration: 2000 });
+    } catch (_noticeError) {
+      // Optional feedback cannot change reading recovery or navigation.
+    }
   }
 
   /** Startup observes durable pending facts; opening a target resumes its id. */

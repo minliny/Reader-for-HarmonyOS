@@ -29,3 +29,11 @@ SDK只保留最近16个终态的 requestId、固定白名单方法或unknown、r
 第二轮随执行中断，完成106项后停止，未发布HAP。第三轮完整执行692项，691项通过，唯一失败为 `test-manga-offline-network-probe.mjs` 的类型检查替身缺少新增的 `reservationQuarantineDiagnosticLogged` 字段。仅为替身增加与生产一致的false初值，保留原断言、范围及时限；修正后重新执行完整流水线。
 
 实施在 `.reader-isolated/runtime-reservation-repair-20261015`，Host基线 `c982cf24`、Core基线 `41e62155`，排除主目录同期进行中的工具链/阅读WIP。原始现场证据保存在主Host忽略目录 `.reader-local/device-current-error-20261015/`，最终产物与回执另附不可变manifest。
+
+## 首次候选安装与后续时长提醒
+
+第四轮692项合同、ArkTS、非增量构建、签名及清单复验全部通过，发布 `20261015T150558Z-6c09fdf8-e18af564`。Host `6c09fdf8` / Core `c9497388` 均clean；签名HAP SHA256 `643af85187913a4a6f4a8166142b0a1047bb2077026addf07f72cc8b9d2da9d7`。同一真机于2026-10-15 23:29完成同身份覆盖更新和启动，正式部署回执确认preserve，未卸载或清数据。
+
+23:30用户在《魂断大明》退出时报告原生“阅读时长尚未确认”弹窗。截图与布局保存在候选 `.reader-local/runtime-reservation/physical/reappeared-error.*`，属于同一已安装包；不等同原始“跳转失败”隔离首因。读取日志时设备连接中断，PID/tag读取结果为空，不能当作没有错误的证据。原三条跳章物理验收及底层时长异常仍OPEN。
+
+按用户随后要求，禁用阅读器8处及Index1处纯错误/后台恢复的模态Alert，改短时非交互提示，保留真正的数据选择。时长从页面级等待改为复用既有Runtime outbox-v2、兼容v1回执恢复，避免退出丢弃组件未受理增量。复用来源及局部适配记录在忽略目录 `.reader-local/record-outbox-reuse/`；未覆盖或提交主目录并行WIP。加入有限阶段诊断、UTF8及1MiB边界、同对象防重、关停后继任转交。详细消息通道审计及源码/设备边界见 `reading-background-feedback-20261015.md`。后续新包需重新完整门禁与物理验证，不能沿用第四轮的设备结论。

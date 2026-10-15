@@ -36,7 +36,7 @@ const Host = productionMotionMethods(file, ['persistBeforeContentMutation', 'rel
 });
 function deferred() { let resolve, reject; const promise = new Promise((a,b) => {resolve=a; reject=b;}); return {promise,resolve,reject}; }
 function fixture() {
-  const events=[], selections=[], dialogs=[];
+  const events=[], selections=[], dialogs=[], notices=[];
   const host = Object.assign(new Host(), { lifecycleToken: 1, sourceId: 'local', bookId: 'book',
     mounted: true, phase: 'ready', chapterSelectionToken: 4, chapter: {chapterIndex: 3}, visiblePage: {startScalar: 100},
     readerSettingsSnapshot: {navigationMode: 'paged'}, pageTurnSettlementActive: false,
@@ -46,13 +46,14 @@ function fixture() {
     commitVisiblePage: async () => {events.push('visible-confirmed'); host.lastCommittedProgress = {
       sourceId: 'local', bookId: 'book', chapterIndex: 3, chapterOffset: 100 };},
     errorMessage: e => e.message, selectChapterAnchor: (...args) => selections.push(args),
+    showReaderBackgroundNotice: message => notices.push(message),
     getUIContext: () => ({showAlertDialog: dialog => dialogs.push(dialog)}),
   });
   const gateway = { runProgressCommitSerial: async action => {events.push('drain'); await action();},
     hasPendingSourceSwitch: () => false,
     loadProgress: async () => ({kind:'restored',progress:{chapterIndex:3,chapterOffset:125,bodyVersion:'body',processingVersion:'new-rules'}}) };
   host.activeGateway = () => gateway;
-  return {host, gateway, events, selections, dialogs};
+  return {host, gateway, events, selections, dialogs, notices};
 }
 {
   const {host,events}=fixture();
@@ -87,6 +88,7 @@ for(const change of ['book','selection','leave','missing','failure']) {
   if(change==='failure') pending.reject(Error('storage unavailable'));
   else pending.resolve(change==='missing'?{kind:'missing'}:{kind:'restored',progress:{chapterIndex:3,chapterOffset:125}});
   await result; assert.equal(f.selections.length,0);
-  assert.equal(f.dialogs.length,change==='missing'||change==='failure'?1:0);
+  assert.equal(f.dialogs.length,0,'failed position recovery never opens a modal');
+  assert.equal(f.notices.length,change==='missing'||change==='failure'?1:0);
 }
 console.log('local Core versions + content-mutation visible-position confirmation and migrated-anchor reload: PASS');

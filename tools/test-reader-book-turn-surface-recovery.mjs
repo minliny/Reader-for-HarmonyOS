@@ -9,11 +9,13 @@ const events=Object.fromEntries(['SURFACE_READY','TEXTURE_READY','VISUAL_COMMIT_
   .map((name,i)=>[`BOOK_TURN_EVENT_${name}`,i+1]));
 const methods=['onBookTurnNativeEvent','failBookTurnRuntime','finishSuccessfulPageTurnPresentation','finishPageTurnRollback', 'requestBookTurn2DFallback', 'completeBookTurn2DFallback'];
 if(source.includes('private recoverBookTurnSurfaceIfIdle('))methods.push('recoverBookTurnSurfaceIfIdle');
-const Owner=productionMotionMethods(file,methods,{...events,cancelReaderPagePan,completeReaderPageGestureSettlement});
+const Owner=productionMotionMethods(file,methods,{ReaderUIFrameCallback:class{constructor(callback){this.callback=callback;}},...events,cancelReaderPagePan,completeReaderPageGestureSettlement});
 const noop=()=>{};
 function owner(){
  const stats={committed:0,rollback:0,refresh:0,native:0};
+ const frames=[];
  const value=Object.assign(new Owner(),{mounted:true,lifecycleToken:1,bookTurnSurfaceRecoveryPending:false,
+  showReaderBackgroundNotice:noop,getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),showAlertDialog:()=>assert.fail('unexpected blocking Alert')}),
   bookTurnRuntimeFailed:false,pageTurnSettlementGeneration:7,bookTurnSurfaceGeneration:7,
   pageTurnRenderRevision:9,bookTurnArkUIReadyRevision:9,pageTurnSettlementActive:true,pageTurnPresentationPhase:'settling',bookTurnMotion:{generation:7},
   pageTurnGestureState:{phase:'settling',owner:'horizontalPage',direction:'next'},pageTurnInputOwned:true,

@@ -16,17 +16,21 @@ assert.equal(reads, 0, 'an expired queued query is inert without releasing or ov
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const Page = productionMotionMethods(file, ['beginPreparedPageTurnPersistence', 'admitPageTurnPersistenceOutcome', 'canPresentOrdinaryPage'],
   { observeReaderProgressOperation: observe, hilog: {warn(){}} });
-let completeWrite, completed = 0, dialogs = 0, current = true;
+let completeWrite, completed = 0, dialogs = 0, notices = 0, reconciliations = 0, current = true;
 const write = new Promise(resolve => { completeWrite = resolve; });
 const page = Object.assign(new Page(), { mounted:true,lifecycleToken:1,chapterSelectionToken:1,pageTurnSettlementGeneration: 7, pageTurnCommitStarted: false,
   activeGateway:()=>({canPersistPresentedProgress:()=>false}),
+  showReaderBackgroundNotice() { notices++; },
+  reconcilePreparedPageTurn: async () => { reconciliations++; return undefined; },
   persistPreparedPageTurn: () => write, isPreparedPageTurnCommitCurrent: () => current,
   cancelPageTurnSettlementDeadline() {}, getUIContext: () => ({ showAlertDialog: () => dialogs++ }),
   finishPreparedPageTurnSettlement() { completed++; current = false; } });
 const prepared={context:{chapter:{chapterIndex:2}}};
 page.beginPreparedPageTurnPersistence(prepared, 1, 7);
 await new Promise(r => setTimeout(r, 12));
-assert.equal(page.pageTurnPersistenceState, 'unknown'); assert.equal(dialogs, 1); assert.equal(completed, 0);
+assert.equal(page.pageTurnPersistenceState, 'unknown'); assert.equal(dialogs, 0); assert.equal(notices, 1); assert.equal(reconciliations, 1); assert.equal(completed, 0);
+page.admitPageTurnPersistenceOutcome(prepared, 1, 7, undefined);
+assert.equal(reconciliations, 1, 'unknown auto recovery cannot spin or repeat the write');
 completeWrite(true); await new Promise(r => setImmediate(r));
 assert.equal(completed, 1); assert.equal(page.pageTurnPersistenceState, 'durable');
 page.admitPageTurnPersistenceOutcome(prepared, 1, 7, true); assert.equal(completed, 1);

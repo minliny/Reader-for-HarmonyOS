@@ -76,7 +76,7 @@ const RetainedReader = productionMotionMethods(readerFile,
   ['commitVisiblePage', 'admitCommittedProgress', 'admitRetainedReadingRecency', 'isVisiblePageCurrent',
     'isSelectionCurrent', 'finishExit', 'awaitOrdinaryFirstPagePersistence', 'isOrdinaryFirstPagePresentationCurrent'], dto);
 function retainedReaderFixture(f) {
-  const gateway = f.gateway(), events = [], alerts = [];
+  const gateway = f.gateway(), events = [], alerts = [], notices = [];
   let deviceReads = 0;
   const chapter = { chapterIndex: 2, chapterTitle: 'Retained chapter', bodyVersion: 'body', processingVersion: 'processing' };
   const page = { startScalar: 10, endScalar: 50 };
@@ -94,9 +94,11 @@ function retainedReaderFixture(f) {
     onReadingCommitted() { events.push('committed'); },
     flushReadingRecordForExit: async () => {},
     retainConfirmedEntryPresentation() {}, onExit() { events.push('exit'); },
+    errorMessage: error => error.message,
+    showReaderBackgroundNotice(message) { notices.push(message); },
     showReaderAlert(_category, options) { alerts.push(options); return {decision:Promise.resolve('pending')}; },
   });
-  return { owner, gateway, progress, events, alerts, deviceReads: () => deviceReads };
+  return { owner, gateway, progress, events, alerts, notices, deviceReads: () => deviceReads };
 }
 for (const sourceId of ['local', 'remote']) {
   const f = fixture(sourceId), reader = retainedReaderFixture(f), owner = reader.owner;
@@ -226,20 +228,25 @@ for (const sourceId of ['local', 'remote']) {
     const f=fixture(sourceId),reader=retainedReaderFixture(f),owner=reader.owner;
     owner.windowChromeActive=true;owner.admitRetainedReadingRecency();f.effects.push('lost');
     owner.exitRequested=true;await owner.finishExit(1);
-    assert.deepEqual(reader.events,[]);assert.equal(reader.alerts.length,1,'an actually dispatched unknown ACK still blocks exit for recovery');
+    assert.deepEqual(reader.events,['exit']);assert.equal(reader.alerts.length,0,'an unknown ACK cannot open a navigation-blocking modal');
+    assert.deepEqual(reader.notices,['部分阅读记录保存尚未确认']);
     assert.equal(f.writes().length,1);assert.notEqual(reader.gateway.pendingPresentedProgress(),undefined);
-    owner.exitRequested=true;await owner.finishExit(1);
-    assert.deepEqual(reader.events,['committed','exit'],'real retry admits only the exact recovered own ACK before exit');
-    assert.equal(f.writes().length,1);assert.equal(owner.lastCommittedProgress.progressRevision,'op:2');
-    f.close();cases.push(`retained-dispatched-unknown-ACK-real-exit-requires-recovery/${sourceId}`);
+    assert.equal(owner.lastCommittedProgress,reader.progress,'leaving is not a fabricated save receipt');
+    const recovered=await reader.gateway.awaitPresentedProgressPersistence();
+    assert.equal(recovered.progressRevision,'op:2');assert.equal(f.writes().length,1,'background receipt inspection does not repeat the write');
+    assert.deepEqual(reader.events,['exit'],'background recovery cannot re-enter or repeat navigation');
+    f.close();cases.push(`retained-dispatched-unknown-ACK-nonblocking-exit-preserves-recovery/${sourceId}`);
   }
   {
     const f=fixture(sourceId),reader=retainedReaderFixture(f),owner=reader.owner;
     owner.windowChromeActive=true;owner.admitRetainedReadingRecency();owner.visiblePage={startScalar:40,endScalar:50};f.effects.push('reject');
     owner.exitRequested=true;await owner.finishExit(1);
-    assert.deepEqual(reader.events,[]);assert.equal(reader.alerts.length,1,'an actual changed-page progress failure is never swallowed');
+    assert.deepEqual(reader.events,['exit']);assert.equal(reader.alerts.length,0,'failed changed-page persistence is reported without blocking the requested exit');
+    assert.deepEqual(reader.notices,['部分阅读记录保存尚未确认']);
     assert.equal(f.writes().length,1);assert.notEqual(reader.gateway.pendingPresentedProgress(),undefined);
-    f.close();cases.push(`ordinary-changed-position-error-remains-real-exit-gate/${sourceId}`);
+    assert.equal(owner.lastCommittedProgress,reader.progress,'a weak notice cannot manufacture durable progress');
+    assert.equal(f.durable().chapterOffset,10,'a rejected write preserves the confirmed stored position');
+    f.close();cases.push(`ordinary-changed-position-error-retained-with-nonblocking-exit/${sourceId}`);
   }
 }
 // Keep the exact former same-position early return as a negative control.

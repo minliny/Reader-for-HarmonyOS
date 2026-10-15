@@ -64,6 +64,7 @@ import type { ReaderWriteEvidence } from './ReaderWriteEvidence';
 import { SharedDownloadStorageGateway, type SettingsTextCleanupJournal, type SharedDownloadCleanupResult } from '../features/downloads/SharedDownloadStorageGateway';
 import type { ReadingTextStorageChapter } from './ReadingImageDiskCache';
 import type { DownloadStorageSummary } from '../features/downloads/SharedDownloadProjection';
+import { ReadingRecordGateway } from '../features/reading/ReadingRecordGateway';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
@@ -152,6 +153,14 @@ export class ReaderRuntimeOwner {
   private downloadStorageGateway: SharedDownloadStorageGateway | undefined;
   private downloadReadingProtection: { sourceId: string; bookId: string; chapterIndex?: number; } | undefined;
   private downloadProtectionRevision: number = 0;
+
+  private readingRecordGateway: ReadingRecordGateway | undefined;
+
+  /** One application-owned duration outbox, independent of reading routes. */
+  getReadingRecordGateway(): ReadingRecordGateway {
+    if (this.readingRecordGateway === undefined) this.readingRecordGateway = new ReadingRecordGateway(this);
+    return this.readingRecordGateway;
+  }
 
   supportsCoreCapability(capability: string): boolean { return this.coreCapabilities.has(capability); }
   private bookCoordinator: BookAcquisitionCoordinator | undefined = undefined;
@@ -626,6 +635,7 @@ export class ReaderRuntimeOwner {
     this.bookCoordinator?.visibilityChanged();
     this.wakeReadingPreparations();
     if (foreground && this.state === 'ready') {
+      void this.getReadingRecordGateway().recover();
       void this.readingImageDiskCache.maintainMangaStorage('expiry').catch((error: Error): void => {
         hilog.warn(LOG_DOMAIN, 'Reader', 'Manga cache maintenance: %{private}s', error.message);
       });
@@ -1482,6 +1492,7 @@ export class ReaderRuntimeOwner {
   }
 
   async close(): Promise<void> {
+    this.readingRecordGateway?.stopBackground();
     this.mangaOfflineProbe?.release('runtime-close');
     this.preparationForeground = false;
     this.preparationNetwork?.close();
@@ -1687,6 +1698,7 @@ export class ReaderRuntimeOwner {
       }
       this.runtime = runtime;
       this.state = 'ready';
+      void this.getReadingRecordGateway().recover();
       ReaderStartupTrace.current()?.mark('startup.runtime-published', 'ready');
       // Legacy completed queue rows carry ambiguous old intent. Persist their
       // protection before restoring new accepted ranges or automatic cleanup.

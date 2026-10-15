@@ -37,7 +37,7 @@ async function fixture() {
    controlSession:{location:{module:'replace'}},reloads:0,notices:[],
    controlVisible(){return this.visible;},controlPage(){return this.page;},isSessionActive(t){return this.mounted&&t===this.lifecycleToken;},
    setControlPage(p){this.page=p;},persistBeforeContentMutation:async()=>()=>true,
-   reloadCurrentPageAfterReplacePersist(){this.reloads++;},errorMessage:e=>e.message,showReaderAlert(_id,o){this.notices.push(o);},
+   reloadCurrentPageAfterReplacePersist(){this.reloads++;},errorMessage:e=>e.message,showReaderBackgroundNotice(message){this.notices.push(message);},showReaderAlert(){assert.fail('rules failure must not open a modal');},
   });return owner;
  };
  return{...actual,shared,gateway,create,deps,owner:create()};
@@ -123,3 +123,16 @@ const results=[];
  f.options.gate.resolve();await until(()=>f.writes().length===1);assert.equal(f.writes().length,1,'the same actual negative control proves the producer guard is necessary');
 }
 console.log('PASS actual LRE/shared Rules owner/Runtime direct/SDK contracts:',results.length,results,'Cold Core exact Rules receipts, native execution and target UI remain separate.');
+
+// Preview failures keep captured ownership and require no user decision.
+const Preview = productionMotionMethods(file, ['previewQuickReplace']);
+for (const retired of [false, true]) {
+ const pending = deferred(), notices = [];
+ const host = Object.assign(new Preview(), { chapter: {chapterIndex: 1}, replaceState: {kind:'ready'},
+  lifecycleToken: 1, chapterSelectionToken: 2, replacePanelGeneration: 3, sourceId:'s', bookId:'b',
+  replaceGateway:{preview:()=>pending.promise}, isSelectionActive:()=>!retired, controlPage:()=> 'quickReplace',
+  showReaderBackgroundNotice: message=>notices.push(message), showReaderAlert:()=>assert.fail('preview failure modal'),
+  showReplacePreview:()=>assert.fail('failed preview cannot become success') });
+ host.previewQuickReplace(); pending.reject(Error('preview failed')); await tick();
+ assert.equal(notices.length, retired ? 0 : 1);
+}

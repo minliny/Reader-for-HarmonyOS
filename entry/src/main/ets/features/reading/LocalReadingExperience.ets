@@ -1,5 +1,4 @@
 import { ReaderReadingRecordHost } from './ReaderReadingRecordHost';
-import { ReadingRecordRecoveryError } from './ReaderReadingRecordState';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../app/BookRequestScheduler';
 import { ReaderReadingImageResources, sameReaderReadingImageResource } from './ReaderReadingImageResources';
 import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from './ReaderProgressProducerHost';
@@ -1278,7 +1277,7 @@ export struct ReadingExperience {
   private screenAwakeKeepScreenOn: boolean = false;
   private readingSystemEventHost: ReaderReadingSystemEventHost | undefined = undefined;
   private readonly readingRecordGateway: ReadingRecordGateway =
-    new ReadingRecordGateway(ReaderRuntimeOwner.current());
+    ReaderRuntimeOwner.current().getReadingRecordGateway();
   private ttsGateway: ReaderTtsGateway | undefined = undefined;
   private ttsHttpGateway: ReaderHttpTtsGateway | undefined = undefined;
   private ttsCoordinator: ReaderTtsSessionCoordinator | undefined = undefined;
@@ -1954,6 +1953,20 @@ export struct ReadingExperience {
   }
 
   private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
+  private lastBackgroundNotice: string = '';
+  private lastBackgroundNoticeAt: number = 0;
+
+  private showReaderBackgroundNotice(message: string): void {
+    const now = Date.now();
+    if (message === this.lastBackgroundNotice && now - this.lastBackgroundNoticeAt < 5000) return;
+    this.lastBackgroundNotice = message;
+    this.lastBackgroundNoticeAt = now;
+    try {
+      this.getUIContext().getPromptAction().showToast({ message, duration: 2000 });
+    } catch (_noticeError) {
+      // Optional feedback never owns reading, persistence, or navigation.
+    }
+  }
 
   private showReaderAlert(spec: ReaderNativeAlertSpecId, options: ReaderNativeAlertOptions): ReaderNativeAlertLease {
     const lifecycle = this.lifecycleToken;
@@ -6614,34 +6627,12 @@ export struct ReadingExperience {
       }
     } catch (error) {
       if (!this.isMountedToken(lifecycleToken) || exitAttemptGeneration !== this.exitAttemptGeneration) return;
-      this.exitRequested = false;
-      let decisionTaken = false;
-      const claimDecision = (): boolean => {
-        if (decisionTaken || !this.isMountedToken(lifecycleToken) ||
-          exitAttemptGeneration !== this.exitAttemptGeneration || this.exitRequested || this.exitDelivered) return false;
-        decisionTaken = true;
-        return true;
-      };
-      const continueReading = (): void => {
-        if (!claimDecision()) return;
-        // Cancelling this exit also cancels the Host's one-shot destination.
-        // Retry deliberately keeps it until the durable exit is delivered.
-        this.onExitCancelled();
-        this.beginReadingRecordClock(lifecycleToken);
-      };
-      const durationPending = error instanceof ReadingRecordRecoveryError;
-      const exitNotice = this.showReaderAlert('confirmation', { title: durationPending ? '阅读时长尚未确认' : '阅读进度尚未保存',
-        message: durationPending ? (error as ReadingRecordRecoveryError).message : '请重试保存后退出。当前阅读位置已保留。',
-        primaryButton: { value: '重试保存并退出', action: (): void => {
-          if (claimDecision()) this.beginExit();
-        } },
-        secondaryButton: { value: '继续阅读', action: continueReading },
-        cancel: continueReading,
-      });
-      void exitNotice.decision.then((decision): void => {
-        if (decision === 'native-failure') continueReading();
-      });
-      return;
+      try {
+        hilog.error(0x5244, 'Reader', 'Reading exit persistence pending: %{private}s', this.errorMessage(error as Error));
+      } catch (_diagnosticError) {}
+      // Runtime owns duration recovery after the page retires. An unconfirmed
+      // save is not a user decision and cannot take ownership of the exit.
+      this.showReaderBackgroundNotice('部分阅读记录保存尚未确认');
     }
     if (!this.isMountedToken(lifecycleToken) || exitAttemptGeneration !== this.exitAttemptGeneration || this.exitDelivered) return;
     this.exitDelivered = true;
@@ -10804,11 +10795,7 @@ export struct ReadingExperience {
       .catch((_error: Error): void => {
         if (this.isSelectionActive(lifecycleToken, selectionToken) &&
           panelGeneration === this.replacePanelGeneration && this.controlPage() === 'quickReplace') {
-          this.showReaderAlert('preview', {
-            title: '替换预览',
-            message: '当前章节原文缓存不可用，无法生成预览。',
-            confirm: { value: '关闭', action: (): void => {} },
-          });
+          this.showReaderBackgroundNotice('当前章节暂时无法生成预览');
         }
       });
   }
@@ -10837,8 +10824,7 @@ export struct ReadingExperience {
     this.projectReaderReplaceWriteFacts();
     const shared = this.rulesMutationOwner.snapshot();
     if (shared.busy || shared.blocked || shared.confirmation === 'unknown') {
-      this.showReaderAlert('preview', { title: '规则操作尚未确认', message: shared.message || '另一规则操作正在执行，请等待确认',
-        confirm: { value: '关闭', action: (): void => {} } });
+      this.showReaderBackgroundNotice('规则保存尚未确认');
       return;
     }
     const mutationGeneration = this.beginReplaceMutation(lifecycleToken, bookId, ruleId);
@@ -10872,8 +10858,7 @@ export struct ReadingExperience {
           this.isReplaceMutationCurrent(mutationGeneration, lifecycleToken, bookId, ruleId);
         if (ownsWrite && this.controlReplaceCurrent(lifecycleToken, sourceId, bookId, panelGeneration)) {
           this.projectReaderReplaceWriteFacts();
-          this.showReaderAlert('preview', { title: '规则操作未确认', message: this.errorMessage(error),
-            confirm: { value: '关闭', action: (): void => {} } });
+          this.showReaderBackgroundNotice('规则保存尚未确认');
         }
         // Retire this UI ticket only. The shared original rule authority keeps
         // dispatched unknown across panel closure, book changes and re-entry.
@@ -11030,10 +11015,7 @@ export struct ReadingExperience {
     } catch (error) {
       if (!isCurrent()) return;
       hilog.error(0x5244, 'Reader', '%{private}s', `Reading content position reload failed: ${this.errorMessage(error as Error)}`);
-      this.showReaderAlert('preview', { title: '阅读位置恢复失败',
-        message: '正文规则已更新，阅读位置尚未确认。请重试恢复。',
-        confirm: { value: '重试恢复', action: (): void => { if (isCurrent()) void this.reloadMigratedContentPosition(lifecycleToken, bookId); } },
-      });
+      this.showReaderBackgroundNotice('阅读位置暂未恢复，可重新打开本章');
     }
   }
 
@@ -11701,19 +11683,9 @@ export struct ReadingExperience {
   private showControlSelectionFailure(ticket: ReaderControlSelectionTicket, error: Error, detail: string): void {
     this.failureCode = this.errorMessage(error);
     this.finishPageTurnPerf('failed');
-    const retry = this.pendingControlSelectionRetry;
     hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience control selection failed: ${this.failureCode}; ${detail}`);
-    this.showReaderAlert('confirmation', {
-      title: ticket.refreshContent === true ? '刷新本章失败' : '跳转失败',
-      message: ticket.refreshContent === true ? `${this.failureCode}\n${detail}。可重试恢复本章，原书签和记录仍保留。` :
-        `${this.failureCode}\n${detail}。可重试本次选择，或关闭提示后重新选择章节。`,
-      primaryButton: { value: '重试', action: (): void => {
-        if (retry === undefined || !readerControlSelectionOwnsReading(ticket, this.controlSelectionOwner())) return;
-        this.selectChapterAnchor(retry.chapterIndex, retry.chapterOffset, retry.requireChapterStart,
-          retry.stopTts, retry.requestedProgress, retry.controlOwnerRevision, retry.closeControlOnCommit, retry.refreshContent, retry.positionContext, retry.ttsOwner);
-      } },
-      secondaryButton: { value: '关闭提示', action: (): void => {} },
-    });
+    this.showReaderBackgroundNotice(ticket.refreshContent === true ?
+      '本章刷新未完成，可稍后重试' : '章节跳转未完成，可重新选择章节');
   }
 
   // ArkUI V1 drops handwritten accessors when lowering @Component structs.
@@ -12984,18 +12956,16 @@ export struct ReadingExperience {
       this.cancelPageTurnSettlementDeadline();
       if (this.pageTurnUnknownNotifiedGeneration === generation) return;
       this.pageTurnUnknownNotifiedGeneration = generation;
-      this.showReaderAlert('retry-blocking', { title: '正在确认阅读进度',
-        message: '暂时无法确认保存结果。页面已保留，确认完成后继续翻页。',
-        primaryButton: { value: '重新确认', action: (): void => {
-          if (this.pageTurnReconciliationPending || !this.isPreparedPageTurnCommitCurrent(prepared, lifecycle, generation)) return;
-          this.pageTurnReconciliationPending = true;
-          this.pageTurnUnknownNotifiedGeneration = -1;
-          void this.reconcilePreparedPageTurn(prepared, lifecycle, generation)
-            .then((result: boolean | undefined): void => {
-              this.admitPageTurnPersistenceOutcome(prepared, lifecycle, generation, result);
-            }).finally((): void => { this.pageTurnReconciliationPending = false; });
-        } },
-      });
+      this.showReaderBackgroundNotice('阅读进度正在后台核对');
+      if (!this.pageTurnReconciliationPending) {
+        this.pageTurnReconciliationPending = true;
+        void this.reconcilePreparedPageTurn(prepared, lifecycle, generation)
+          .then((result: boolean | undefined): void => {
+            this.admitPageTurnPersistenceOutcome(prepared, lifecycle, generation, result);
+          }).catch((): void => {
+            // The original write still owns its outcome; no speculative replay.
+          }).finally((): void => { this.pageTurnReconciliationPending = false; });
+      }
       return;
     }
     this.pageTurnCommitFinished = true;
@@ -13237,13 +13207,11 @@ export struct ReadingExperience {
     // infinite native retries, nor can it justify exposing an unadmitted page.
     this.pageTurnRenderRevision += 1;
     this.cancelPageTurnSettlementDeadline();
-    this.showReaderAlert('retry-blocking', { title: '正在恢复页面',
-      message: '阅读位置已保留，可以重新显示当前页面。',
-      primaryButton: { value: '重新显示', action: (): void => {
-        if (generation !== this.pageTurnSettlementGeneration || !this.mounted) return;
-        if (!this.completeBookTurn2DFallback(generation)) this.pageTurnRenderRevision += 1;
-      } },
-    });
+    this.showReaderBackgroundNotice('正在恢复阅读页面');
+    this.getUIContext().postFrameCallback(new ReaderUIFrameCallback((): void => {
+      if (generation !== this.pageTurnSettlementGeneration || !this.mounted) return;
+      this.completeBookTurn2DFallback(generation);
+    }));
   }
 
   private completeBookTurn2DFallback(generation: number): boolean {

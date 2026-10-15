@@ -6,14 +6,17 @@ registerHooks({ resolve(specifier, context, next) { try { return next(specifier,
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error;
 } } });
 const { ReaderReadingRecordHost } = await import('../entry/src/main/ets/features/reading/ReaderReadingRecordHost.ts');
+
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const dir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const gatewaySource = readFileSync(new URL('ReadingRecordGateway.ts', dir), 'utf8');
 let activeRuntime, storeFactory, ids = 0;
-const loadGateway = source => new Function('preferences', 'util', 'ReaderRuntimeOwner', 'ReadingRecordIntent', 'ReadingRecordRecoveryError',
+const diagnosticLogs=[];
+const loadGateway = source => new Function('preferences', 'util', 'hilog', 'ReaderRuntimeOwner', 'ReadingRecordIntent', 'ReadingRecordRecoveryError',
   `${stripTypeScriptTypes(source.replace(/^import[^\n]*\n/gm, '')).replace('export class ', 'class ')}; return ReadingRecordGateway;`)
-  ({ getPreferences: () => storeFactory() }, { generateRandomUUID: () => `actual-intent-${++ids}` },
+  ({ getPreferences: () => storeFactory() }, { generateRandomUUID: () => `actual-intent-${++ids}`, TextEncoder: class { encodeInto(value){return new TextEncoder().encode(value);} } },
+    {warn(...args){diagnosticLogs.push(args.at(-1));}},
     { isCurrent: owner => owner === activeRuntime }, ReadingRecordIntent, ReadingRecordRecoveryError);
 const Gateway = loadGateway(gatewaySource);
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return {promise,resolve,reject}; };
@@ -21,7 +24,7 @@ const settle = async () => { for (let i=0;i<8;i++) await new Promise(done=>setIm
 function nativeReceipt(params) { return { ...params, author: '', record: { deviceId:params.deviceId, bookName:params.bookName,
   readTime:params.elapsedMillis, lastRead:params.readAt } }; }
 function fixture(GatewayClass = Gateway) {
-  let head = null, throwWrite = false, hangWrite, flushFailure, flushGate, rejectJournalPut = false, eraseJournalOnFlushFailure = false;
+  let head = null, throwWrite = false, hangWrite, flushFailure, flushGate, rejectJournalPut = false, eraseJournalOnFlushFailure = false, diskUnavailable = false;
   const cache = new Map([['device-id','harmony-device']]), events = [], writes = [];
   const store = { async get(key, fallback) { events.push(['get',key]); return cache.get(key) ?? fallback; },
     async put(key, value) { events.push(['put',key]);
@@ -29,8 +32,9 @@ function fixture(GatewayClass = Gateway) {
       cache.set(key,value); }, async flush() {
       const phase=JSON.parse(cache.get('delta-journal-v1')??'null')?.phase;
       events.push(['flush',phase]);
+      if (diskUnavailable) throw Error('ENOSPC duration Preferences unavailable');
       if (flushGate) { const gate=flushGate; flushGate=undefined; await gate.promise; }
-      if (flushFailure===phase) { flushFailure=undefined;
+      if (flushFailure!==undefined && flushFailure===phase) { flushFailure=undefined;
         if (eraseJournalOnFlushFailure) { eraseJournalOnFlushFailure=false; cache.delete('delta-journal-v1'); }
         throw Error('lost Preferences flush ACK'); }
     } };
@@ -49,6 +53,7 @@ function fixture(GatewayClass = Gateway) {
     lostFlush:phase=>{flushFailure=phase;},hangFlush:gate=>{flushGate=gate;},
     rejectPutBeforeEffect:()=>{rejectJournalPut=true;},missingJournalAfterFlush:()=>{flushFailure='pending';eraseJournalOnFlushFailure=true;},
     journal:()=>JSON.parse(cache.get('delta-journal-v1')??'null'),
+    outbox:()=>JSON.parse(cache.get('delta-outbox-v2')??'null'),diskUnavailable:value=>{diskUnavailable=value;},
     remount() { const next={...runtime}; activeRuntime=next; storeFactory=async()=>store; return new Gateway(next); },
   };
 }
@@ -168,45 +173,247 @@ for(const failure of ['native','pending','confirmed']) {
   assert.equal(f.writes.length,0); assert.equal(f.journal(),null);
 }
 
-// The real producer owns the real clock, one accepted delta and the real
-// gateway. Native result delivery is controlled here, not a reimplemented CAS.
+// The actual producer transfers ownership without waiting for disk/Core.
+// New elapsed time is durably staged even while the old Native ACK hangs.
 {
   const f=fixture(), gate=deferred(), timers=new Map(); let time=100, timer=0, live=true;
   const host=new ReaderReadingRecordHost(f.gateway,()=> 'book',()=>{},()=>time,
     (callback,delay)=>{const id=++timer;timers.set(id,{callback,delay});return id;},id=>timers.delete(id));
-  host.begin(()=>live); const periodic=[...timers.values()][0]; assert.equal(periodic.delay,30000);
+  host.begin(()=>live); assert.equal([...timers.values()][0].delay,30000);
   time=200;host.capture(false);f.hangWrite(gate);
-  const exiting=host.flushForExit(); const deadline=[...timers.values()].find(x=>x.delay===15000);
-  const expired=assert.rejects(exiting,ReadingRecordRecoveryError);
-  await settle(); assert.equal(f.writes.length,1);
-  const before=host.flush(); assert.equal(host.flush(),before,'periodic/exit retries coalesce while actual durable tail is pending');
-  deadline.callback(); await expired;
-  assert.equal(f.journal().phase,'pending'); assert.equal(f.writes.length,1);
-  host.retire();live=false;gate.resolve();await before;
-  assert.equal(f.journal().phase,'confirmed','retired presentation never cancels an already dispatched accepted delta');
-  assert.equal(host.pendingMillis,0);
+  await host.flushForExit();
+  assert.equal([...timers.values()].some(x=>x.delay===15000),false,'no exit-facing receipt deadline');
+  await settle();assert.equal(f.writes.length,1);assert.equal(f.journal().phase,'pending');
+  host.pendingMillis=25;host.handoff();await settle();
+  assert.equal(f.outbox().tail[0].elapsedMillis,25,'Native ACK does not hold the independent durable tail');
+  for(let i=0;i<30;i++){host.pendingMillis=1;host.handoff();}
+  await settle();assert.equal(f.outbox().tail.length,1);assert.equal(f.outbox().tail[0].elapsedMillis,55);
+  host.begin(()=>live);time=250;host.retire();live=false;
+  await settle();assert.equal(host.pendingMillis,0);assert.equal(f.outbox().tail[0].elapsedMillis,105,
+    'forced retirement hands over fresh elapsed time instead of clearing it');
+  gate.resolve();await f.gateway.recover();await settle();
+  assert.deepEqual(f.writes.map(x=>x.elapsedMillis),[100,105]);
+  assert.equal(f.gateway.recoveryState().pendingMillis,0);assert.equal(f.outbox().active,undefined);
+  assert.equal(f.journal().phase,'confirmed');f.gateway.stopBackground();
 }
 {
   const f=fixture(), host=new ReaderReadingRecordHost(f.gateway,()=> 'book',()=>{});
-  host.pendingMillis=100;f.lostWrite();await assert.rejects(host.flushForExit(),ReadingRecordRecoveryError);
-  await host.flushForExit(); assert.equal(f.writes.length,1,'retry is not a second elapsed-time accumulation');
+  host.pendingMillis=100;f.lostWrite();await host.flushForExit();await settle();
+  assert.match(f.gateway.recoveryState().lastError,/stage=core.accumulate;kind=pending;name=Error;code=UNCLASSIFIED/,'bounded failure metadata remains queryable');
+  const assigned={...f.writes[0]};f.gateway.stopBackground();
+  // Simulate process death: only persisted v2 outbox/v1 journal survive.
+  Gateway.retiredMemory=[];
+  const next=f.remount();await next.recover();
+  assert.equal(f.writes.length,1,'cold recovery confirms the existing exact receipt without duplicate accumulation');
+  assert.equal(f.journal().operationId,assigned.operationId);assert.equal(f.journal().phase,'confirmed');
+  assert.equal(next.recoveryState().pendingMillis,0);next.stopBackground();
 }
 {
-  const f=fixture(), events=[], host=new ReaderReadingRecordHost(f.gateway,()=> 'book',()=>{});
-  host.pendingMillis=100;f.lostWrite();
-  const Reader=productionMotionMethods(new URL('LocalReadingExperience.ets',dir),['finishExit','flushReadingRecordForExit'],
-    {ReadingRecordRecoveryError,hilog:{warn(){}}});
-  let notice;
-  const owner=Object.assign(new Reader(),{readingRecordHost:host,mounted:true,lifecycleToken:1,chapterSelectionToken:1,
-    exitRequested:true,exitAttemptGeneration:1,exitDelivered:false,readerSettingsSnapshot:{navigationMode:'paged'},
-    getUIContext:()=>({showAlertDialog:spec=>{notice=spec;}}),awaitOrdinaryFirstPagePersistence:async()=>{},
-    commitVisiblePage:async()=>events.push('progress'),retainConfirmedEntryPresentation(){},
-    onExit:()=>events.push('exit'),onExitCancelled:()=>events.push('cancel'),beginReadingRecordClock:()=>events.push('clock')});
-  await owner.finishExit(1);assert.equal(notice.title,'阅读时长尚未确认');assert.deepEqual(events,[]);
-  assert.equal(owner.exitDelivered,false,'unconfirmed duration cannot pass the old swallowed-catch exit');
-  notice.secondaryButton.action();assert.deepEqual(events,['cancel','clock']);
-  owner.exitRequested=true;owner.exitAttemptGeneration++;
-  await owner.finishExit(1);assert.deepEqual(events,['cancel','clock','progress','exit']);
-  assert.equal(f.writes.length,1);
+  const f=fixture(), host=new ReaderReadingRecordHost(f.gateway,()=> 'book',()=>{});
+  f.diskUnavailable(true);host.pendingMillis=90;await host.flushForExit();await settle();
+  assert.equal(host.pendingMillis,0,'Runtime accepted ownership even when persistence is unavailable');
+  assert.equal(f.writes.length,0,'no Core mutation before durable outbox staging');
+  assert.equal(f.gateway.recoveryState().pendingMillis,90);assert.equal(f.gateway.recoveryState().durable,false);
+  assert.match(f.gateway.recoveryState().lastError,/stage=outbox.flush/);
+  assert.doesNotMatch(f.gateway.recoveryState().lastError,/ENOSPC|Preferences unavailable/);
+  f.diskUnavailable(false);await f.gateway.recover();
+  assert.equal(f.writes.length,1);assert.equal(f.writes[0].elapsedMillis,90);
+  assert.equal(f.gateway.recoveryState().pendingMillis,0);assert.equal(f.gateway.recoveryState().lastError,'');
+  f.gateway.stopBackground();
 }
-console.log('PASS actual reading duration Host/Gateway/LRE: fixed journal, native/lost Preferences ACK, cold/current Runtime, cross-owner IO serialization, safe sequence, superseded unknown block, coalesced bounded exit and exact receipt retry; actual SQLite atomic/dedup tests are separate.');
+{
+  const f=fixture(), gate=deferred();f.hangWrite(gate);
+  f.gateway.handoff(f.gateway.createIntent('first',1,1));await settle();
+  for(let i=0;i<130;i++) f.gateway.handoff(f.gateway.createIntent(`book-${i}`,2,i+2));
+  await settle();
+  const snapshot=f.outbox();assert.equal(snapshot.tail.length+1,128,'durable outbox has a hard entry limit');
+  assert.equal(f.gateway.recoveryState().memoryOnlyBooks,3,'overflow remains explicit Runtime work, never a dropped delta');
+  assert.equal(f.gateway.recoveryState().pendingMillis,261);assert.equal(f.gateway.recoveryState().durable,false);
+  gate.resolve();await f.gateway.recover();
+  assert.equal(f.writes.length,131);assert.equal(f.writes.reduce((total,x)=>total+x.elapsedMillis,0),261);
+  assert.equal(f.gateway.recoveryState().pendingMillis,0);f.gateway.stopBackground();
+}
+{
+  const f=fixture(), old=f.gateway.createIntent('legacy-v1',70,10);f.lostWrite();
+  await assert.rejects(f.gateway.accumulate(old));assert.equal(f.outbox(),null);
+  const next=f.remount();await next.recover();assert.equal(f.writes.length,1);
+  assert.equal(f.journal().phase,'confirmed','startup recovers legacy v1 journals even without new UI elapsed time');
+  next.stopBackground();
+}
+{
+  const f=fixture(), gate=deferred();f.hangWrite(gate);
+  f.gateway.handoff(f.gateway.createIntent('active',10,1));await settle();
+  f.gateway.handoff(f.gateway.createIntent('tail',20,2));await settle();
+  const older=f.cache.get('delta-outbox-v2');
+  f.diskUnavailable(true);f.gateway.handoff(f.gateway.createIntent('tail',30,3));await settle();
+  assert.equal(f.gateway.recoveryState().pendingMillis,60);
+  f.gateway.stopBackground();f.cache.set('delta-outbox-v2',older);
+  const next=f.remount();f.diskUnavailable(false);gate.resolve();await next.recover();
+  assert.deepEqual(f.writes.map(x=>[x.bookName,x.elapsedMillis]),[['active',10],['tail',50]],
+    'Runtime successor keeps the exact unknown active and latest unassigned tail after failed disk staging');
+  assert.equal(next.recoveryState().pendingMillis,0);next.stopBackground();
+}
+for(const malformed of [false,'null','{"version":2,"tail":[{"acceptanceId":"x"}]}']) {
+  const f=fixture();f.cache.set('delta-outbox-v2',malformed);
+  f.gateway.handoff(f.gateway.createIntent('new',5,4));await f.gateway.recover();
+  assert.equal(f.cache.get('delta-outbox-v2'),malformed,'corrupt outbox is retained instead of being overwritten');
+  assert.equal(f.writes.length,0);assert.equal(f.gateway.recoveryState().pendingMillis,5);
+  assert.equal(f.gateway.recoveryState().durable,false);assert.ok(f.gateway.recoveryState().lastError.length>0);
+  f.gateway.stopBackground();Gateway.retiredMemory=[];
+}
+{
+  const f=fixture(),gate=deferred(),events=[],host=new ReaderReadingRecordHost(f.gateway,()=> 'exit-book',()=>{});
+  host.pendingMillis=80;f.hangWrite(gate);
+  const Reader=productionMotionMethods(new URL('LocalReadingExperience.ets',dir),['finishExit'],
+    {hilog:{warn(){},error(){}}});
+  const reader=Object.assign(new Reader(),{readingRecordHost:host,lifecycleToken:1,exitAttemptGeneration:1,exitDelivered:false,
+    flushReadingRecordForExit:()=>host.flushForExit(),
+    awaitOrdinaryFirstPagePersistence:async()=>{}, readerSettingsSnapshot:{navigationMode:'paged'},
+    commitVisiblePage:async()=>events.push('position-commit'),
+    isMountedToken:token=>token===1, retainConfirmedEntryPresentation(){},onExit:()=>events.push('exit'),errorMessage:String,
+    showReaderAlert:()=>assert.fail('duration uncertainty must never open a modal')});
+  const exiting=reader.finishExit(1);
+  await settle();
+  assert.deepEqual(events,['position-commit','exit'],
+    'actual candidate exit still commits its normal position while the duration Native ACK hangs');
+  await exiting;assert.equal(f.writes.length,1);assert.equal(f.journal().phase,'pending');
+  host.retire();gate.resolve();await f.gateway.recover();assert.equal(f.journal().phase,'confirmed');
+  f.gateway.stopBackground();
+}
+// These lifecycle hooks are deliberately limited to duration recovery. The
+// candidate does not import the separate reading-progress journal/TTS work.
+{
+  const owner=readFileSync(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),'utf8');
+  assert.match(owner,/private readingRecordGateway: ReadingRecordGateway \| undefined/);
+  const method=owner.match(/  getReadingRecordGateway\(\): ReadingRecordGateway \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(method,'Runtime owns a single lazy duration Gateway');
+  let created=0;
+  const Owner=new Function('ReadingRecordGateway',stripTypeScriptTypes(
+    `class Owner { ${method} }`)+'; return Owner;')(class {constructor(owner){this.owner=owner;created++;}});
+  const runtime=new Owner();assert.equal(runtime.getReadingRecordGateway(),runtime.getReadingRecordGateway());
+  assert.equal(created,1,'multiple route consumers share one outbox');
+  assert.match(owner,/this\.runtime = runtime;\s*this\.state = 'ready';\s*void this\.getReadingRecordGateway\(\)\.recover\(\)/,
+    'cold recovery starts only after publishing the ready Native runtime');
+  assert.match(owner,/if \(foreground && this\.state === 'ready'\) \{\s*void this\.getReadingRecordGateway\(\)\.recover\(\)/,
+    'foreground wakes duration recovery without awaiting it');
+  assert.match(owner,/async close\(\): Promise<void> \{\s*this\.readingRecordGateway\?\.stopBackground\(\)/,
+    'close transfers in-process pending work before Runtime teardown');
+}
+
+// Execute the real Owner close and real component clock/retirement methods.
+// UI teardown may happen before or after the successor has loaded its outbox.
+for(const successorAlreadyLoaded of [false,true]) {
+  const f=fixture();let now=100,oldNativeCalls=0;
+  const request=f.runtime.request;
+  f.runtime.request=async function(...args){if(this===f.runtime) oldNativeCalls++;return request(...args);};
+  const host=new ReaderReadingRecordHost(f.gateway,()=> 'late-retire',()=>{},()=>now,()=>1,()=>{});
+  host.begin(()=>true);now=200;
+  const source=readFileSync(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),'utf8');
+  const close=source.match(/  async close\(\): Promise<void> \{[\s\S]*?\n  \}/)?.[0];assert.ok(close);
+  const Owner=new Function('ReadingBodyImageHost',stripTypeScriptTypes(`class Owner { ${close} }`)+';return Owner;')
+    ({instance:{setMangaMetadataInspector(){}}});
+  const owner=Object.assign(new Owner(),{readingRecordGateway:f.gateway,state:'ready',
+    closeDownloadsAndRuntime:async()=>{}});
+  await owner.close();
+  let next;
+  if(successorAlreadyLoaded) {next=f.remount();await next.recover();}
+  host.retire();host.retire();
+  assert.equal(host.pendingMillis,0,'late component time has transferred ownership');
+  if(!next) {assert.equal(Gateway.retiredMemory.reduce((sum,x)=>sum+x.elapsedMillis,0),100);next=f.remount();await next.recover();}
+  await settle();
+  assert.equal(f.writes.reduce((sum,x)=>sum+x.elapsedMillis,0),100,
+    'late retirement is automatically recovered even by an already-loaded successor');
+  const repeated=f.gateway.createIntent('same-late-object',50,201);
+  f.gateway.handoff(repeated);f.gateway.handoff(repeated);next.handoff(repeated);
+  await settle();assert.equal(f.writes.reduce((sum,x)=>sum+x.elapsedMillis,0),150);
+  await owner.close();
+  assert.equal(Gateway.currentReceiver,next,'a repeated predecessor close cannot clear the new receiver');
+  host.pendingMillis=25;host.retire();await settle();
+  assert.equal(f.writes.reduce((sum,x)=>sum+x.elapsedMillis,0),175);
+  assert.equal(oldNativeCalls,0,'late handoff never starts a request on the closed runtime');
+  assert.equal(next.recoveryState().pendingMillis,0);
+  next.stopBackground();assert.equal(Gateway.currentReceiver,undefined);
+}
+
+{
+  const f=fixture();f.gateway.stopBackground();
+  const intent=f.gateway.createIntent('carried-same-object',100,1);f.gateway.handoff(intent);
+  const next=f.remount();next.handoff(intent);next.handoff(intent);
+  await next.recover();next.handoff(intent);await settle();
+  assert.equal(f.writes.length,1);assert.equal(f.writes[0].elapsedMillis,100,
+    'same object cannot enter both the predecessor carry lane and successor inbox');
+  next.stopBackground();
+}
+
+// Weak object identity only: this is not a claim about replaying a cloned
+// intent or arbitrary cold-start acceptance IDs.
+{
+  const f=fixture(),intent=f.gateway.createIntent('same-object',100,10);
+  f.gateway.handoff(intent);f.gateway.handoff(intent);await f.gateway.recover();
+  f.gateway.handoff(intent);await f.gateway.recover();
+  assert.equal(f.writes.length,1);assert.equal(f.writes[0].elapsedMillis,100);
+  f.gateway.stopBackground();
+}
+{
+  const f=fixture();
+  assert.equal(new TextEncoder().encode(f.gateway.createIntent('汉'.repeat(1365)+'a',1,1).bookName).length,4096);
+  assert.throws(()=>f.gateway.createIntent('汉'.repeat(1366),1,1));
+  assert.throws(()=>f.gateway.handoff(new ReadingRecordIntent('long','汉'.repeat(1366),1,1)));
+  const invalid={phase:'pending',acceptanceId:'old',deviceId:'harmony-device',bookName:'汉'.repeat(1366),
+    elapsedMillis:1,readAt:1,operationId:'harmony-device/1',sequence:1};
+  const encoded=JSON.stringify(invalid);f.cache.set('delta-journal-v1',encoded);
+  await assert.rejects(f.gateway.accumulate(f.gateway.createIntent('new',1,2)),e=>e.kind==='blocked');
+  assert.equal(f.cache.get('delta-journal-v1'),encoded);assert.equal(f.writes.length,0);
+  f.gateway.stopBackground();
+}
+{
+  const f=fixture();await f.gateway.recover();
+  const prior=f.cache.get('delta-outbox-v2');
+  // Valid 4096-byte names whose JSON control escaping exceeds the snapshot
+  // limit. Admission keeps all elapsed values in process and preserves disk.
+  for(let i=0;i<50;i++) f.gateway.handoff(f.gateway.createIntent('\u0001'.repeat(4090)+String(i),1,i));
+  await f.gateway.recover();await settle();
+  assert.equal(f.cache.get('delta-outbox-v2'),prior,'oversized serialization never overwrites prior readable snapshot');
+  assert.equal(f.writes.length,0);assert.equal(f.gateway.recoveryState().pendingMillis,50);
+  assert.equal(f.gateway.recoveryState().durable,false);
+  assert.match(f.gateway.recoveryState().lastError,/stage=outbox.encode;kind=blocked/);
+  f.gateway.stopBackground();Gateway.retiredMemory=[];
+}
+for(const raw of [' '.repeat(1048577), '汉'.repeat(350000), JSON.stringify({version:2,tail:[
+  {acceptanceId:'v2-invalid-name',bookName:'汉'.repeat(1366),elapsedMillis:1,readAt:1}]})]) {
+  const f=fixture();f.cache.set('delta-outbox-v2',raw);
+  await f.gateway.recover();assert.equal(f.cache.get('delta-outbox-v2'),raw);
+  assert.match(f.gateway.recoveryState().lastError,/stage=outbox.load;kind=blocked/);
+  assert.equal(f.writes.length,0);
+  f.gateway.stopBackground();Gateway.retiredMemory=[];
+}
+
+for(const metadata of [{name:'ReaderCoreRequestError',event:{error:{code:'TIMEOUT'}}},
+  {name:'BusinessError',code:15500019},{name:'SECRET_NAME',code:'SECRET_CODE'}]) {
+  const f=fixture();f.runtime.request=async()=>{throw Object.assign(Error('SECRET_BOOK_TOKEN'.repeat(200)),metadata);};
+  f.gateway.handoff(f.gateway.createIntent('SECRET_BOOK_TOKEN',1,1));await f.gateway.recover();
+  const diagnostic=f.gateway.recoveryState().lastError;
+  assert.match(diagnostic,/stage=receipt.read;kind=pending/);assert.ok(diagnostic.length<200);
+  assert.doesNotMatch(diagnostic,/SECRET|stack|message/);
+  assert.match(diagnostic,metadata.name==='ReaderCoreRequestError'?/name=ReaderCoreRequestError;code=TIMEOUT/:
+    metadata.name==='BusinessError'?/name=BusinessError;code=15500019/:/name=Other;code=UNCLASSIFIED/);
+  f.gateway.stopBackground();Gateway.retiredMemory=[];
+}
+for(const [message,structuredCode,expected] of [
+  ['Reader-Core request timed out: 123456',undefined,'TIMEOUT'],
+  ['Reader-Core request timed out: 123456 SECRET',undefined,'UNCLASSIFIED'],
+  ['prefix Reader-Core request timed out: 123456',undefined,'UNCLASSIFIED'],
+  ['Reader-Core command was not admitted','BUSY','BUSY'],
+  ['Reader-Core command was not admitted','RESOURCE_EXHAUSTED','RESOURCE_EXHAUSTED'],
+  ['Reader-Core command was not admitted: runtime result reservation contract failed; drain and recreate','BUSY','RESERVATION_CONTRACT_FAULT'],
+  ['SECRET runtime result reservation contract failed; drain and recreate',undefined,'UNCLASSIFIED']]) {
+  const f=fixture();f.runtime.request=async()=>{throw Object.assign(Error(message),{code:structuredCode});};
+  f.gateway.handoff(f.gateway.createIntent('secret-book',1,1));await f.gateway.recover();
+  const diagnostic=f.gateway.recoveryState().lastError;
+  assert.equal(diagnostic,`stage=receipt.read;kind=pending;name=Error;code=${expected}`);
+  assert.doesNotMatch(diagnostic,/123456|SECRET|secret-book/);
+  f.gateway.stopBackground();Gateway.retiredMemory=[];
+}
+assert.ok(diagnosticLogs.length>0);assert.ok(diagnosticLogs.every(line=>line.length<200&&!/SECRET_BOOK_TOKEN|SECRET_NAME|SECRET_CODE/.test(line)));
+
+console.log('PASS actual duration Host/Gateway: exact v1 receipt identity, independent bounded durable outbox, cold/legacy recovery, unknown ACK, nonblocking exit/retirement, merged tail, disk failure recovery, explicit capacity overflow, bounded private diagnostics, UTF-8/snapshot limits, same-object handoff deduplication and late component retirement after Runtime close.');
