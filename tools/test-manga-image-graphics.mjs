@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { registerHooks } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { validateMangaGraphicsDimensions, validateMangaGraphicsPlan } from '../entry/src/main/ets/app/MangaImageGraphicsPlan.ts';
 import { MangaImageDecodeHost } from '../entry/src/main/ets/app/MangaImageDecodeHost.ts';
+registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
+ if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;}}});
+const {ReadingEntryPreparation}=await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
 const fixture=name=>readFileSync(new URL(`./fixtures/manga-graphics/${name}`,import.meta.url));
 const plan=JSON.parse(fixture('plan.json')), encoded=new Uint8Array(fixture('input.png'));
 const expected=fixture('expected-bgra.bin'), original=fixture('input-bgra.bin'), jpeg=new Uint8Array(fixture('expected.jpg'));
@@ -76,18 +80,32 @@ for(const fault of ['cancel','read','pack','animated','stride','output-format','
  };
  const result=await host.prepare({resourceRef:'page'},request,()=>true);
  assert.equal(result,validated);assert.deepEqual(result,jpeg);assert.notDeepEqual(result,encoded);
- const Owner=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),['prefetchReadingImage','prefetchReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes'],{
+ const Owner=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),['prefetchReadingImage','prefetchReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes','assertReadingImageCurrent','captureMangaImageContentValidity'],{
   MangaImageDecodeHost:{instance:host},ReadingBodyImageHost:{instance:{async prepareMangaDisplay(bytes,_chapter,current){return this.validateBytes(bytes,current)},async validateBytes(bytes){assert.deepEqual(bytes,jpeg)}}}
  });
  const owner=new Owner();owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;owner.mangaImageQueue=[];owner.mangaImageActive=false;owner.mangaImageUrgentStreak=0;let stored,requests=0;
- owner.assertReadingImageCurrent=()=>{};
+ owner.state='ready';
+ const preparation=new ReadingEntryPreparation(owner,false);owner.readingEntryPreparations=()=>preparation;
  owner.request=async(method,params)=>{requests++;assert.equal(method,'manga.resource.prepare');return request(params)};
- owner.readingImageDiskCache={captureValidity:()=>()=>true,async loadResource(){return stored},async storeResource(identity,bytes){stored=bytes},async removeResource(){stored=undefined}};
+ owner.readingImageDiskCache={captureValidity:(_source,_book,current)=>current??(()=>true),async loadResource(){return stored},async storeResource(identity,bytes){stored=bytes},async removeResource(){stored=undefined}};
  const identity={sourceId:'s',bookId:'b',chapterIndex:0,contentVersion:'v',resourceRef:'page',mangaDecodeRevision:'bytes-v1',baseUrl:'chapter',imageUrl:'image'};
  await owner.prefetchReadingImage(identity,()=>true,'rules',true);
  assert.deepEqual(stored,jpeg);assert.notDeepEqual(stored,encoded);assert.equal(requests,1);
  await owner.prefetchReadingImage(identity,()=>true,'rules',false);
  assert.equal(requests,1,'offline decoded cache never re-enters JS, graphics or HTTP');
+ for(const method of ['book.detail','book.toc','bookshelf.add']) {
+  const params={sourceId:'s',bookId:'b'};preparation.beginRequest(method,params);
+  await owner.prefetchReadingImage(identity,()=>true,'rules',false);
+  preparation.finishRequest(method,params);
+  assert.equal(requests,1,'metadata keeps decoded offline bytes without new decode/JS/HTTP');
+ }
+ const frozen=owner.captureMangaImageContentValidity('s','b');
+ preparation.beginRequest('source.update',{sourceId:'s'});
+ assert.equal(frozen(),false,'real source changes revoke the existing image scope');
+ await assert.rejects(owner.prefetchReadingImage(identity,()=>true,'rules',false),/cancelled/);
+ preparation.finishRequest('source.update',{sourceId:'s'});
+ assert.deepEqual(stored,jpeg,'a rejected stale owner cannot delete verified decoded bytes');
+
 }
 console.log('PASS manga graphics: real bundled-rule 14-strip golden coordinates, independent Pillow BGRA, explicit ImageKit source format, narrow dimensions/coverage, actual methods, cancellation/release, decoded-byte transfer (native ImageKit codec pixels remain target gate)');
 

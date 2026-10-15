@@ -28,7 +28,7 @@ const manifest = {chapter:{sourceId:'s',bookId:'b',chapterId:'chapter'},sourceRu
 const ownerFile = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
 for(const cached of [false,true]) {
  const calls=[],bytes=new Uint8Array([9,8]);
- const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','prefetchReadingImage','prefetchReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes','captureReadingContentValidity'],{
+ const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','prefetchReadingImage','prefetchReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes','captureReadingContentValidity','captureMangaImageContentValidity'],{
   MangaImageDecodeHost:{instance:{async prepare(params,request,current){calls.push(['decode',params]);assert.equal(current(),true);return bytes}}},
   ReadingBodyImageHost:{instance:{async loadMangaBytes(bytes,_owner,current,position){return this.loadBytes(bytes,current,position)},async prepareMangaDisplay(bytes,_owner,current){return this.validateBytes?.(bytes,current,0)},async loadBytes(value,current,position){calls.push(['load',value,position]);return {fileUri:'file://ok'}},async validateBytes(value,current,position){calls.push(['validate',value,position]);assert.equal(position,0)},async fetchRequestBytes(){throw Error('bypassed manga decode')}}},
   hilog:{error(){}},LOG_DOMAIN:0
@@ -43,7 +43,7 @@ for(const cached of [false,true]) {
  if(!cached){assert.equal(calls.find(c=>c[0]==='decode')[1].chapter.chapterId,'https://chapter#part');assert.equal(calls.filter(c=>c[0]==='store').length,2);}
 }
 {
- const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','captureReadingContentValidity'],{ReadingBodyImageHost:{instance:{}}});
+ const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','captureReadingContentValidity','captureMangaImageContentValidity'],{ReadingBodyImageHost:{instance:{}}});
  const owner=new Owner();owner.mangaImageTail=Promise.resolve();owner.mangaImagePending=0;owner.mangaImageQueue=[];owner.mangaImageActive=false;owner.mangaImageUrgentStreak=0;owner.assertReadingImageCurrent=()=>{};owner.readingImageCacheIdentity=()=>({sourceId:'s',bookId:'b'});
  const preparation=new ReadingEntryPreparation(owner,false);owner.readingEntryPreparations=()=>preparation;
  owner.readingImageDiskCache={captureValidity:()=>()=>true,async loadResource(){return undefined}};
@@ -64,7 +64,7 @@ console.log('PASS manga transfer preserves actionable HTTP failure identity acro
  // A newly admitted owner reuses persisted *decoded* bytes while offline; it
  // cannot call the key/library preparation route again.
  const decoded=new Uint8Array([254,253,252]),persisted=new Map();let prepareCalls=0,online=true;
- const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes','captureReadingContentValidity'],{
+ const Owner=productionMotionMethods(ownerFile,['loadReadingImage','loadReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes','captureReadingContentValidity','captureMangaImageContentValidity'],{
   MangaImageDecodeHost:{instance:{async prepare(){assert.equal(online,true,'offline must not enter nested key/library route');prepareCalls++;return decoded}}},
   ReadingBodyImageHost:{instance:{async loadMangaBytes(bytes,_owner,current,position){return this.loadBytes(bytes,current,position)},async prepareMangaDisplay(bytes,_owner,current){return this.validateBytes?.(bytes,current,0)},async loadBytes(bytes){assert.deepEqual(bytes,decoded);return {fileUri:'file://decoded'}},async fetchRequestBytes(){throw Error('network bypass')}}},
   hilog:{error(){}},LOG_DOMAIN:0

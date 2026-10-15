@@ -41,9 +41,9 @@ declare const ReadingBodyImageHost:{instance:PreparedBody};
 class PreparedRuntime {
   private state:'new'|'starting'|'ready'|'closing'|'closed'='ready';
   private readingImageDiskCache:{captureValidity(source:string, book:string, current?:()=>boolean):()=>boolean};
-  captureReadingContentValidity(source:string, book:string):()=>boolean {throw Error();}
+  private readingEntryPreparations():{captureMangaImageContentValidity(source:string, book:string):()=>boolean} {throw Error();}
 ${members(runtime, 'ReaderRuntimeOwner', ['mangaDisplaySessions','nextMangaDisplaySession','assertReadingImageCurrent',
-  'beginMangaDisplaySession','endMangaDisplaySession','tryAcquireMangaPreparedImage','mangaDisplaySessionKey','publishMangaPreparedImage'])}
+  'captureMangaImageContentValidity','beginMangaDisplaySession','endMangaDisplaySession','tryAcquireMangaPreparedImage','mangaDisplaySessionKey','publishMangaPreparedImage'])}
 }
 ${gateway}
 `;
