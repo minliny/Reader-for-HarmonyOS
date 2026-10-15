@@ -15,6 +15,30 @@ const Index = productionMotionMethods(index, methods, { readingOfflineFailureHin
   hilog: { warn() {}, error() {} }, DOMAIN: 0 });
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const tick = () => new Promise(resolve => setImmediate(resolve));
+// Execute the actual ArkTS-compatible view-state copy and its opening guards.
+// Download list I/O remains the existing Host seam; no layout is reconstructed.
+{
+  let reloads=0;
+  class Host { async reload(current){assert.equal(current(),true);reloads++;} }
+  const Page=productionMotionMethods(index,['openDownloads'],{SharedDownloadHost:Host});
+  const owner={},book={sourceId:'source',bookId:'book'};
+  const retained={query:'325',type:'text',state:'downloading',sourceId:'source',
+    sort:'size',direction:'asc',listScroll:389,detailKey:'old'};
+  const page=Object.assign(new Page(),{mountedRuntimeOwner:owner,readingSessionActive:false,
+    shelfReceiptRetired:false,route:'directory',downloadViewState:retained,
+    rssInstanceIdentity:'instance',detailShelfAdmissionMount:1,navigationGeneration:1,
+    isCurrentRuntime:value=>value===owner,currentDownloadBook:()=>book,
+    nextNavigationGeneration(){return ++this.navigationGeneration;},
+    isCurrentDownloadPresentation:(generation,value)=>value===owner&&generation===page.navigationGeneration});
+  page.openDownloads('job');
+  assert.deepEqual(page.downloadViewState,{...retained,detailKey:'job'});
+  assert.notEqual(page.downloadViewState,retained);assert.equal(retained.detailKey,'old');
+  assert.equal(page.downloadReturnTarget,'directory');assert.equal(page.downloadReturnBook,book);
+  const same=page.downloadViewState;page.openDownloads('',true);assert.equal(page.downloadViewState,same);
+  page.openDownloads('next',true);assert.deepEqual(page.downloadViewState,{...retained,detailKey:'next'});
+  page.readingSessionActive=true;page.openDownloads('blocked');assert.equal(reloads,3);
+  assert.equal(page.downloadViewState.detailKey,'next','active reading waits for its saved exit before opening downloads');
+}
 function fixture() {
   const ack = deferred(), calls = [], toast = [], protection = [], probeReleases = [];
   const owner = { getDownloadCoordinator: () => ({ submit: (session, indexes) => {

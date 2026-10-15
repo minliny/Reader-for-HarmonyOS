@@ -1832,7 +1832,12 @@ struct Index {
       this.downloadReturnTarget = this.route === 'detail' || this.route === 'directory' ? this.route : 'settings';
       this.downloadReturnBook = this.downloadReturnTarget === 'settings' ? undefined : this.currentDownloadBook();
     }
-    if (detailKey.length > 0 || !preserveReturn) this.downloadViewState = { ...this.downloadViewState, detailKey };
+    if (detailKey.length > 0 || !preserveReturn) {
+      const retained = this.downloadViewState;
+      this.downloadViewState = { query: retained.query, type: retained.type, state: retained.state,
+        sourceId: retained.sourceId, sort: retained.sort, direction: retained.direction,
+        listScroll: retained.listScroll, detailKey };
+    }
     const generation = this.nextNavigationGeneration();
     const identity = JSON.stringify([this.rssInstanceIdentity, this.detailShelfAdmissionMount, generation, 'downloads']);
     this.route = 'downloads';
