@@ -19,6 +19,7 @@ import type { ReadingBookDetail } from './ReadingBookDetail';
 import type { ReadingEntrySeed } from './ReadingEntryPreparation';
 import { MangaAdmissionGateway } from '../manga/MangaAdmissionGateway';
 import { MangaBookPresentation } from '../manga/MangaBookPresentation';
+import { bookCoverDisplayUrl } from '../common/BookCoverDisplay';
 
 export interface ReadingEntrySnapshot {
   scopeId: number;
@@ -56,6 +57,8 @@ export interface ReadingEntryLease {
 export interface RemoteReadingEntryInput {
   seed: RemoteReadingBookSeed;
   sourceName: string;
+  /** Display-only search-group cover; canonical acquisition metadata remains source-owned. */
+  displayCoverUrl?: string;
   shelfSnapshot?: ShelfBook;
   /** Current Core shelf projection can establish presence, never absence. */
   shelfBooks?: ShelfBook[];
@@ -108,6 +111,7 @@ export class ReadingEntryHost {
    * as a background refresh trigger. */
   private lastRemoteInput: RemoteReadingEntryInput | undefined;
   private lastLocalSelection: ShelfBook | undefined;
+  private displayCoverUrl: string | undefined;
 
   constructor(runtime: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) { this.runtime = runtime; }
   static forRuntime(runtime: ReaderRuntimeOwner = ReaderRuntimeOwner.current()): ReadingEntryHost {
@@ -126,6 +130,7 @@ export class ReadingEntryHost {
     this.mangaDisplayRefreshTask = undefined; this.mangaDisplayRefreshSession = undefined; this.mangaDisplayRefreshedSession = undefined;
     this.lastRemoteInput = undefined;
     this.lastLocalSelection = undefined;
+    this.displayCoverUrl = undefined;
   }
 
   async openLocal(selection: ShelfBook, lease: ReadingEntryLease, resumeImmediately: boolean = false): Promise<void> {
@@ -164,7 +169,7 @@ export class ReadingEntryHost {
     }
     const retained = input.shelfSnapshot !== undefined && this.sameBook(input.retainedSession, seed) ? input.retainedSession : undefined;
     const scope = this.begin(lease, this.detail(seed, input.sourceName), input.shelfSnapshot !== undefined,
-      input.shelfSnapshot === undefined ? '正在获取在线目录…' : '正在读取本地目录…', seed, retained);
+      input.shelfSnapshot === undefined ? '正在获取在线目录…' : '正在读取本地目录…', seed, retained, [], input.displayCoverUrl);
     const current = this.current(scope, lease);
     if (input.resumeImmediately) {
       if (input.shelfSnapshot !== undefined) this.runtime.noteReadingPreparationIntent(seed.sourceId, seed.bookId);
@@ -219,7 +224,7 @@ export class ReadingEntryHost {
       const suppliedShelf = shelf?.sourceId === session.identity.sourceId && shelf.bookId === session.identity.bookId ? shelf :
         input.shelfBooks?.find(book => book.sourceId === session.identity.sourceId && book.bookId === session.identity.bookId);
       this.install(session);
-      this.state = { ...this.state, seed: seeds[index], book: this.sessionDetail(session, sourceName),
+      this.state = { ...this.state, seed: seeds[index], book: this.sessionDetail(session, sourceName, group),
         toc: this.catalog(session), inBookshelf: suppliedShelf !== undefined, loadingMessage: '' };
       this.publish(scope, lease);
       const probe = this.probe(scope);
@@ -237,7 +242,13 @@ export class ReadingEntryHost {
       if (error instanceof RemoteChapterCacheRefreshError) { await this.refreshCachedChapter(error, scope, lease, current); return; }
       if (!admissionMeasured) this.admissionDiagnostic(scope, lease, seed, admissionStartedAt);
       const catalogAvailable = group && this.state.session !== undefined && this.state.toc.length > 0;
-      if (!catalogAvailable) { this.install(undefined); this.state = { ...this.state, book: this.detail(seed, input.sourceName), toc: [] }; }
+      if (!catalogAvailable) {
+        const previous = this.state.book;
+        const retainCover = previous !== undefined && (previous.contentKind ?? 'text') === (seed.contentKind ?? 'text') &&
+          (group || previous.sourceId === seed.sourceId && previous.bookId === seed.bookId);
+        this.install(undefined); this.state = { ...this.state,
+          book: this.displayDetail(this.detail(seed, input.sourceName), retainCover), toc: [] };
+      }
       this.state = { ...this.state, loadingMessage: errorMessageOf(error), verdict: verdictForFailureKind(remoteReadingFailureKindOf(error)),
         candidateAdmissionFailed: group || input.retainAdmissionThroughProbe === true };
       this.publish(scope, lease); this.diagnostic(lease, 'remote-detail', error);
@@ -480,7 +491,7 @@ export class ReadingEntryHost {
         if (!current()) return;
         await this.openRemote({ seed: { sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
           title: book.title, author: book.author, intro: book.intro, coverUrl: book.coverUrl, kind: book.kind, lastChapter: book.lastChapter, contentKind: book.contentKind },
-          sourceName: book.sourceName, shelfSnapshot: snapshot, retainAdmissionThroughProbe: true }, lease);
+          sourceName: book.sourceName, displayCoverUrl: book.displayCoverUrl, shelfSnapshot: snapshot, retainAdmissionThroughProbe: true }, lease);
         return;
       }
       // Cached metadata cannot change the content type admitted by this owner.
@@ -494,7 +505,7 @@ export class ReadingEntryHost {
         detail.mangaPosition !== book.mangaPosition;
       // Shelf-only acquisition events do not replace the displayed metadata,
       // session or directory when their admitted evidence is unchanged.
-      this.state = { ...this.state, book: metadataChanged ? detail : book };
+      this.state = { ...this.state, book: metadataChanged ? this.displayDetail(detail, true) : book };
       const wasReadable = this.state.verdict === 'readable';
       if (previous !== undefined && previous.catalogVersion !== undefined && previous.contextVersion !== undefined &&
         facts.catalogVersion === previous.catalogVersion && facts.contextVersion === previous.contextVersion && facts.sourceVersion === previous.sourceVersion) {
@@ -561,12 +572,18 @@ export class ReadingEntryHost {
   }
 
   private begin(lease: ReadingEntryLease, book: ReadingBookDetail, inBookshelf: boolean, loadingMessage: string,
-    seed?: RemoteReadingBookSeed, session?: RemoteReadingSession, toc: LocalReadingTocEntry[] = []): number {
+    seed?: RemoteReadingBookSeed, session?: RemoteReadingSession, toc: LocalReadingTocEntry[] = [], displayCoverUrl?: string): number {
     if (!this.runtimeCurrent() || !lease.isCurrent()) throw new Error('READING_ENTRY_OWNER_RETIRED');
+    const previous = this.state.book;
+    const sameDisplayIdentity = this.lease !== undefined && previous !== undefined && previous.sourceId === book.sourceId &&
+      previous.bookId === book.bookId && (previous.contentKind ?? 'text') === (book.contentKind ?? 'text');
+    const inheritedCover = sameDisplayIdentity ? bookCoverDisplayUrl(book.displayCoverUrl) ?? bookCoverDisplayUrl(previous?.displayCoverUrl) : undefined;
+    this.displayCoverUrl = undefined;
+    const displayedBook = this.displayDetail(book, false, bookCoverDisplayUrl(displayCoverUrl) ?? bookCoverDisplayUrl(book.coverUrl) ?? inheritedCover);
     const scope = this.state.scopeId + 1; this.lease = lease; this.probeGeneration += 1; this.projectionPending = undefined;
     this.membershipGeneration = lease.membership().generation;
     this.mangaDisplayRefreshTask = undefined; this.mangaDisplayRefreshSession = undefined; this.mangaDisplayRefreshedSession = undefined;
-    this.state = { scopeId: scope, sessionGeneration: this.state.sessionGeneration, book, seed, toc, inBookshelf,
+    this.state = { scopeId: scope, sessionGeneration: this.state.sessionGeneration, book: displayedBook, seed, toc, inBookshelf,
       loadingMessage, verdict: book.sourceId === LOCAL_SOURCE_ID ? 'readable' : 'verifying', candidateAdmissionActive: false, candidateAdmissionFailed: false };
     this.readableRevision = -1; this.install(session); this.runtime.bookAcquisitions().setPreparationVisible(false);
     this.publish(scope, lease); return scope;
@@ -622,7 +639,7 @@ export class ReadingEntryHost {
   }
   private admitCatalog(session: RemoteReadingSession, seeds: RemoteReadingBookSeed[], names: string[], scope: number, lease: ReadingEntryLease): void {
     const index = seeds.findIndex(seed => this.sameBook(session, seed)); if (index < 0) return;
-    this.install(session); this.state = { ...this.state, seed: seeds[index], book: this.sessionDetail(session, names[index] || session.identity.sourceId),
+    this.install(session); this.state = { ...this.state, seed: seeds[index], book: this.sessionDetail(session, names[index] || session.identity.sourceId, true),
       toc: this.catalog(session), loadingMessage: '', verdict: 'verifying' }; this.publish(scope, lease);
   }
   private async refreshInBackground(seed: RemoteReadingBookSeed, name: string, cached: RemoteReadingSession,
@@ -728,10 +745,19 @@ export class ReadingEntryHost {
       kind: seed.kind, coverUrl: seed.coverUrl, intro: seed.intro, lastChapter: seed.lastChapter,
       contentKind: seed.contentKind, mangaPosition: seed.contentKind === 'manga' ? MangaBookPresentation.get(seed.sourceId, seed.bookId) : undefined };
   }
-  private sessionDetail(session: RemoteReadingSession, name: string): ReadingBookDetail {
-    return { sourceId: session.identity.sourceId, sourceName: name, bookId: session.identity.bookId, ...this.remoteDetail(session.book), contentKind: session.contentKind,
+  private sessionDetail(session: RemoteReadingSession, name: string, confirmedCandidate: boolean = false): ReadingBookDetail {
+    const previous = this.state.book;
+    const retain = previous !== undefined && (previous.contentKind ?? 'text') === (session.contentKind ?? 'text') &&
+      (this.sameBook(session, previous) || confirmedCandidate);
+    return this.displayDetail({ sourceId: session.identity.sourceId, sourceName: name, bookId: session.identity.bookId,
+      ...this.remoteDetail(session.book), contentKind: session.contentKind,
       authorIdentity: session.book.authorIdentity, sourceVersion: session.sourceVersion,
-      mangaPosition: session.contentKind === 'manga' ? MangaBookPresentation.get(session.identity.sourceId, session.identity.bookId) : undefined };
+      mangaPosition: session.contentKind === 'manga' ? MangaBookPresentation.get(session.identity.sourceId, session.identity.bookId) : undefined }, retain);
+  }
+  private displayDetail(book: ReadingBookDetail, retain: boolean, preferred?: string): ReadingBookDetail {
+    const next = bookCoverDisplayUrl(preferred) ?? bookCoverDisplayUrl(book.coverUrl);
+    this.displayCoverUrl = next ?? (retain ? this.displayCoverUrl : undefined);
+    return book.displayCoverUrl === this.displayCoverUrl ? book : { ...book, displayCoverUrl: this.displayCoverUrl };
   }
   private remoteDetail(book: { title: string; author: string; intro?: string; coverUrl?: string; kind?: string; lastChapter?: string }):
     { title: string; author: string; intro?: string; coverUrl?: string; kind?: string; lastChapter?: string } {

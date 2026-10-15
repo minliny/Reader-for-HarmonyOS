@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { resolveHorizontalFrame, SurfaceWidthSpec } from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
@@ -24,8 +25,8 @@ assert.ok(actionModel, 'production action model is present');
 const DialogActionView = new Function(stripTypeScriptTypes(actionModel.getText(surfaceTree))
   .replace(/^export /, '') + '; return DialogActionView;')();
 const specSource = readFileSync(file('features/common/ReaderSurfaceSpecs.ets'), 'utf8');
-const { resolveDialogSpec } = new Function('TextAlign', stripTypeScriptTypes(specSource)
-  .replace(/^export /gm, '') + '; return { resolveDialogSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' });
+const { resolveDialogSpec } = new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', stripTypeScriptTypes(specSource)
+  .replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '') + '; return { resolveDialogSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' }, SOURCE_SWITCH_VISUAL);
 // Mirror the SDK frontend's production child/decorator collection before the
 // isolated parent Builder transform; do not rewrite the component call.
 syntax.componentCollection.customComponents.add('ReaderDialogSurface');

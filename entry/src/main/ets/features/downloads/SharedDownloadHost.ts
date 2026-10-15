@@ -3,15 +3,15 @@ import { BookshelfFlowGateway } from '../bookshelf/BookshelfFlowGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import type { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { SharedDownloadGateway } from './SharedDownloadGateway';
-import { createDownloadBookView, type DownloadBookView, type DownloadStorageSummary, type SharedDownloadActionTarget } from './SharedDownloadProjection';
-import { ReadingOfflineHost, type ReadingOfflineBinding } from '../reading/ReadingOfflineHost';
-import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
+import { createDownloadBookView, type DownloadBookView, type DownloadStorageSummary, type DownloadStoragePolicyView, type SharedDownloadActionTarget } from './SharedDownloadProjection';
+import type { SharedDownloadCoordinatorSnapshot } from './SharedDownloadCoordinator';
 
 export interface SharedDownloadSnapshot {
   books: DownloadBookView[];
   loading: boolean;
   error: string;
   storageSummary: DownloadStorageSummary;
+  storagePolicy?: DownloadStoragePolicyView;
 }
 
 type IndexedDownloadBook = {
@@ -26,8 +26,8 @@ type IndexedDownloadBook = {
 // without treating a download/clear/source mutation as a fresh fact.
 const DOWNLOAD_STATUS_INDEX = new WeakMap<object, Map<string, IndexedDownloadBook>>();
 
-/** Read-only page projection over the existing bookshelf/cache authorities.
- * Never starts a download, changes retention or opens the reader. */
+/** Incremental page projection over bookshelf/cache authorities. Mutations
+ * delegate to the durable Runtime coordinator and storage owner. */
 export class SharedDownloadHost {
   private generation: number = 0;
   private snapshot: SharedDownloadSnapshot = { books: [], loading: false, error: '', storageSummary: {} };
@@ -36,10 +36,12 @@ export class SharedDownloadHost {
   private readonly owner: ReaderRuntimeOwner;
   private readonly publish: (snapshot: SharedDownloadSnapshot) => void;
   private unsubscribeDownloadStatus: (() => void) | undefined;
+  private unsubscribeDownloadIntents: (() => void) | undefined;
   private progressTimer: ReturnType<typeof setTimeout> | undefined;
   private pendingBookKeys: Set<string> = new Set();
   private progressInFlight: boolean = false;
   private readonly rowPositions: Map<string, number> = new Map();
+  private readonly intentSignatures: Map<string, string> = new Map();
   private readonly statusIndex: Map<string, IndexedDownloadBook> | undefined;
 
   constructor(owner: ReaderRuntimeOwner, publish: (snapshot: SharedDownloadSnapshot) => void) {
@@ -56,6 +58,8 @@ export class SharedDownloadHost {
 
   private stopProgress(): void {
     this.unsubscribeDownloadStatus?.(); this.unsubscribeDownloadStatus = undefined;
+    this.unsubscribeDownloadIntents?.(); this.unsubscribeDownloadIntents = undefined;
+    this.intentSignatures.clear();
     if (this.progressTimer !== undefined) clearTimeout(this.progressTimer);
     this.progressTimer = undefined; this.pendingBookKeys.clear();
   }
@@ -76,7 +80,10 @@ export class SharedDownloadHost {
       for (const key of this.statusIndex?.keys() ?? []) {
         if (!shelfKeys.has(key)) this.statusIndex?.delete(key);
       }
-      const rows = shelf.books.map((book: ShelfBook): DownloadBookView => {
+      const allBooks = new Map(shelf.books.map((book: ShelfBook) => [JSON.stringify([book.sourceId, book.bookId]), book]));
+      for (const book of this.owner.getDownloadCoordinator?.().books() ?? [])
+        if (!allBooks.has(JSON.stringify([book.sourceId, book.bookId]))) allBooks.set(JSON.stringify([book.sourceId, book.bookId]), book);
+      const rows = Array.from(allBooks.values()).map((book: ShelfBook): DownloadBookView => {
         const fresh = createDownloadBookView(book);
         return this.reuseIndexedRow(fresh, this.currentStatusRevision(fresh)) ?? fresh;
       });
@@ -86,6 +93,7 @@ export class SharedDownloadHost {
       // look like a failed download projection.
       this.update({ books: rows, loading: rows.length > 0, error: '', storageSummary: this.snapshot.storageSummary }, active);
       this.bindProgress(active);
+      this.bindAcceptedIntents(active);
       void this.refreshStorageSummary(active);
       let next = 0;
       const hydrate = async (): Promise<void> => {
@@ -108,7 +116,21 @@ export class SharedDownloadHost {
   private async refreshStorageSummary(current: () => boolean): Promise<void> {
     try {
       const measured = await this.owner.mangaStorageSummary();
-      if (current()) this.update({ ...this.snapshot, storageSummary: measured }, current);
+      const measuredPolicy = await this.owner.getDownloadStorageGateway?.().readPolicy();
+      if (current()) {
+        const storage = this.owner.getDownloadStorageGateway?.();
+        const books = this.snapshot.books.map(book => {
+          if (storage === undefined || book.projectionStatus !== 'ready') return book;
+          const images = storage.bookImageBytes(book.sourceId, book.bookId);
+          const bytes = images === undefined ? undefined : book.contentKind === 'manga' ? images :
+            book.bytes === undefined ? undefined : book.bytes + images;
+          return bytes === book.bytes ? book : { ...book, bytes };
+        });
+        const oldPolicy = this.snapshot.storagePolicy;
+        const storagePolicy = measuredPolicy !== undefined && oldPolicy?.capacityBytes === measuredPolicy.capacityBytes &&
+          oldPolicy.expiryDays === measuredPolicy.expiryDays ? oldPolicy : measuredPolicy;
+        this.update({ ...this.snapshot, books, storageSummary: measured, storagePolicy }, current);
+      }
     } catch (_) {
       // Storage summary is advisory; leave the rows usable and preserve the
       // last known summary for an explicit retry.
@@ -134,68 +156,69 @@ export class SharedDownloadHost {
 
   async runAction(action: 'download' | 'pause' | 'cancel' | 'deleteLocal' | 'cleanup' | 'configureStorage',
     targets: SharedDownloadActionTarget[],
-    current: () => boolean, cacheLimitMb?: number, cleanupAfterDays?: number): Promise<void> {
+    current: () => boolean, cacheLimitMb?: number, cleanupAfterDays?: number): Promise<string | undefined> {
     if (!current()) return;
     if (action === 'configureStorage') {
-      await this.owner.configureDownloadStorage(cacheLimitMb ?? 2048, cleanupAfterDays ?? 7);
-      return;
+      const saved = await this.owner.configureDownloadStorage(cacheLimitMb ?? 2048, cleanupAfterDays ?? 7);
+      return saved.maintenanceMessage;
     }
     if (action === 'cleanup') {
       await this.owner.clearDownloadRebuildableCache();
       return;
     }
+    const coordinator = this.owner.getDownloadCoordinator();
     for (const target of targets) {
       if (!current()) return;
       const book = this.snapshot.books.find(row => row.sourceId === target.sourceId && row.bookId === target.bookId);
       if (book === undefined || book.projectionStatus !== 'ready') continue;
-      const selected = book.chapters.filter(chapter => chapter.navigable &&
-        (target.chapterIndices === undefined || target.chapterIndices.includes(chapter.index)));
-      if (action === 'deleteLocal') {
-        await this.owner.clearDownloadBook(book.sourceId, book.bookId);
-        continue;
-      }
-      if (action === 'pause' || action === 'cancel') {
-        for (const chapter of selected) {
-          if (chapter.localComplete || (action === 'pause' && chapter.queueState !== 'queued' && chapter.queueState !== 'inProgress') ||
-            (action === 'cancel' && chapter.queueState !== 'queued' && chapter.queueState !== 'inProgress' &&
-              chapter.queueState !== 'paused' && chapter.queueState !== 'failed')) continue;
-          await this.owner.controlDownloadTask(action, book.sourceId, book.bookId, chapter.index);
-        }
-        continue;
-      }
-      const session = await this.gateway.loadOfflineSession(book, current);
-      const offline = ReadingOfflineHost.forRuntime(this.owner, current);
-      if (offline === undefined) throw new Error('DOWNLOAD_OFFLINE_HOST_UNAVAILABLE');
-      const binding = this.downloadBinding(session, book, current);
-      const indexes = selected.filter(chapter => !chapter.localComplete).map(chapter => chapter.index);
-      for (const chapter of selected) if (chapter.queueState === 'paused')
-        await this.owner.controlDownloadTask('resume', book.sourceId, book.bookId, chapter.index);
-      if (indexes.length === 0) continue;
-      if (target.chapterIndices === undefined) await offline.downloadBook(binding, indexes);
-      else for (const index of indexes) await offline.downloadChapter(index, binding);
+      const selected = target.chapterIndices === undefined ? undefined : book.chapters.filter(chapter => chapter.navigable &&
+        target.chapterIndices!.includes(chapter.index));
+      if (selected !== undefined && selected.length !== new Set(target.chapterIndices).size)
+        throw new Error('目录已变化，目标章节操作已停止，请重新读取目录');
+      // Flushed Runtime intent ACK is the end of this UI operation. The page
+      // generation never owns the accepted Core/Host materialization loop.
+      await coordinator.operate(action === 'deleteLocal' ? 'delete' : action, { book: book.shelfBook,
+        chapterIndexes: selected?.map(chapter => chapter.index),
+        expectedChapters: selected?.map(chapter => ({ chapterIndex: chapter.index, chapterId: chapter.chapterId })) });
     }
   }
 
-  private downloadBinding(session: import('../reading/RemoteReadingFlowGateway').RemoteReadingSession,
-    book: DownloadBookView, current: () => boolean): ReadingOfflineBinding {
-    const entries = (): LocalReadingTocEntry[] => book.chapters.map(chapter => ({
-      index: chapter.index, title: chapter.title,
-      navigable: chapter.navigable, downloadState: chapter.queueState,
-    }));
-    return { session, current, currentEntries: entries, emitEntries: (): void => {},
-      onProgress: (): void => {}, failed: (error: Error): void => { throw error; } };
+  private bindAcceptedIntents(current: () => boolean): void {
+    const coordinator = this.owner.getDownloadCoordinator?.();
+    if (coordinator === undefined) return;
+    void coordinator.restore().catch((): void => {});
+    let initialized = false;
+    this.unsubscribeDownloadIntents = coordinator.subscribe((state: SharedDownloadCoordinatorSnapshot): void => {
+      if (!current()) return;
+      const missing = state.books.filter(book => !this.rowPositions.has(JSON.stringify([book.sourceId, book.bookId])));
+      if (missing.length > 0) this.update({ ...this.snapshot,
+        books: [...this.snapshot.books, ...missing.map(book => createDownloadBookView(book))] }, current);
+      const missingKeys = new Set(missing.map(book => JSON.stringify([book.sourceId, book.bookId])));
+      const present = new Set<string>();
+      for (const job of state.jobs) {
+        present.add(job.key);
+        const signature = JSON.stringify([job.revision, job.status, job.updatedAt,
+          job.requestedIndexes.length, job.pausedIndexes.length, job.retainedIndexes.length]);
+        if ((initialized && this.intentSignatures.get(job.key) !== signature) || missingKeys.has(job.key))
+          this.pendingBookKeys.add(job.key);
+        this.intentSignatures.set(job.key, signature);
+      }
+      for (const key of this.intentSignatures.keys()) if (!present.has(key)) this.intentSignatures.delete(key);
+      initialized = true;
+      this.scheduleProgress(current);
+    });
   }
 
   private async loadRow(book: DownloadBookView, current: () => boolean, force: boolean,
     statusRevision: string | undefined): Promise<DownloadBookView> {
     if (!force) {
       const indexed = this.reuseIndexedRow(book, statusRevision);
-      if (indexed !== undefined) return indexed;
+      if (indexed !== undefined) return this.withAcceptedIntent(indexed);
     }
     try {
       const loaded = await this.gateway.load(book, current);
       this.indexLoadedRow(loaded, statusRevision);
-      return loaded;
+      return this.withAcceptedIntent(loaded);
     }
     catch (_) {
       const unavailable = createDownloadBookView(book.shelfBook);
@@ -205,12 +228,24 @@ export class SharedDownloadHost {
     }
   }
 
+  private withAcceptedIntent(view: DownloadBookView): DownloadBookView {
+    const job = this.owner.getDownloadCoordinator?.().job(view.sourceId, view.bookId);
+    if (job === undefined || view.projectionStatus !== 'ready') return view;
+    const requested = new Set(job.requestedIndexes), paused = new Set(job.pausedIndexes);
+    const running = job.status === 'queued' || job.status === 'downloading';
+    const chapters = view.chapters.map(chapter => chapter.localComplete || !requested.has(chapter.index) ? chapter :
+      paused.has(chapter.index) ? { ...chapter, queueState: 'paused' as const, stateLabel: '已暂停' } :
+        running && chapter.queueState === 'missing' ? { ...chapter, queueState: 'queued' as const, stateLabel: '等待下载' } : chapter);
+    return { ...view, chapters, state: running ? 'downloading' : view.state,
+      stateLabel: running ? '下载中' : job.status === 'failed' ? (job.error || '下载失败，请重试') : view.stateLabel };
+  }
+
   private currentStatusRevision(book: DownloadBookView): string | undefined {
     try {
       const coordinator = this.owner.bookAcquisitions?.();
       const downloadRevision = coordinator?.downloadStatusRevision?.(book.sourceId, book.bookId);
       return typeof downloadRevision === 'number' && Number.isSafeInteger(downloadRevision) && downloadRevision >= 0 ?
-        String(downloadRevision) : undefined;
+        `${downloadRevision}:${this.owner.getDownloadCoordinator?.().projectionRevision(book.sourceId, book.bookId) ?? ''}` : undefined;
     } catch (_) {
       // Test/runtime adapters without the optional acquisition coordinator do
       // not get an index entry; their existing read behavior is unchanged.
@@ -295,8 +330,7 @@ export class SharedDownloadHost {
     // Clone only the outer list and replace the changed row. Unchanged book
     // objects retain identity so ArkUI can skip their full projection.
     const books = this.snapshot.books.slice(); books[index] = book;
-    this.update({ books, loading: this.snapshot.loading, error: this.snapshot.error,
-      storageSummary: this.snapshot.storageSummary }, current);
+    this.update({ ...this.snapshot, books }, current);
   }
 
   private update(snapshot: SharedDownloadSnapshot, current: () => boolean): void {

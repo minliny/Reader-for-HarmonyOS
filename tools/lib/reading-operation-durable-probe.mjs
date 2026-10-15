@@ -1,3 +1,4 @@
+import { formatDownloadStorageBytes } from '../../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts';
 import {fixture as actualGeneralSettingsFixture} from './general-settings-persistence-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
@@ -75,12 +76,26 @@ export async function fixture(official=false,existing){
    const event=await command(method,params);
    if(options.afterMethod===method){options.afterMethod=undefined;throw Error('ACK lost after actual durable Core effect');}
    return options.transformMethod===method?{...event,data:options.transform(event.data)}:event;}};
+ const journalPath=resolve(files,'settings-text-cleanup-v2-fixture.json');
+ const textPersistence={async loadLegacyProtection(){return[];},async saveLegacyProtection(){},
+  async loadSettingsTextCleanup(){try{const encoded=await fsp.readFile(journalPath,'utf8');return encoded===''?undefined:JSON.parse(encoded);}catch(error){if(error.code==='ENOENT')return undefined;throw error;}},
+  async saveSettingsTextCleanup(journal){await replaceReaderAtomicSnapshot(journalPath,files,journal===undefined?'':JSON.stringify(journal));}};
+ const Storage=compile('features/downloads/SharedDownloadStorageGateway.ts','SharedDownloadStorageGateway',{...sdk,SharedDownloadIntentPreferences:class{}},official);
+ const storageDisk={async captureReadingStorageInventory(){return{files:[],hostImageChapters:[],protectedChapters:[],writeRevision:0};},
+  isReadingStorageInventoryCurrent:()=>true,async readPolicy(){return{capacityBytes:1024**3,expiryDays:7};},
+  async readingStorageSummary(){return{totalBytes:0,retainedBytes:0,automaticBytes:0,cleanableBytes:0,classificationKnown:true};},
+  async readingStorageBookIndex(){return new Map();},async readingStorageCleanupReceipt(){return{deletedBytes:0,deletedFiles:0};},
+  async clearChapter(sourceId,bookId,chapterIndex){calls.push({textPlatform:[sourceId,bookId,chapterIndex]});}};
+ runtime.readDownloadStorageBindings=async()=>({retainedChapters:[],protectedChapters:[]});
+ const textStorage=new Storage(runtime,storageDisk,textPersistence);
+ runtime.clearTextRebuildableCache=(evidence,current)=>textStorage.cleanupSettingsText(evidence,current);
+ runtime.readSettingsTextCleanup=()=>textStorage.readSettingsTextCleanup();
  installed=runtime;
  const dirDeps={ReaderWriteEvidence,projectPersistedReceipt,LocalReadingFlowGateway,LOCAL_SOURCE_ID,loadReaderControlBookmarkProjection};
  const Directory=compile('features/reading/ReaderDirectoryHost.ts','ReaderDirectoryHost',dirDeps,official);
  const Offline=compile('features/reading/ReadingOfflineHost.ts','ReadingOfflineHost',{ReaderWriteEvidence,projectPersistedReceipt,ReadingOfflineGateway,MangaDownloadActionsGateway},official);
  const SettingsGateway=compile('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',{CacheClearOperationIntentStore:types.CacheClearOperationIntentStore},official);
- const SettingsOwner=compile('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,SettingsCacheGateway:SettingsGateway},official);
+ const SettingsOwner=compile('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,formatDownloadStorageBytes,SettingsCacheGateway:SettingsGateway},official);
  const general=actualGeneralSettingsFixture();general.setActive(runtime);
  general.Runtime.isCurrent=owner=>Runtime.isCurrent(owner);general.Runtime.current=()=>Runtime.current();
  const generalHost=new general.Host(()=>{},()=>({autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true,developerMode:false}),()=>true,()=>runtime.getUIAbilityContext());
@@ -94,7 +109,17 @@ export async function fixture(official=false,existing){
  return{root,files,core,types,Runtime,runtime,options,io,calls,publications,command,bookmarkStore,clearStore,directory,offline,settings,SettingsOwner,SettingsGateway,SettingsHost,dirBinding,offlineBinding,Directory,Offline,
   entries:()=>entries,setEntries:v=>entries=v,retire:()=>{route=false;},unset:()=>{installed=undefined;},install:o=>{installed=o;},
   create:()=>directory.createPosition(bookmarkInput,dirBinding),clear:()=>offline.clearBook(offlineBinding),
-  reads:()=>calls.filter(c=>c.method?.endsWith('.query')),writes:()=>calls.filter(c=>['bookmark.create','bookmark.delete','cache.clear'].includes(c.method)),
+  reads:()=>calls.filter(c=>c.method?.endsWith('.query')),writes:()=>calls.filter(c=>['bookmark.create','bookmark.delete','cache.clear','cache.storage.cleanup'].includes(c.method)),
   disk:domain=>fs.readFileSync(resolve(files,domain==='bookmark'?'reader-bookmark-intent-v1.json':'reader-cache-clear-intent-v1.json'),'utf8')};
 }
 export {ReaderWriteEvidence};
+
+// Create a pre-upgrade Settings intent with the actual old Core/atomic Store.
+// Live Settings never calls this unsafe scope. Only fixtures use it to seed
+// history whose existing qualified receipt must still be readable/settleable.
+export async function seedLegacySettingsClear(f) {
+ const evidence=new ReaderWriteEvidence();let report,error;
+ try{report=await f.clearStore.execute('cache.clear',{scope:'cache'},{sourceId:'cache',bookId:'global-text'},
+  data=>new f.SettingsGateway(f.runtime).decode(data),evidence,()=>true);}catch(issue){error=issue;}
+ return{evidence,report,error};
+}

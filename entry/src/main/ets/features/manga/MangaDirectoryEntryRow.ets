@@ -4,6 +4,7 @@ import { MangaDirectoryPressFeedback } from './MangaDirectoryPressFeedback';
 import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
 import type { MangaDirectoryRowPresentation } from './MangaDirectoryPresentation';
 import { mangaDirectoryDisplay } from './MangaDirectoryDisplay';
+import { mangaDirectoryDownloadStatusText } from './MangaDirectoryState';
 import type { MangaDirectoryLayoutRow, MangaDirectoryLabel } from './MangaDirectoryLayout';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600 } from '../common/ReaderFontFamilies';
@@ -73,16 +74,20 @@ export struct MangaDirectoryEntryRow {
 
   private title(entry: LocalReadingTocEntry): string {
     const current = this.liveEntry(entry);
-    if (current === undefined) return '';
-    const title = current.title.trim();
-    return title.length > 0 && title !== '第话' && title !== '第 话' ? current.title : `第${Math.max(1, current.index + 1)}话`;
+    return current === undefined ? '' : mangaDirectoryDisplay(current).title;
+  }
+
+  private contextTitle(entry: LocalReadingTocEntry): string {
+    const current = this.liveEntry(entry);
+    return current?.contextTitle?.trim().length ? current.contextTitle : this.facts(entry)?.contextTitle ?? '';
   }
 
   private status(entry: LocalReadingTocEntry): string {
     const current = this.liveEntry(entry);
     if (current === undefined) return '';
-    return mangaDirectoryDisplay({ title: current.title, displayTitle: current.displayTitle,
-      isVip: current.isVip, isPay: current.isPay }).statusText;
+    return [mangaDirectoryDisplay(current).statusText,
+      mangaDirectoryDownloadStatusText(current.downloadState, this.downloadable(entry))]
+      .filter((text: string): boolean => text.length > 0).join(' · ');
   }
 
   private gridLabel(label: MangaDirectoryLabel): string {
@@ -91,10 +96,11 @@ export struct MangaDirectoryEntryRow {
 
   private accessibility(entry: LocalReadingTocEntry): string {
     const facts = this.facts(entry);
-    const context = facts?.contextTitle ? `${facts.contextTitle}，` : '';
+    const context = this.contextTitle(entry) ? `${this.contextTitle(entry)}，` : '';
     const state = facts?.group === true ? `分组，${this.expanded(entry) ? '已展开' : '已折叠'}` :
       this.liveEntry(entry)?.navigable === false ? '暂不可读' : this.liveEntry(entry)?.navigable === undefined ? '状态待确认，打开章节' : '打开章节';
-    return `${context}${this.title(entry)}，${state}${this.current(entry) ? '，正在读' : ''}`;
+    const metadata = this.status(entry);
+    return `${context}${this.title(entry)}，${state}${this.current(entry) ? '，正在读' : ''}${metadata ? `，${metadata}` : ''}${this.liveEntry(entry)?.downloadState === 'completed' && this.downloadable(entry) ? '，已下载' : ''}`;
   }
 
   private activateEntry(entry: LocalReadingTocEntry): void {
@@ -146,7 +152,8 @@ export struct MangaDirectoryEntryRow {
           }
           if (this.status(entry).length > 0) {
             Text(this.status(entry)).flexShrink(0).maxLines(1)
-              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize)
+              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+              .minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize)
               .lineHeight(MANGA_DIRECTORY_VISUAL.metaLineHeight).fontColor(this.color('muted'))
               .margin({ left: MANGA_DIRECTORY_VISUAL.contentGap });
           }
@@ -235,8 +242,8 @@ export struct MangaDirectoryEntryRow {
           Text('可阅读，含子目录').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.metaLineHeight)
             .fontColor(this.color('muted')).width('100%');
         }
-        if (this.query.trim().length > 0 && this.facts(entry)?.contextTitle) {
-          Text(this.facts(entry)?.contextTitle).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.metaLineHeight)
+        if (this.query.trim().length > 0 && this.contextTitle(entry).length > 0) {
+          Text(this.contextTitle(entry)).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.metaLineHeight)
             .fontColor(this.color('muted')).width('100%');
         }
       }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);
@@ -284,8 +291,8 @@ export struct MangaDirectoryEntryRow {
 
   build() {
     Column() {
-      if (this.showContext && this.row.entries.length > 0 && this.facts(this.row.entries[0])?.contextTitle) {
-        Text(this.facts(this.row.entries[0])?.contextTitle).width('100%')
+      if (this.showContext && this.row.entries.length > 0 && this.contextTitle(this.row.entries[0]).length > 0) {
+        Text(this.contextTitle(this.row.entries[0])).width('100%')
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.metaFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.metaLineHeight)
           .fontColor(this.color('muted')).padding({ left: MANGA_DIRECTORY_VISUAL.namedPaddingX, right: MANGA_DIRECTORY_VISUAL.namedPaddingX,
             top: MANGA_DIRECTORY_VISUAL.contextPaddingTop, bottom: MANGA_DIRECTORY_VISUAL.contextPaddingBottom })

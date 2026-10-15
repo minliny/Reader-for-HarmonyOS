@@ -464,7 +464,7 @@ function retainedMangaPaint(candidate = source, numeric = false) {
   const captured = retainedData.getData(0);
   const properties = createArkUIPropertyRuntimeProbe();
   const extra = ['view', 'onViewChanged', 'chapterEntries', 'onChapterEntriesChanged', 'chapterByIndex',
-    'chapterSource', 'chapterSignatures', 'mangaPresentationRevision', 'currentChapterIndex'];
+    'chapterSource', 'chapterSignatures', 'mangaPresentationRevision', 'currentChapterIndex', 'mangaGridSpans'];
   const result = createReaderBuilderProbe(candidate, [...new Set([...names, ...extra])],
     { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk }, properties.hooks);
   const owner = result.owner, reads = [], downloads = [];
@@ -523,7 +523,7 @@ function retainedMangaPaint(candidate = source, numeric = false) {
   assert.equal(owner.canDownloadTarget(nextNode), false, 'a removed node cannot retain download authority');
 }
 retainedMangaPaint(source); retainedMangaPaint(source, true);
-const capturedTitle = source.replace('Text(this.mangaPaintNode(item.node).title)', 'Text(item.node.title)');
+const capturedTitle = source.replace('return mangaDirectoryDisplay(this.mangaDisplayNode(node)).title;', 'return node.title;');
 assert.notEqual(capturedTitle, source);
 assert.throws(() => retainedMangaPaint(capturedTitle), /retained title reads the current canonical node/,
   'the original item.node.title capture is rejected by actual retained SDK observers');

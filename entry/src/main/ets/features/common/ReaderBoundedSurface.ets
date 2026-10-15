@@ -1,7 +1,8 @@
 import { readerAppColor } from './ReaderThemeRegistry';
-import { PopupSurfaceSpec, resolvePopupSpec, resolveSheetSpec, resolveDialogSpec } from './ReaderSurfaceSpecs';
+import { PopupSurfaceSpec, resolvePopupSpec, resolveSheetSpec, resolveDialogSpec, resolveDrawerSpec } from './ReaderSurfaceSpecs';
+import { ReaderInsetsVp } from './ReaderWindowMetrics';
 
-export type ReaderBoundedSurfaceId = 'source-switch-window' | 'tts-config-manager' | 'tts-config-picker' | 'bookshelf-book-action' | 'local-import-selection' | 'local-import-progress' | 'local-import-result-content' | 'reader-replace-editor';
+export type ReaderBoundedSurfaceId = 'source-switch-window' | 'source-switch-drawer' | 'reader-action-sheet' | 'tts-config-manager' | 'tts-config-picker' | 'bookshelf-book-action' | 'local-import-selection' | 'local-import-progress' | 'local-import-result-content' | 'reader-replace-editor';
 
 /** Bounded existing modal/popup frames only. Width/height are the original
  * owner's measured viewport geometry; visual choices are finite spec IDs.
@@ -14,10 +15,35 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
   private readonly width: number | string;
   private readonly height: number;
   private readonly scheme: string;
-  constructor(id: ReaderBoundedSurfaceId, width: number | string, height: number, scheme: string) {
+  private readonly placement: 'bottom' | 'side';
+  private readonly maxHeight: number;
+  private readonly insets: ReaderInsetsVp;
+  constructor(id: ReaderBoundedSurfaceId, width: number | string, height: number, scheme: string,
+    placement: 'bottom' | 'side' = 'bottom', maxHeight: number = 0, insets: ReaderInsetsVp = new ReaderInsetsVp(0, 0, 0, 0)) {
     this.id = id; this.width = width; this.height = height; this.scheme = scheme;
+    this.placement = placement; this.maxHeight = maxHeight; this.insets = insets;
   }
   applyNormalAttribute(instance: CommonAttribute): void {
+    if (this.id === 'source-switch-drawer') {
+      const spec = resolveDrawerSpec(this.id);
+      instance.width(this.width).height(this.height).constraintSize({ maxWidth: spec.maxWidth })
+        .backgroundColor(readerAppColor(spec.surfaceRole, this.scheme))
+        .borderRadius({ topLeft: spec.cornerRadius, topRight: spec.cornerRadius }).clip(true);
+      return;
+    }
+    if (this.id === 'reader-action-sheet') {
+      const spec = resolveDrawerSpec(this.id); const side = this.placement === 'side';
+      const contentMax = Math.max(1, this.maxHeight - this.insets.top - this.insets.bottom);
+      instance.width(this.width).height(side ? this.height : undefined)
+        .constraintSize({ minHeight: side ? 0 : Math.min(spec.minimumContentHeight, contentMax) + this.insets.top + this.insets.bottom, maxHeight: this.maxHeight })
+        .padding({ left: this.insets.left, right: this.insets.right, top: this.insets.top, bottom: this.insets.bottom })
+        .backgroundColor(readerAppColor(spec.surfaceRole, this.scheme))
+        .border(side ? { width: { left: 1 }, color: readerAppColor(spec.lineRole, this.scheme) } : undefined)
+        .borderRadius({ topLeft: side ? 0 : spec.cornerRadius, topRight: side ? 0 : spec.cornerRadius, bottomLeft: 0, bottomRight: 0 })
+        .clip(true).shadow({ radius: side ? 32 : 48, color: side ? '#11000000' : this.scheme === 'night' ? '#66000000' : '#33000000',
+          offsetX: side ? -14 : 0, offsetY: side ? 0 : -16 });
+      return;
+    }
     if (this.id === 'local-import-selection' || this.id === 'local-import-progress' || this.id === 'local-import-result-content') {
       const spec = resolveDialogSpec('local-import');
       instance.width(this.width).height(this.height);
@@ -63,6 +89,10 @@ export struct ReaderBoundedSurface {
   @Prop specId: ReaderBoundedSurfaceId = 'source-switch-window';
   @Prop surfaceWidth: number | string = 300;
   @Prop surfaceHeight: number = 385;
+  @Prop maxSurfaceHeight: number = 0;
+  @Prop placement: 'bottom' | 'side' = 'bottom';
+  @Prop scheme: 'auto' | 'day' | 'night' = 'auto';
+  @Prop safeInsets: ReaderInsetsVp = new ReaderInsetsVp(0, 0, 0, 0);
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam body: () => void = this.emptySlot;
   @BuilderParam actions: () => void = this.emptySlot;
@@ -86,6 +116,7 @@ export struct ReaderBoundedSurface {
   }
 
   private frameModifier(): AttributeModifier<CommonAttribute> {
-    return new ReaderBoundedFrameModifier(this.specId, this.surfaceWidth, this.surfaceHeight, this.appThemeScheme);
+    return new ReaderBoundedFrameModifier(this.specId, this.surfaceWidth, this.surfaceHeight,
+      this.scheme === 'auto' ? this.appThemeScheme : this.scheme, this.placement, this.maxSurfaceHeight, this.safeInsets);
   }
 }

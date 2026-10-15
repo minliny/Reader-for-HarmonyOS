@@ -13,7 +13,9 @@ for (const title of ['41上', '41 上', '41（上）', '41 ( 上 )']) {
 }
 assert.equal(mangaDirectoryLabel('41 中').part, '中');
 assert.equal(mangaDirectoryLabel('41（下）').part, '下');
-for (const title of ['第41话', '第41话（下）', '第一卷', '41·下', '41（下', '41 下）', '番外 2', '']) {
+for (const title of ['第41话', '41章', '４１']) assert.equal(mangaDirectoryLabel(title).kind, 'numeric');
+for (const title of ['第41话（下）', '41·下', '第４１章（下）']) assert.deepEqual(mangaDirectoryLabel(title), { kind: 'parts', numberText: '41', part: '下' });
+for (const title of ['第一卷', '41（下', '41 下）', '番外 2', '']) {
   assert.equal(mangaDirectoryLabel(title).kind, 'named', `retain the entire named/ambiguous title: ${title}`);
 }
 assert.deepEqual([false, true].map(narrow => mangaDirectoryGridColumns('numeric', false, narrow)), [4, 3]);
@@ -98,7 +100,7 @@ assert.equal(mangaDirectorySameNodeRun(nodes[5], nodes[6]), false, 'a readable p
 const nodeRows = mangaDirectoryNodeRows(nodes, false, 256);
 assert.deepEqual(nodeRows.map(row => [row.startIndex, row.kind, row.columns, row.nodes.map(value => value.nodeId)]), [
   [256, 'numeric', 4, ['a', 'b', 'c', 'd']], [260, 'numeric', 4, ['e']], [261, 'numeric', 4, ['f']],
-  [262, 'row', 1, ['parent']], [263, 'row', 1, ['disabled']], [264, 'row', 1, ['named']],
+  [262, 'row', 1, ['parent']], [263, 'row', 1, ['disabled']], [264, 'numeric', 4, ['named']],
   [265, 'parts', 3, ['upper', 'middle', 'lower']],
 ]);
 const placements = mangaDirectoryNodePlacements(nodes, false, 256);
@@ -147,8 +149,8 @@ for (let at = 0; at < enlargedNodes.length; at += 1) {
 
 const page = Array.from({ length: 256 }, (_, ordinal) => node(`node-${ordinal}`, String(ordinal + 1), ordinal * 17));
 assert.equal(mangaDirectoryNodePlacements(page, false, 512).length, 256);
-assert.deepEqual(mangaDirectoryNodePlacements(page, true, 512).at(-1).nodes.map(value => value.nodeId), ['node-255']);
-assert.equal(mangaDirectoryNodePlacements(page, true, 512).at(-1).startIndex, 767);
+assert.deepEqual(mangaDirectoryNodePlacements(page, true, 512).at(-1).nodes.map(value => value.nodeId), ['node-253', 'node-254', 'node-255']);
+assert.equal(mangaDirectoryNodePlacements(page, true, 512).at(-1).startIndex, 765);
 console.log('Manga directory layout: explicit hierarchy, readable parents, compact label rows, nearby parts and bounded Core slots passed');
 
 const downloadLabels = [entry(3, '21', 1), entry(4, '22', 1), entry(5, '23', 1)];

@@ -1,4 +1,4 @@
-import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
+import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder, mangaSurfaceBoundedControls } from './lib/manga-surface-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -161,20 +161,21 @@ console.log('PASS actual SDK tablet directory mounts while controls are hidden, 
 
 function overlayFixture(values, candidate=source) {
   const properties=createArkUIPropertyRuntimeProbe();
+  const shared=mangaSurfaceBoundedControls(properties);
   const probe=createReaderBuilderProbe(candidate,names,{
-    ...properties.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource,ListScroller,Scroller,PhotoViewScaleModel,
+    ...properties.sdk,...mangaSurfaceSdkDependencies,...shared.deps,MangaStripDataSource,ListScroller,Scroller,PhotoViewScaleModel,
     ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeInsets,
     ScrollAlign:{START:0},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},
     LazyForEach:nativeBoundary,Gesture:nativeBoundary,GestureGroup:nativeBoundary,
     PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,TapGesture:nativeBoundary,
     globalThis:{PanGesture:nativeBoundary,Gesture:nativeBoundary,GestureGroup:nativeBoundary,PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,TapGesture:nativeBoundary},
     GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
-  },properties.hooks);
+  },shared.hooks);
   Object.assign(probe.owner,{opened:true,showPageNumbers:true,controlsVisible:false,horizontalPageCount:36,
     panelFontsReady:true,bookTitle:'山海纪行',title:'当前第5话',directoryQuery:'第5',
     viewportWidth:390,viewportHeight:844,stageWidth:390,stageHeight:844,...values});
   probe.owner.initialRender();mountMangaViewportBuilder(probe.owner);
-  const nodes=[...probe.owner.nodes.values()];
+  const nodes=shared.nodes(probe.owner);
   Object.defineProperty(nodes,'owner',{value:probe.owner});
   return nodes;
 }
@@ -192,38 +193,39 @@ for(const chapterEnd of [false,true]) {
     assert.ok(nodes.some(node=>node.type==='Column'&&node.height==='100%'&&node.padding?.bottom===48),'end card retains its full-height Column and existing bottom clearance');
   }
 }
+const sharedThemeLine=background=>background==='ink'?'#FF3B4036':'#FFE7E0D5';
 for(const panel of ['directory','mode','settings','more']) for(const backgroundPreference of ['paper','ink']) for(const landscape of [false,true]) {
   const nodes=overlayFixture({panel,backgroundPreference,viewportWidth:landscape?844:390,viewportHeight:landscape?390:844,
     stageWidth:landscape?844:390,stageHeight:landscape?390:844});
   const panelDock=nodes.find(node=>node.type==='Stack'&&node.create?.alignContent===(landscape?'Alignment.End':'Alignment.Bottom'));
   assert.ok(panelDock,'existing panel alignment remains an explicit Stack child placement');
   assert.equal(panelDock.width,'100%');assert.equal(panelDock.height,'100%');
-  const sheet=nodes.find(node=>node.type==='Stack'&&node.width===(landscape?320:'100%')&&node.clip===true);
+  const sheet=nodes.find(node=>node.type===(panel==='more'?'Column':'Stack')&&node.width===(landscape?320:'100%')&&node.clip===true);
   assert.ok(sheet,'bounded side panel / full-width phone sheet owns clipping');
   assert.deepEqual(sheet.borderRadius,{topLeft:landscape?0:22,topRight:landscape?0:22,bottomLeft:0,bottomRight:0});
-  assert.deepEqual(sheet.border,landscape?{width:{left:1},color:backgroundPreference==='ink'?'#3B4036':'#E7E0D5'}:undefined,
+  assert.deepEqual(sheet.border,landscape?{width:{left:1},color:panel==='more'?sharedThemeLine(backgroundPreference):backgroundPreference==='ink'?'#3B4036':'#E7E0D5'}:undefined,
     'wide panel has the demo separating line and phone sheet has no frame');
-  assert.equal(sheet.backgroundColor,backgroundPreference==='ink'?'#282C25':'#FFFCF8');
+  assert.equal(sheet.backgroundColor,panel==='more'?(backgroundPreference==='ink'?'#FF282C25':'#FFFFFCF8'):backgroundPreference==='ink'?'#282C25':'#FFFCF8');
   const sizeOwner=nodes.find(node=>node.type==='Column'&&node.constraintSize?.minHeight===(landscape?0:260));
   assert.equal(sizeOwner.height,landscape?390:undefined,'phone height is measured from actual content');
-  assert.equal(sizeOwner.constraintSize.maxHeight,landscape?390:Math.round(844*(panel==='directory'?.78:panel==='more'?.5:.67)));
-  assert.equal(nodes.some(node=>node.type==='Column'&&node.width===42&&node.height===5),!landscape,'only phone has the demo grabber');
-  assert.ok(nodes.some(node=>node.type==='Row'&&node.width===(landscape?34:36)&&node.height===(landscape?34:36)&&
+  assert.equal(sizeOwner.constraintSize.maxHeight,landscape?390:Math.round(844*(panel==='directory'?.78:panel==='more'?.75:.67)));
+  assert.equal(nodes.some(node=>node.type===(panel==='more'?'Blank':'Column')&&node.width===42&&node.height===5),!landscape,'only phone has the shared grabber');
+  assert.ok(nodes.some(node=>node.type==='Row'&&node.width===(panel==='more'?44:landscape?34:36)&&node.height===(panel==='more'?44:landscape?34:36)&&
     node.accessibilityText===(landscape?'关闭宽屏面板':'关闭面板')),'close cross has an explicit touch target');
   if(landscape){
     const header=nodes.find(node=>node.type==='Row'&&(panel==='directory'?node.constraintSize?.minHeight===66:node.height===66));
-    assert.ok(header);assert.deepEqual(header.padding,{top:panel==='directory'?12:0,bottom:panel==='directory'?12:0},
+    assert.ok(header);assert.deepEqual(header.padding,panel==='more'?undefined:{top:panel==='directory'?12:0,bottom:panel==='directory'?12:0},
       'directory title grows with vertical padding while its line remains inside the horizontal inset wrapper');
     if(panel==='directory') { assert.equal(header.height,undefined);assert.deepEqual(header.constraintSize,{minHeight:66}); }
     const headerInset=nodes.find(node=>node.type==='Column'&&node.padding?.left===20&&node.margin?.bottom===17);
     assert.ok(headerInset);assert.deepEqual(headerInset.padding,{left:20,right:20});assert.deepEqual(headerInset.margin,{bottom:17});
-    assert.equal(headerInset.height,panel==='directory'?undefined:66);
+    assert.equal(headerInset.height,panel==='directory'||panel==='more'?undefined:66);
     const title=nodes.slice(nodes.indexOf(sheet)+1).find(node=>node.type==='Text'&&node.create===({directory:'章节目录',mode:'阅读方式',settings:'漫画阅读设置',more:'更多'}[panel]));
     assert.equal(title.fontSize,15);assert.equal(title.lineHeight,24);assert.equal(title.fontWeight,600);
     assert.equal(title.fontFamily,'ReaderMangaSans600');
   }
   assert.ok(nodes.some(node=>node.type==='Column'&&node.width==='100%'&&node.height==='100%'&&
-    node.backgroundColor===(landscape?'Color.Transparent':'#57000000')&&typeof node.onClick==='function'),
+    node.backgroundColor===(landscape?'Color.Transparent':panel==='more'&&backgroundPreference==='ink'?'#80000000':'#57000000')&&typeof node.onClick==='function'),
     'phone dim / wide transparent outside dismissal');
   if(panel==='directory'){
     assert.ok(!nodes.some(node=>node.type==='TextInput'),'quick directory follows the nearby-chapter demo toolbar');
@@ -250,6 +252,32 @@ for(const panel of ['directory','mode','settings','more']) for(const backgroundP
   }
 }
 console.log('PASS actual SDK four demo sheets: paper/ink, natural phone height + per-panel caps, landscape bounds, grabber/close, paired mode choices and separated fit rows (native layout not tested)');
+
+for (const panel of ['more', 'downloads']) for (const landscape of [false, true]) {
+  metrics=createDefaultReaderWindowMetrics();
+  metrics.systemInsets=new ReaderInsetsVp(0,38,0,0);
+  metrics.cutoutInsets=new ReaderInsetsVp(32,0,0,0);
+  metrics.gestureInsets=new ReaderInsetsVp(10,0,18,12);
+  metrics.navigationInsets=new ReaderInsetsVp(0,0,28,32);
+  const nodes=overlayFixture({panel,panelPhase:'open',stageWidth:landscape?844:390,stageHeight:landscape?390:844,
+    viewportWidth:landscape?844:390,viewportHeight:landscape?390:844});
+  const frame=nodes.find(node=>node.type==='Column'&&node.clip===true&&node.constraintSize?.maxHeight);
+  assert.deepEqual(frame.padding,{left:landscape?0:32,right:28,top:landscape?38:0,bottom:32},
+    'the shared frame consumes measured safe bands once and removes the unreachable left band on the right drawer');
+  assert.equal(nodes.filter(node=>node.type==='Column'&&node.padding?.bottom===32).length,1,
+    'header/body cannot duplicate the frame navigation band');
+  assert.equal(frame.constraintSize.maxHeight,landscape?390:Math.round(844*(panel==='more'?.75:.5)));
+  const body=nodes.find(node=>node.type==='Scroll'&&node.scrollBar==='BarState.Auto');
+  assert.equal(body.constraintSize.maxHeight,nodes.owner.panelContentHeight()-(landscape?83:70),
+    'scroll ceiling removes safe bands and the shared header exactly once');
+  const heading=nodes.find(node=>node.type==='Text'&&node.create===(panel==='more'?'更多':'本书下载'));
+  assert.deepEqual([heading.minFontScale,heading.maxFontScale],[0,2],
+    'moving the title into the shared header retains the existing system font-scale bounds');
+  const scrims=nodes.filter(node=>node.type==='Column'&&node.height==='100%'&&typeof node.onClick==='function');
+  assert.equal(scrims.length,1,'the shared frame adds no second outside-dismiss layer');
+}
+metrics=createDefaultReaderWindowMetrics();
+console.log('PASS composed shared manga action frames: More/download phone and side layouts retain one measured safe-area owner, bounded scroll and one scrim');
 
 // The side panel is sized against the whole reader, not the split image canvas.
 function verifyStageWidths(candidate=source) {

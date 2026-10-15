@@ -1,4 +1,4 @@
-import { readerAppColor } from './ReaderThemeRegistry';
+import { ReaderActionSheetAction, ReaderActionSheetContent } from './ReaderActionSheetContent';
 import { SheetSurfaceSpec, resolveSheetSpec } from './ReaderSurfaceSpecs';
 
 /** Finite per-book actions. The native host owns presentation identity;
@@ -18,6 +18,34 @@ export struct ReaderSheetActionList {
   aboutToAppear(): void { this.mounted = true; }
   aboutToDisappear(): void { this.mounted = false; }
   private surfaceSpec(): SheetSurfaceSpec { return resolveSheetSpec('bookshelf-book-action'); }
+  private actionToken(id: string, actionId: string): string {
+    return `${id}::${actionId}`;
+  }
+
+  private actionId(token: string): string {
+    const separator = token.lastIndexOf('::');
+    return separator < 0 ? '' : token.slice(separator + 2);
+  }
+
+  private presentationFromToken(token: string): string {
+    const separator = token.lastIndexOf('::');
+    return separator < 0 ? '' : token.slice(0, separator);
+  }
+
+  private actionItems(id: string): ReaderActionSheetAction[] {
+    const night = this.appThemeScheme === 'night';
+    return [
+      new ReaderActionSheetAction(this.actionToken(id, 'multi-select'), '多选', '', '', '', true,
+        night ? $r('app.media.bookshelf_more_batch_theme_night') : $r('app.media.bookshelf_more_batch'), 'default', false),
+      new ReaderActionSheetAction(this.actionToken(id, 'book-info'), '书籍信息', '', '', '', true,
+        night ? $r('app.media.import_info_theme_night') : $r('app.media.import_info'), 'default', false),
+      new ReaderActionSheetAction(this.actionToken(id, 'edit-group'), '编辑分组', '', '', '', true,
+        night ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder'), 'default', false),
+      new ReaderActionSheetAction(this.actionToken(id, 'remove'), '移除书架', '书架', '移除后可在书籍详情中重新加入', '', true,
+        night ? $r('app.media.download_visual_trash_theme_night') : $r('app.media.download_visual_trash'), 'danger', false),
+    ];
+  }
+
   private dispatch(id: string, action: () => void): void {
     if (!this.mounted || id.length === 0 || id !== this.presentationId ||
       this.dispatchedId === id) return;
@@ -26,33 +54,30 @@ export struct ReaderSheetActionList {
     action();
   }
 
-  build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      ForEach([this.presentationId], (id: string): void => {
-        this.actionSlot('多选', false, 0, id, (): void => this.onMultiSelect());
-        this.actionSlot('书籍信息', false, 1, id, (): void => this.onBookInfo());
-        this.actionSlot('编辑分组', false, 2, id, (): void => this.onEditGroup());
-        this.actionSlot('移除书架', true, 3, id, (): void => this.onRemoveFromBookshelf());
-      }, (id: string): string => `book-action:${id}`);
-    }.width('100%').height(this.surfaceSpec().height);
+  private dispatchToken(token: string): void {
+    const id = this.presentationFromToken(token);
+    const actionId = this.actionId(token);
+    if (actionId === 'multi-select') this.dispatch(id, (): void => this.onMultiSelect());
+    else if (actionId === 'book-info') this.dispatch(id, (): void => this.onBookInfo());
+    else if (actionId === 'edit-group') this.dispatch(id, (): void => this.onEditGroup());
+    else if (actionId === 'remove') this.dispatch(id, (): void => this.onRemoveFromBookshelf());
   }
 
-  @Builder
-  private actionSlot(label: string, danger: boolean, index: number, id: string, action: () => void) {
-    Row() {
-      Row() {
-        Text(label).fontFamily(this.surfaceSpec().actionLabelFontFamily)
-          .fontWeight(this.surfaceSpec().actionLabelFontWeight).fontSize(this.surfaceSpec().actionLabelFontSize)
-          .lineHeight(this.surfaceSpec().actionLabelLineHeight)
-          .fontColor(readerAppColor(danger ? this.surfaceSpec().dangerTextRole : this.surfaceSpec().actionTextRole, this.appThemeScheme))
-          .maxLines(1);
-      }.layoutWeight(1).height(this.surfaceSpec().actionHeight)
-        .padding({ left: this.surfaceSpec().actionPaddingLeft }).alignItems(VerticalAlign.Center)
-        .backgroundColor(readerAppColor(danger ? this.surfaceSpec().dangerBackgroundRole : this.surfaceSpec().actionBackgroundRole, this.appThemeScheme))
-        .borderRadius(this.surfaceSpec().actionBorderRadius).accessibilityText(label)
-        .onClick((): void => this.dispatch(id, action));
-    }.width('100%').height(this.surfaceSpec().actionHeight)
+  build() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Scroll() {
+      Column() {
+      ForEach([this.presentationId], (id: string): void => {
+        ReaderActionSheetContent({
+          variant: 'quick',
+          actions: this.actionItems(id),
+          onAction: (token: string): void => this.dispatchToken(token),
+        });
+      }, (id: string): string => `book-action-content:${id}`);
+      }.width('100%');
+      }.width('100%').height('100%').scrollBar(BarState.Auto);
+    }.width('100%').height(Math.max(0, this.surfaceSpec().height - this.surfaceSpec().actionStart))
       .padding({ left: this.surfaceSpec().horizontalInset, right: this.surfaceSpec().horizontalInset })
-      .position({ x: 0, y: this.surfaceSpec().actionY(index) });
+      .position({ x: 0, y: this.surfaceSpec().actionStart });
   }
 }

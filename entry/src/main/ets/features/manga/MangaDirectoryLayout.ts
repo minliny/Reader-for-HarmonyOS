@@ -2,17 +2,13 @@ import type { LocalReadingTocEntry } from '../reading/LocalReadingFlowGateway';
 import type { ReaderDirectoryNavigationNode } from '../reading/ReaderDirectoryNavigation';
 import type { MangaDirectoryRowPresentation } from './MangaDirectoryPresentation';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryLabelsFit, mangaDirectoryColumns } from './MangaDirectoryVisual.ts';
-
-export interface MangaDirectoryLabel {
-  kind: 'numeric' | 'parts' | 'named';
-  numberText: string;
-  part: '' | '上' | '中' | '下';
-}
+import { mangaDirectoryDisplay, mangaDirectoryStatusWidth, type MangaDirectoryLabel } from './MangaDirectoryDisplay.ts';
+export { mangaDirectoryLabel } from './MangaDirectoryDisplay.ts';
+export type { MangaDirectoryLabel } from './MangaDirectoryDisplay.ts';
 
 export interface MangaDirectoryLayoutRow {
   kind: 'row' | 'numeric' | 'parts';
   columns: number;
-  /** Position in the provided visible projection, never a chapter identity. */
   startIndex: number;
   entries: LocalReadingTocEntry[];
   labels: MangaDirectoryLabel[];
@@ -20,177 +16,185 @@ export interface MangaDirectoryLayoutRow {
   runEnd?: boolean;
   groupSpacing?: number;
 }
-
 export interface MangaDirectoryNodeLayoutRow {
   kind: 'row' | 'numeric' | 'parts';
   columns: number;
-  /** Core visible position; canonical chapterIndex/nodeId remain on each node. */
   startIndex: number;
   nodes: ReaderDirectoryNavigationNode[];
   labels: MangaDirectoryLabel[];
 }
-
 export interface MangaDirectoryNodePlacement extends MangaDirectoryNodeLayoutRow {
   leader: boolean;
   rowLength: number;
 }
-
-/** Two deliberately narrow display forms from the reviewed demo. Named
- * titles stay verbatim. This never determines hierarchy, readability or IDs. */
-export function mangaDirectoryLabel(title: string): MangaDirectoryLabel {
-  const numeric = title.match(/^\s*(\d+)\s*$/);
-  if (numeric !== null) return { kind: 'numeric', numberText: numeric[1], part: '' };
-  const parts = title.match(/^\s*(\d+)\s*(?:[（(]\s*([上中下])\s*[）)]|([上中下]))\s*$/);
-  if (parts !== null) return { kind: 'parts', numberText: parts[1], part: (parts[2] ?? parts[3]) as '上' | '中' | '下' };
-  return { kind: 'named', numberText: '', part: '' };
-}
+export type MangaDirectoryNodeAccessoryWidth = number | ((node: ReaderDirectoryNavigationNode) => number);
+export type MangaDirectoryEntryAccessoryWidth = number | ((entry: LocalReadingTocEntry) => number);
 
 export function mangaDirectoryGridColumns(kind: 'numeric' | 'parts' | 'named', hasMiddle: boolean,
   narrow: boolean = false, fontScale: number = 1, contentWidth: number = 0,
   labels: MangaDirectoryLabel[] = [], accessoryWidth: number = 0): number {
-  // This finite page/run only supplies presentation facts. A conservative
-  // glyph-width budget reduces columns before applying the demo's nowrap
-  // numeric label, rather than ellipsizing a chapter's distinguishing suffix.
   return mangaDirectoryColumns(kind, hasMiddle, narrow, fontScale, contentWidth,
     labels.map((label: MangaDirectoryLabel): number => label.numberText.length), accessoryWidth);
 }
 
-function gridLabelsFit(labels: MangaDirectoryLabel[], fontScale: number, contentWidth: number, accessoryWidth: number): boolean {
-  return labels.every((label: MangaDirectoryLabel): boolean => mangaDirectoryLabelsFit(label.kind, fontScale, contentWidth,
-    [label.numberText.length], accessoryWidth));
+/** One finite loaded window. No whole-catalog scan, target synthesis or title
+ * inference of hierarchy. Width is per real item, not the longest resident run. */
+interface DirectoryLayoutAtom {
+  label: MangaDirectoryLabel;
+  leaf: boolean;
+  parent: string;
+  depth: number | undefined;
+  accessory: number;
 }
-
-export function mangaDirectorySameNodeRun(left: ReaderDirectoryNavigationNode,
-  right: ReaderDirectoryNavigationNode): boolean {
-  const label = mangaDirectoryLabel(left.title);
-  return left.kind === 'target' && right.kind === 'target' && !left.hasChildren && !right.hasChildren &&
-    label.kind !== 'named' && label.kind === mangaDirectoryLabel(right.title).kind &&
-    left.parentId === right.parentId && left.depth === right.depth;
+interface DirectoryAtomRow {
+  kind: 'row' | 'numeric' | 'parts';
+  columns: number;
+  start: number;
+  end: number;
+  runStart?: boolean;
+  runEnd?: boolean;
 }
-
-function gridNode(node: ReaderDirectoryNavigationNode): boolean {
-  return node.kind === 'target' && !node.hasChildren && mangaDirectoryLabel(node.title).kind !== 'named';
+function sameAtomBoundary(left: DirectoryLayoutAtom, right: DirectoryLayoutAtom): boolean {
+  return left.leaf && right.leaf && left.parent === right.parent && left.depth === right.depth &&
+    left.label.kind !== 'named' && left.label.kind === right.label.kind;
 }
-
-/** The caller supplies one already-loaded bounded page/window. No catalog
- * fetch, full-view scan, synthetic target or title-derived parent is created. */
-export function mangaDirectoryNodeRows(nodes: ReaderDirectoryNavigationNode[], narrow: boolean = false,
-  offset: number = 0, fontScale: number = 1, contentWidth: number = 0, accessoryWidth: number = 0): MangaDirectoryNodeLayoutRow[] {
-  const rows: MangaDirectoryNodeLayoutRow[] = [];
+function atomFits(atom: DirectoryLayoutAtom, fontScale: number, contentWidth: number): boolean {
+  return mangaDirectoryLabelsFit(atom.label.kind, fontScale, contentWidth, [atom.label.numberText.length], atom.accessory);
+}
+function atomColumns(atom: DirectoryLayoutAtom, narrow: boolean, fontScale: number, contentWidth: number, hasMiddle: boolean): number {
+  return mangaDirectoryGridColumns(atom.label.kind, hasMiddle, narrow, fontScale, contentWidth, [atom.label], atom.accessory);
+}
+function partGroupEnd(atoms: DirectoryLayoutAtom[], start: number, fontScale: number, contentWidth: number): number {
+  const first = atoms[start];
+  const seen = new Set<string>([first.label.part]);
+  let end = start + 1;
+  while (end < atoms.length && seen.size < 3) {
+    const next = atoms[end];
+    if (!sameAtomBoundary(first, next) || next.label.numberText !== first.label.numberText ||
+      seen.has(next.label.part) || !atomFits(next, fontScale, contentWidth)) break;
+    seen.add(next.label.part); end += 1;
+  }
+  return end;
+}
+function directoryAtomRows(atoms: DirectoryLayoutAtom[], narrow: boolean, fontScale: number,
+  contentWidth: number, offset: number, query: string): DirectoryAtomRow[] {
+  const rows: DirectoryAtomRow[] = [];
   let start = 0;
-  while (start < nodes.length) {
-    const first = nodes[start];
-    if (!gridNode(first)) {
-      rows.push({ kind: 'row', columns: 1, startIndex: offset + start, nodes: [first], labels: [mangaDirectoryLabel(first.title)] });
-      start += 1;
-      continue;
+  while (start < atoms.length) {
+    const first = atoms[start];
+    if (query.trim().length > 0 || !first.leaf || first.label.kind === 'named' || !atomFits(first, fontScale, contentWidth)) {
+      rows.push({ kind: 'row', columns: 1, start, end: start + 1 }); start += 1; continue;
     }
-    let end = start + 1;
-    while (end < nodes.length && mangaDirectorySameNodeRun(first, nodes[end])) end += 1;
-    const labels = nodes.slice(start, end).map((node: ReaderDirectoryNavigationNode): MangaDirectoryLabel => mangaDirectoryLabel(node.title));
-    const kind = labels[0].kind as 'numeric' | 'parts';
-    if (!gridLabelsFit(labels, fontScale, contentWidth, accessoryWidth)) {
-      for (let at = start; at < end; at += 1) rows.push({ kind: 'row', columns: 1, startIndex: offset + at,
-        nodes: [nodes[at]], labels: [labels[at - start]] });
-      start = end;
-      continue;
+    if (first.label.kind === 'numeric') {
+      const columns = atomColumns(first, narrow, fontScale, contentWidth, false);
+      let end = start + 1;
+      while (end < atoms.length && sameAtomBoundary(first, atoms[end]) && atomFits(atoms[end], fontScale, contentWidth) &&
+        atomColumns(atoms[end], narrow, fontScale, contentWidth, false) === columns) end += 1;
+      // Absolute Core slots give the same later row boundaries regardless of
+      // which adjacent 256-slot pages happen to be resident. The first bounded
+      // fragment is real, possibly short; missing predecessors are never faked.
+      for (let at = start; at < end;) {
+        // A visible preceding boundary proves the run's own start. Only a
+        // bounded leading fragment without that predecessor uses Core slot
+        // phase; a known volume starts with its complete ordinary grid row.
+        const phase = start > 0 || offset === 0 ? at - start : offset + at;
+        const count = Math.min(end - at, columns - (phase % columns));
+        rows.push({ kind: 'numeric', columns, start: at, end: at + count, runStart: at === start, runEnd: at + count === end });
+        at += count;
+      }
+      start = end; continue;
     }
-    const columns = mangaDirectoryGridColumns(kind, labels.some((label: MangaDirectoryLabel): boolean => label.part === '中'),
-      narrow, fontScale, contentWidth, labels, accessoryWidth);
-    for (let at = start; at < end; at += columns) {
-      rows.push({ kind, columns, startIndex: offset + at, nodes: nodes.slice(at, Math.min(end, at + columns)),
-        labels: labels.slice(at - start, Math.min(end - start, at - start + columns)) });
+    let end = partGroupEnd(atoms, start, fontScale, contentWidth);
+    const group = atoms.slice(start, end);
+    const hasMiddle = group.some((atom: DirectoryLayoutAtom): boolean => atom.label.part === '中');
+    const columns = group.length === 1 ? 1 : group.reduce((minimum: number, atom: DirectoryLayoutAtom): number =>
+      Math.min(minimum, atomColumns(atom, narrow, fontScale, contentWidth, hasMiddle)), hasMiddle ? 3 : 4);
+    // Only two complete upper/lower groups can share four lanes. Absolute slot
+    // phase keeps later pair anchors stable after a bounded leading fragment is
+    // completed by its preceding page. A three-part group owns its own row.
+    if (columns === 4 && group.length === 2 && !hasMiddle && (start > 0 || offset === 0 || (offset + start) % 4 < 2) && end < atoms.length &&
+      sameAtomBoundary(first, atoms[end]) && atoms[end].label.kind === 'parts' && atomFits(atoms[end], fontScale, contentWidth)) {
+      const nextEnd = partGroupEnd(atoms, end, fontScale, contentWidth);
+      const next = atoms.slice(end, nextEnd);
+      if (next.length === 2 && next.every((atom: DirectoryLayoutAtom): boolean => atom.label.part !== '中' &&
+        atomColumns(atom, narrow, fontScale, contentWidth, false) === 4)) end = nextEnd;
     }
+    for (let at = start; at < end; at += columns) rows.push({ kind: 'parts', columns, start: at,
+      end: Math.min(end, at + columns), runStart: at === start, runEnd: at + columns >= end });
     start = end;
   }
   return rows;
 }
 
-export function mangaDirectoryNodePlacement(nodes: ReaderDirectoryNavigationNode[], ordinal: number,
-  narrow: boolean = false, offset: number = 0, fontScale: number = 1, contentWidth: number = 0, accessoryWidth: number = 0): MangaDirectoryNodePlacement | undefined {
-  if (!Number.isInteger(ordinal) || ordinal < 0 || ordinal >= nodes.length) return undefined;
-  const target = nodes[ordinal];
-  if (!gridNode(target)) return { kind: 'row', columns: 1, startIndex: offset + ordinal,
-    nodes: [target], labels: [mangaDirectoryLabel(target.title)], leader: true, rowLength: 1 };
-  let start = ordinal;
-  let end = ordinal + 1;
-  while (start > 0 && mangaDirectorySameNodeRun(target, nodes[start - 1])) start -= 1;
-  while (end < nodes.length && mangaDirectorySameNodeRun(target, nodes[end])) end += 1;
-  const kind = mangaDirectoryLabel(target.title).kind as 'numeric' | 'parts';
-  const labels = nodes.slice(start, end).map((node: ReaderDirectoryNavigationNode): MangaDirectoryLabel => mangaDirectoryLabel(node.title));
-  if (!gridLabelsFit(labels, fontScale, contentWidth, accessoryWidth)) return { kind: 'row', columns: 1, startIndex: offset + ordinal,
-    nodes: [target], labels: [mangaDirectoryLabel(target.title)], leader: true, rowLength: 1 };
-  const columns = mangaDirectoryGridColumns(kind, labels.some((label: MangaDirectoryLabel): boolean =>
-    label.part === '中'), narrow, fontScale, contentWidth, labels, accessoryWidth);
-  const rowStart = start + Math.floor((ordinal - start) / columns) * columns;
-  const rowNodes = nodes.slice(rowStart, Math.min(end, rowStart + columns));
-  return { kind, columns, startIndex: offset + rowStart, nodes: rowNodes,
-    labels: rowNodes.map((node: ReaderDirectoryNavigationNode): MangaDirectoryLabel => mangaDirectoryLabel(node.title)),
-    leader: ordinal === rowStart, rowLength: rowNodes.length };
+export function mangaDirectorySameNodeRun(left: ReaderDirectoryNavigationNode, right: ReaderDirectoryNavigationNode): boolean {
+  return left.kind === 'target' && right.kind === 'target' && left.hasChildren === false && right.hasChildren === false &&
+    mangaDirectoryDisplay(left).label.kind !== 'named' && mangaDirectoryDisplay(left).label.kind === mangaDirectoryDisplay(right).label.kind &&
+    left.parentId === right.parentId && left.depth === right.depth;
 }
 
-/** One layout pass for a loaded page. Results correspond one-to-one with
- * canonical visible slots; retaining the page does not renumber targets. */
+export function mangaDirectoryNodeRows(nodes: ReaderDirectoryNavigationNode[], narrow: boolean = false,
+  offset: number = 0, fontScale: number = 1, contentWidth: number = 0,
+  accessoryWidth: MangaDirectoryNodeAccessoryWidth = 0, query: string = ''): MangaDirectoryNodeLayoutRow[] {
+  const atoms = nodes.map((node: ReaderDirectoryNavigationNode): DirectoryLayoutAtom => {
+    const display = mangaDirectoryDisplay(node);
+    const accessory = typeof accessoryWidth === 'number' ? accessoryWidth : accessoryWidth(node);
+    return { label: display.label, leaf: node.kind === 'target' && node.hasChildren === false,
+      parent: node.parentId ?? '', depth: node.depth,
+      accessory: Math.max(0, accessory) + mangaDirectoryStatusWidth(display.statusText, fontScale) };
+  });
+  return directoryAtomRows(atoms, narrow, fontScale, contentWidth, Math.max(0, offset), query).map((row: DirectoryAtomRow): MangaDirectoryNodeLayoutRow =>
+    ({ kind: row.kind, columns: row.columns, startIndex: offset + row.start, nodes: nodes.slice(row.start, row.end),
+      labels: atoms.slice(row.start, row.end).map((atom: DirectoryLayoutAtom): MangaDirectoryLabel => atom.label) }));
+}
+
+export function mangaDirectoryNodePlacement(nodes: ReaderDirectoryNavigationNode[], ordinal: number,
+  narrow: boolean = false, offset: number = 0, fontScale: number = 1, contentWidth: number = 0,
+  accessoryWidth: MangaDirectoryNodeAccessoryWidth = 0, query: string = ''): MangaDirectoryNodePlacement | undefined {
+  if (!Number.isInteger(ordinal) || ordinal < 0 || ordinal >= nodes.length) return undefined;
+  const row = mangaDirectoryNodeRows(nodes, narrow, offset, fontScale, contentWidth, accessoryWidth, query)
+    .find((candidate: MangaDirectoryNodeLayoutRow): boolean => ordinal + offset >= candidate.startIndex &&
+      ordinal + offset < candidate.startIndex + candidate.nodes.length);
+  return row === undefined ? undefined : { ...row, leader: ordinal + offset === row.startIndex, rowLength: row.nodes.length };
+}
+
 export function mangaDirectoryNodePlacements(nodes: ReaderDirectoryNavigationNode[], narrow: boolean = false,
-  offset: number = 0, fontScale: number = 1, contentWidth: number = 0, accessoryWidth: number = 0): MangaDirectoryNodePlacement[] {
+  offset: number = 0, fontScale: number = 1, contentWidth: number = 0,
+  accessoryWidth: MangaDirectoryNodeAccessoryWidth = 0, query: string = ''): MangaDirectoryNodePlacement[] {
   const result: MangaDirectoryNodePlacement[] = [];
-  for (const row of mangaDirectoryNodeRows(nodes, narrow, offset, fontScale, contentWidth, accessoryWidth)) {
-    for (let ordinal = 0; ordinal < row.nodes.length; ordinal += 1) {
-      result.push({ kind: row.kind, columns: row.columns, startIndex: row.startIndex,
-        nodes: row.nodes, labels: row.labels, leader: ordinal === 0, rowLength: row.nodes.length });
-    }
+  for (const row of mangaDirectoryNodeRows(nodes, narrow, offset, fontScale, contentWidth, accessoryWidth, query)) {
+    for (let ordinal = 0; ordinal < row.nodes.length; ordinal += 1)
+      result.push({ ...row, leader: ordinal === 0, rowLength: row.nodes.length });
   }
   return result;
 }
 
 function gridEntry(entry: LocalReadingTocEntry, presentation: Map<number, MangaDirectoryRowPresentation>): boolean {
-  return entry.navigable === true && presentation.get(entry.index)?.hasChildren !== true &&
-    mangaDirectoryLabel(entry.title).kind !== 'named';
+  return entry.navigable === true && presentation.get(entry.index)?.hasChildren !== true && mangaDirectoryDisplay(entry).label.kind !== 'named';
 }
-
 function sameEntryRun(left: LocalReadingTocEntry, right: LocalReadingTocEntry,
   presentation: Map<number, MangaDirectoryRowPresentation>): boolean {
   return gridEntry(left, presentation) && gridEntry(right, presentation) && left.level === right.level &&
     presentation.get(left.index)?.parentIndex === presentation.get(right.index)?.parentIndex &&
-    mangaDirectoryLabel(left.title).kind === mangaDirectoryLabel(right.title).kind;
+    mangaDirectoryDisplay(left).label.kind === mangaDirectoryDisplay(right).label.kind;
 }
 
-/** Fall back only to the Core materialized level/navigable facts. Unknown
- * readability, disabled leaves and readable parents always retain rows. */
-export function mangaDirectoryEntryRows(entries: LocalReadingTocEntry[],
-  presentation: Map<number, MangaDirectoryRowPresentation>, narrow: boolean = false,
-  fontScale: number = 1, contentWidth: number = 0, accessoryWidth: number = 0): MangaDirectoryLayoutRow[] {
-  const rows: MangaDirectoryLayoutRow[] = [];
-  let start = 0;
-  while (start < entries.length) {
-    const first = entries[start];
-    if (!gridEntry(first, presentation)) {
-      rows.push({ kind: 'row', columns: 1, startIndex: start, entries: [first], labels: [mangaDirectoryLabel(first.title)],
-        groupSpacing: start > 0 && presentation.get(first.index)?.group === true &&
-          presentation.get(entries[start - 1].index)?.group === true ? MANGA_DIRECTORY_VISUAL.gridRunMargin : 0 });
-      start += 1;
-      continue;
-    }
-    let end = start + 1;
-    while (end < entries.length && sameEntryRun(first, entries[end], presentation)) end += 1;
-    const labels = entries.slice(start, end).map((entry: LocalReadingTocEntry): MangaDirectoryLabel => mangaDirectoryLabel(entry.title));
-    const kind = labels[0].kind as 'numeric' | 'parts';
-    if (!gridLabelsFit(labels, fontScale, contentWidth, accessoryWidth)) {
-      for (let at = start; at < end; at += 1) rows.push({ kind: 'row', columns: 1, startIndex: at,
-        entries: [entries[at]], labels: [labels[at - start]] });
-      start = end;
-      continue;
-    }
-    const columns = mangaDirectoryGridColumns(kind, labels.some((label: MangaDirectoryLabel): boolean => label.part === '中'),
-      narrow, fontScale, contentWidth, labels, accessoryWidth);
-    for (let at = start; at < end; at += columns) {
-      rows.push({ kind, columns, startIndex: at, entries: entries.slice(at, Math.min(end, at + columns)),
-        labels: labels.slice(at - start, Math.min(end - start, at - start + columns)),
-        runStart: at === start, runEnd: at + columns >= end });
-    }
-    start = end;
-  }
-  return rows;
+export function mangaDirectoryEntryRows(entries: LocalReadingTocEntry[], presentation: Map<number, MangaDirectoryRowPresentation>,
+  narrow: boolean = false, fontScale: number = 1, contentWidth: number = 0,
+  accessoryWidth: MangaDirectoryEntryAccessoryWidth = 0, query: string = ''): MangaDirectoryLayoutRow[] {
+  const atoms = entries.map((entry: LocalReadingTocEntry): DirectoryLayoutAtom => {
+    const display = mangaDirectoryDisplay(entry);
+    const accessory = typeof accessoryWidth === 'number' ? accessoryWidth : accessoryWidth(entry);
+    const facts = presentation.get(entry.index);
+    return { label: display.label, leaf: entry.navigable === true && facts?.hasChildren !== true,
+      parent: facts?.parentIndex === undefined ? '' : facts.parentIndex.toString(), depth: entry.level,
+      accessory: Math.max(0, accessory) + mangaDirectoryStatusWidth(display.statusText, fontScale) };
+  });
+  return directoryAtomRows(atoms, narrow, fontScale, contentWidth, 0, query).map((row: DirectoryAtomRow): MangaDirectoryLayoutRow =>
+    ({ kind: row.kind, columns: row.columns, startIndex: row.start, entries: entries.slice(row.start, row.end),
+      labels: atoms.slice(row.start, row.end).map((atom: DirectoryLayoutAtom): MangaDirectoryLabel => atom.label),
+      runStart: row.runStart, runEnd: row.runEnd,
+      groupSpacing: row.kind === 'row' && row.start > 0 && presentation.get(entries[row.start].index)?.group === true &&
+        presentation.get(entries[row.start - 1].index)?.group === true ? MANGA_DIRECTORY_VISUAL.gridRunMargin : 0 }));
 }
 
 /** Nearby preview candidates keep the legacy unknown-row admission policy,
@@ -211,8 +215,8 @@ export function mangaDirectoryNearbyEntries(entries: LocalReadingTocEntry[],
     end = Math.min(candidates.length, start + count);
   }
   const samePart = (left: LocalReadingTocEntry, right: LocalReadingTocEntry): boolean => {
-    const leftLabel = mangaDirectoryLabel(left.title);
-    const rightLabel = mangaDirectoryLabel(right.title);
+    const leftLabel = mangaDirectoryDisplay(left).label;
+    const rightLabel = mangaDirectoryDisplay(right).label;
     return leftLabel.kind === 'parts' && rightLabel.kind === 'parts' && leftLabel.numberText === rightLabel.numberText &&
       sameEntryRun(left, right, presentation);
   };
@@ -237,8 +241,8 @@ export function mangaDirectoryNearbyNodes(nodes: ReaderDirectoryNavigationNode[]
     end = Math.min(targets.length, start + count);
   }
   const samePart = (left: ReaderDirectoryNavigationNode, right: ReaderDirectoryNavigationNode): boolean => {
-    const leftLabel = mangaDirectoryLabel(left.title);
-    const rightLabel = mangaDirectoryLabel(right.title);
+    const leftLabel = mangaDirectoryDisplay(left).label;
+    const rightLabel = mangaDirectoryDisplay(right).label;
     return leftLabel.kind === 'parts' && rightLabel.kind === 'parts' && leftLabel.numberText === rightLabel.numberText &&
       mangaDirectorySameNodeRun(left, right);
   };

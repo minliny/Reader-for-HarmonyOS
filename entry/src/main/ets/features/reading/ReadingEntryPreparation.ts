@@ -88,9 +88,11 @@ class PreparationMutationState {
   bookId: string;
   revision: number = 0;
   contentRevision: number = 0;
+  imageContentRevision: number = 0;
   workRevision: number = 0;
   mutations: number = 0;
   contentMutations: number = 0;
+  imageContentMutations: number = 0;
   catalogMutations: number = 0;
 
   constructor(sourceId: string = '', bookId: string = '') { this.sourceId = sourceId; this.bookId = bookId; }
@@ -345,6 +347,29 @@ export class ReadingEntryPreparation {
       state.contentRevision === revisions[index] && state.contentMutations === 0 && state.catalogMutations === 0);
   }
 
+  /** Immutable manga pixels survive catalog metadata acquisition. Destructive
+   * content mutations still revoke their original epoch, including failures. */
+  captureMangaImageContentValidity(sourceId: string, bookId: string): () => boolean {
+    const states = this.statesFor(sourceId, bookId);
+    const revisions = states.map((state: PreparationMutationState): number => state.imageContentRevision);
+    const admitted = !this.closed && states.every((state: PreparationMutationState): boolean => state.imageContentMutations === 0);
+    return (): boolean => admitted && !this.closed && states.every((state: PreparationMutationState, index: number): boolean =>
+      state.imageContentRevision === revisions[index] && state.imageContentMutations === 0);
+  }
+
+  /** A global cleanup receipt expires only matching cached preparation; it
+   * never revokes another protected chapter or an owned download image epoch. */
+  invalidateCachedChapters(chapters: { sourceId: string; bookId: string; chapterIndex: number }[]): void {
+    for (const chapter of chapters) {
+      if (!Number.isSafeInteger(chapter.chapterIndex) || chapter.chapterIndex < 0) continue;
+      const key = this.key(chapter.sourceId, chapter.bookId);
+      const entry = this.visible.get(key);
+      if (entry?.snapshot?.chapter?.chapterIndex === chapter.chapterIndex) this.invalidateImagePresentation(chapter.sourceId, chapter.bookId);
+      this.persistedTargets.delete(key);
+    }
+    if (chapters.length > 0) this.persistedCompletedRevision = '';
+  }
+
   /** Await an in-flight mutation before retrying a foreground chapter read. */
   waitForContentIdle(sourceId: string, bookId: string): Promise<void> {
     if (this.contentIdle(sourceId, bookId)) return Promise.resolve();
@@ -376,12 +401,14 @@ export class ReadingEntryPreparation {
     if (method !== 'book.toc' && method !== 'book.detail' && !this.affectsSnapshot(method, params)) return false;
     const catalog = method === 'book.toc' || method === 'book.detail';
     const content = method !== 'reading.progress.update' || params['sourceSwitchTransactionId'] !== undefined;
+    const imageContent = this.affectsMangaImages(method, content);
     for (const scope of this.mutationScopes(method, params)) {
       const state = this.stateForScope(scope);
       if (catalog) state.catalogMutations += 1;
       else state.mutations += 1;
       if (content) state.contentMutations += 1;
-      this.invalidate(scope, catalog, content, method);
+      if (imageContent) state.imageContentMutations += 1;
+      this.invalidate(scope, catalog, content, method, imageContent);
     }
     return true;
   }
@@ -392,13 +419,15 @@ export class ReadingEntryPreparation {
     params = effect.params;
     const catalog = method === 'book.toc' || method === 'book.detail';
     const content = method !== 'reading.progress.update' || params['sourceSwitchTransactionId'] !== undefined;
+    const imageContent = this.affectsMangaImages(method, content);
     const scopes = this.mutationScopes(method, params);
     for (const scope of scopes) {
       const state = this.stateForScope(scope);
-      this.invalidate(scope, catalog, content, method);
+      this.invalidate(scope, catalog, content, method, imageContent);
       if (catalog) state.catalogMutations = Math.max(0, state.catalogMutations - 1);
       else state.mutations = Math.max(0, state.mutations - 1);
       if (content) state.contentMutations = Math.max(0, state.contentMutations - 1);
+      if (imageContent) state.imageContentMutations = Math.max(0, state.imageContentMutations - 1);
     }
     this.discardRetiredStates(method, scopes, content);
     this.settleContentIdleWaiters();
@@ -430,6 +459,13 @@ export class ReadingEntryPreparation {
       method === 'replace-rule.create' || method === 'replace-rule.update' || method === 'replace-rule.delete' ||
       method === 'dict-rule.put' || method === 'dict-rule.delete' || method === 'rule-bundle.import' ||
       method === 'runtime.storage.apply' || method === 'runtime.storage.restore';
+  }
+
+  private affectsMangaImages(method: string, content: boolean): boolean {
+    // Detail/TOC install metadata; shelf admission records ownership and its
+    // verified first-image receipt without replacing an immutable manifest.
+    // Keep remove, rules, switches, refresh, clear and restore destructive.
+    return content && method !== 'book.detail' && method !== 'book.toc' && method !== 'bookshelf.add';
   }
 
   private statesFor(sourceId: string, bookId: string): PreparationMutationState[] {
@@ -514,7 +550,8 @@ export class ReadingEntryPreparation {
       if (from.kind !== 'book' || target.kind !== 'book') return [{ kind: 'global' }];
       return from.sourceId === target.sourceId && from.bookId === target.bookId ? [from] : [from, target];
     }
-    if (method === 'cache.clear') return params['scope'] === 'book' ? [this.bookScope(params)] : [{ kind: 'global' }];
+    if (method === 'cache.clear') return params['scope'] === 'book' || params['scope'] === 'chapter' ?
+      [this.bookScope(params)] : [{ kind: 'global' }];
     if (method === 'book.detail' || method === 'book.toc') {
       const book = preparationObject(params['book']);
       return [this.bookScope({ sourceId: params['sourceId'], bookId: params['bookId'] ?? book['bookId'] ?? params['bookUrl'] })];
@@ -552,7 +589,7 @@ export class ReadingEntryPreparation {
     }
   }
 
-  private invalidate(scope: PreparationMutationScope, catalog: boolean, content: boolean, method: string): void {
+  private invalidate(scope: PreparationMutationScope, catalog: boolean, content: boolean, method: string, imageContent: boolean): void {
     this.persistedCompletedRevision = '';
     this.persistedMutationRevision += 1;
     if (scope.kind === 'global') this.persistedTargets.clear();
@@ -566,6 +603,7 @@ export class ReadingEntryPreparation {
     const state = this.stateForScope(scope);
     state.revision += 1;
     if (content) state.contentRevision += 1;
+    if (imageContent) state.imageContentRevision += 1;
     // Acquisition itself installs a catalog. Preserve its work until it can
     // capture the new epoch; already-loaded chapter results remain fenced.
     if (!catalog) state.workRevision += 1;

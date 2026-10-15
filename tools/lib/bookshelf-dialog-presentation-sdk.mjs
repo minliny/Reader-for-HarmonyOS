@@ -7,6 +7,7 @@ import {readerRecoveryView} from '../../entry/src/main/ets/app/ReaderRecoveryPro
 import {runtimeOwnerIdentityProbe} from './reader-runtime-admission-probe.mjs';
 import {ReaderWindowMetricsSnapshot,ReaderRectVp,readerInteractiveSafeLeft,readerInteractiveSafeRight} from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {resolveHorizontalFrame,SurfaceWidthSpec,SurfaceHorizontalFrame} from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
+import {SOURCE_SWITCH_VISUAL} from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 const read=p=>readFileSync(new URL('../../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const require=createRequire(import.meta.url),loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const syntax=require(loader+'/lib/validate_ui_syntax.js'),ts=require(loader+'/node_modules/typescript'),options=require(loader+'/lib/ets_checker.js').compilerOptions;
@@ -19,8 +20,8 @@ syntax.componentCollection.customDialogs.add('BookRemovalDialog');syntax.builder
 function declaration(text,name){const t=ts.createSourceFile('/tmp/dialog-declaration.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);return t.statements.find(n=>n.name?.text===name).getText(t);}
 const model=ts.transpileModule(declaration(surfaceSource,'DialogActionView'),{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
 const actionExports={};new Function('exports',model)(actionExports);const DialogActionView=actionExports.DialogActionView;
-const specText=read('features/common/ReaderSurfaceSpecs.ets'),specJs=ts.transpileModule(specText,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
-const exports={};new Function('exports','TextAlign',specJs)(exports,{Start:'start',Center:'center'});const resolveDialogSpec=exports.resolveDialogSpec;
+const specText=read('features/common/ReaderSurfaceSpecs.ets'),specJs=ts.transpileModule(specText.replace(/^import[^;]+;\s*/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
+const exports={};new Function('exports','TextAlign','SOURCE_SWITCH_VISUAL',specJs)(exports,{Start:'start',Center:'center'},SOURCE_SWITCH_VISUAL);const resolveDialogSpec=exports.resolveDialogSpec;
 const metrics=new ReaderWindowMetricsSnapshot();metrics.windowRect=new ReaderRectVp(0,0,390,844);
 const surfaceNames=['body','defaultBody','build','header','actionsRow','actionCell','spec','resolvedFrame','frameWidth','framePadding','actionLabelColor','actionSurfaceRole','actionModifier','actionTouchRegion','bodyActionsInnerMargin'];
 function sharedSurface(params){

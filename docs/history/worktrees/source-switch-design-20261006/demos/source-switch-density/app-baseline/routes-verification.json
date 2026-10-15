@@ -1,0 +1,381 @@
+{
+  "checkedAt": "2026-10-05T07:20:19.515Z",
+  "tool": "Mermaid 11.12.0 / Playwright Chromium",
+  "scope": "Route diagram syntax/render; source semantics separately audited in coverage-audit.json",
+  "modules": 38,
+  "overviewDiagrams": 7,
+  "totalDiagrams": 45,
+  "parsePassed": 45,
+  "renderPassed": 45,
+  "pageErrors": [],
+  "logicSha256": "1c17de0c12e3028b8d5e1e46bc422ac30caf99f0d5cd6a8e4acfaf7c429a6b6b",
+  "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+  "currentDesignSha256": "4e2f547d1de7179c98e11f1e81b6b0a1df87c1e14d905fc551a0ab2923cea3f5",
+  "uiCanvasInputsUnchanged": false,
+  "referenceImagesRegenerated": false,
+  "results": [
+    {
+      "title": "入口与页面关系",
+      "nodes": 17,
+      "edges": 20,
+      "width": 994.90625,
+      "height": 828,
+      "svgSha256": "d632ae0908feefe51df1b5b3d6b40d3a70f040a0ee403a2bb359a1ee2e2a3e3a"
+    },
+    {
+      "title": "书架、导入与移除",
+      "nodes": 13,
+      "edges": 17,
+      "width": 766.03125,
+      "height": 992,
+      "svgSha256": "149823206ec6a8e9040c85783a13d0a17764d867675eb992225e9005deaa6c3a"
+    },
+    {
+      "title": "搜索、详情与返回",
+      "nodes": 9,
+      "edges": 14,
+      "width": 1350.0234375,
+      "height": 478,
+      "svgSha256": "387d4100a26768a2366d69c12f773fab08612fead55390fe8f3b5a45b3883f53"
+    },
+    {
+      "title": "阅读、目录与换源",
+      "nodes": 14,
+      "edges": 25,
+      "width": 1752.796875,
+      "height": 958,
+      "svgSha256": "c7a1f4a0d573f8fdf059ce780978cfc52c50ebc2bde534fd73950ac45c854581"
+    },
+    {
+      "title": "阅读模块与离线内容",
+      "nodes": 13,
+      "edges": 12,
+      "width": 1092,
+      "height": 804,
+      "svgSha256": "88656ea8588be21a03800ef0643943ba408914eac34f1915a6de02ba5576a637"
+    },
+    {
+      "title": "设置与书源管理",
+      "nodes": 12,
+      "edges": 20,
+      "width": 1573,
+      "height": 652,
+      "svgSha256": "8e09f2448090aab23d1b2997a976a82fe77acd383bb15f1afbcfd9848c5e1d4e"
+    },
+    {
+      "title": "当前反馈与视觉复用",
+      "nodes": 9,
+      "edges": 11,
+      "width": 1207.78125,
+      "height": 646,
+      "svgSha256": "a4757edc11ffd31c5bf7b15dc1ee8aa813bd6dd878e6a253cbf5547f8082fe53"
+    },
+    {
+      "title": "书架（bookshelf）",
+      "nodes": 12,
+      "edges": 21,
+      "width": 1300,
+      "height": 922.9461669921875,
+      "svgSha256": "e6600d393fb592b08d1cc639d698b04b983c33555424cad528c3556570e8ebdb"
+    },
+    {
+      "title": "书架 · 筛选展开（shelf-filter）",
+      "nodes": 7,
+      "edges": 12,
+      "width": 902,
+      "height": 750,
+      "svgSha256": "1353d36db8a2443abf3c714e7c07d41ccb9ac0ce4cd9d4f2e7d69409aba35f70"
+    },
+    {
+      "title": "搜索（search）",
+      "nodes": 10,
+      "edges": 20,
+      "width": 1545,
+      "height": 1016.1499633789062,
+      "svgSha256": "ddbeecd2dc5ed320604b487c9c520fb99b3021deebc9929b38c08e910f67466f"
+    },
+    {
+      "title": "书籍详情（detail）",
+      "nodes": 11,
+      "edges": 24,
+      "width": 1820,
+      "height": 941.0499877929688,
+      "svgSha256": "dba8798160ae943cc80525f53a87cab223e8f770920d150e30a249e85c90b967"
+    },
+    {
+      "title": "书架设置（bookshelf-settings）",
+      "nodes": 8,
+      "edges": 12,
+      "width": 1106.5,
+      "height": 806,
+      "svgSha256": "3d817a43a09b5264b4097fe95b62ae01afdffdf196e52ede9d38ae6da8839e57"
+    },
+    {
+      "title": "批量管理（multiselect）",
+      "nodes": 10,
+      "edges": 18,
+      "width": 1066.5,
+      "height": 1270,
+      "svgSha256": "adfbd08fbc384777668d090d767b908b296c907ea2264f20bd4bc33aba5a4a3d"
+    },
+    {
+      "title": "书架更多（shelf-more）",
+      "nodes": 7,
+      "edges": 14,
+      "width": 1246,
+      "height": 718,
+      "svgSha256": "7dc01d595738298895addc3376c133dcaa05f915bef5d1109a1a60ca8f4b0051"
+    },
+    {
+      "title": "书籍操作（book-actions）",
+      "nodes": 8,
+      "edges": 12,
+      "width": 971,
+      "height": 638,
+      "svgSha256": "b0a8a2dd1ba8ba3e5b6c38b7cc86620d5556a38758a98afae4bd98368fe6d6fc"
+    },
+    {
+      "title": "编辑分组（group-select）",
+      "nodes": 7,
+      "edges": 10,
+      "width": 664.5,
+      "height": 870,
+      "svgSha256": "a91e685731ea263e1857967dfb74e833f23af362ec166ee192418934773323a7"
+    },
+    {
+      "title": "导入本地书籍（local-import）",
+      "nodes": 8,
+      "edges": 15,
+      "width": 1163,
+      "height": 990,
+      "svgSha256": "93d6f80bf923bd55887d25e39490a2c4fa4aad1a05b7487cdac51d248bb9c7a3"
+    },
+    {
+      "title": "移除书架确认（book-removal）",
+      "nodes": 11,
+      "edges": 23,
+      "width": 1656,
+      "height": 1182,
+      "svgSha256": "bd69f951a2b031628d7ee6278989a2097f16bbf5019d076a5a25062018c50df9"
+    },
+    {
+      "title": "书架操作 · 系统提示（library-error）",
+      "nodes": 8,
+      "edges": 14,
+      "width": 1254,
+      "height": 886,
+      "svgSha256": "46aa96d92a0b7899826e9283e549561c5cffe76b1e0e20d8ee57dbbb9bf55865"
+    },
+    {
+      "title": "设置首页（settings）",
+      "nodes": 5,
+      "edges": 8,
+      "width": 556,
+      "height": 326,
+      "svgSha256": "857134d5d086ebf4b841ce23025e010196c25d6d3d67252b106d3ba9c13dc103"
+    },
+    {
+      "title": "通用设置（general）",
+      "nodes": 9,
+      "edges": 15,
+      "width": 1357.140625,
+      "height": 718,
+      "svgSha256": "4e9cdf573e7e0bef28feaf7256a1cbd3db63cbb3129eade6a5560f4fbf2b69a4"
+    },
+    {
+      "title": "书源管理（sources）",
+      "nodes": 12,
+      "edges": 21,
+      "width": 1871.75,
+      "height": 797,
+      "svgSha256": "53c1831ba381b0f43f1f804f0466012e8f4cab2f152cf312e105580349f91896"
+    },
+    {
+      "title": "批量管理与书源工具（source-tools）",
+      "nodes": 12,
+      "edges": 29,
+      "width": 1994,
+      "height": 1034.5250244140625,
+      "svgSha256": "a9e8e90d9f1385e5086b77c678d0e4533d280a37f7e17fc51852b67b61eebd89"
+    },
+    {
+      "title": "书源登录 / 验证（source-login）",
+      "nodes": 7,
+      "edges": 10,
+      "width": 699.0390625,
+      "height": 1030,
+      "svgSha256": "6a00178dc2ba1cf5b33eed78ab1ea4e17e19a9bb52ffb3f8037d123856fd5e91"
+    },
+    {
+      "title": "导入书源（json-import）",
+      "nodes": 9,
+      "edges": 14,
+      "width": 965.03125,
+      "height": 1126.046875,
+      "svgSha256": "1d47126ab8a00a08640ee95be70bd32eaf3c85993231a75c6277369ae775ac12"
+    },
+    {
+      "title": "恢复界面与阅读设置（restore-defaults）",
+      "nodes": 9,
+      "edges": 11,
+      "width": 982,
+      "height": 1150,
+      "svgSha256": "df3a6c88ec031c76acc45bbbeb2281cbfb363c0689077b78371ec3d3c07fe274"
+    },
+    {
+      "title": "书源导入结果（source-result）",
+      "nodes": 9,
+      "edges": 10,
+      "width": 809.0078125,
+      "height": 1166,
+      "svgSha256": "746084cbd8d1b3a83e7979645e81089ffbdcf0defe96e3668694d2f1d8694786"
+    },
+    {
+      "title": "书源导出确认（source-export）",
+      "nodes": 8,
+      "edges": 13,
+      "width": 623,
+      "height": 1182,
+      "svgSha256": "436727c933e6ecf5a7a34f39921215ead866d74ffa32d6eff54ebfefcdbe368f"
+    },
+    {
+      "title": "删除书源确认（source-delete）",
+      "nodes": 11,
+      "edges": 15,
+      "width": 842.98828125,
+      "height": 1526,
+      "svgSha256": "224d225bb8d9801ade639ab9e1bbddb2ff2b4ba445adbe4dfb3a5ea14b72b81f"
+    },
+    {
+      "title": "阅读正文（reader）",
+      "nodes": 12,
+      "edges": 19,
+      "width": 1134,
+      "height": 790,
+      "svgSha256": "cd90e252b38b29f7d8898d7a59375286fc91d48dbd0000a2fde04b7655149ab4"
+    },
+    {
+      "title": "详情独立目录（directory）",
+      "nodes": 10,
+      "edges": 15,
+      "width": 1010.76953125,
+      "height": 1342,
+      "svgSha256": "7f9cd1242324d62b20d1d430e086f1bc350f8da02526f6cc7646e59dee39a815"
+    },
+    {
+      "title": "阅读控制首页（reader-controls）",
+      "nodes": 12,
+      "edges": 12,
+      "width": 886.171875,
+      "height": 1006,
+      "svgSha256": "52306e3dcceb9f5717c97e3cbbe8e501c33abd97b4fa9f121f82c54244d8d92a"
+    },
+    {
+      "title": "控制栏目录与书签（reader-directory）",
+      "nodes": 11,
+      "edges": 20,
+      "width": 914.203125,
+      "height": 1045.40625,
+      "svgSha256": "43d36ff23ef72d731217528437f9a9e4f11e62a48f307d93f7f29414d34c8a0d"
+    },
+    {
+      "title": "朗读（reader-tts）",
+      "nodes": 10,
+      "edges": 21,
+      "width": 1279.628173828125,
+      "height": 1114.25,
+      "svgSha256": "3c847249416cad03dcbc31711801569aa41d9de1076838edb4b0c9bbc58f6d18"
+    },
+    {
+      "title": "朗读配置选项（reader-tts-config）",
+      "nodes": 8,
+      "edges": 13,
+      "width": 1223.8046875,
+      "height": 742,
+      "svgSha256": "c613b23754be6145236d9d1b216e335362c6546ece3b935369c48f2997a206a2"
+    },
+    {
+      "title": "第三方 TTS 配置（reader-tts-manager）",
+      "nodes": 8,
+      "edges": 12,
+      "width": 743.02734375,
+      "height": 870,
+      "svgSha256": "2cdb56c171197c486986283da8297498aff4b9b2cd02c1f98dbd9ecbf5d623f4"
+    },
+    {
+      "title": "阅读界面（reader-appearance）",
+      "nodes": 8,
+      "edges": 17,
+      "width": 1153.9742431640625,
+      "height": 606,
+      "svgSha256": "1307404b8fb6de7aa5a3f75fbdb67eb3017213c3d16f26cdb35e50e9aaba87dd"
+    },
+    {
+      "title": "阅读设置（reader-settings）",
+      "nodes": 8,
+      "edges": 17,
+      "width": 729.0499877929688,
+      "height": 1182,
+      "svgSha256": "d005528c5c32d3b7bb59e9596c95013b93750488fdde3f25039bcbc0c4f4cdc9"
+    },
+    {
+      "title": "内容搜索（reader-search）",
+      "nodes": 11,
+      "edges": 17,
+      "width": 575,
+      "height": 1278,
+      "svgSha256": "4cfafd2ab647c1f79044b48f45ba2af35b8f010dbbc9bd75d3fd4eb9a9d6d3ec"
+    },
+    {
+      "title": "自动翻页（reader-autopage）",
+      "nodes": 10,
+      "edges": 25,
+      "width": 1162.1796875,
+      "height": 1062,
+      "svgSha256": "2a24c7448f0de02b666948f55dc9d6a9d21e7109bb418d4f0def1a7dfc271cc0"
+    },
+    {
+      "title": "替换规则（reader-replace）",
+      "nodes": 12,
+      "edges": 24,
+      "width": 1241,
+      "height": 1181.40625,
+      "svgSha256": "2d0c1719d1c2808001b8d3b0fcb87178f815e612a2a0c604b25f22de5d9fa928"
+    },
+    {
+      "title": "换源窗口（source-switch）",
+      "nodes": 12,
+      "edges": 19,
+      "width": 1341.7542724609375,
+      "height": 1214,
+      "svgSha256": "bb9841718fab310fea2c3881878b358bc001a2438c778112fccc8e232aecd5dc"
+    },
+    {
+      "title": "阅读更多菜单（reader-more）",
+      "nodes": 12,
+      "edges": 17,
+      "width": 1017.9375,
+      "height": 822,
+      "svgSha256": "a3d980948afa3b70fc2220bb7434c8cb929686e8ee72b0525e0e39eb2477ff2a"
+    },
+    {
+      "title": "退出保存失败（reader-exit-failure）",
+      "nodes": 6,
+      "edges": 7,
+      "width": 493.5,
+      "height": 694,
+      "svgSha256": "87fc24e68df38a3a8d73a19ac841a556889c0e5b09b357a2debb039d5b7a8373"
+    },
+    {
+      "title": "阅读恢复与跳转提示（reader-refresh-failure）",
+      "nodes": 12,
+      "edges": 19,
+      "width": 1923.6015625,
+      "height": 622,
+      "svgSha256": "4f5a8db8083c5ff244b91c2690c4521c786c32daed8908bc81b35031b6523658"
+    }
+  ],
+  "currentApplicability": "HISTORICAL_STALE",
+  "supersededBy": "coverage-evidence/repair-verification.json",
+  "note": "保留旧版浏览器/渲染检查，本次未重跑。新文件仅提供绑定当前源码的离线检查。"
+}

@@ -179,6 +179,8 @@ export default class EntryAbility extends UIAbility {
         const result = await owner.clearRebuildableCachesForVerification();
         hilog.info(DOMAIN, 'Reader', 'READER_VM_CACHE_CLEAR %{public}s', JSON.stringify({
           result: 'completed', ordinaryBytes: result.ordinaryBytes, derivedDisplayFiles: result.derivedDisplayFiles,
+          remainingAutomaticBytes: result.ordinaryBytes, removedContentBytes: result.removedContentBytes,
+          deletedBytes: result.deletedBytes, deletedFiles: result.deletedFiles,
           preserved: ['downloads', 'manifests', 'bookshelf', 'progress', 'active-leases'],
         }));
       } catch (error) {

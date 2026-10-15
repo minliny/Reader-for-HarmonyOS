@@ -59,6 +59,11 @@ import { MangaOfflineNetworkProbe, type MangaOfflineProbeScope, type MangaProbeS
 import { MangaChapterPreparationCoordinator } from '../features/manga/MangaChapterPreparationCoordinator';
 import type { MangaStorageChapter, MangaStorageGrant } from './ReadingImageDiskCache';
 import type { MangaDisplaySessionScope } from '../features/reading/ReadingGatewayRuntime';
+import { SharedDownloadCoordinator } from '../features/downloads/SharedDownloadCoordinator';
+import type { ReaderWriteEvidence } from './ReaderWriteEvidence';
+import { SharedDownloadStorageGateway, type SettingsTextCleanupJournal, type SharedDownloadCleanupResult } from '../features/downloads/SharedDownloadStorageGateway';
+import type { ReadingTextStorageChapter } from './ReadingImageDiskCache';
+import type { DownloadStorageSummary } from '../features/downloads/SharedDownloadProjection';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
@@ -142,6 +147,10 @@ export class ReaderRuntimeOwner {
   private importFinalizeTask: Promise<void> = Promise.resolve();
   private state: RuntimeState = 'new';
   private coreCapabilities: Set<string> = new Set<string>();
+  private downloadCoordinator: SharedDownloadCoordinator | undefined;
+  private downloadStorageGateway: SharedDownloadStorageGateway | undefined;
+  private downloadReadingProtection: { sourceId: string; bookId: string; chapterIndex?: number; } | undefined;
+  private downloadProtectionRevision: number = 0;
 
   supportsCoreCapability(capability: string): boolean { return this.coreCapabilities.has(capability); }
   private bookCoordinator: BookAcquisitionCoordinator | undefined = undefined;
@@ -412,6 +421,76 @@ export class ReaderRuntimeOwner {
     return this.bookCoordinator;
   }
 
+  getDownloadCoordinator(): SharedDownloadCoordinator {
+    if (this.downloadCoordinator === undefined) this.downloadCoordinator = new SharedDownloadCoordinator(this,
+      (): boolean => ReaderRuntimeOwner.isCurrent(this) && this.state === 'ready');
+    return this.downloadCoordinator;
+  }
+
+  getDownloadStorageGateway(): SharedDownloadStorageGateway {
+    if (this.downloadStorageGateway === undefined)
+      this.downloadStorageGateway = new SharedDownloadStorageGateway(this, this.readingImageDiskCache);
+    return this.downloadStorageGateway;
+  }
+
+  waitForDownloadStorageIdle(): Promise<void> {
+    return this.downloadStorageGateway?.waitForActiveMutation() ?? Promise.resolve();
+  }
+
+  releaseLegacyDownloadProtection(sourceId: string, bookId: string, chapterIndexes?: number[]): Promise<void> {
+    return this.getDownloadStorageGateway().confirmExplicitDeletion(sourceId, bookId, chapterIndexes);
+  }
+
+  setDownloadReadingProtection(sourceId?: string, bookId?: string, chapterIndex?: number): void {
+    if (this.state !== 'ready' || !ReaderRuntimeOwner.isCurrent(this)) return;
+    if (chapterIndex !== undefined && (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0))
+      throw new Error('DOWNLOAD_READING_PROTECTION_INVALID');
+    const previous = this.downloadReadingProtection;
+    if (previous?.sourceId === sourceId && previous?.bookId === bookId && previous?.chapterIndex === chapterIndex) return;
+    this.downloadReadingProtection = sourceId === undefined || bookId === undefined ? undefined : { sourceId, bookId, chapterIndex };
+    this.downloadProtectionRevision += 1;
+  }
+
+  captureDownloadStorageValidity(): () => boolean {
+    const revision = this.downloadProtectionRevision;
+    const coordinator = this.getDownloadCoordinator();
+    const signature = (): string => coordinator.ownershipSignature();
+    const before = signature();
+    return (): boolean => this.state === 'ready' && ReaderRuntimeOwner.isCurrent(this) &&
+      revision === this.downloadProtectionRevision && before === signature();
+  }
+
+  async readDownloadStorageBindings(): Promise<{ retainedChapters: ReadingTextStorageChapter[]; protectedChapters: ReadingTextStorageChapter[]; }> {
+    const coordinator = this.getDownloadCoordinator();
+    await coordinator.restore();
+    const retainedChapters: ReadingTextStorageChapter[] = [], protectedChapters: ReadingTextStorageChapter[] = [];
+    for (const job of coordinator.jobs()) {
+      if (job.book.contentKind !== 'manga') {
+        for (const chapterIndex of job.retainedIndexes) retainedChapters.push({ sourceId: job.sourceId, bookId: job.bookId, chapterIndex });
+        for (const chapter of job.preservedRetentions) retainedChapters.push({ sourceId: job.sourceId, bookId: job.bookId, chapterIndex: chapter.chapterIndex });
+      }
+      if (job.status === 'queued' || job.status === 'downloading') for (const chapterIndex of job.requestedIndexes)
+        protectedChapters.push({ sourceId: job.sourceId, bookId: job.bookId, chapterIndex });
+    }
+    const reading = this.downloadReadingProtection;
+    if (reading !== undefined) {
+      if (reading.chapterIndex !== undefined) protectedChapters.push({ ...reading, chapterIndex: reading.chapterIndex });
+      else {
+        const data = (await this.request('cache.book.status', { sourceId: reading.sourceId, bookId: reading.bookId,
+          includeGlobalStats: false, includeChapterStates: true })).data;
+        if (data['sourceId'] !== reading.sourceId || data['bookId'] !== reading.bookId || !Array.isArray(data['chapters']))
+          throw new Error('DOWNLOAD_READING_PROTECTION_UNAVAILABLE');
+        for (const raw of data['chapters']) {
+          const index = (raw as JsonObject)['chapterIndex'];
+          if (typeof index !== 'number' || !Number.isSafeInteger(index) || index < 0)
+            throw new Error('DOWNLOAD_READING_PROTECTION_UNAVAILABLE');
+          protectedChapters.push({ sourceId: reading.sourceId, bookId: reading.bookId, chapterIndex: index });
+        }
+      }
+    }
+    return { retainedChapters, protectedChapters };
+  }
+
   async request(method: string, params: JsonObject = {}, options: BookRequestOptions = {}): Promise<ReaderCoreResultEvent> {
     if (this.state === 'closing' && this.runtime !== undefined &&
       (method === 'manga.cache.materialization.abort' || method === 'manga.session.release')) return this.runtime.request(method, params, options);
@@ -469,32 +548,41 @@ export class ReaderRuntimeOwner {
   }
 
   /**
-   * Debug/VM maintenance entry point. It reclaims only rebuildable manga
+   * Debug/VM maintenance entry point. It reclaims rebuildable reading
    * cache data and idle display derivatives; Core-owned downloads, manifests,
    * bookshelf state, reading progress and active display leases stay intact.
    */
-  async clearRebuildableCachesForVerification(): Promise<{ ordinaryBytes: number; derivedDisplayFiles: number }> {
+  async clearRebuildableCachesForVerification(): Promise<{ ordinaryBytes: number; derivedDisplayFiles: number;
+    removedContentBytes: number; deletedBytes: number; deletedFiles: number }> {
     if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
-    await this.readingImageDiskCache.maintainMangaStorage('clear');
-    const derivedDisplayFiles = await ReadingBodyImageHost.instance.clearRebuildableMangaDisplay(
-      (): boolean => this.state === 'ready');
-    const usage = await this.readingImageDiskCache.mangaStorageUsage();
-    return { ordinaryBytes: usage.ordinaryBytes, derivedDisplayFiles };
+    const cleanup = await this.getDownloadStorageGateway().cleanup();
+    if (cleanup.cleanupError !== undefined) throw new Error(cleanup.cleanupError);
+    return { ordinaryBytes: cleanup.automaticBytes ?? 0, derivedDisplayFiles: cleanup.deletedFiles,
+      removedContentBytes: cleanup.removedContentBytes, deletedBytes: cleanup.deletedBytes, deletedFiles: cleanup.deletedFiles };
   }
 
   /** Download-page cache action. Keep the Core receipt and Host cleanup in the
    * Runtime owner so UI surfaces cannot bypass the durable cache policy. */
   async clearDownloadRebuildableCache(): Promise<JsonObject> {
-    const method = 'cache.clear';
-    const result = await this.request(method, { scope: 'cache' });
-    if (result.data['scope'] !== 'cache') throw new Error('cache.clear returned an unexpected scope');
-    return result.data;
+    if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
+    const cleanup = await this.getDownloadStorageGateway().cleanup();
+    return { scope: 'cache', removedContentBytes: cleanup.removedContentBytes,
+      deletedBytes: cleanup.deletedBytes, deletedFiles: cleanup.deletedFiles,
+      ...(cleanup.cleanupError === undefined ? {} : { cleanupError: cleanup.cleanupError }) };
   }
 
-  async configureDownloadStorage(limitMb: number, cleanupAfterDays: number): Promise<void> {
+  clearTextRebuildableCache(evidence: ReaderWriteEvidence, current: () => boolean): Promise<SharedDownloadCleanupResult> {
     if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
-    await this.readingImageDiskCache.configureStoragePolicy(limitMb, cleanupAfterDays);
-    await this.readingImageDiskCache.maintainMangaStorage('expiry');
+    return this.getDownloadStorageGateway().cleanupSettingsText(evidence, current);
+  }
+  readSettingsTextCleanup(): Promise<SettingsTextCleanupJournal | undefined> {
+    if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
+    return this.getDownloadStorageGateway().readSettingsTextCleanup();
+  }
+
+  async configureDownloadStorage(limitMb: number, cleanupAfterDays: number): Promise<{ maintenanceMessage?: string; }> {
+    if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
+    return this.getDownloadStorageGateway().configurePolicy({ capacityBytes: limitMb * 1024 * 1024, expiryDays: cleanupAfterDays });
   }
 
   async controlDownloadTask(action: 'pause' | 'resume' | 'cancel', sourceId: string, bookId: string,
@@ -514,12 +602,9 @@ export class ReaderRuntimeOwner {
     return result.data;
   }
 
-  async mangaStorageSummary(): Promise<{
-    totalBytes: number; retainedBytes: number; automaticBytes: number;
-    cleanableBytes: number; availableBytes: number;
-  }> {
+  async mangaStorageSummary(): Promise<DownloadStorageSummary> {
     if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
-    return this.readingImageDiskCache.mangaStorageSummary();
+    return this.getDownloadStorageGateway().summary();
   }
 
   /** Called by the app shell; no disk or network work runs in this UI turn. */
@@ -586,6 +671,17 @@ export class ReaderRuntimeOwner {
     return (): boolean => this.state !== 'closing' && this.state !== 'closed' && valid();
   }
 
+  captureMangaImageContentValidity(sourceId: string, bookId: string): () => boolean {
+    const valid = this.readingEntryPreparations().captureMangaImageContentValidity(sourceId, bookId);
+    return (): boolean => this.state !== 'closing' && this.state !== 'closed' && valid();
+  }
+
+  clearOfflineChapterImages(sourceId: string, bookId: string, chapterIndex: number, manga: boolean = false): Promise<void> {
+    // Manga originals are removed only by their existing exact retention/grant
+    // transaction. The text ordinal must never authorize manga file deletion.
+    return manga ? Promise.resolve() : this.readingImageDiskCache.clearChapter(sourceId, bookId, chapterIndex);
+  }
+
   waitForReadingContentIdle(sourceId: string, bookId: string): Promise<void> {
     return this.readingEntryPreparations().waitForContentIdle(sourceId, bookId);
   }
@@ -609,6 +705,8 @@ export class ReaderRuntimeOwner {
       if (runtime === undefined) {
         throw new Error('Reader Core runtime did not become ready');
       }
+      if (method === 'chapter.content' || method === 'manga.chapter.get' || method === 'manga.entry.get' ||
+        method === 'reading.entry.prepare') await this.downloadStorageGateway?.waitForActiveMutation();
       // Non-scheduled writes can wait on startup/preparation fences. Recheck
       // their captured authority at the last synchronous dispatch boundary.
       // Scheduler requests already strip these hooks after their own admission.
@@ -666,9 +764,27 @@ export class ReaderRuntimeOwner {
         // Core owns the logical grant and Host owns physical bytes. The Host
         // returns the actual post-unlink receipt so UI feedback uses the same
         // scope and physical-byte accounting as the cleanable preview.
-        const cleanup = await this.readingImageDiskCache.clearMangaRebuildableCache(scope);
+        // A chapter ordinal is not global manga deletion authority. Exact
+        // chapter-image handoff is owned by ReadingOfflineGateway below.
+        const cleanup = params['scope'] === 'chapter' ? { deletedBytes: 0, deletedFiles: 0 } :
+          await this.readingImageDiskCache.clearMangaRebuildableCache(scope);
         result.data['deletedBytes'] = cleanup.deletedBytes;
         result.data['deletedFiles'] = cleanup.deletedFiles;
+      }
+      if (method === 'cache.storage.cleanup') {
+        if (!Array.isArray(result.data['removedChapters'])) throw new Error('DOWNLOAD_STORAGE_SCOPE_UNAVAILABLE');
+        const removed = result.data['removedChapters'].map(raw => {
+          const chapter = raw as JsonObject;
+          if (typeof chapter['sourceId'] !== 'string' || !(chapter['sourceId'] as string).trim() ||
+            typeof chapter['bookId'] !== 'string' || !(chapter['bookId'] as string).trim() ||
+            typeof chapter['chapterIndex'] !== 'number' || !Number.isSafeInteger(chapter['chapterIndex']) ||
+            (chapter['chapterIndex'] as number) < 0) throw new Error('DOWNLOAD_STORAGE_SCOPE_INVALID');
+          return { sourceId: chapter['sourceId'] as string, bookId: chapter['bookId'] as string,
+            chapterIndex: chapter['chapterIndex'] as number };
+        });
+        // Exact optional-entry cache invalidation must not revoke another
+        // protected chapter's display/download resource epoch in the book.
+        preparations.invalidateCachedChapters(removed);
       }
       return result;
     } catch (error) {
@@ -736,6 +852,7 @@ export class ReaderRuntimeOwner {
     mangaDecodeRevision?: string,
     mangaDisplaySessionId?: number,
   ): Promise<ReadingBodyImagePayload> {
+    await this.downloadStorageGateway?.waitForActiveMutation();
     this.assertReadingImageCurrent(isCurrent);
     if (resourceRef === undefined && imageUrl.trim().toLowerCase().startsWith('data:image/')) {
       const embedded = await (this.mangaOfflineProbe?.readingSamplingEnabled() === true ?
@@ -861,6 +978,7 @@ export class ReaderRuntimeOwner {
     allowNetwork: boolean = true,
     priority: MangaImagePriority = 'download',
   ): Promise<void> {
+    await this.downloadStorageGateway?.waitForActiveMutation();
     this.assertReadingImageCurrent(isCurrent);
     const ownedIdentity: ReadingImageCacheIdentity = identity.resourceRef === undefined ? identity :
       { ...identity, chapterId: identity.chapterId ?? identity.baseUrl,
@@ -1356,9 +1474,22 @@ export class ReaderRuntimeOwner {
     }
     this.state = 'closing';
     ReadingBodyImageHost.instance.setMangaMetadataInspector(undefined);
-    this.readingImageDiskCache.close();
-    this.closeTask = this.closeRuntime();
+    this.closeTask = this.closeDownloadsAndRuntime();
     return this.closeTask;
+  }
+
+  private async closeDownloadsAndRuntime(): Promise<void> {
+    let downloadFailure: unknown;
+    try { await this.downloadCoordinator?.close(); }
+    catch (error) { downloadFailure = error; }
+    try { await this.downloadStorageGateway?.waitForActiveMutation(); }
+    finally {
+      // Already dispatched transactions own their exact file handoff. Close
+      // physical admission only after those finite owners have settled.
+      this.readingImageDiskCache.close();
+      await this.closeRuntime();
+    }
+    if (downloadFailure !== undefined) throw downloadFailure;
   }
 
   private assertReadingImageCurrent(isCurrent?: () => boolean): void {
@@ -1398,7 +1529,8 @@ export class ReaderRuntimeOwner {
       // `close()` sets state=closing first, so the supply loop stops after its
       // current local Core request. Wait for that request before closing Core.
       const drained = await Promise.allSettled([this.sourceSupplyTask, this.importFinalizeTask, this.mangaImageTail,
-        MangaChapterPreparationCoordinator.forRuntime(this).close()]);
+        MangaChapterPreparationCoordinator.forRuntime(this).close(), this.downloadCoordinator?.close(),
+        this.downloadStorageGateway?.waitForActiveMutation()]);
       for (const result of drained) if (result.status === 'rejected')
         hilog.warn(LOG_DOMAIN, 'Reader', '%{private}s', `Runtime teardown drain failed: ${errorMessageOf(result.reason)}`);
       // A foreground/background flush that began before `closing` must finish
@@ -1533,6 +1665,14 @@ export class ReaderRuntimeOwner {
       this.runtime = runtime;
       this.state = 'ready';
       ReaderStartupTrace.current()?.mark('startup.runtime-published', 'ready');
+      // Legacy completed queue rows carry ambiguous old intent. Persist their
+      // protection before restoring new accepted ranges or automatic cleanup.
+      // This background work never gates the initial usable page.
+      void this.getDownloadStorageGateway().restoreLegacyProtection().then(() => this.getDownloadCoordinator().restore())
+        .then((): Promise<void> => this.state === 'ready' ? this.getDownloadStorageGateway().maintainAutomaticStorage() : Promise.resolve())
+        .catch((error: Error): void => {
+          if (this.state === 'ready') hilog.warn(LOG_DOMAIN, 'Reader', 'Download recovery: %{private}s', errorMessageOf(error));
+        });
       this.scheduleImportFinalizeCleanup(runtime);
       // A 1,951-record collection must not hold the first frame or turn a
       // single malformed/dead source into an application startup failure.

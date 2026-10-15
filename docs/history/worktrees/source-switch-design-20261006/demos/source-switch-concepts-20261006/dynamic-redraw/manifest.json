@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-06",
+  "scope": "User requested redraw after identifying lack of dynamic list states. Four successive state mockups of one single-column layout.",
+  "worktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+  "targetLogicalViewport": {
+    "width": 390,
+    "height": 844
+  },
+  "artifactKind": "unconfirmed custom design drafts",
+  "dataKind": "fictional illustration, not live source metrics",
+  "displayOrder": "Final four temporal state targets resolve to displayed images 1, 2, 3 and 5. Displayed image 4 was superseded by corrected ended toolbar.",
+  "states": [
+    {
+      "displayedFrame": 1,
+      "file": "01-discovering.png",
+      "state": "early discovery with three candidates",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-2b1e9306-c6fb-4234-94aa-324a3159cde5.png",
+      "sha256": "ad4e676fb4d139edd31ef6479dcae00eae42fce933c013575c245da3f66bbbdd",
+      "pixelDimensions": [
+        853,
+        1844
+      ]
+    },
+    {
+      "displayedFrame": 2,
+      "file": "02-incremental.png",
+      "state": "metadata fills in place and new candidates append to six",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-11bfef8d-bf71-4fb7-85fe-07bac619e2af.png",
+      "sha256": "e35d4941cb7e0299cf8da36798189466e58f94132a3cb8d39a70f612e4e90a51",
+      "pixelDimensions": [
+        853,
+        1844
+      ]
+    },
+    {
+      "displayedFrame": 3,
+      "file": "03-rechecking.png",
+      "state": "eight retained candidates during rechecking",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-25aa86c1-bfb6-4dda-b9a1-85c9b8c5b24a.png",
+      "sha256": "76fb1da0c6f92c3d0bcbe6e4df16cc35684c0396eb586c069cad4105f2adf1cd",
+      "pixelDimensions": [
+        853,
+        1844
+      ]
+    },
+    {
+      "displayedFrame": 5,
+      "file": "04-ended.png",
+      "state": "ended round with known timing unknowns and local failures",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-b9df1895-e977-4604-acf9-c91af7795175.png",
+      "sha256": "1bbb6fc4854714a7208c4182dfda64d9903c47fccd0eb99feb1af21a1c774f7e",
+      "pixelDimensions": [
+        853,
+        1844
+      ],
+      "stateSequence": 4,
+      "supersededFile": "04-ended-superseded.png"
+    }
+  ],
+  "references": [
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-10-06-native-ui-redo/superseded-app-baseline/references/bookshelf--list--day--phone.png",
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-10-06-native-ui-redo/superseded-app-baseline/references/search--results--day--phone.png",
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-10-06-native-ui-redo/superseded-app-baseline/references/sources--default--day--phone.png"
+  ],
+  "layoutContract": [
+    "Bookshelf-style book context with title, author, latest chapter and current source.",
+    "Compact single-column two-line source rows with reserved timing or state area.",
+    "Known source identities keep their positions in these temporal drafts.",
+    "New candidates append; chapter metadata and search times fill in place.",
+    "Rechecking retains names and chapters while replacing old timings.",
+    "Local failure and unknown states reserve the same row height and support inline retry.",
+    "Search request timing does not prove body reading speed or readability."
+  ],
+  "remainingDesignGaps": [
+    "Generated cover illustration varies slightly in the final frame; reuse a single cover asset in implementation.",
+    "Long-title truncation, large font settings, switching lock, stop state, dark mode and other viewports have not been drawn in this set.",
+    "Candidate chapter meaning is implied by layout; explicit latest-chapter labelling remains to refine."
+  ],
+  "verification": {
+    "visualReview": "Root and second-agent static image inspection of original four frames; root inspected corrected ended frame.",
+    "runtime": false,
+    "interaction": false,
+    "native": false,
+    "userAcceptance": false
+  },
+  "demoModified": false,
+  "nativeModified": false,
+  "correctedDesignIssue": "Removed inactive grey activity-style ring from ended-state toolbar using Image Gen, without changing result positions."
+}

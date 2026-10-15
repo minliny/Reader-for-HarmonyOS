@@ -20,6 +20,8 @@ export type ReadingBookDetail = {
   /** Display projection of Core's manga location; never novel scalar progress. */
   mangaPosition?: MangaBookPosition;
   coverUrl?: string;
+  /** Ephemeral cover chosen from a merged result; never changes canonical Core metadata. */
+  displayCoverUrl?: string;
   intro?: string;
   lastChapter?: string;
 };

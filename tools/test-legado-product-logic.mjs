@@ -92,11 +92,14 @@ assert.match(sourceSwitchRow, /acquisitionState === 'readable'/,
   'a discovered source must not be labeled readable');
 assert.match(sourceSwitchWindow, /build\(\)\s*\{\s*Stack\(\{ alignContent: Alignment\.Bottom \}\)/,
   'both formats use the selected bottom-aligned live source drawer');
-assert.match(sourceSwitchWindow, /\.width\('100%'\)\.constraintSize\(\{ maxWidth: SOURCE_SWITCH_VISUAL\.drawerMaxWidth \}\)\.height\(this\.drawerHeight\(\)\)/,
+assert.match(sourceSwitchWindow, /ReaderBoundedSurface\(\{\s*specId: 'source-switch-drawer', surfaceWidth: '100%', surfaceHeight: this\.drawerHeight\(\)/,
   'the shared source drawer derives its bounded extent from the actual host viewport');
-assert.match(sourceSwitchWindow, /backgroundColor\(readerAppColor\('TOK_SS_WINDOW_BG'/,
-  'both formats retain the selected themed source-drawer paper');
-assert.doesNotMatch(sourceSwitchWindow, /resolvePopupSpec\('source-switch-window'\)|this\.surfaceSpec\(\)\.height/,
+const sourceDrawerSpecs=read('entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets');
+assert.match(sourceDrawerSpecs, /this\.maxWidth = id === 'source-switch-drawer' \? SOURCE_SWITCH_VISUAL\.drawerMaxWidth/,
+  'the shared drawer variant retains the selected source width cap');
+assert.match(sourceDrawerSpecs, /this\.surfaceRole = id === 'source-switch-drawer' \? 'TOK_SS_WINDOW_BG'/,
+  'both formats retain the selected themed source-drawer paper through the registered frame');
+assert.doesNotMatch(sourceSwitchWindow, /ReaderBoundedSurface\(\{\s*specId: 'source-switch-window'|resolvePopupSpec\('source-switch-window'\)|this\.surfaceSpec\(\)\.height/,
   'the live picker is not clipped to the retired 300 by 385 popup');
 assert.match(sourceSwitchWindow, /readerInteractiveSafeLeft\(metrics\)[\s\S]*readerInteractiveSafeRight\(ReaderWindowCoordinator\.metrics\(\)\)/,
   'source-switch keeps asymmetric safe edges for both phone and tablet hosts');

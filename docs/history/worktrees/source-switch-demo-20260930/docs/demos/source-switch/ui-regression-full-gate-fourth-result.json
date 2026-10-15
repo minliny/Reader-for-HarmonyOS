@@ -1,0 +1,25 @@
+{
+  "sourceCommit": "ac2a5c19f96aad25e4f91c15a0a062d614cf24a7",
+  "files": 397,
+  "passed": 396,
+  "failed": 1,
+  "cancelled": 0,
+  "skipped": 0,
+  "durationMs": 40622.163625,
+  "hapProduced": false,
+  "failure": {
+    "test": "tools/test-phone-layout-figma-regressions.mjs",
+    "reason": "Continue-reading signature changed from book value to live provider; legacy regex still hardcoded book: ShelfBook. Reactive width expression itself unchanged.",
+    "assertionRetained": "Width must read this.shelfContentWidth(isTablet) inside the actual continueReadingCard method. Also verifies live book provider signature.",
+    "fix": "Narrow test method extraction plus live provider signature and same width assertion; no production changes."
+  },
+  "rawLog": ".reader-local/ui-regression-full-build-fourth.log",
+  "rawLogSha256": "d81587dc192b5613bbb0ca0007ffd6f56a7366080d7bbc40dbe64e64d386020e",
+  "extraUntrackedInput": {
+    "file": "tools/test-reader-paragraph-indent 2.mjs",
+    "bytes": 9113,
+    "sha256": "239d30537b425304f7d9753a61d5f471250da6e1a33d78f405879b956a3ca25e",
+    "mtimeLocal": "2026-09-30T20:58:29",
+    "boundary": "Unexpected older untracked copy appeared during the run. Origin not established; preserved without editing, deleting, committing, or excluding from full gate. Immutable controller snapshot must capture it. Existing paired Core dirty likewise preserved; iteration class only."
+  }
+}

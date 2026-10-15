@@ -183,8 +183,9 @@ Object.assign(detail, { viewportWidth: 390, readerWindowMetricsRevision: 1, appT
   book: {sourceId: 'source', bookId: 'book', contentKind: 'manga', title: '真实字段长标题', author: '作者', sourceName: '来源', intro: '简介',
     mangaPosition: {chapterIndex: 4, pageOrdinal: 7, totalPages: 24}},
   toc: [{index: 3, title: '卷组', navigable: false}, {index: 4, title: '可读目标', navigable: true}],
-  introExpanded: false, collapsedGroups: [], shelfMessage: '', removing: false, inBookshelf: true,
+  introExpanded: false, introMeasured: true, introOverflow: false, collapsedGroups: [], shelfMessage: '', removing: false, inBookshelf: true,
   removalEnabled: true, adding: false, cancellingAdd: false, onBack() {}, onContinue() {}, onRemove() {}});
+// Native MeasureUtils full/folded equality for this short synopsis is covered in test-book-detail-intro-measurement-sdk; this SDK branch consumes its admitted receipt.
 // The real deferred font admission is covered separately; this case examines
 // the SDK branch after its checked receipt, with no production glyph bypass.
 detail.mangaFontsReady = true; detail.prepareMangaPreview(); detail.initialRender();

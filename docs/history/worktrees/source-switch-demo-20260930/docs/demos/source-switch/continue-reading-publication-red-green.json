@@ -1,0 +1,137 @@
+{
+  "recordedAt": "2026-09-30T18:49:27.374358+00:00",
+  "lane": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS",
+  "baselineHead": "86fce31f780a77fd26410324f0820ab623ac483a",
+  "headWhenRecorded": "86fce31f780a77fd26410324f0820ab623ac483a",
+  "phenomenon": {
+    "source": "parent-reported VM evidence; no VM tool used in this task",
+    "description": "After switching from short to long book, shelf row shows long book first and 4 percent progress, while Continue Reading retained short book",
+    "paths": [
+      ".reader-local/ui-regression-full-vm/ui-full-populated-two.jpeg",
+      ".reader-local/ui-regression-full-vm/ui-full-populated-two.json"
+    ]
+  },
+  "codeFinding": "Actual Index observer delivers book B to real SDK BookshelfPage @Prop, but retained continueReadingCard native observers and gesture capture initial Builder book A. Existing mechanism predates BookshelfShell.",
+  "red": {
+    "log": "/private/tmp/source-demo-continue-reading-publication-20261001.red.log",
+    "exitCode": 1,
+    "baselineProductionSha256": "da3bdacc09386fbbc8e072f0444d361123ac07dddea5fda7acc17b23cc80b6f4",
+    "deliveredProp": "b",
+    "pageMounts": 1,
+    "nativeActorCount": 21,
+    "observedTitle": "短书 A",
+    "observedAuthor": "作者 A",
+    "observedCover": "file:///a.png",
+    "observedClick": "a",
+    "assertion": "Retained card must publish book B after actual Index state and SDK Prop update"
+  },
+  "fix": "Pass a live () => this.continueReading provider at the actual Builder call and read it from title, author, cover branch and click observers. Undefined Prop makes retained click a no-op.",
+  "green": {
+    "seconds": 3.827732083,
+    "results": [
+      {
+        "test": "test-bookshelf-continue-reading-publication.mjs",
+        "exit": 0,
+        "seconds": 0.725216958,
+        "log": "/private/tmp/source-demo-continue-reading-publication-20261001/test-bookshelf-continue-reading-publication.mjs.log"
+      },
+      {
+        "test": "test-bookshelf-startup-readiness.mjs",
+        "exit": 0,
+        "seconds": 0.3128992500000001,
+        "log": "/private/tmp/source-demo-continue-reading-publication-20261001/test-bookshelf-startup-readiness.mjs.log"
+      },
+      {
+        "test": "test-bookshelf-shell-states.mjs",
+        "exit": 0,
+        "seconds": 0.6380099579999998,
+        "log": "/private/tmp/source-demo-continue-reading-publication-20261001/test-bookshelf-shell-states.mjs.log"
+      },
+      {
+        "test": "test-bookshelf-view-and-menu.mjs",
+        "exit": 0,
+        "seconds": 0.368067417,
+        "log": "/private/tmp/source-demo-continue-reading-publication-20261001/test-bookshelf-view-and-menu.mjs.log"
+      },
+      {
+        "test": "test-bookshelf-detail-control-stability.mjs",
+        "exit": 0,
+        "seconds": 0.3786207079999997,
+        "log": "/private/tmp/source-demo-continue-reading-publication-20261001/test-bookshelf-detail-control-stability.mjs.log"
+      },
+      {
+        "test": "test-bookshelf-physical-feedback.mjs",
+        "exit": 0,
+        "seconds": 0.40990191600000037,
+        "log": "/private/tmp/source-demo-continue-reading-publication-20261001/test-bookshelf-physical-feedback.mjs.log"
+      },
+      {
+        "test": "test-bookshelf-more-layout.mjs",
+        "exit": 0,
+        "seconds": 0.6478437910000001,
+        "log": "/private/tmp/source-demo-continue-reading-publication-20261001/test-bookshelf-more-layout.mjs.log"
+      },
+      {
+        "test": "test-bookshelf-filter-responsibilities.mjs",
+        "exit": 0,
+        "seconds": 0.34600233299999994,
+        "log": "/private/tmp/source-demo-continue-reading-publication-20261001/test-bookshelf-filter-responsibilities.mjs.log"
+      }
+    ]
+  },
+  "sdkLintRun": {
+    "command": [
+      "node",
+      "/private/tmp/reader-source-switch-sdk-probe-20260930.cjs",
+      "entry/src/main/ets/features/bookshelf/BookshelfPage.ets"
+    ],
+    "exitCode": 0,
+    "elapsedSeconds": 2.090211
+  },
+  "sdkLint": {
+    "elapsedSeconds": 1.527,
+    "targets": [
+      "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/entry/src/main/ets/features/bookshelf/BookshelfPage.ets"
+    ],
+    "sourceFiles": 445,
+    "semantic": [],
+    "arkts": [],
+    "unresolvedImports": [
+      "libreader_core_napi.so from entry/vendor/core-harmony/Index.ts",
+      "@hms.ai.textToSpeech from entry/src/main/ets/app/HarmonySystemTtsHost.ts"
+    ]
+  },
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+      "sha256": "41b33827d67537c8213c1252501469dacf5085ae0b54d72996525138d9e32f0e"
+    },
+    {
+      "path": "tools/test-bookshelf-continue-reading-publication.mjs",
+      "sha256": "f61d14278f6450e2f28137fed99d1b031f1da278e507300aca5772f73b097670"
+    }
+  ],
+  "coverage": [
+    "Actual SDK compiler and SDK property/proxy classes with instrumented subscriber delivery",
+    "Actual Index bookshelfContent child call, actual Page @Prop, actual ListItem continueReadingCard call",
+    "A to B title/author/cover/click publication with same native observer IDs and one Page mount",
+    "No-cover A to B retains existing NoCover actor",
+    "A to undefined to B coalesced before child render; retained gesture while undefined is no-op"
+  ],
+  "limits": [
+    "No renderer, pixel or VM verification after fix",
+    "Actual native conditional-branch removal and subsequent remount after undefined is not covered",
+    "SDK lint reports unresolved native libreader_core_napi.so and HMS textToSpeech imports; no semantic or ArkTS diagnostics for target, not full HAP compile",
+    "Lane has no integration tier registry. Root directs main patch assembler to register this new test in main integration tier."
+  ],
+  "scope": {
+    "onlyProductionEdited": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+    "testAdded": "tools/test-bookshelf-continue-reading-publication.mjs",
+    "fullGateRun": false,
+    "hapBuildRun": false,
+    "vmUsed": false,
+    "mainModified": false,
+    "commitCreated": false,
+    "frozen": true
+  }
+}

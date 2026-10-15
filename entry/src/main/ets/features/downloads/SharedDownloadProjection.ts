@@ -26,6 +26,8 @@ export interface DownloadStorageSummary {
   availableBytes?: number;
 }
 
+export interface DownloadStoragePolicyView { capacityBytes: number; expiryDays: number; }
+
 function validDownloadStorageBytes(bytes: number | undefined): boolean {
   return bytes !== undefined && Number.isSafeInteger(bytes) && bytes >= 0;
 }

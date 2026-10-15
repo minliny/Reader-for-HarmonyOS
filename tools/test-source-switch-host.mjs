@@ -562,7 +562,9 @@ for(const loseSyncAt of [3,4]) {
   const retry=nodes.find(node=>node.type==='Button'&&node.createWithLabel?.[0]==='重试核对');assert.ok(retry?.onClick);
   const originalFrame=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.width==='100%'&&node.height==='100%');
   assert.ok(originalFrame,'the approved live picker retains one full-viewport owner');
-  assert.equal(p.walk(owner).some(child=>child instanceof p.deps.ReaderBoundedSurface),false,'the full-screen design does not restore the retired 385vp popup');
+  const frames=p.walk(owner).filter(child=>child instanceof p.deps.ReaderBoundedSurface);
+  assert.equal(frames.length,1,'the live picker has one shared bounded drawer frame');
+  assert.equal(frames[0].specId,'source-switch-drawer','shared composition cannot restore the retired 385vp popup');
   const oldRetry=owner.onRetry;f.options.failExactQuery=false;retry.onClick();await settle();p.properties.flush();
   assert.equal(f.host.current().write.confirmation,'confirmed');assert.equal(f.effects.at(-1).kind,'targetReady');
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1);

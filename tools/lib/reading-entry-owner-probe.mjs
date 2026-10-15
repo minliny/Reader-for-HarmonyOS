@@ -18,6 +18,7 @@ const evidence=await import('../../entry/src/main/ets/app/ReaderWriteEvidence.ts
 const policy=await import('../../entry/src/main/ets/app/HttpTransportPolicy.ts');
 const category=await import('../../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
 const importFailure=await import('../../entry/src/main/ets/app/LocalImportFailure.ts');
+const coverDisplay=await import('../../entry/src/main/ets/features/common/BookCoverDisplay.ts');
 const local=await import('../../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 const remote=await import('../../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 const readingEvidence=await import('../../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
@@ -44,7 +45,7 @@ function emit(path,name,deps,source=read(path)){
  assert.deepEqual(result.diagnostics,[],path+' actual SDK emitter');
  const exports={};new Function('exports',...Object.keys(deps),result.outputText)(exports,...Object.values(deps));return exports[name];
 }
-const common={ReaderRuntimeOwner:Runtime,...sdk,...errors,...receipt,...evidence,...policy,...category,...importFailure,...local,...remote,
+const common={ReaderRuntimeOwner:Runtime,...sdk,...errors,...receipt,...evidence,...policy,...category,...importFailure,...coverDisplay,...local,...remote,
  ...readingEvidence,...position,...content,...bookmarks,ReadingOfflineGateway,MangaAdmissionGateway,MangaBookPresentation,hilog:{warn(){},error(){},info(){}}};
 const ReaderCoreGateway=emit('app/ReaderCoreGateway.ts','ReaderCoreGateway',common);
 const LocalBookImportGateway=emit('features/bookshelf/LocalBookImportGateway.ts','LocalBookImportGateway',{...common,ReaderCoreGateway});

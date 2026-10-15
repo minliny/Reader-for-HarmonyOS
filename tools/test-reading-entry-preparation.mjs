@@ -806,3 +806,29 @@ console.log('PASS bounded shelf preparation: TXT, EPUB explicit breaks, remote, 
   prep.close();
 }
 console.log('PASS content mutation epoch: stale chapter fenced, progress save retained, retry waits for idle');
+
+{
+ const f=fixture(), prep=f.preparations;
+ const image=prep.captureMangaImageContentValidity('s1','book');
+ for(const method of ['book.detail','book.toc','bookshelf.add']) {
+   const params={sourceId:'s1',bookId:'book'};
+   prep.beginRequest(method,params);assert.equal(image(),true,method+' does not replace active image content');
+   prep.finishRequest(method,params);assert.equal(image(),true);
+ }
+ const params={sourceId:'s1',bookId:'book',scope:'chapter',chapterIndex:3};
+ prep.beginRequest('cache.clear',params);assert.equal(image(),false,'destructive cache mutation fences retained pixels');
+ prep.finishRequest('cache.clear',params);assert.equal(image(),false);
+ prep.close();
+}
+{
+ const f=fixture();f.preparations.setVisibleBooks([seed('/retained','s1')]);
+ await until(()=>f.preparations.visible.get(identity('s1','/retained'))?.snapshot!==undefined);
+ const image=f.preparations.captureMangaImageContentValidity('s1','/retained');
+ f.preparations.invalidateCachedChapters([{sourceId:'s1',bookId:'/retained',chapterIndex:2}]);
+ assert.ok(f.preparations.visible.get(identity('s1','/retained')).snapshot,'cleanup of another chapter keeps the prepared current chapter');
+ f.preparations.invalidateCachedChapters([{sourceId:'s1',bookId:'/retained',chapterIndex:0}]);
+ assert.equal(f.preparations.visible.get(identity('s1','/retained')).snapshot,undefined);
+ assert.equal(image(),true,'actual cleaned chapter receipt does not revoke protected active image leases');
+ f.preparations.close();
+}
+console.log('PASS image epoch distinguishes metadata, destructive mutations and exact cleanup chapter receipts');

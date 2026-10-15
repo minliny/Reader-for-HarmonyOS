@@ -1,3 +1,5 @@
+import { mangaDirectoryContextEntries } from '../manga/MangaDirectoryState';
+import { mangaDirectoryPresentation } from '../manga/MangaDirectoryPresentation';
 import { TYPE_APP_INHERITED_OPTION, TYPE_READER_DIRECTORY_COLLAPSE, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_HEADING, TYPE_READER_DIRECTORY_POSITION_INTER, TYPE_READER_DIRECTORY_TAB, TYPE_READER_DIRECTORY_TITLE_INTER } from '../common/ReaderTypography';
 import { readerDirectoryScopeKey } from './ReaderDirectoryNavigation';
 import type { JsonObject } from '@reader/core-harmony';
@@ -1335,7 +1337,7 @@ export struct FullDirectoryPanel {
     // intentionally sends an empty sentinel while the control is hidden; the
     // snapshot keeps the already-painted directory rows alive until a real
     // data/session commit reaches a stable endpoint.
-    const sourceEntries = this.admittedEntries;
+    const sourceEntries = this.mangaSearch ? mangaDirectoryContextEntries(this.admittedEntries, mangaDirectoryPresentation(this.admittedEntries)) : this.admittedEntries;
     if (tab === 'bookmarks') {
       this.projectedEntries = [];
       this.bookmarkTabLoading = readerBookmarkLoadState(sourceEntries) === 'loading';

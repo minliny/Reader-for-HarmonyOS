@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {fixture,until} from './lib/reading-operation-durable-probe.mjs';
+import {fixture,until,seedLegacySettingsClear} from './lib/reading-operation-durable-probe.mjs';
 import {makeIndex as makeDirectory,settled} from './lib/reading-directory-sdk-consumer.mjs';
 import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
@@ -26,29 +26,25 @@ function makeSettings(f,{mount=1}={}){
 }
 const checks=[];
 for(const boundary of ['before','after']){
- const f=await fixture(true),s=makeSettings(f);f.options[boundary==='before'?'beforeMethod':'afterMethod']='cache.clear';
- await s.idx.clearTextCache();assert.equal(s.idx.settingsCacheCleanup.confirmation,'unknown');const original=JSON.parse(f.disk('cacheClear'));
+ const f=await fixture(true),s=makeSettings(f);f.options[boundary==='before'?'beforeMethod':'afterMethod']='cache.storage.cleanup';
+ await s.idx.clearTextCache();assert.equal(s.idx.settingsCacheCleanup.confirmation,'unknown');
  const oldPage=s.render(),oldActor=s.native(oldPage,'核对清理结果'),writes=f.writes().length;oldActor();
  await until(()=>!f.settings.current().busy);assert.equal(f.writes().length,writes);
- if(boundary==='after')assert.equal(s.idx.settingsCacheCleanup.confirmation,'confirmed');
- else{
-  assert.equal(s.idx.settingsCacheCleanup.confirmation,'unknown');assert.equal(s.idx.settingsCacheCleanup.canContinueOriginal,true);
-  const page=s.render();const continueNative=s.native(page,'继续原操作');continueNative();continueNative();await until(()=>!f.settings.current().busy);
-  assert.equal(f.writes().length,2);assert.deepEqual(f.writes()[1].params,original.params);assert.equal(s.idx.settingsCacheCleanup.confirmation,'confirmed');
- }
- checks.push('actual-Settings-Index-decorated-Page-native-pure-read-and-explicit-original-'+boundary);
+ assert.equal(s.idx.settingsCacheCleanup.confirmation,'unknown');assert.equal(s.idx.settingsCacheCleanup.canContinueOriginal,false);
+ const page=s.render();assert.equal(s.actors(page).some(actor=>actor.label==='继续原操作'),false,'unknown safe cleanup has no blind replay actor');
+ checks.push('actual-Settings-safe-text-ACK-'+boundary+'-pure-private-read-no-replay');
 }
 {
- const f=await fixture(true),s=makeSettings(f);f.options.beforeMethod='cache.clear';await s.idx.clearTextCache();
- await s.idx.reconcileSettingsCache(s.idx.settingsCacheCleanup.operation.generation);const page=s.render(),actor=s.actors(page).find(c=>c.label==='继续原操作'),old=s.native(page,'继续原操作');
- const before=f.writes().length;s.idx.navigationGeneration++;old();await new Promise(setImmediate);assert.equal(f.writes().length,before,'old actual Index page callback cannot borrow new navigation');
- s.idx.navigationGeneration--;page.temporaryBackIdentity='settings:new';page.replay();old();await new Promise(setImmediate);assert.equal(f.writes().length,before,'retained actor never adopts the new physical presentation');
- assert.notEqual(actor.generation,undefined);f.unset();old();await new Promise(setImmediate);assert.equal(f.writes().length,before,'runtime unavailable safely refuses old mutation');
+ const f=await fixture(true),s=makeSettings(f);f.options.beforeMethod='cache.storage.cleanup';await s.idx.clearTextCache();
+ const page=s.render(),actor=s.actors(page).find(c=>c.label==='核对清理结果'),old=s.native(page,'核对清理结果');
+ const before=f.calls.length;s.idx.navigationGeneration++;old();await new Promise(setImmediate);assert.equal(f.calls.length,before,'old Index page callback cannot borrow new navigation');
+ s.idx.navigationGeneration--;page.temporaryBackIdentity='settings:new';page.replay();old();await new Promise(setImmediate);assert.equal(f.calls.length,before,'retained actor never adopts new physical presentation');
+ assert.notEqual(actor.generation,undefined);f.unset();old();await new Promise(setImmediate);assert.equal(f.calls.length,before);
  checks.push('actual-settings-close-reopen-V1-retained-physical-and-runtime-unset');
 }
 for(const boundary of ['before','after']){
- const warm=await fixture(true);warm.options[boundary==='before'?'beforeMethod':'afterMethod']='cache.clear';await warm.settings.clear(()=>true);
- assert.equal(warm.settings.current().confirmation,'unknown');const original=JSON.parse(warm.disk('cacheClear'));
+ const warm=await fixture(true);warm.options[boundary==='before'?'beforeMethod':'afterMethod']='cache.clear';await seedLegacySettingsClear(warm);
+const original=JSON.parse(warm.disk('cacheClear'));
  const f=await fixture(true,warm),directory=makeDirectory(f,{remote:true}),settings=makeSettings(f);f.options.status=true;
  await f.offline.load(directory.idx.offlineBinding(f.runtime,directory.idx.remoteReadingSession));await settled(f);
  const operation=directory.idx.offlineOperation;assert.equal(operation.sourceId,'cache');assert.equal(operation.bookId,'global-text');
@@ -58,11 +54,14 @@ for(const boundary of ['before','after']){
  const writes=f.writes().length;directory.idx.downloadDirectoryChapter(0);directory.idx.clearDirectoryBookOffline();await settled(f);assert.equal(f.writes().length,writes,'original pending global clear blocks new book mutation');
  await settings.idx.reconcileSettingsCache(undefined);assert.equal(f.writes().length,writes,'cold opening is pure exact receipt query, never a new clear');
  if(boundary==='before'){
-  assert.equal(settings.idx.settingsCacheCleanup.confirmation,'unknown');const page=settings.render();settings.native(page,'继续原操作')();await until(()=>!f.settings.current().busy);
-  assert.equal(f.writes().length,writes+1);assert.deepEqual(f.writes().at(-1).params,original.params);
+  assert.equal(settings.idx.settingsCacheCleanup.confirmation,'unknown');const page=settings.render();
+  assert.equal(settings.actors(page).some(actor=>actor.label==='继续原操作'),false);
+  assert.equal(f.writes().length,writes,'unsafe historical global scope cannot be continued');
+  assert.deepEqual(JSON.parse(f.disk('cacheClear')).params,original.params);
  }else assert.equal(settings.idx.settingsCacheCleanup.confirmation,'confirmed');
  await f.offline.load(directory.idx.offlineBinding(f.runtime,directory.idx.remoteReadingSession));await settled(f);
- assert.equal(directory.idx.directoryRecovery().offlineBlocked,false);assert.equal(directory.idx.directoryRecovery().offline.visible,false);
+ assert.equal(directory.idx.directoryRecovery().offlineBlocked,boundary==='before');
+ assert.equal(directory.idx.directoryRecovery().offline.visible,boundary==='before');
  assert.equal(directory.idx.offlineOperation.projection.receipt.confirmation,'unknown','absence of original intent changes capacity only, never invents this book ACK');
  checks.push('cold-original-global-intent-other-book-capacity-and-original-settings-authority-'+boundary);
 }

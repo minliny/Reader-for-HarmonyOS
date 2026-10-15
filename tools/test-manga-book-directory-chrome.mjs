@@ -1,3 +1,5 @@
+import * as directoryState from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -130,7 +132,7 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     const properties = createArkUIPropertyRuntimeProbe();
     const metrics = { systemFontScale: scale, windowRect: { width: contentWidth + 40, height: 640 },
       interactiveSafeInsets: { bottom: safeBottom } };
-    const dependencies = { ...fonts, ...directoryVisual, ...properties.sdk,
+    const dependencies = { ...fonts, ...directoryVisual, ...directoryState, mangaDirectoryDisplay, ...properties.sdk,
       ReaderWindowCoordinator: { metrics: () => metrics } };
     const actualField = createReaderBuilderProbe(fieldSource, fieldNames, { ...dependencies, ...fieldDeps }, properties.hooks).Component;
     const actualHeader = createReaderBuilderProbe(headerCandidate, headerNames, dependencies,
@@ -322,7 +324,7 @@ function checkFullAdaptive(candidate = pageSource) {
   for (const scheme of ['day', 'night']) for (const height of [480, 800]) {
     const properties = createArkUIPropertyRuntimeProbe(), scrolls = [];
     const metrics = { systemFontScale: 3.2, windowRect: { width: 320, height }, interactiveSafeInsets: { bottom: 34 } };
-    const deps = { ...fonts, ...directoryVisual, ...properties.sdk,
+    const deps = { ...fonts, ...directoryVisual, ...directoryState, mangaDirectoryDisplay, ...properties.sdk,
       ReaderWindowCoordinator: { metrics: () => metrics },
       ScrollAlign: { START: 'start' }, LengthMetrics: { vp: value => ({ value }) } };
     const actualFooter = createReaderBuilderProbe(footerSource, footerNames, deps, properties.hooks).Component;
@@ -411,7 +413,7 @@ function checkVpHost(candidate=pageSource) {
   const properties=createArkUIPropertyRuntimeProbe();
   const metrics=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,1280,800),undefined,new metricsApi.ReaderInsetsVp(32,54,24,34));
   metrics.systemFontScale=3.2;
-  const deps={...fonts,...directoryVisual,...metricsApi,...geometryApi,...properties.sdk,TOK_CONTENT_MAX_W_TABLET:720,
+  const deps={...fonts,...directoryVisual, ...directoryState, mangaDirectoryDisplay,...metricsApi,...geometryApi,...properties.sdk,TOK_CONTENT_MAX_W_TABLET:720,
     ReaderWindowCoordinator:{metrics:()=>metrics},LengthMetrics:{vp:value=>({value})}};
   const Footer=createReaderBuilderProbe(footerSource,footerNames,deps,properties.hooks).Component;
   const {owner}=createReaderBuilderProbe(candidate,[...pageNames,'viewportWidth','contentFrame','contentKind','onMangaKindChanged'],{

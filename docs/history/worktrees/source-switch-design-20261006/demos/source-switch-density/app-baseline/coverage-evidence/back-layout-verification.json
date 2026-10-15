@@ -1,0 +1,1684 @@
+{
+  "domain": "back-layout",
+  "status": "PASS",
+  "scope": "Explicit native geometry + actual font advances + all-state return/close inventory; not browser layout/visual acceptance",
+  "stateCount": 441,
+  "renderCount": 3969,
+  "returnOrCloseControls": 5886,
+  "fontMetrics": {
+    "10": 20,
+    "13": 26,
+    "20": 40
+  },
+  "models": [
+    {
+      "profile": "phone",
+      "scale": 1,
+      "backWidth": 51,
+      "textWidth": 20,
+      "fieldWidth": 167
+    },
+    {
+      "profile": "phone",
+      "scale": 1.3,
+      "backWidth": 57,
+      "textWidth": 26,
+      "fieldWidth": 161
+    },
+    {
+      "profile": "phone",
+      "scale": 2,
+      "backWidth": 71,
+      "textWidth": 40,
+      "fieldWidth": 147
+    },
+    {
+      "profile": "small",
+      "scale": 1,
+      "backWidth": 51,
+      "textWidth": 20,
+      "fieldWidth": 97
+    },
+    {
+      "profile": "small",
+      "scale": 1.3,
+      "backWidth": 57,
+      "textWidth": 26,
+      "fieldWidth": 91
+    },
+    {
+      "profile": "small",
+      "scale": 2,
+      "backWidth": 71,
+      "textWidth": 40,
+      "fieldWidth": 77
+    },
+    {
+      "profile": "ios",
+      "scale": 1,
+      "backWidth": 51,
+      "textWidth": 20,
+      "fieldWidth": 167
+    },
+    {
+      "profile": "ios",
+      "scale": 1.3,
+      "backWidth": 57,
+      "textWidth": 26,
+      "fieldWidth": 161
+    },
+    {
+      "profile": "ios",
+      "scale": 2,
+      "backWidth": 71,
+      "textWidth": 40,
+      "fieldWidth": 147
+    },
+    {
+      "profile": "android",
+      "scale": 1,
+      "backWidth": 51,
+      "textWidth": 20,
+      "fieldWidth": 137
+    },
+    {
+      "profile": "android",
+      "scale": 1.3,
+      "backWidth": 57,
+      "textWidth": 26,
+      "fieldWidth": 131
+    },
+    {
+      "profile": "android",
+      "scale": 2,
+      "backWidth": 71,
+      "textWidth": 40,
+      "fieldWidth": 117
+    },
+    {
+      "profile": "android-buttons",
+      "scale": 1,
+      "backWidth": 51,
+      "textWidth": 20,
+      "fieldWidth": 137
+    },
+    {
+      "profile": "android-buttons",
+      "scale": 1.3,
+      "backWidth": 57,
+      "textWidth": 26,
+      "fieldWidth": 131
+    },
+    {
+      "profile": "android-buttons",
+      "scale": 2,
+      "backWidth": 71,
+      "textWidth": 40,
+      "fieldWidth": 117
+    },
+    {
+      "profile": "landscape",
+      "scale": 1,
+      "backWidth": 51,
+      "textWidth": 20,
+      "fieldWidth": 523
+    },
+    {
+      "profile": "landscape",
+      "scale": 1.3,
+      "backWidth": 57,
+      "textWidth": 26,
+      "fieldWidth": 517
+    },
+    {
+      "profile": "landscape",
+      "scale": 2,
+      "backWidth": 71,
+      "textWidth": 40,
+      "fieldWidth": 503
+    },
+    {
+      "profile": "wide",
+      "scale": 1,
+      "backWidth": 51,
+      "textWidth": 20,
+      "fieldWidth": 523
+    },
+    {
+      "profile": "wide",
+      "scale": 1.3,
+      "backWidth": 57,
+      "textWidth": 26,
+      "fieldWidth": 517
+    },
+    {
+      "profile": "wide",
+      "scale": 2,
+      "backWidth": 71,
+      "textWidth": 40,
+      "fieldWidth": 503
+    },
+    {
+      "profile": "tablet",
+      "scale": 1,
+      "backWidth": 51,
+      "textWidth": 20,
+      "fieldWidth": 523
+    },
+    {
+      "profile": "tablet",
+      "scale": 1.3,
+      "backWidth": 57,
+      "textWidth": 26,
+      "fieldWidth": 517
+    },
+    {
+      "profile": "tablet",
+      "scale": 2,
+      "backWidth": 71,
+      "textWidth": 40,
+      "fieldWidth": 503
+    },
+    {
+      "profile": "split",
+      "scale": 1,
+      "backWidth": 51,
+      "textWidth": 20,
+      "fieldWidth": 363
+    },
+    {
+      "profile": "split",
+      "scale": 1.3,
+      "backWidth": 57,
+      "textWidth": 26,
+      "fieldWidth": 357
+    },
+    {
+      "profile": "split",
+      "scale": 2,
+      "backWidth": 71,
+      "textWidth": 40,
+      "fieldWidth": 343
+    }
+  ],
+  "groups": [
+    {
+      "class": "icon-btn",
+      "label": "返回书架",
+      "modules": [
+        "search"
+      ],
+      "states": [
+        "search/initial",
+        "search/history-loading",
+        "search/idle",
+        "search/loading",
+        "search/results",
+        "search/searching",
+        "search/stopped-results",
+        "search/filtered-empty",
+        "search/partial-error",
+        "search/local-partial-error",
+        "search/failed-sources",
+        "search/skipped-sources",
+        "search/no-source",
+        "search/all-disabled",
+        "search/source-error",
+        "search/empty",
+        "search/empty-partial-error",
+        "search/stopped",
+        "search/error",
+        "search/local-error",
+        "search/history-error",
+        "search/history-clear-error"
+      ],
+      "count": 198
+    },
+    {
+      "class": "lib-search-state-pill secondary",
+      "label": "返回书架",
+      "modules": [
+        "search"
+      ],
+      "states": [
+        "search/no-source",
+        "search/all-disabled",
+        "search/source-error"
+      ],
+      "count": 27
+    },
+    {
+      "class": "icon-btn",
+      "label": "返回",
+      "modules": [
+        "detail",
+        "bookshelf-settings",
+        "general",
+        "sources",
+        "source-tools"
+      ],
+      "states": [
+        "detail/saved",
+        "detail/local",
+        "detail/manga",
+        "detail/manga-unread",
+        "detail/preview",
+        "detail/catalog-loading",
+        "detail/catalog-empty",
+        "detail/catalog-error",
+        "detail/catalog-blocked",
+        "detail/catalog-nonnavigable",
+        "detail/adding",
+        "detail/cancelling",
+        "detail/removing",
+        "detail/add-error",
+        "bookshelf-settings/cover",
+        "bookshelf-settings/list",
+        "bookshelf-settings/save-error",
+        "bookshelf-settings/auto-off",
+        "general/default",
+        "general/settings-refreshing",
+        "general/settings-saved-refreshing",
+        "general/settings-read-error",
+        "general/settings-save-unknown",
+        "general/cache-unknown",
+        "general/cache-continuable",
+        "general/cache-reconcile-busy",
+        "general/theme-day",
+        "general/theme-night",
+        "general/reduce-motion",
+        "general/auto-check-off",
+        "general/cache-busy",
+        "general/cache-success",
+        "general/cache-error",
+        "general/reset-busy",
+        "general/reset-success",
+        "general/reset-error",
+        "general/reset-incomplete",
+        "sources/default",
+        "sources/read-refreshing",
+        "sources/receipt-refreshing",
+        "sources/receipt-refresh-failed",
+        "sources/receipt-unknown",
+        "sources/receipt-unknown-reading",
+        "sources/original-unknown",
+        "sources/original-cleanup",
+        "sources/original-busy",
+        "sources/loading",
+        "sources/load-error",
+        "sources/empty",
+        "sources/filter-empty",
+        "sources/group-open",
+        "sources/checking",
+        "sources/login-waiting",
+        "sources/check-passed",
+        "sources/check-failed",
+        "sources/importing",
+        "sources/import-online",
+        "sources/import-success",
+        "sources/import-warning",
+        "sources/import-error",
+        "sources/import-refresh-warning",
+        "sources/import-refresh-warning-partial",
+        "sources/toggle-error",
+        "sources/source-disabled",
+        "source-tools/default",
+        "source-tools/read-refreshing",
+        "source-tools/receipt-refreshing",
+        "source-tools/receipt-refresh-failed",
+        "source-tools/receipt-unknown",
+        "source-tools/receipt-unknown-reading",
+        "source-tools/original-unknown",
+        "source-tools/original-cleanup",
+        "source-tools/original-busy",
+        "source-tools/editor-save-unknown",
+        "source-tools/editor-reread-unknown",
+        "source-tools/loading",
+        "source-tools/load-error",
+        "source-tools/selected",
+        "source-tools/selection-cleared",
+        "source-tools/check-initial",
+        "source-tools/check-first",
+        "source-tools/check-running",
+        "source-tools/check-stopping",
+        "source-tools/check-complete",
+        "source-tools/check-mixed",
+        "source-tools/check-stopped",
+        "source-tools/check-stopped-empty",
+        "source-tools/check-error",
+        "source-tools/editor-loading",
+        "source-tools/editor-load-error",
+        "source-tools/editor-switch-loading",
+        "source-tools/editor-switch-error",
+        "source-tools/editor-switch-success",
+        "source-tools/editor",
+        "source-tools/editor-busy",
+        "source-tools/editor-error",
+        "source-tools/editor-readback-error",
+        "source-tools/editor-reread-busy",
+        "source-tools/editor-reread-not-found",
+        "source-tools/editor-reread-success",
+        "source-tools/editor-saved",
+        "source-tools/editor-cancelled",
+        "source-tools/export-busy",
+        "source-tools/export-success",
+        "source-tools/export-cancelled",
+        "source-tools/export-error",
+        "source-tools/enable-busy",
+        "source-tools/enable-success",
+        "source-tools/disable-busy",
+        "source-tools/disable-success",
+        "source-tools/update-partial",
+        "source-tools/update-error",
+        "source-tools/delete-busy",
+        "source-tools/delete-success",
+        "source-tools/delete-cleanup-warning",
+        "source-tools/delete-error",
+        "source-tools/debug",
+        "source-tools/debug-busy",
+        "source-tools/debug-passed",
+        "source-tools/debug-failed",
+        "source-tools/debug-error"
+      ],
+      "count": 1089
+    },
+    {
+      "class": "app-btn secondary",
+      "label": "取消加入",
+      "modules": [
+        "detail"
+      ],
+      "states": [
+        "detail/adding"
+      ],
+      "count": 9
+    },
+    {
+      "class": "app-btn secondary",
+      "label": "正在取消…",
+      "modules": [
+        "detail"
+      ],
+      "states": [
+        "detail/cancelling"
+      ],
+      "count": 9
+    },
+    {
+      "class": "",
+      "label": "取消",
+      "modules": [
+        "multiselect"
+      ],
+      "states": [
+        "multiselect/selected",
+        "multiselect/none",
+        "multiselect/all",
+        "multiselect/list",
+        "multiselect/loading",
+        "multiselect/removing"
+      ],
+      "count": 54
+    },
+    {
+      "class": "",
+      "label": "取消全选",
+      "modules": [
+        "multiselect"
+      ],
+      "states": [
+        "multiselect/all"
+      ],
+      "count": 9
+    },
+    {
+      "class": "lib-book-action-close",
+      "label": "关闭书籍操作",
+      "modules": [
+        "book-actions"
+      ],
+      "states": [
+        "book-actions/default",
+        "book-actions/local"
+      ],
+      "count": 18
+    },
+    {
+      "class": "app-btn lib-import-cancel",
+      "label": "取消",
+      "modules": [
+        "local-import"
+      ],
+      "states": [
+        "local-import/selection",
+        "local-import/selection-error",
+        "local-import/picker"
+      ],
+      "count": 27
+    },
+    {
+      "class": "app-btn primary",
+      "label": "完成",
+      "modules": [
+        "local-import"
+      ],
+      "states": [
+        "local-import/result",
+        "local-import/partial",
+        "local-import/failed",
+        "local-import/recovery",
+        "local-import/long-result"
+      ],
+      "count": 45
+    },
+    {
+      "class": "app-btn secondary",
+      "label": "取消",
+      "modules": [
+        "book-removal",
+        "source-tools",
+        "source-login",
+        "restore-defaults",
+        "source-export",
+        "source-delete"
+      ],
+      "states": [
+        "book-removal/online",
+        "book-removal/local",
+        "book-removal/batch",
+        "source-tools/editor-save-unknown",
+        "source-tools/editor-reread-unknown",
+        "source-tools/editor-switch-loading",
+        "source-tools/editor-switch-error",
+        "source-tools/editor-switch-success",
+        "source-tools/editor",
+        "source-tools/editor-busy",
+        "source-tools/editor-error",
+        "source-tools/editor-readback-error",
+        "source-tools/editor-reread-busy",
+        "source-tools/editor-reread-not-found",
+        "source-login/default",
+        "source-login/starting",
+        "source-login/long-url",
+        "restore-defaults/default",
+        "source-export/default",
+        "source-delete/default"
+      ],
+      "count": 180
+    },
+    {
+      "class": "source-group-dismiss",
+      "label": "关闭分组选择",
+      "modules": [
+        "sources"
+      ],
+      "states": [
+        "sources/group-open"
+      ],
+      "count": 9
+    },
+    {
+      "class": "source-json-close",
+      "label": "关闭",
+      "modules": [
+        "json-import"
+      ],
+      "states": [
+        "json-import/default",
+        "json-import/empty-url"
+      ],
+      "count": 18
+    },
+    {
+      "class": "app-btn secondary",
+      "label": "知道了",
+      "modules": [
+        "source-result"
+      ],
+      "states": [
+        "source-result/default",
+        "source-result/partial",
+        "source-result/committed-refresh-failure",
+        "source-result/committed-refresh-failure-partial",
+        "source-result/error"
+      ],
+      "count": 45
+    },
+    {
+      "class": "app-btn secondary",
+      "label": "继续管理",
+      "modules": [
+        "source-result"
+      ],
+      "states": [
+        "source-result/from-search",
+        "source-result/from-search-refresh-failure"
+      ],
+      "count": 18
+    },
+    {
+      "class": "reading-text-button ",
+      "label": "返回目录",
+      "modules": [
+        "reader"
+      ],
+      "states": [
+        "reader/manga-end",
+        "reader/manga-book-end"
+      ],
+      "count": 18
+    },
+    {
+      "class": "icon-btn",
+      "label": "退出漫画阅读",
+      "modules": [
+        "reader"
+      ],
+      "states": [
+        "reader/manga-recovery",
+        "reader/manga-replacement",
+        "reader/manga-login"
+      ],
+      "count": 27
+    },
+    {
+      "class": "icon-btn",
+      "label": "返回书籍详情",
+      "modules": [
+        "directory"
+      ],
+      "states": [
+        "directory/chapters",
+        "directory/hierarchy",
+        "directory/hierarchy-collapsed",
+        "directory/manga-chapters",
+        "directory/manga-hierarchy",
+        "directory/manga-hierarchy-collapsed",
+        "directory/manga-unread",
+        "directory/downloaded",
+        "directory/unadmitted",
+        "directory/no-match",
+        "directory/empty",
+        "directory/local",
+        "directory/local-rules-loading",
+        "directory/local-rules-editor",
+        "directory/local-rules-empty",
+        "directory/local-rules-added",
+        "directory/local-rules-invalid",
+        "directory/local-rules-preview",
+        "directory/local-rules-busy",
+        "directory/local-rules-error",
+        "directory/local-rules-load-error",
+        "directory/local-rules-unavailable",
+        "directory/local-rules-applied",
+        "directory/bookmark-recovery",
+        "directory/bookmark-partial",
+        "directory/offline-recovery",
+        "directory/offline-blocked",
+        "directory/offline-continue"
+      ],
+      "count": 252
+    },
+    {
+      "class": "reading-text-button reading-rules-expand",
+      "label": "收起层级规则",
+      "modules": [
+        "directory"
+      ],
+      "states": [
+        "directory/local-rules-loading",
+        "directory/local-rules-editor",
+        "directory/local-rules-empty",
+        "directory/local-rules-added",
+        "directory/local-rules-invalid",
+        "directory/local-rules-preview",
+        "directory/local-rules-busy",
+        "directory/local-rules-error",
+        "directory/local-rules-load-error",
+        "directory/local-rules-unavailable",
+        "directory/local-rules-applied"
+      ],
+      "count": 99
+    },
+    {
+      "class": "icon-btn",
+      "label": "退出阅读，返回上一页",
+      "modules": [
+        "reader-controls",
+        "reader-directory",
+        "reader-tts",
+        "reader-appearance",
+        "reader-settings",
+        "reader-search",
+        "reader-autopage",
+        "reader-replace"
+      ],
+      "states": [
+        "reader-controls/quick",
+        "reader-controls/local",
+        "reader-directory/quick",
+        "reader-directory/full",
+        "reader-directory/hierarchy",
+        "reader-directory/hierarchy-full",
+        "reader-directory/hierarchy-collapsed",
+        "reader-directory/hierarchy-full-collapsed",
+        "reader-directory/quick-bookmarks",
+        "reader-directory/bookmarks",
+        "reader-directory/quick-bookmark-loading",
+        "reader-directory/bookmark-loading",
+        "reader-directory/quick-bookmark-empty",
+        "reader-directory/bookmark-empty",
+        "reader-directory/quick-bookmark-error",
+        "reader-directory/bookmark-error",
+        "reader-directory/quick-bookmark-pending",
+        "reader-directory/bookmark-pending",
+        "reader-directory/no-match-full",
+        "reader-directory/no-match-quick",
+        "reader-directory/catalog-empty-quick",
+        "reader-directory/unadmitted-quick",
+        "reader-directory/catalog-empty-full",
+        "reader-directory/unadmitted-full",
+        "reader-tts/quick",
+        "reader-tts/full",
+        "reader-tts/playing",
+        "reader-tts/paused",
+        "reader-tts/error",
+        "reader-tts/full-playing",
+        "reader-tts/full-paused",
+        "reader-tts/full-error",
+        "reader-tts/full-preparing",
+        "reader-tts/preparing",
+        "reader-tts/quick-online",
+        "reader-tts/quick-online-configured",
+        "reader-tts/quick-online-configured-playing",
+        "reader-tts/online",
+        "reader-tts/online-configured",
+        "reader-tts/full-online-configured-playing",
+        "reader-tts/resuming",
+        "reader-tts/full-resuming",
+        "reader-tts/interrupted",
+        "reader-tts/full-interrupted",
+        "reader-tts/probing",
+        "reader-tts/full-probing",
+        "reader-tts/completed",
+        "reader-tts/full-completed",
+        "reader-tts/stopping",
+        "reader-tts/full-stopping",
+        "reader-tts/unavailable",
+        "reader-tts/full-unavailable",
+        "reader-appearance/quick",
+        "reader-appearance/full",
+        "reader-appearance/indent-choice",
+        "reader-appearance/conversion-choice",
+        "reader-settings/quick",
+        "reader-settings/full",
+        "reader-settings/unavailable",
+        "reader-settings/full-unavailable",
+        "reader-search/quick",
+        "reader-search/full",
+        "reader-search/results",
+        "reader-search/loading",
+        "reader-search/empty",
+        "reader-search/error",
+        "reader-search/more-loading",
+        "reader-search/more-error",
+        "reader-search/complete",
+        "reader-search/full-results",
+        "reader-search/full-loading",
+        "reader-search/full-empty",
+        "reader-search/full-error",
+        "reader-search/full-more-loading",
+        "reader-search/full-more-error",
+        "reader-search/full-complete",
+        "reader-autopage/quick",
+        "reader-autopage/full",
+        "reader-autopage/running",
+        "reader-autopage/paused",
+        "reader-autopage/full-running",
+        "reader-autopage/full-paused",
+        "reader-replace/quick",
+        "reader-replace/full",
+        "reader-replace/loading",
+        "reader-replace/full-loading",
+        "reader-replace/error",
+        "reader-replace/full-error",
+        "reader-replace/mutation-busy",
+        "reader-replace/full-mutation-busy",
+        "reader-replace/editor",
+        "reader-replace/edit",
+        "reader-replace/editor-error",
+        "reader-replace/editor-busy",
+        "reader-replace/editor-uncertain",
+        "reader-replace/delete",
+        "reader-replace/delete-error",
+        "reader-replace/delete-busy",
+        "reader-replace/import",
+        "reader-replace/import-error",
+        "reader-replace/import-busy",
+        "reader-replace/preview",
+        "reader-replace/preview-loading",
+        "reader-replace/preview-error",
+        "reader-replace/preview-full",
+        "reader-replace/preview-loading-full",
+        "reader-replace/preview-error-full",
+        "reader-replace/write-uncertain",
+        "reader-replace/quick-write-uncertain",
+        "reader-replace/empty",
+        "reader-replace/full-empty"
+      ],
+      "count": 999
+    },
+    {
+      "class": "reading-chapter-title",
+      "label": "第一章 清晨",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/quick",
+        "reader-directory/full",
+        "reader-directory/hierarchy",
+        "reader-directory/hierarchy-full",
+        "reader-directory/unadmitted-quick",
+        "reader-directory/unadmitted-full"
+      ],
+      "count": 54
+    },
+    {
+      "class": "reading-chapter-title",
+      "label": "第二章 林间",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/quick",
+        "reader-directory/full",
+        "reader-directory/hierarchy",
+        "reader-directory/hierarchy-full",
+        "reader-directory/unadmitted-quick",
+        "reader-directory/unadmitted-full"
+      ],
+      "count": 54
+    },
+    {
+      "class": "reading-chapter-title",
+      "label": "第三章 山路",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/quick",
+        "reader-directory/full",
+        "reader-directory/hierarchy",
+        "reader-directory/hierarchy-full",
+        "reader-directory/unadmitted-quick",
+        "reader-directory/unadmitted-full"
+      ],
+      "count": 54
+    },
+    {
+      "class": "reading-chapter-title",
+      "label": "第四章 远村",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/quick",
+        "reader-directory/full",
+        "reader-directory/hierarchy",
+        "reader-directory/hierarchy-full",
+        "reader-directory/hierarchy-collapsed",
+        "reader-directory/hierarchy-full-collapsed",
+        "reader-directory/unadmitted-quick",
+        "reader-directory/unadmitted-full"
+      ],
+      "count": 72
+    },
+    {
+      "class": "reading-chapter-title",
+      "label": "第五章 灯火",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/quick",
+        "reader-directory/full",
+        "reader-directory/hierarchy",
+        "reader-directory/hierarchy-full",
+        "reader-directory/hierarchy-collapsed",
+        "reader-directory/hierarchy-full-collapsed",
+        "reader-directory/unadmitted-quick",
+        "reader-directory/unadmitted-full"
+      ],
+      "count": 72
+    },
+    {
+      "class": "active",
+      "label": "目录，已选中；再次点击返回控制首页",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/quick",
+        "reader-directory/full",
+        "reader-directory/hierarchy",
+        "reader-directory/hierarchy-full",
+        "reader-directory/hierarchy-collapsed",
+        "reader-directory/hierarchy-full-collapsed",
+        "reader-directory/quick-bookmarks",
+        "reader-directory/bookmarks",
+        "reader-directory/quick-bookmark-loading",
+        "reader-directory/bookmark-loading",
+        "reader-directory/quick-bookmark-empty",
+        "reader-directory/bookmark-empty",
+        "reader-directory/quick-bookmark-error",
+        "reader-directory/bookmark-error",
+        "reader-directory/quick-bookmark-pending",
+        "reader-directory/bookmark-pending",
+        "reader-directory/no-match-full",
+        "reader-directory/no-match-quick",
+        "reader-directory/catalog-empty-quick",
+        "reader-directory/unadmitted-quick",
+        "reader-directory/catalog-empty-full",
+        "reader-directory/unadmitted-full"
+      ],
+      "count": 198
+    },
+    {
+      "class": "reading-text-button ",
+      "label": "收起",
+      "modules": [
+        "reader-directory",
+        "reader-tts",
+        "reader-appearance",
+        "reader-settings",
+        "reader-search",
+        "reader-autopage"
+      ],
+      "states": [
+        "reader-directory/full",
+        "reader-directory/hierarchy-full",
+        "reader-directory/hierarchy-full-collapsed",
+        "reader-directory/bookmarks",
+        "reader-directory/bookmark-loading",
+        "reader-directory/bookmark-empty",
+        "reader-directory/bookmark-error",
+        "reader-directory/bookmark-pending",
+        "reader-directory/no-match-full",
+        "reader-directory/catalog-empty-full",
+        "reader-directory/manga-external-full",
+        "reader-directory/manga-external-bookmarks",
+        "reader-directory/manga-external-menu",
+        "reader-directory/unadmitted-full",
+        "reader-tts/full",
+        "reader-tts/full-playing",
+        "reader-tts/full-paused",
+        "reader-tts/full-error",
+        "reader-tts/full-preparing",
+        "reader-tts/online",
+        "reader-tts/online-configured",
+        "reader-tts/full-online-configured-playing",
+        "reader-tts/full-resuming",
+        "reader-tts/full-interrupted",
+        "reader-tts/full-probing",
+        "reader-tts/full-completed",
+        "reader-tts/full-stopping",
+        "reader-tts/full-unavailable",
+        "reader-appearance/full",
+        "reader-appearance/indent-choice",
+        "reader-appearance/conversion-choice",
+        "reader-settings/full",
+        "reader-settings/full-unavailable",
+        "reader-search/full",
+        "reader-search/full-results",
+        "reader-search/full-loading",
+        "reader-search/full-empty",
+        "reader-search/full-error",
+        "reader-search/full-more-loading",
+        "reader-search/full-more-error",
+        "reader-search/full-complete",
+        "reader-autopage/full",
+        "reader-autopage/full-running",
+        "reader-autopage/full-paused"
+      ],
+      "count": 396
+    },
+    {
+      "class": "manga-panel-mask",
+      "label": "关闭章节目录",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-quick",
+        "reader-directory/manga-full",
+        "reader-directory/manga-hierarchy",
+        "reader-directory/manga-hierarchy-full",
+        "reader-directory/manga-hierarchy-collapsed",
+        "reader-directory/manga-hierarchy-full-collapsed"
+      ],
+      "count": 54
+    },
+    {
+      "class": "manga-panel-grabber",
+      "label": "向下关闭章节目录",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-quick",
+        "reader-directory/manga-full",
+        "reader-directory/manga-hierarchy",
+        "reader-directory/manga-hierarchy-full",
+        "reader-directory/manga-hierarchy-collapsed",
+        "reader-directory/manga-hierarchy-full-collapsed"
+      ],
+      "count": 54
+    },
+    {
+      "class": "manga-panel-close",
+      "label": "关闭章节目录",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-quick",
+        "reader-directory/manga-full",
+        "reader-directory/manga-hierarchy",
+        "reader-directory/manga-hierarchy-full",
+        "reader-directory/manga-hierarchy-collapsed",
+        "reader-directory/manga-hierarchy-full-collapsed"
+      ],
+      "count": 54
+    },
+    {
+      "class": "reading-text-button manga-directory-name",
+      "label": "第1话 清晨",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-quick",
+        "reader-directory/manga-full",
+        "reader-directory/manga-hierarchy",
+        "reader-directory/manga-hierarchy-full"
+      ],
+      "count": 36
+    },
+    {
+      "class": "reading-text-button manga-directory-name",
+      "label": "第2话 林间",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-quick",
+        "reader-directory/manga-full",
+        "reader-directory/manga-hierarchy",
+        "reader-directory/manga-hierarchy-full"
+      ],
+      "count": 36
+    },
+    {
+      "class": "reading-text-button manga-directory-name",
+      "label": "第3话 山路",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-quick",
+        "reader-directory/manga-full",
+        "reader-directory/manga-hierarchy",
+        "reader-directory/manga-hierarchy-full"
+      ],
+      "count": 36
+    },
+    {
+      "class": "reading-text-button manga-directory-name",
+      "label": "第4话 远村",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-quick",
+        "reader-directory/manga-full",
+        "reader-directory/manga-hierarchy",
+        "reader-directory/manga-hierarchy-full",
+        "reader-directory/manga-hierarchy-collapsed",
+        "reader-directory/manga-hierarchy-full-collapsed"
+      ],
+      "count": 54
+    },
+    {
+      "class": "reading-text-button manga-directory-name",
+      "label": "第5话 灯火",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-quick",
+        "reader-directory/manga-full",
+        "reader-directory/manga-hierarchy",
+        "reader-directory/manga-hierarchy-full",
+        "reader-directory/manga-hierarchy-collapsed",
+        "reader-directory/manga-hierarchy-full-collapsed"
+      ],
+      "count": 54
+    },
+    {
+      "class": "reading-text-button bookmark-return",
+      "label": "返回目录",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/quick-bookmark-empty",
+        "reader-directory/bookmark-empty"
+      ],
+      "count": 18
+    },
+    {
+      "class": "icon-btn",
+      "label": "收起完整目录",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-external-full",
+        "reader-directory/manga-external-bookmarks",
+        "reader-directory/manga-external-menu"
+      ],
+      "count": 27
+    },
+    {
+      "class": "reading-chapter-title",
+      "label": "第1话 清晨",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-external-full",
+        "reader-directory/manga-external-menu"
+      ],
+      "count": 18
+    },
+    {
+      "class": "reading-chapter-title",
+      "label": "第2话 林间",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-external-full",
+        "reader-directory/manga-external-menu"
+      ],
+      "count": 18
+    },
+    {
+      "class": "reading-chapter-title",
+      "label": "第3话 山路",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-external-full",
+        "reader-directory/manga-external-menu"
+      ],
+      "count": 18
+    },
+    {
+      "class": "reading-chapter-title",
+      "label": "第4话 远村",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-external-full",
+        "reader-directory/manga-external-menu"
+      ],
+      "count": 18
+    },
+    {
+      "class": "reading-chapter-title",
+      "label": "第5话 灯火",
+      "modules": [
+        "reader-directory"
+      ],
+      "states": [
+        "reader-directory/manga-external-full",
+        "reader-directory/manga-external-menu"
+      ],
+      "count": 18
+    },
+    {
+      "class": "active",
+      "label": "朗读，已选中；再次点击返回控制首页",
+      "modules": [
+        "reader-tts"
+      ],
+      "states": [
+        "reader-tts/quick",
+        "reader-tts/full",
+        "reader-tts/playing",
+        "reader-tts/paused",
+        "reader-tts/error",
+        "reader-tts/full-playing",
+        "reader-tts/full-paused",
+        "reader-tts/full-error",
+        "reader-tts/full-preparing",
+        "reader-tts/preparing",
+        "reader-tts/quick-online",
+        "reader-tts/quick-online-configured",
+        "reader-tts/quick-online-configured-playing",
+        "reader-tts/online",
+        "reader-tts/online-configured",
+        "reader-tts/full-online-configured-playing",
+        "reader-tts/resuming",
+        "reader-tts/full-resuming",
+        "reader-tts/interrupted",
+        "reader-tts/full-interrupted",
+        "reader-tts/probing",
+        "reader-tts/full-probing",
+        "reader-tts/completed",
+        "reader-tts/full-completed",
+        "reader-tts/stopping",
+        "reader-tts/full-stopping",
+        "reader-tts/unavailable",
+        "reader-tts/full-unavailable"
+      ],
+      "count": 252
+    },
+    {
+      "class": "reading-tts-choice-close",
+      "label": "关闭 TTS 配置",
+      "modules": [
+        "reader-tts-config"
+      ],
+      "states": [
+        "reader-tts-config/engine",
+        "reader-tts-config/engine-busy",
+        "reader-tts-config/engine-error",
+        "reader-tts-config/language",
+        "reader-tts-config/language-busy",
+        "reader-tts-config/language-error",
+        "reader-tts-config/failure",
+        "reader-tts-config/failure-busy",
+        "reader-tts-config/failure-error"
+      ],
+      "count": 81
+    },
+    {
+      "class": "reading-tts-manager-close",
+      "label": "关闭 TTS 配置",
+      "modules": [
+        "reader-tts-manager"
+      ],
+      "states": [
+        "reader-tts-manager/new",
+        "reader-tts-manager/edit",
+        "reader-tts-manager/error",
+        "reader-tts-manager/busy"
+      ],
+      "count": 36
+    },
+    {
+      "class": "reading-text-button ",
+      "label": "取消",
+      "modules": [
+        "reader-tts-manager",
+        "reader-replace"
+      ],
+      "states": [
+        "reader-tts-manager/new",
+        "reader-tts-manager/edit",
+        "reader-tts-manager/error",
+        "reader-tts-manager/busy",
+        "reader-replace/editor",
+        "reader-replace/edit",
+        "reader-replace/editor-error",
+        "reader-replace/editor-busy",
+        "reader-replace/editor-uncertain",
+        "reader-replace/delete",
+        "reader-replace/delete-error",
+        "reader-replace/delete-busy",
+        "reader-replace/import",
+        "reader-replace/import-error",
+        "reader-replace/import-busy",
+        "reader-replace/preview",
+        "reader-replace/preview-loading",
+        "reader-replace/preview-error",
+        "reader-replace/preview-full",
+        "reader-replace/preview-loading-full",
+        "reader-replace/preview-error-full"
+      ],
+      "count": 189
+    },
+    {
+      "class": "active",
+      "label": "界面，已选中；再次点击返回控制首页",
+      "modules": [
+        "reader-appearance"
+      ],
+      "states": [
+        "reader-appearance/quick",
+        "reader-appearance/full",
+        "reader-appearance/indent-choice",
+        "reader-appearance/conversion-choice"
+      ],
+      "count": 36
+    },
+    {
+      "class": "reading-select-dismiss",
+      "label": "关闭选择层",
+      "modules": [
+        "reader-appearance"
+      ],
+      "states": [
+        "reader-appearance/indent-choice",
+        "reader-appearance/conversion-choice"
+      ],
+      "count": 18
+    },
+    {
+      "class": "selected",
+      "label": "无",
+      "modules": [
+        "reader-appearance"
+      ],
+      "states": [
+        "reader-appearance/indent-choice"
+      ],
+      "count": 9
+    },
+    {
+      "class": "",
+      "label": "1字符",
+      "modules": [
+        "reader-appearance"
+      ],
+      "states": [
+        "reader-appearance/indent-choice"
+      ],
+      "count": 9
+    },
+    {
+      "class": "",
+      "label": "2字符",
+      "modules": [
+        "reader-appearance"
+      ],
+      "states": [
+        "reader-appearance/indent-choice"
+      ],
+      "count": 9
+    },
+    {
+      "class": "selected",
+      "label": "原文",
+      "modules": [
+        "reader-appearance"
+      ],
+      "states": [
+        "reader-appearance/conversion-choice"
+      ],
+      "count": 9
+    },
+    {
+      "class": "",
+      "label": "繁转简",
+      "modules": [
+        "reader-appearance"
+      ],
+      "states": [
+        "reader-appearance/conversion-choice"
+      ],
+      "count": 9
+    },
+    {
+      "class": "",
+      "label": "简转繁",
+      "modules": [
+        "reader-appearance"
+      ],
+      "states": [
+        "reader-appearance/conversion-choice"
+      ],
+      "count": 9
+    },
+    {
+      "class": "active",
+      "label": "设置，已选中；再次点击返回控制首页",
+      "modules": [
+        "reader-settings"
+      ],
+      "states": [
+        "reader-settings/quick",
+        "reader-settings/full",
+        "reader-settings/unavailable",
+        "reader-settings/full-unavailable"
+      ],
+      "count": 36
+    },
+    {
+      "class": "reading-quick-back reading-search-back",
+      "label": "返回阅读控制首页",
+      "modules": [
+        "reader-search"
+      ],
+      "states": [
+        "reader-search/quick",
+        "reader-search/results",
+        "reader-search/loading",
+        "reader-search/empty",
+        "reader-search/error",
+        "reader-search/more-loading",
+        "reader-search/more-error",
+        "reader-search/complete"
+      ],
+      "count": 72
+    },
+    {
+      "class": "reading-quick-back reading-replace-back",
+      "label": "返回阅读控制首页",
+      "modules": [
+        "reader-replace"
+      ],
+      "states": [
+        "reader-replace/quick",
+        "reader-replace/loading",
+        "reader-replace/error",
+        "reader-replace/mutation-busy",
+        "reader-replace/quick-write-uncertain",
+        "reader-replace/empty"
+      ],
+      "count": 54
+    },
+    {
+      "class": "reading-text-button reading-replace-editor-back",
+      "label": "返回",
+      "modules": [
+        "reader-replace"
+      ],
+      "states": [
+        "reader-replace/editor",
+        "reader-replace/edit",
+        "reader-replace/editor-error",
+        "reader-replace/editor-busy",
+        "reader-replace/editor-uncertain"
+      ],
+      "count": 45
+    },
+    {
+      "class": "source-picker-back",
+      "label": "返回",
+      "modules": [
+        "source-switch"
+      ],
+      "states": [
+        "source-switch/candidates",
+        "source-switch/discovering",
+        "source-switch/switching",
+        "source-switch/empty",
+        "source-switch/discovery-error",
+        "source-switch/failure",
+        "source-switch/failure-transaction"
+      ],
+      "count": 63
+    },
+    {
+      "class": "icon-btn",
+      "label": "取消目标章节选择，返回换源列表",
+      "modules": [
+        "source-switch"
+      ],
+      "states": [
+        "source-switch/manga-selection",
+        "source-switch/manga-selection-busy",
+        "source-switch/manga-selection-commit"
+      ],
+      "count": 27
+    },
+    {
+      "class": "manga-panel-mask",
+      "label": "关闭阅读方式",
+      "modules": [
+        "manga-mode"
+      ],
+      "states": [
+        "manga-mode/normal"
+      ],
+      "count": 9
+    },
+    {
+      "class": "manga-panel-grabber",
+      "label": "向下关闭阅读方式",
+      "modules": [
+        "manga-mode"
+      ],
+      "states": [
+        "manga-mode/normal"
+      ],
+      "count": 9
+    },
+    {
+      "class": "manga-panel-close",
+      "label": "关闭阅读方式",
+      "modules": [
+        "manga-mode"
+      ],
+      "states": [
+        "manga-mode/normal"
+      ],
+      "count": 9
+    },
+    {
+      "class": "manga-panel-mask",
+      "label": "关闭漫画阅读设置",
+      "modules": [
+        "manga-settings"
+      ],
+      "states": [
+        "manga-settings/normal"
+      ],
+      "count": 9
+    },
+    {
+      "class": "manga-panel-grabber",
+      "label": "向下关闭漫画阅读设置",
+      "modules": [
+        "manga-settings"
+      ],
+      "states": [
+        "manga-settings/normal"
+      ],
+      "count": 9
+    },
+    {
+      "class": "manga-panel-close",
+      "label": "关闭漫画阅读设置",
+      "modules": [
+        "manga-settings"
+      ],
+      "states": [
+        "manga-settings/normal"
+      ],
+      "count": 9
+    },
+    {
+      "class": "manga-panel-mask",
+      "label": "关闭更多",
+      "modules": [
+        "manga-more"
+      ],
+      "states": [
+        "manga-more/normal",
+        "manga-more/offline"
+      ],
+      "count": 18
+    },
+    {
+      "class": "manga-panel-grabber",
+      "label": "向下关闭更多",
+      "modules": [
+        "manga-more"
+      ],
+      "states": [
+        "manga-more/normal",
+        "manga-more/offline"
+      ],
+      "count": 18
+    },
+    {
+      "class": "manga-panel-close",
+      "label": "关闭更多",
+      "modules": [
+        "manga-more"
+      ],
+      "states": [
+        "manga-more/normal",
+        "manga-more/offline"
+      ],
+      "count": 18
+    },
+    {
+      "class": "manga-panel-mask",
+      "label": "关闭本书下载",
+      "modules": [
+        "manga-downloads"
+      ],
+      "states": [
+        "manga-downloads/normal",
+        "manga-downloads/active",
+        "manga-downloads/paused",
+        "manga-downloads/loading",
+        "manga-downloads/error"
+      ],
+      "count": 45
+    },
+    {
+      "class": "manga-panel-grabber",
+      "label": "向下关闭本书下载",
+      "modules": [
+        "manga-downloads"
+      ],
+      "states": [
+        "manga-downloads/normal",
+        "manga-downloads/active",
+        "manga-downloads/paused",
+        "manga-downloads/loading",
+        "manga-downloads/error"
+      ],
+      "count": 45
+    },
+    {
+      "class": "manga-panel-close",
+      "label": "关闭本书下载",
+      "modules": [
+        "manga-downloads"
+      ],
+      "states": [
+        "manga-downloads/normal",
+        "manga-downloads/active",
+        "manga-downloads/paused",
+        "manga-downloads/loading",
+        "manga-downloads/error"
+      ],
+      "count": 45
+    },
+    {
+      "class": "manga-panel-mask",
+      "label": "关闭本话下载",
+      "modules": [
+        "manga-downloads"
+      ],
+      "states": [
+        "manga-downloads/chapter",
+        "manga-downloads/chapter-completed"
+      ],
+      "count": 18
+    },
+    {
+      "class": "manga-panel-grabber",
+      "label": "向下关闭本话下载",
+      "modules": [
+        "manga-downloads"
+      ],
+      "states": [
+        "manga-downloads/chapter",
+        "manga-downloads/chapter-completed"
+      ],
+      "count": 18
+    },
+    {
+      "class": "manga-panel-close",
+      "label": "关闭本话下载",
+      "modules": [
+        "manga-downloads"
+      ],
+      "states": [
+        "manga-downloads/chapter",
+        "manga-downloads/chapter-completed"
+      ],
+      "count": 18
+    },
+    {
+      "class": "reading-text-button manga-operation",
+      "label": "取消下载",
+      "modules": [
+        "manga-downloads"
+      ],
+      "states": [
+        "manga-downloads/active",
+        "manga-downloads/paused"
+      ],
+      "count": 18
+    },
+    {
+      "class": "app-btn primary",
+      "label": "重试保存并退出",
+      "modules": [
+        "reader-exit-failure"
+      ],
+      "states": [
+        "reader-exit-failure/normal"
+      ],
+      "count": 9
+    },
+    {
+      "class": "app-btn secondary",
+      "label": "继续阅读",
+      "modules": [
+        "reader-exit-failure"
+      ],
+      "states": [
+        "reader-exit-failure/normal"
+      ],
+      "count": 9
+    },
+    {
+      "class": "app-btn secondary",
+      "label": "关闭提示",
+      "modules": [
+        "reader-refresh-failure"
+      ],
+      "states": [
+        "reader-refresh-failure/refresh",
+        "reader-refresh-failure/jump"
+      ],
+      "count": 18
+    },
+    {
+      "class": "app-btn secondary",
+      "label": "保留缓存并返回",
+      "modules": [
+        "reader-refresh-failure"
+      ],
+      "states": [
+        "reader-refresh-failure/cache-verify"
+      ],
+      "count": 9
+    }
+  ],
+  "browser": false,
+  "nativeVisual": false
+}

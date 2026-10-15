@@ -526,10 +526,20 @@ export struct SettingsPage {
     if (this.cacheCleanup !== undefined) this.applyCacheCleanup(this.cacheCleanup);
   }
 
+  private cacheCleanupNoticeGeneration: number = -1;
   private applyCacheCleanup(snapshot: SettingsCacheCleanupSnapshot): void {
     this.cacheCleanupInFlight = snapshot.busy;
-    this.cacheActionLabel = snapshot.busy ? '清理中' : snapshot.confirmation === 'confirmed' ? '已清理' :
+    const report = snapshot.operation.value;
+    const resultLabel = report?.scope === 'text' && report.cleanupError !== undefined ? '部分清理' :
+      report?.scope === 'text' && report.removedContentBytes === 0 && (report.deletedFiles ?? 0) === 0 ? '暂无缓存' : '已清理';
+    this.cacheActionLabel = snapshot.busy ? '清理中' : snapshot.confirmation === 'confirmed' ? resultLabel :
       snapshot.confirmation === 'unknown' ? '结果未确认' : snapshot.confirmation === 'undispatched' ? '清理失败' : '清理文字缓存';
+    if (!snapshot.busy && this.mounted && snapshot.confirmation !== undefined && snapshot.operation.message !== undefined &&
+      snapshot.operation.generation !== undefined && this.cacheCleanupNoticeGeneration !== snapshot.operation.generation) {
+      this.cacheCleanupNoticeGeneration = snapshot.operation.generation;
+      try { this.getUIContext().getPromptAction().showToast({ message: snapshot.operation.message }); }
+      catch (_notice) { /* Native notices cannot change the storage receipt. */ }
+    }
   }
 
   @Builder

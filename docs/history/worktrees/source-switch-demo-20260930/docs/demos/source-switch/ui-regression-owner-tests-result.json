@@ -1,0 +1,18 @@
+{
+  "files": {
+    "tools/test-bookshelf-reading-entry.mjs": "f118cdb8cc353427571756008ae66485aa8f74323b65a477760505a20c3ff82e",
+    "tools/test-legado-product-logic.mjs": "95e5350fc84a089c1912675c3d6d82bf9bd685cf62d54be38b69016b2b25dbfc",
+    "tools/test-reader-window-chrome-p0.mjs": "756140d408591ecf46cf103982e3caf4c9a03b0dd30f67510fae2b41e049c0cf"
+  },
+  "redLogs": [
+    "/private/tmp/bookshelf-reading-entry-owner-red-20261001.log",
+    "/private/tmp/legado-product-logic-owner-red-20261001.log",
+    "/private/tmp/reader-window-chrome-p0-owner-red-20261001.log"
+  ],
+  "greenLogs": [
+    "/private/tmp/bookshelf-reading-entry-owner-green-20261001.log",
+    "/private/tmp/legado-product-logic-owner-green-20261001.log",
+    "/private/tmp/reader-window-chrome-p0-owner-green-20261001.log"
+  ],
+  "scope": "Only three existing tests changed; production frozen"
+}

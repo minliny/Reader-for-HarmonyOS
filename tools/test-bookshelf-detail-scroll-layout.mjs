@@ -172,9 +172,10 @@ function checkAreaMeasurements(candidate = localBookDetailSource) {
     owner.mangaFontsReady = true; owner.initialRender();
     const scroll = [...owner.nodes.values()].find(node => node.type === 'Scroll');
     const callbacks = [...owner.nodes.values()].filter(node => typeof node.onAreaChange === 'function');
-    assert.equal(callbacks.length, 2, 'detail exposes only its actual host-width and dock-height measurements');
+    assert.equal(callbacks.length, 3, 'detail exposes its host-width, dock-height and actual synopsis-width measurements');
     const dock = callbacks.find(node => node.type === 'Stack' && node.constraintSize?.minHeight === (contentKind === 'manga' ? visual.detailDockHeight : 68));
-    assert.ok(dock); const host = callbacks.find(node => node !== dock);
+    assert.ok(dock); const host = callbacks.find(node => node !== dock && node.type !== 'Text');
+    assert.ok(callbacks.some(node => node.type === 'Text'), 'synopsis width is measured by its actual native text actor');
     host.onAreaChange({}, {width: unit ? '320vp' : 320});
     assert.equal(owner.viewportWidth, 320, 'actual narrow host width receipt overrides the 800vp window');
     assert.equal(owner.contentFrame().width, 280);

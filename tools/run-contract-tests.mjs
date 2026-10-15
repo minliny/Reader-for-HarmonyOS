@@ -7,6 +7,7 @@ import { spawnSync, spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 
 export const MAX_CONTRACT_TIMEOUT_MS = 110_000;
+export const MAX_CONTRACT_KILL_GRACE_MS = 1_000;
 
 export function contractSelection(manifest, discovered, tier, scope) {
   assert.ok(['source', 'full'].includes(tier));
@@ -55,10 +56,10 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
   const runStarted = performance.now();
   assert.ok(Number.isInteger(workers) && workers >= 1 && workers <= 4, 'workers must be an integer in 1..4');
   const timeoutMs = testOptions.timeoutMs ?? MAX_CONTRACT_TIMEOUT_MS;
-  const killGraceMs = testOptions.killGraceMs ?? 1_000;
+  const killGraceMs = testOptions.killGraceMs ?? MAX_CONTRACT_KILL_GRACE_MS;
   const scopeTimeoutMs = testOptions.scope === undefined ? null : testOptions.scopeTimeoutMs ?? MAX_CONTRACT_TIMEOUT_MS;
   assert.ok(Number.isInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= MAX_CONTRACT_TIMEOUT_MS, 'invalid test deadline');
-  assert.ok(Number.isInteger(killGraceMs) && killGraceMs > 0 && killGraceMs <= 10_000, 'invalid termination grace');
+  assert.ok(Number.isInteger(killGraceMs) && killGraceMs > 0 && killGraceMs <= MAX_CONTRACT_KILL_GRACE_MS, 'invalid termination grace');
   assert.ok(scopeTimeoutMs === null || Number.isInteger(scopeTimeoutMs) && scopeTimeoutMs > 0 && scopeTimeoutMs <= MAX_CONTRACT_TIMEOUT_MS,
     'invalid scope deadline');
   assert.ok(scopeTimeoutMs === null || killGraceMs <= 1_000, 'scope termination grace must be at most one second');

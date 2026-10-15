@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260930T192156Z-bdf8bcde-f2af9d1a",
+  "manifest": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/.reader-artifacts/hap/20260930T192156Z-bdf8bcde-f2af9d1a/manifest.json",
+  "buildClass": "iteration",
+  "acceptanceEligible": false,
+  "sourceCommit": "bdf8bcde87f1c547a2cae97ba65351be47825e3d",
+  "sourceDirtySnapshot": [
+    "?? docs/demos/source-switch/MAIN_UI_SYNC.md",
+    "?? docs/demos/source-switch/main-ui-sync-live-check.json",
+    "?? docs/demos/source-switch/main-ui-sync-metadata.json",
+    "?? docs/demos/source-switch/main-ui-sync.patch",
+    "?? \"tools/test-reader-paragraph-indent 2.mjs\""
+  ],
+  "buildFingerprint": "f2af9d1a9e3e5da7443dd09d4b06f7d1a33e33d902ea5276db30dae55a0a50d3",
+  "controllerFingerprint": "e3cb08e6cf4288571d6e6779e8792fd1b2e089b9fbf5278a4f13c6730880d213",
+  "pairedCoreCommit": "e2a2db0b1f6b2d9a4300c2577eaae4155bddef2f",
+  "pairedCoreFingerprint": "4c77f6b85e0e3c2e17d1a96f48d8e0ca1763620f213d9acd1a8669e0e8c42f98",
+  "coreNativeSha256": "6b09806856bcae6260cb5bfc3bbe57775134813c7f8f358d9038bd735e8c5707",
+  "signedArtifactSha256": "0e41f0bc9376568227e47fb60f5445d7d9c61b474b12244b4727bf43d6893cee",
+  "certificateSha256": "3a563778e5bf17cd3ead0218e13b4a5030de3f5d7d4e21e0336d8eb37b676dc4",
+  "bundleName": "io.reader.minliny",
+  "gates": {
+    "files": 397,
+    "passed": 397,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "durationMs": 40549.873459,
+    "arktsTypeCheck": "PASS",
+    "nonIncrementalBuild": "PASS",
+    "hvigorDurationMs": 17050,
+    "signatureVerification": "PASS",
+    "bundledSourceBytes": "PASS"
+  },
+  "deploymentReceipt": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/.reader-artifacts/hap/20260930T192156Z-bdf8bcde-f2af9d1a/deploy-vm-6460677a198b-20260930T192348Z.json",
+  "install": "PASS",
+  "launch": "PASS",
+  "dataPolicy": "preserve",
+  "sourceBoundary": "Production inputs and all 397 discovered test files are immutable snapshot bound; four pending main patch docs and an unexplained older untracked duplicate test were preserved, and paired Core remains its prior dirty snapshot. No acceptance-class claim."
+}

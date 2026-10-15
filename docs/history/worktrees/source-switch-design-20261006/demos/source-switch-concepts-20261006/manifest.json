@@ -1,0 +1,42 @@
+{
+  "scope": "novel source switch visual concepts",
+  "date": "2026-10-06",
+  "order": "actual generated-image display order in this chat",
+  "targetLogicalViewport": {
+    "width": 390,
+    "height": 844
+  },
+  "imageKind": "generated concept mockup",
+  "data": "fictional samples",
+  "nativeVerification": false,
+  "browserVerification": false,
+  "implementationModified": false,
+  "options": [
+    {
+      "displayedOption": 1,
+      "file": "01.png",
+      "source": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-7aa47209-37b1-4d40-b1f0-7c9738176621.png",
+      "sha256": "308b8643b889aa6fccf903a7caef75b3d49cf8acde3709c79fa11e7029ff9e2f",
+      "interaction": "direct row selection"
+    },
+    {
+      "displayedOption": 2,
+      "file": "02.png",
+      "source": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-cd3931c8-8c1e-495f-94f4-d60a9d489b2f.png",
+      "sha256": "f53db526835e9c421a90be73653364985db9c12b6c6d036ac74bc7ca6aac6439",
+      "interaction": "radio selection with confirmation"
+    },
+    {
+      "displayedOption": 3,
+      "file": "03.png",
+      "source": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-96f8bea3-cc4a-4bdd-837c-9b26a5c99419.png",
+      "sha256": "cc67ca4b619f58f7ff8ef15c6d0515734065265f6aa7d200c964b43bd4f0c962",
+      "interaction": "grouped results and retry rows"
+    }
+  ],
+  "styleReferences": [
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-10-06-native-ui-redo/superseded-app-baseline/references/bookshelf--list--day--phone.png",
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-10-06-native-ui-redo/superseded-app-baseline/references/search--results--day--phone.png",
+    "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-10-06-native-ui-redo/superseded-app-baseline/references/sources--default--day--phone.png"
+  ]
+}

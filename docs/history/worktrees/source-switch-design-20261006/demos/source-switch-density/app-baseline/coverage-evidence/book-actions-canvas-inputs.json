@@ -1,0 +1,20 @@
+{
+  "scope": "Canvas inputs before specification-only wording correction",
+  "designSourceSha256": "e7446e59aca3155a0c067e5bbdc0ca88f22c84d31cd734b3fccd575878a86c44",
+  "files": {
+    "app.css": "41eca69685e798ec2270420de1280238fbf2dadead3e62662597f63a48fbbcd2",
+    "app.mjs": "b2a6b897c78c2135792dc3dee7eb2e03dd1aff91f05813c052743119eaee1771",
+    "delivery-config.mjs": "b223aa252ba206f927256d58e9f708754d0de5a5409e203232d8a0bcc9224fa9",
+    "delivery-ui.mjs": "b193ec1ac8cf4e6010c5b45f24d7ff36af3a79155e1fa253b609729a8ac37279",
+    "delivery.css": "76b3bbe46a1cb8cf18230eda9098be3969b42338724c11b4631390aab13ca99e",
+    "index.html": "664902cc0326c81b52d29a3a8a539ed966012f2c840aa8919862d33a208aa806",
+    "library.css": "c0474561731955516f2e92f7e6d36eb649d7f9e13ac968972c9fb8fdf165bc55",
+    "reading.css": "4fcd178615e578718c662469ec1fada2da5792bfbc67b94eb129146bc6a964d5",
+    "settings.css": "cfe4ed671ee51765e8d4264daf1b484ca55b3edacb42d17ba2cba5aa5a36b8d4",
+    "shared.mjs": "3e72bfb27ae3e121c4254b0e93aa47c69f3a03b21f7f2307cb2cb0a51ede3c9a",
+    "tokens.css": "7c69cceb21e27c6ffa8c2bdfa76dd009b78c7ed737fbba74751c991148804018",
+    "ui-library.mjs": "a40d83ea2e8fa497df872a0797e73cd9cd6cd0d69b0aa3c41bc79607fee01b85",
+    "ui-reading.mjs": "398a087d071746773bfd8ca8de4316af341c4ab458876e52f913fcbfc4a1aa07",
+    "ui-settings.mjs": "792ca21484050057605ba2fcc38c2ace5fd757b7c6a2169727860a9e63cca248"
+  }
+}

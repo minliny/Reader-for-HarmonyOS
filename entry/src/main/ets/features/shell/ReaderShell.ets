@@ -6,6 +6,7 @@ import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from 
 import { ReaderSettingsGateway } from '../reading/ReaderSettingsGateway';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { MangaReadingSurface } from '../manga/MangaReadingSurface';
+import type { ReaderActionSheetVariant } from '../common/ReaderActionSheetContent';
 import type { MangaDownloadAction, MangaDownloadActionId } from '../manga/MangaDownloadActionsGateway';
 import type { JsonObject } from '@reader/core-harmony';
 import type { RemoteReadingPositionScope } from '../reading/RemoteReadingPositionMigration';
@@ -102,6 +103,8 @@ export struct ReaderShell {
   @Prop directoryOpenedFromControl: boolean = false;
   @Prop offlineBookOperationActive: boolean = false;
   @Prop mangaDownloadEnabled: boolean = false;
+  /** Explicit layout variant for the shared manga More action sheet. */
+  @Prop mangaMoreMenuVariant: ReaderActionSheetVariant = 'grouped';
   onLoadMangaDownloadActions: (chapterIndex?: number) => Promise<MangaDownloadAction[]> = async (): Promise<MangaDownloadAction[]> => [];
   onMangaDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number) => Promise<void> = async (): Promise<void> => {};
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
@@ -142,6 +145,7 @@ export struct ReaderShell {
     undefined;
   onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onDownloadBook: () => void = (): void => {};
+  onOpenDownloads: () => void = (): void => {};
   onClearBookOffline: () => void = (): void => {};
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
   onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]) => void =
@@ -410,6 +414,7 @@ export struct ReaderShell {
         settingsGateway: this.mangaSettingsGateway,
         bookTitle: this.bookTitle, inBookshelf: this.inBookshelf,
         downloadEnabled: this.mangaDownloadEnabled,
+        moreMenuVariant: this.mangaMoreMenuVariant,
         directoryProjection: this.tocEntries,
         directoryCurrentChapterIndex: this.directoryCurrentChapterIndex,
         onLoadDownloadActions: (chapterIndex?: number): Promise<MangaDownloadAction[]> =>
@@ -417,6 +422,7 @@ export struct ReaderShell {
         onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number): Promise<void> =>
           _identity === this.mangaIdentityKey() ? this.onMangaDownloadAction(action, chapterIndex) : Promise.resolve(),
         onDownloadBook: (): void => { if (_identity === this.mangaIdentityKey()) this.onDownloadBook(); },
+        onOpenDownloads: (): void => { if (_identity === this.mangaIdentityKey()) this.onOpenDownloads(); },
         onDetail: (): void => this.onOpenBookInfo(),
         onToggleShelf: (): void => this.onToggleShelf(),
         onDownloadChapter: (): void => {

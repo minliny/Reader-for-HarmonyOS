@@ -1,0 +1,50 @@
+{
+  "baseCommit": "d6c3213c06d930b9ce19c952f5075a389ca8b3c7",
+  "reason": "Inherit the user-mandated io.reader.minliny identity and current canonical signing/build controller from the main worktree; no unrelated reading changes copied.",
+  "files": [
+    {
+      "path": "scripts/hap-pipeline.mjs",
+      "sha256": "1358db898019ff547001b8e317c6dc0e41b797fd547c2c840e3eb6cd2cdf164b"
+    },
+    {
+      "path": "tools/reader-signing-authority.mjs",
+      "sha256": "b940c72ee23f9604df750c18878fcdb9474e80993add7dd505fb0feed014aeee"
+    },
+    {
+      "path": "tools/reader-build-tools.mjs",
+      "sha256": "16a0d10e61d3acbaf32fe9aa217e3be0557aea5f2cf22f6625cdaf147ab201a2"
+    },
+    {
+      "path": "tools/reader-core-inputs.mjs",
+      "sha256": "914804474cf10ca9601514eb2aea59e94e8425ef9a4ab258e749e8c709705ecf"
+    },
+    {
+      "path": "tools/reader-hdc-lease.mjs",
+      "sha256": "7f1078e0bf3c32ccdeac148aa443668c8799f9bbfeded96ca3982eb732b812d1"
+    },
+    {
+      "path": "tools/test-hap-pipeline-contract.mjs",
+      "sha256": "9f38a48e1b56132de683ea4742e6746dd3a15a6957e75101cf8cf8b6cf849e99"
+    },
+    {
+      "path": "tools/test-signing-authority.mjs",
+      "sha256": "a5937c3b2fd288b64321b2e297623dd2f0b761b5489eb9dfa9fc02a3174883c2"
+    },
+    {
+      "path": "tools/test-build-input-safety.mjs",
+      "sha256": "21f0224a674b3075b845430733ab183dbb69dc165eef84b35276792c7f86fb83"
+    },
+    {
+      "path": "AppScope/app.json5",
+      "sha256": "ffc7ab545590490b5241c6446aaca4a9879c84bd2d8f3f33eb431fbed4ac78dc"
+    },
+    {
+      "path": "entry/src/main/module.json5",
+      "sha256": "19c043e91c3eb627476131aa8e0ab59587c727e7578397cd74d21c6e31285a32"
+    },
+    {
+      "path": "entry/src/main/resources/rawfile/arkdata/utd/utd.json5",
+      "sha256": "5a39dc1b1a9eab07bc21665495a05b15f18bbd86c451d258dfe9004a22e6322a"
+    }
+  ]
+}

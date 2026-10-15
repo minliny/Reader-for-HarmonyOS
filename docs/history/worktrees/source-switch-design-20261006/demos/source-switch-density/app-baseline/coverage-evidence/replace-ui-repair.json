@@ -1,0 +1,97 @@
+{
+  "status": "DRAFT_REPAIRED_OFFLINE_VERIFIED_VISUAL_PENDING",
+  "checkedAt": "2026-10-05T14:22:19.967Z",
+  "module": "reader-replace",
+  "hostHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+  "source": "entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets",
+  "priorDesignInputs": {
+    "ui-reading.mjs": "898d150ba0d3102e442dd144349be535234b5f34fae1586e42f3b70bc9e4b9b0",
+    "reading.css": "36509d1202e11d2bba321bfc7b1c1bd435461faa072e9f4c7462c249a44d821e",
+    "spec-reading.mjs": "6cd81c5305825fc768b3aa83ee484f3e91b46a39948ed42fbb69dd00ea664caf",
+    "routes-reading.json": "276829c0780a20a6eb42e873b9a511a9035d7a39a1d3b47112ca42e8d0e236b8",
+    "app.mjs": "7b110888abc4dc03167d183454358d83521712e401103de05013d0d810a709c9"
+  },
+  "findings": [
+    {
+      "id": "REPLACE-01",
+      "observed": "Full规则行用flex居中，名称/元信息/开关/编辑删除未沿native明确坐标，Quick名称间距8而native10。",
+      "status": "FIXED_DRAFT",
+      "resolution": "规则名称/元信息/开关/编辑删除按native actor坐标排布；Quick冻结完整规则集合的窗口，Full独立滚动。",
+      "productionBugClaim": false
+    },
+    {
+      "id": "REPLACE-02",
+      "observed": "规则Full开关仍34×20/thumb14，Quick flex末端与translateX叠加；editor旗标开关也非44×24/thumb20。",
+      "status": "FIXED_DRAFT",
+      "resolution": "独立规则/编辑旗标开关，Quick27×16/thumb12与Full44×24/thumb20；off/on用单次绝对定位，沿阅读语义与原生palette。",
+      "productionBugClaim": false
+    },
+    {
+      "id": "REPLACE-03",
+      "observed": "toolbar gap6等宽，原生gap8/100.66:96.67:96.67；颜色和边框使用通用应用变量而非阅读语义。",
+      "status": "FIXED_DRAFT",
+      "resolution": "工具栏gap8与100.66/96.67/96.67权重；20icon/11Bold，新增/次项及内容底面使用真实阅读主题。",
+      "productionBugClaim": false
+    },
+    {
+      "id": "REPLACE-04",
+      "observed": "状态提示未按原生列表内min76及已有规则时84上覆notice承载；预览直接32按钮而非32row/28button；Quick可滚动而原生冻结3行投影。",
+      "status": "FIXED_DRAFT",
+      "resolution": "状态min76、已有规则错误覆盖min(84,ListH)，Full32row/28preview；pending不新增列表外状态条，预览恢复原形态/规则数量。",
+      "productionBugClaim": false
+    },
+    {
+      "id": "REPLACE-05",
+      "observed": "编辑层、预览层混用通用字号/色/开关；字段草稿无具体可访问label与本地choice。",
+      "status": "FIXED_DRAFT",
+      "resolution": "临时层28头/12padding/8gap/36footer，8字段/5flag绑定本地草稿；真实新增正则/3000ms/scope/order默认，被选编辑/删除对象，预览当前章节及计数。",
+      "productionBugClaim": false
+    }
+  ],
+  "visualEvidence": {
+    "path": "/Users/minliny/Documents/Reader/evidence/2026-10-05-integration-closure/recovery/vm-shell-temporary/reader-control-r9509-1789315814956-replace-full.png",
+    "sha256": "ddd115ced3cc4f4a79dc5528def80bbe3dce70e22dbeb916e0379b942f40e4e9",
+    "kind": "historical native screenshot",
+    "binding": "旧io.reader.harmonyos/pages/Index；没有完整HAP/source绑定，仅作历史结构佐证，不是当前源码视觉验收"
+  },
+  "limits": [
+    "本轮先从代码定位，无原生运行、设备操作或新截图。",
+    "先前浏览器访问已安全拒绝；本轮不尝试直接或间接浏览器渲染。"
+  ],
+  "coreHead": "2166576ff5f2091b1d921c9a018cd7c7b536fdd4",
+  "sourceTreeSha256": "7ba0dbddfab49fe87a7b36d4993b301dc0e38e1ef5cd05dbd0d6f60075201c2b",
+  "designSourceSha256": "cfcf577a266c6da4343c82586482b5aac6363555ad234f51167a1a5568418e7e",
+  "logicSha256": "8871335274baa1717fd259df755df4015e3965963f77f4820e53c6f71869c393",
+  "bundleSha256": "e48fa5f8a629582f51a0e0fd6b9f522dd1ca99b129f385c2047b4ab3b130ff38",
+  "productionSourceChanged": false,
+  "repairInputs": {
+    "ui-reading.mjs": "89120d870c86fd47a875b36cde75118cb90524407f30ca530dec3eaf142c9cad",
+    "reading.css": "9608630307e4d2bed93c54aa8243d3235560b43fb8ffe99ee7a345635ef05b6c",
+    "spec-reading.mjs": "935e42a1c83215e92aed0c6ecc2f7a45f7e2883a6a285235d63118c40f298184",
+    "routes-reading.json": "ab5d1cc6ea0619c3a02837a80256d4a249f4de35744dd6efef9e3fb855bceaf3",
+    "app.mjs": "fdab8083f71d06152f9fb246c2b06f5711c1fe5689f0cfe48add96de8c85fe49"
+  },
+  "verification": {
+    "record": "repair-verification.json",
+    "integratedChecks": 20,
+    "failures": 0,
+    "readingChecks": 26,
+    "modules": 41,
+    "states": 441,
+    "markupRenders": 882,
+    "readingRenders": 904,
+    "returnLayoutModels": 27,
+    "nativeGeometry": "Node/esbuild执行当前ReaderControlReplaceGeometry，比较Quick/Full尺寸/坐标与明确CSS scalar规则；不执行ArkUI渲染。",
+    "browser": false,
+    "nativeVisual": false,
+    "backend": false
+  },
+  "intermediateProbeCorrections": [
+    "首次字段数量断言误包含同壳阅读亮度input；限定replace-draft字段后8项通过。"
+  ],
+  "remainingLimits": [
+    "已看历史native空态截图并核当前源码；未做本轮浏览器/当前HAP视觉或设备验收。",
+    "ArkUI输入框默认内边距和字体AUTO测量仍需平台适配；离线CSS scalar/状态测试不等于浏览器计算布局。",
+    "示例规则与本地草稿不执行Core保存、删除、导入或预览。"
+  ]
+}

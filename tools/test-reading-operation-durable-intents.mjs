@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fixture, deferred, until, ReaderWriteEvidence, bookmarkContext, cacheContext, bookmarkInput, book } from './lib/reading-operation-durable-probe.mjs';
+import { fixture, deferred, until, ReaderWriteEvidence, bookmarkContext, cacheContext, bookmarkInput, book, seedLegacySettingsClear } from './lib/reading-operation-durable-probe.mjs';
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 let cases=0;
 for(const official of [false,true]){
@@ -58,35 +58,35 @@ for(const official of [false,true]){
   assert.equal(cold.directory.snapshot().projection.receipt.confirmation,'unknown','nonExecution on continuation cannot erase earlier uncertainty');assert.equal(cold.disk('bookmark'),original);assert.equal(cold.directory.snapshot().canContinueOriginal,true);cases++;
  }
  {
-  const f=await fixture(official);f.options.afterMethod='cache.clear';await f.settings.clear(()=>true);assert.equal(f.settings.current().confirmation,'unknown');
+  const f=await fixture(official);f.options.afterMethod='cache.clear';const seeded=await seedLegacySettingsClear(f);assert.equal(seeded.evidence.confirmation(),'unknown');
   const cold=await fixture(official,f);await cold.settings.reconcile(()=>true);assert.equal(cold.settings.current().confirmation,'confirmed');assert.equal(cold.writes().length,0);assert.equal(cold.disk('cacheClear'),'');
   cold.options.status=true;await cold.clear();assert.equal(cold.writes().length,1);assert.equal(cold.writes()[0].params.sequence,2,'Settings and Offline share exact cache-clear head');assert.equal(cold.calls.filter(c=>c.platform).length,1);cases++;
  }
  {
-  const f=await fixture(official);f.options.beforeMethod='cache.clear';await f.settings.clear(()=>true);const original=JSON.parse(f.disk('cacheClear'));
-  const cold=await fixture(official,f);await cold.settings.reconcile(()=>true);assert.equal(cold.writes().length,0);assert.equal(cold.settings.current().canContinueOriginal,true);
+  const f=await fixture(official);f.options.beforeMethod='cache.clear';await seedLegacySettingsClear(f);const original=JSON.parse(f.disk('cacheClear'));
+  const cold=await fixture(official,f);await cold.settings.reconcile(()=>true);assert.equal(cold.writes().length,0);assert.equal(cold.settings.current().canContinueOriginal,false,'historical unsafe Settings scope cannot be replayed');
   await cold.offline.downloadChapter(0,cold.offlineBinding);assert.equal(cold.calls.filter(c=>c.method==='cache.book.prefetch').length,0,'cold global pending clear bars overlapping downloads');
   await cold.clear();assert.equal(cold.writes().length,0,'another clear consumer cannot overwrite shared intent');
-  await cold.settings.continueOriginal(cold.settings.current().operation.generation,()=>true);assert.equal(cold.settings.current().confirmation,'confirmed');assert.deepEqual(cold.writes()[0].params,original.params);cases++;
+  await cold.settings.continueOriginal(cold.settings.current().operation.generation,()=>true);assert.equal(cold.settings.current().confirmation,'unknown');assert.equal(cold.writes().length,0);assert.deepEqual(JSON.parse(cold.disk('cacheClear')).params,original.params);cases++;
  }
  {
-  const f=await fixture(official);f.options.beforeMethod='cache.clear.operation.settle';await f.settings.clear(()=>true);
-  assert.equal(f.settings.current().confirmation,'confirmed');assert.equal(JSON.parse(f.disk('cacheClear')).phase,'confirmed');
+  const f=await fixture(official);f.options.beforeMethod='cache.clear.operation.settle';const seeded=await seedLegacySettingsClear(f);
+  assert.equal(seeded.evidence.confirmation(),'confirmed');assert.equal(JSON.parse(f.disk('cacheClear')).phase,'confirmed');
   const cold=await fixture(official,f);cold.options.beforeMethod='cache.clear.operation.query';await cold.settings.reconcile(()=>true);
   assert.equal(cold.settings.current().confirmation,'confirmed','durably retained qualified ACK is not erased by later query failure');assert.equal(cold.settings.current().canContinueOriginal,false);assert.equal(cold.writes().length,0);cases++;
  }
  {
-  const f=await fixture(official);f.options.afterMethod='cache.clear.operation.settle';await f.settings.clear(()=>true);assert.equal(f.settings.current().confirmation,'confirmed');assert.equal(f.disk('cacheClear'),'');assert.equal(f.writes().length,1);assert.ok(f.reads().length>=3,'lost metadata ACK proved by exact pure query');cases++;
+  const f=await fixture(official);f.options.afterMethod='cache.clear.operation.settle';const seeded=await seedLegacySettingsClear(f);assert.equal(seeded.evidence.confirmation(),'confirmed');assert.equal(f.disk('cacheClear'),'');assert.equal(f.writes().length,1);assert.ok(f.reads().length>=3,'lost metadata ACK proved by exact pure query');cases++;
  }
  {
-  const f=await fixture(official);f.options.loseFinishAt=3;await f.settings.clear(()=>true);assert.equal(f.settings.current().confirmation,'confirmed');assert.equal(f.settings.current().operation.fact,'refreshFailed');assert.equal(f.io.failWrites,0,'finish invoked never rolls back the published file');
+  const f=await fixture(official);f.options.loseFinishAt=3;const seeded=await seedLegacySettingsClear(f);assert.equal(seeded.evidence.confirmation(),'confirmed');assert.ok(seeded.error);assert.equal(f.io.failWrites,0,'finish invoked never rolls back the published file');
   assert.equal((await f.clearStore.pending()).phase,'confirmed','warm pending remains after local clear lost ACK');await f.settings.reconcile(()=>true);assert.equal((await f.clearStore.pending()),undefined);assert.equal(f.writes().length,1);cases++;
  }
  {
-  const f=await fixture(official);f.options.typedMethod='cache.clear';await f.settings.clear(()=>true);assert.equal(f.settings.current().confirmation,'undispatched');assert.equal(f.disk('cacheClear'),'');await f.settings.clear(()=>true);assert.equal(f.settings.current().confirmation,'confirmed');assert.deepEqual(f.writes().map(c=>c.params.sequence),[1,1],'known nondispatch safely admits head+1 again');cases++;
+  const f=await fixture(official);f.options.typedMethod='cache.clear';const first=await seedLegacySettingsClear(f);assert.equal(first.evidence.confirmation(),'undispatched');assert.equal(f.disk('cacheClear'),'');const second=await seedLegacySettingsClear(f);assert.equal(second.evidence.confirmation(),'confirmed');assert.deepEqual(f.writes().map(c=>c.params.sequence),[1,1],'known nondispatch safely admits head+1 again');cases++;
  }
  {
-  const f=await fixture(official);f.options.loseFinishAt=1;await f.settings.clear(()=>true);assert.equal(f.writes().length,0);assert.equal(f.settings.current().confirmation,'undispatched');assert.equal(f.disk('cacheClear'),'');assert.equal(f.io.failWrites,0);cases++;
+  const f=await fixture(official);f.options.loseFinishAt=1;const seeded=await seedLegacySettingsClear(f);assert.equal(f.writes().length,0);assert.equal(seeded.evidence.confirmation(),'undispatched');assert.equal(f.disk('cacheClear'),'');assert.equal(f.io.failWrites,0);cases++;
  }
  {
   const f=await fixture(official);f.options.status=true;f.options.imageFailure=true;await f.clear();assert.equal(f.offline.snapshot().projection.receipt.confirmation,'confirmed');assert.equal(f.offline.snapshot().materialization,'failed');assert.match(f.offline.snapshot().materializationFailure,/image cleanup failed/);
@@ -101,7 +101,7 @@ for(const official of [false,true]){
   await early.createPosition(bookmarkInput,f.dirBinding);assert.equal(f.writes()[0].params.sequence,1,'readonly-first owner later receives mandatory durable authority');cases++;
  }
  {
-  const f=await fixture(official),gate=deferred();f.options.pauseMethod='cache.clear';f.options.pauseAfterDispatch=true;f.options.gate=gate;
+  const f=await fixture(official),gate=deferred();f.options.pauseMethod='cache.storage.cleanup';f.options.pauseAfterDispatch=true;f.options.gate=gate;
   const task=f.settings.clear(()=>true);await until(()=>f.writes().length===1);
   const deliveries=[];const host=new f.SettingsHost(()=>{},()=>({}),()=>true,()=>({filesDir:f.files}),()=>{},s=>deliveries.push(s));
   const joined=host.clearCache(f.runtime,()=>true);assert.equal(host.cacheCleanupSnapshot(f.runtime),f.settings.current());gate.resolve();await Promise.all([task,joined]);
@@ -111,11 +111,11 @@ for(const official of [false,true]){
   const current=f.SettingsOwner.forRuntime(successor,()=>{});assert.ok(current);assert.notEqual(current,f.settings);cases++;
  }
  {
-  const f=await fixture(official);f.options.beforeMethod='cache.clear';await f.settings.clear(()=>true);
+  const f=await fixture(official);f.options.beforeMethod='cache.clear';await seedLegacySettingsClear(f);
   const cold=await fixture(official,f),host=new cold.SettingsHost(()=>{},()=>({}),()=>true,()=>({filesDir:cold.files}));
-  await host.reconcileCacheCleanup(cold.runtime,()=>true);const status=host.cacheCleanupSnapshot(cold.runtime);assert.equal(status.canContinueOriginal,true);assert.equal(cold.writes().length,0);
+  await host.reconcileCacheCleanup(cold.runtime,()=>true);const status=host.cacheCleanupSnapshot(cold.runtime);assert.equal(status.canContinueOriginal,false);assert.equal(cold.writes().length,0);
   await host.continueOriginalCacheCleanup(cold.runtime,status.operation.generation+1,()=>true);assert.equal(cold.writes().length,0);
-  await host.continueOriginalCacheCleanup(cold.runtime,status.operation.generation,()=>true);assert.equal(cold.writes().length,1);assert.equal(host.cacheCleanupSnapshot(cold.runtime).confirmation,'confirmed');cases++;
+  await host.continueOriginalCacheCleanup(cold.runtime,status.operation.generation,()=>true);assert.equal(cold.writes().length,0);assert.equal(host.cacheCleanupSnapshot(cold.runtime).confirmation,'unknown');cases++;
  }
  {
   const f=await fixture(official),gate=deferred();const rpc=f.runtime.request.bind(f.runtime);let started=false;

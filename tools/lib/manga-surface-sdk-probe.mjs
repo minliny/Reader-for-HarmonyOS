@@ -1,5 +1,6 @@
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
+import { boundedSurfaceSdk } from './bounded-surface-sdk-probe.mjs';
 import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from '../../entry/src/main/ets/features/manga/MangaLayoutPolicy.ts';
 import { MangaBookPresentation } from '../../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 import * as readerWindowMetrics from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
@@ -42,11 +43,17 @@ export function mountMangaViewportBuilder(owner) {
   for (const wrapper of wrappers) wrapper.params.customList();
   return wrappers.length;
 }
+const actionControls = boundedSurfaceSdk();
+const ReaderActionSheetAction = actionControls.deps.ReaderActionSheetAction;
+export function mangaSurfaceBoundedControls(properties, options = {}) { return boundedSurfaceSdk({ ...options, properties, allowEmptyBranchAdmission: true }); }
 for (const [name, relative] of [
   ['ReaderIconButton', '../../entry/src/main/ets/features/common/ReaderIconButton.ets'],
   ['ReaderDirectoryNavigationSurface', '../../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets'],
   ['MangaReadingDirectoryFallback', '../../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets'],
   ['MangaDownloadOperationsPanel', '../../entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets'],
+  ['ReaderActionSheetContent', '../../entry/src/main/ets/features/common/ReaderActionSheetContent.ets'],
+  ['ReaderBoundedSurface', '../../entry/src/main/ets/features/common/ReaderBoundedSurface.ets'],
+  ['ReaderBoundedSurfaceHeader', '../../entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets'],
   ['MangaDirectoryCurrentFooter', '../../entry/src/main/ets/features/manga/MangaDirectoryCurrentFooter.ets'],
   ['PullToRefresh', '../../entry/src/main/ets/features/manga/vendor/pulltorefresh/PullToRefresh.ets'],
   ['MangaBoundaryTurnFeedback', '../../entry/src/main/ets/features/manga/MangaBoundaryTurnFeedback.ets'],
@@ -60,6 +67,8 @@ export const mangaSurfaceSdkDependencies = {
     .map(name => [name, new Proxy({}, { get: (_target, key) => `${name}.${String(key)}` })])),
   READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SANS_SC_UI_900, MangaSheetFrame,
+  ReaderActionSheetAction,
+  resolveDrawerSpec: actionControls.deps.resolveDrawerSpec, readerAppColor: actionControls.deps.readerAppColor,
   ...mangaDirectoryVisual, visual: mangaDirectoryVisual.MANGA_DIRECTORY_VISUAL,
   PanGesture: nativeGesture, PanDirection: { Vertical: 'vertical' },
   GesturePriority: { Low: 'low' },
@@ -68,6 +77,9 @@ export const mangaSurfaceSdkDependencies = {
   ReaderDirectoryNavigationSurface: ImportedChildBoundary,
   MangaReadingDirectoryFallback: ImportedChildBoundary,
   MangaDownloadOperationsPanel: ImportedChildBoundary,
+  ReaderActionSheetContent: ImportedChildBoundary,
+  ReaderBoundedSurface: ImportedChildBoundary,
+  ReaderBoundedSurfaceHeader: ImportedChildBoundary,
   MangaDirectoryCurrentFooter: ImportedChildBoundary,
   PullToRefresh: ImportedChildBoundary,
   MangaBoundaryTurnFeedback: ImportedChildBoundary,

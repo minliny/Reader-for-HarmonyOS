@@ -1,0 +1,287 @@
+{
+  "file": "search/SearchPage.ets",
+  "name": "searchBar",
+  "source": "@Builder\n  private searchBar() {\n    Row({ space: TOK_SPACE_CONTROL_INLINE }) {\n      ReaderIconButton({ icon: (this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back')),\n        boxSize: 32, iconSize: 20, radius: 16, onTap: (): void => this.onBack() });\n\n      Row() {\n        ReaderSearchField({\n          variant: 'bookPage',\n          mode: 'submit',\n          focusOnAppear: this.focusInputOnAppear,\n          text: this.keyword,\n          placeholder: '搜索书名、作者...',\n          accessibilityLabel: '搜索书名或作者',\n          isTablet: this.isTablet,\n          clearable: true,\n          submitEnabled: this.presentation.kind !== 'loading',\n          onTextChange: (value: string): void => {\n            this.keyword = value;\n            this.viewState.keywordDraft = value;\n          },\n          onSubmit: (): void => this.submitSearch(),\n        });\n      }\n      .layoutWeight(1)\n      .alignItems(VerticalAlign.Center);\n\n      // The search action doubles as the ACQ-02 stop control: while a sweep\n      // is live the pill reads 停止 and stops the sweep; otherwise it submits.\n      // Loading additionally inlines a 13px spinner and submitSearch prevents\n      // re-entry.\n      ReaderButton({ scheme: this.appThemeScheme, specId: this.isTablet ? 'search-field-wide' : 'search-field-phone',\n        label: this.isSweeping() ? '停止' : '搜索', isBusy: this.isSweeping(), actionEnabled: this.canSubmit(),\n        leading: (): void => this.searchActionLeading(),\n        onAction: (): void => { if (this.isSweeping()) this.onStop(); else this.submitSearch(); } });\n    }\n    .width(this.contentFrame().width)\n    .constraintSize({ minHeight: this.searchBarHeight() })\n    .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })\n    .alignItems(VerticalAlign.Center)\n    .hitTestBehavior(HitTestMode.Transparent);\n  }",
+  "sha256": "5c6e7ea831b031b300a218110487bfa2e9b660d6f81e2774cda1746f63e2814b",
+  "historicalSha256": "820b5520af42993dffe1f93464db9d9c491fd042650e4eb0630369db96ff84c6",
+  "approvalEvidence": "docs/SEARCH_LAYOUT_AND_DISPLAY_COVER_SUCCESSOR_20261008.md",
+  "scope": "Only natural book input height and scale-aware search-bar minimum; original icon recipe, query and callbacks retained",
+  "heightHelper": {
+    "name": "searchBarHeight",
+    "source": "private searchBarHeight(): number {\n    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;\n    return (this.isTablet ? 56 : 52) + (TYPE_SEARCH_BOOK_INPUT.lineHeightFp as number) *\n      Math.max(0, (Number.isFinite(scale) && scale > 0 ? scale : 1) - 1);\n  }",
+    "sha256": "1c470af3b27338e24fb07cbef94f6c83d1d647583c1a9f3ed7c045d0bc06d69b"
+  },
+  "predecessorSharedProducer": {
+    "id": "shared-ReaderButton",
+    "file": "entry/src/main/ets/features/common/ReaderButton.ets",
+    "shape": {
+      "types": [],
+      "declarations": [
+        {
+          "name": "ReaderButtonLabelModifier",
+          "publicFields": []
+        },
+        {
+          "name": "ReaderButtonFrameModifier",
+          "publicFields": []
+        },
+        {
+          "name": "ReaderButtonTextModifier",
+          "publicFields": []
+        },
+        {
+          "name": "ReaderButton",
+          "publicFields": [
+            {
+              "name": "scheme",
+              "type": "string",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "specId",
+              "type": "ReaderButtonSpecId",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "primary",
+              "type": "boolean",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "actionEnabled",
+              "type": "boolean",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "layout",
+              "type": "ReaderButtonLayout",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "isBusy",
+              "type": "boolean",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "availableWidth",
+              "type": "number",
+              "decorators": [
+                "// Measured layout authority only; finite Source status variants own the\n// admitted 58/72 design widths and existing 318vp shrink formula.\n@Prop"
+              ]
+            },
+            {
+              "name": "actionAccessibilityLabel",
+              "type": "string",
+              "decorators": [
+                "@Prop"
+              ]
+            },
+            {
+              "name": "leading",
+              "type": "() => void",
+              "decorators": [
+                "@BuilderParam"
+              ]
+            },
+            {
+              "name": "onAction",
+              "type": "() => void",
+              "decorators": []
+            }
+          ]
+        }
+      ],
+      "styles": [
+        {
+          "owner": "ReaderButtonLabelModifier",
+          "method": "applyNormalAttribute",
+          "property": "fontFamily",
+          "args": [
+            "text.fontFamily"
+          ]
+        },
+        {
+          "owner": "ReaderButtonLabelModifier",
+          "method": "applyNormalAttribute",
+          "property": "fontWeight",
+          "args": [
+            "weight"
+          ]
+        },
+        {
+          "owner": "ReaderButtonLabelModifier",
+          "method": "applyNormalAttribute",
+          "property": "fontSize",
+          "args": [
+            "text.fontSizeFp"
+          ]
+        },
+        {
+          "owner": "ReaderButtonLabelModifier",
+          "method": "applyNormalAttribute",
+          "property": "lineHeight",
+          "args": [
+            "text.lineHeightFp"
+          ]
+        },
+        {
+          "owner": "ReaderButtonLabelModifier",
+          "method": "applyNormalAttribute",
+          "property": "letterSpacing",
+          "args": [
+            "text.letterSpacingFp"
+          ]
+        },
+        {
+          "owner": "ReaderButtonLabelModifier",
+          "method": "applyNormalAttribute",
+          "property": "fontColor",
+          "args": [
+            "readerAppColor(this.primary ? spec.primaryText : spec.secondaryText, this.scheme)"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "width",
+          "args": [
+            "'100%'"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "height",
+          "args": [
+            "spec.height"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "width",
+          "args": [
+            "spec.responsiveStatusWidth ? spec.fixedWidth * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : spec.fixedWidth"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "constraintSize",
+          "args": [
+            "{ maxWidth: 160 }"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "constraintSize",
+          "args": [
+            "{ maxWidth: this.availableWidth > 0 ? Math.max(0, this.availableWidth - TOK_SPACE_XS) : '100%' }"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "margin",
+          "args": [
+            "spec.outerMargin"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "padding",
+          "args": [
+            "spec.allPadding"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "padding",
+          "args": [
+            "{ top: spec.verticalPadding, bottom: spec.verticalPadding }"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "padding",
+          "args": [
+            "{ left: spec.horizontalPadding, right: spec.horizontalPadding, top: spec.verticalPadding, bottom: spec.verticalPadding }"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "padding",
+          "args": [
+            "{ left: spec.horizontalPadding, right: spec.horizontalPadding }"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "border",
+          "args": [
+            "{ width: TOK_BORDER_W, color: readerAppColor(this.primary ? spec.primaryBorder : spec.secondaryBorder, this.scheme) }"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "opacity",
+          "args": [
+            "this.enabled ? 1 : disabledOpacity"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "opacity",
+          "args": [
+            "this.busy ? spec.busyOpacity : 1"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "responseRegion",
+          "args": [
+            "{ x: 0, y: spec.responseOffset, width: '100%', height: spec.responseHeight }"
+          ]
+        },
+        {
+          "owner": "ReaderButtonFrameModifier",
+          "method": "applyNormalAttribute",
+          "property": "borderRadius",
+          "args": [
+            "spec.radius"
+          ]
+        }
+      ],
+      "implementation": "import { ReaderButtonLayout, ReaderButtonSpecId, resolveReaderButtonSpec } from './ReaderControlSpecs';\nimport { ReaderPressFeedback } from './ReaderPressFeedback';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { TOK_BORDER_W, TOK_SPACE_XS } from './ReaderTokens';\nclass ReaderButtonLabelModifier implements AttributeModifier<TextAttribute> {\n    private id: ReaderButtonSpecId;\n    private primary: boolean;\n    private scheme: string;\n    constructor(id: ReaderButtonSpecId, primary: boolean, scheme: string) {\n        this.id = id;\n        this.primary = primary;\n        this.scheme = scheme;\n    }\n    applyNormalAttribute(instance: TextAttribute): void {\n        const spec = resolveReaderButtonSpec(this.id);\n        const text = spec.text;\n        if (text.fontFamily !== undefined)\n            instance.fontFamily(text.fontFamily);\n        const weight = this.primary ? (spec.selectedWeight ?? text.fontWeight) : text.fontWeight;\n        if (weight !== undefined)\n            instance.fontWeight(weight);\n        instance.fontSize(text.fontSizeFp);\n        if (text.lineHeightFp !== undefined)\n            instance.lineHeight(text.lineHeightFp);\n        if (text.letterSpacingFp !== undefined)\n            instance.letterSpacing(text.letterSpacingFp);\n        instance.fontColor(readerAppColor(this.primary ? spec.primaryText : spec.secondaryText, this.scheme));\n        if (spec.centerText)\n            instance.textAlign(TextAlign.Center);\n        if (spec.maxLines > 0)\n            instance.maxLines(spec.maxLines);\n        if (spec.textEllipsis)\n            instance.textOverflow({ overflow: TextOverflow.Ellipsis });\n    }\n}\nclass ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {\n    private id: ReaderButtonSpecId;\n    private primary: boolean;\n    private enabled: boolean;\n    private layout: ReaderButtonLayout;\n    private scheme: string;\n    private busy: boolean;\n    private availableWidth: number;\n    constructor(id: ReaderButtonSpecId, primary: boolean, enabled: boolean, layout: ReaderButtonLayout, scheme: string, busy: boolean = false, availableWidth: number = 0) {\n        this.id = id;\n        this.primary = primary;\n        this.enabled = enabled;\n        this.layout = layout;\n        this.scheme = scheme;\n        this.busy = busy;\n        this.availableWidth = availableWidth;\n    }\n    applyNormalAttribute(instance: CommonAttribute): void {\n        const spec = resolveReaderButtonSpec(this.id);\n        if (this.layout === 'equal')\n            instance.layoutWeight(1);\n        if (this.layout === 'full')\n            instance.width('100%');\n        if (spec.height !== undefined)\n            instance.height(spec.height);\n        if (spec.fixedWidth > 0)\n            instance.width(spec.responsiveStatusWidth ? spec.fixedWidth * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : spec.fixedWidth);\n        if (spec.maxWidthKind === 'scope')\n            instance.constraintSize({ maxWidth: 160 });\n        else if (spec.maxWidthKind === 'history')\n            instance.constraintSize({ maxWidth: this.availableWidth > 0 ? Math.max(0, this.availableWidth - TOK_SPACE_XS) : '100%' });\n        if (spec.outerMargin !== undefined)\n            instance.margin(spec.outerMargin);\n        if (spec.allPadding !== undefined)\n            instance.padding(spec.allPadding);\n        else if (spec.verticalOnlyPadding)\n            instance.padding({ top: spec.verticalPadding, bottom: spec.verticalPadding });\n        else if (spec.verticalPadding > 0)\n            instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding, top: spec.verticalPadding, bottom: spec.verticalPadding });\n        else if (spec.horizontalPadding > 0)\n            instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });\n        if (spec.hasBorder && (!this.primary || spec.primaryHasBorder))\n            instance.border({ width: TOK_BORDER_W, color: readerAppColor(this.primary ? spec.primaryBorder : spec.secondaryBorder, this.scheme) });\n        const disabledOpacity = this.primary ? (spec.primaryDisabledOpacity ?? spec.disabledOpacity) : spec.disabledOpacity;\n        if (disabledOpacity < 1)\n            instance.opacity(this.enabled ? 1 : disabledOpacity);\n        if (spec.busyOpacity < 1)\n            instance.opacity(this.busy ? spec.busyOpacity : 1);\n        if (spec.responseOffset !== undefined)\n            instance.responseRegion({ x: 0, y: spec.responseOffset, width: '100%', height: spec.responseHeight });\n        if (spec.hasSurface)\n            this.feedback().applyNormalAttribute(instance);\n        else if (spec.outerRadius)\n            instance.borderRadius(spec.radius);\n    }\n    applyPressedAttribute(instance: CommonAttribute): void { this.applyNormalAttribute(instance); if (resolveReaderButtonSpec(this.id).hasSurface)\n        this.feedback().applyPressedAttribute(instance); }\n    applyDisabledAttribute(instance: CommonAttribute): void { this.applyNormalAttribute(instance); if (resolveReaderButtonSpec(this.id).hasSurface)\n        this.feedback().applyDisabledAttribute(instance); }\n    private feedback(): ReaderPressFeedback {\n        const spec = resolveReaderButtonSpec(this.id);\n        return new ReaderPressFeedback(readerAppColor(this.primary ? spec.primarySurface : spec.secondarySurface, this.scheme), this.scheme, spec.radius, spec.radius, this.enabled);\n    }\n}\nclass ReaderButtonTextModifier implements AttributeModifier<TextAttribute> {\n    private id: ReaderButtonSpecId;\n    private primary: boolean;\n    private enabled: boolean;\n    private layout: ReaderButtonLayout;\n    private scheme: string;\n    private busy: boolean;\n    private availableWidth: number;\n    constructor(id: ReaderButtonSpecId, primary: boolean, enabled: boolean, layout: ReaderButtonLayout, scheme: string, busy: boolean = false, availableWidth: number = 0) {\n        this.id = id;\n        this.primary = primary;\n        this.enabled = enabled;\n        this.layout = layout;\n        this.scheme = scheme;\n        this.busy = busy;\n        this.availableWidth = availableWidth;\n    }\n    applyNormalAttribute(instance: TextAttribute): void {\n        new ReaderButtonLabelModifier(this.id, this.primary, this.scheme).applyNormalAttribute(instance);\n        new ReaderButtonFrameModifier(this.id, this.primary, this.enabled, this.layout, this.scheme, this.busy, this.availableWidth).applyNormalAttribute(instance);\n    }\n    applyPressedAttribute(instance: TextAttribute): void {\n        new ReaderButtonLabelModifier(this.id, this.primary, this.scheme).applyNormalAttribute(instance);\n        new ReaderButtonFrameModifier(this.id, this.primary, this.enabled, this.layout, this.scheme, this.busy, this.availableWidth).applyPressedAttribute(instance);\n    }\n    applyDisabledAttribute(instance: TextAttribute): void { this.applyNormalAttribute(instance); }\n}\n@Component\nexport struct ReaderButton extends   {\n    constructor(?: {\n        scheme?: string;\n        specId?: ReaderButtonSpecId;\n        label?: string;\n        primary?: boolean;\n        actionEnabled?: boolean;\n        layout?: ReaderButtonLayout;\n        isBusy?: boolean;\n        availableWidth?: number;\n        actionAccessibilityLabel?: string;\n        leading?: () => void;\n        onAction?: () => void;\n        private mounted?: boolean;\n    }, ?: ) { }\n    @Prop\n    scheme: string = 'day';\n    @Prop\n    specId: ReaderButtonSpecId = 'source-action';\n    @Prop\n    label: string = '';\n    @Prop\n    primary: boolean = false;\n    @Prop\n    actionEnabled: boolean = true;\n    @Prop\n    layout: ReaderButtonLayout = 'intrinsic';\n    @Prop\n    isBusy: boolean = false;\n    @Prop\n    availableWidth: number = 0;\n    @Prop\n    actionAccessibilityLabel: string = '';\n    @BuilderParam\n    leading: () => void = this.emptyLeading;\n    onAction: () => void = (): void => { };\n    private mounted: boolean = false;\n    aboutToAppear(): void { this.mounted = true; }\n    aboutToDisappear(): void { this.mounted = false; }\n    @Builder\n    private emptyLeading() { }\n    build() {\n        if (resolveReaderButtonSpec(this.specId).stacked) {\n            .attributeModifier<\n      >(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth))\n                .enabled<\n      >(this.actionEnabled).focusable<\n      >(this.actionEnabled)\n                .accessibilityRole<\n      >(AccessibilityRoleType.BUTTON)\n                .accessibilityText<\n      >(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick<\n      >((): void => this.commit());\n        }\n        else {\n            .attributeModifier<\n      >(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth))\n                .enabled<\n      >(this.actionEnabled).focusable<\n      >(this.actionEnabled)\n                .accessibilityRole<\n      >(AccessibilityRoleType.BUTTON)\n                .accessibilityText<\n      >(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick<\n      >((): void => this.commit());\n        }\n    }\n    private commit(): void { if (this.mounted && this.actionEnabled)\n        this.onAction(); }\n}\n"
+    },
+    "sha256": "2446cee48d444cbe7a1b513c270d4ccc466605855beedc254c29ee60f5cdfa8f"
+  }
+}

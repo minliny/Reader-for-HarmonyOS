@@ -1,0 +1,106 @@
+{
+  "date": "2026-10-06",
+  "scope": "Three revised alternatives after user corrected candidate eligibility",
+  "worktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+  "artifactKind": "unconfirmed custom visual alternatives",
+  "targetLogicalViewport": {
+    "width": 390,
+    "height": 844
+  },
+  "dataKind": "six fictional successful-result examples; not real source verification",
+  "userCorrection": "书源不存在检测失败，是有检查成功的书源才在列表中展示",
+  "candidateEligibility": "Only sources whose checks completed successfully enter selectable list.",
+  "options": [
+    {
+      "displayedOption": 1,
+      "file": "01-bookshelf-list.png",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-8c34c4b0-9233-4eeb-9010-433008973d71.png",
+      "parentImage": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-concepts-20261006/page-alternatives/01-bookshelf-list.png",
+      "direction": "bookshelf summary and continuous grouped list",
+      "sha256": "c0ac1565b121c9a9fe2345e186b2af117b5f4041fc5adbabb53cb5006f6f5656",
+      "pixelDimensions": [
+        853,
+        1844
+      ]
+    },
+    {
+      "displayedOption": 2,
+      "file": "02-chapter-ledger.png",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-ee06275d-ac23-40e4-9a06-249f9e095f18.png",
+      "parentImage": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-concepts-20261006/page-alternatives/02-chapter-ledger.png",
+      "direction": "chapter-comparison ledger",
+      "sha256": "d3491123c843dd126000399e3055bb3ebad1d5e25c5b971c339b87cb0a9922d3",
+      "pixelDimensions": [
+        853,
+        1844
+      ]
+    },
+    {
+      "displayedOption": 3,
+      "file": "03-reading-drawer.png",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-674bfb01-ec94-4080-846b-2e961aeb92b6.png",
+      "parentImage": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS/demos/source-switch-concepts-20261006/page-alternatives/03-reading-drawer.png",
+      "direction": "fixed-height reading-context drawer",
+      "sha256": "c9ca2789a959b881b9fc0769f5585e81e49f7c07146842fa02afcc531f3b6140",
+      "pixelDimensions": [
+        853,
+        1844
+      ]
+    }
+  ],
+  "contentInventory": {
+    "book": [
+      "title",
+      "author",
+      "latest chapter",
+      "current source"
+    ],
+    "discovery": [
+      "global activity",
+      "successful source count",
+      "stop or search again"
+    ],
+    "candidate": [
+      "successful source name",
+      "source-specific latest chapter",
+      "search request latency",
+      "tap row to switch"
+    ]
+  },
+  "dynamicContract": [
+    "Only successful results append to selectable candidate list.",
+    "Global discovery shows progress; candidates have no pending checking failure timeout retry or placeholder rows.",
+    "Count reflects successful source results.",
+    "Existing identities and row heights stay stable while new successful rows append.",
+    "Defer reorder during touch or scroll and preserve anchor if later implemented.",
+    "Fixed drawer height; scroll successful candidates internally.",
+    "Stop/end preserves found results; zero eligible results uses page-level empty state."
+  ],
+  "supersedes": "../page-alternatives/manifest.json",
+  "verification": {
+    "rootStaticReview": true,
+    "secondAgentStaticReview": true,
+    "interaction": false,
+    "native": false,
+    "userAcceptance": false
+  },
+  "demoModified": false,
+  "nativeModified": false,
+  "remainingRefinements": [
+    "First book summary still lacks explicit latest chapter label.",
+    "Generated covers and typography need actual assets if a direction is selected.",
+    "Long labels empty stopped switching-busy states and other sizes/themes are not drawn here.",
+    "Native candidate-eligibility logic and dynamic list interaction have not been modified or tested."
+  ],
+  "operationNotes": [
+    "First metadata-save script did not parse non-ASCII stdin; retried using ASCII-escaped serialization. No design file was created by failed attempt."
+  ],
+  "selection": {
+    "displayedOption": 3,
+    "userAcceptedVisualDirection": true,
+    "request": "定下来第三个，在独立 demo 里绘制从控制栏点击换源到弹出窗口到书源动态刷新，最后选择进入换源动画的全过程",
+    "demo": "../../source-switch-density/app-baseline/index.html",
+    "nativeImplemented": false,
+    "demoVisualAcceptance": false
+  }
+}

@@ -197,7 +197,7 @@ export class BookAcquisitionCoordinator {
     // Ordinary prefetch fills missing bodies and materializes assets without
     // replacing a cached body. It must not cancel another book's validated
     // chapter handoff or active body admission.
-    const changesDownloadStatus = changesSources || effectMethod === 'cache.clear' ||
+    const changesDownloadStatus = changesSources || effectMethod === 'cache.clear' || effectMethod === 'cache.storage.cleanup' ||
       effectMethod === 'cache.book.prefetch' || effectMethod.startsWith('cache.download.') ||
       effectMethod === 'chapter.content' || effectMethod === 'manga.chapter.get' || effectMethod === 'book.toc' ||
       effectMethod === 'manga.retention.set' || effectMethod.startsWith('manga.cache.materialization.') ||

@@ -14,7 +14,7 @@ const checks = [
   ['cache action observes state in concrete component tree', settings.includes('Text(this.cacheActionLabel)')],
   ['cache action does not cross builder argument boundary', !settings.includes('this.inlineAction(this.cacheActionLabel, 66)')],
   ['duplicate taps are gated', settings.includes('cacheCleanupInFlight')],
-  ['typed gateway invokes canonical text-only method', gateway.includes("this.intents.execute('cache.clear', { scope: 'cache' }, { sourceId: 'cache', bookId: 'global-text' }") && !index.includes("request('cache.clear'")],
+  ['typed gateway invokes protected shared text-only storage owner', gateway.includes('this.owner.clearTextRebuildableCache(evidence, current)') && !gateway.includes('this.intents.execute(') && !gateway.includes('this.intents.continueOriginal(') && !index.includes("request('cache.clear'")],
   ['typed gateway validates returned scope and all counts', gateway.includes("data['scope'] !== 'cache'") && gateway.includes('Number.isSafeInteger')],
   ['Settings wiring consumes typed result under captured presentation', index.includes('this.clearTextCache(generation, owner, mounting, host, identity)')],
   ['existing Host owns finite cleanup', host.includes('SettingsCacheCleanupOwner.forRuntime(owner') && index.includes('return host.clearCache(owner, current)')],

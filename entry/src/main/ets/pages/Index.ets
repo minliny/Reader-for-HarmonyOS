@@ -183,8 +183,8 @@ import { SettingsPage, type SettingsSnapshot } from '../features/settings/Settin
 import { SettingsHost } from '../features/settings/SettingsHost';
 import { SharedDownloadPage, type SharedDownloadUiIntent, type SharedDownloadViewState } from '../features/downloads/SharedDownloadPage';
 import { SharedDownloadHost, type SharedDownloadSnapshot } from '../features/downloads/SharedDownloadHost';
-import { SharedDownloadActionTarget } from '../features/downloads/SharedDownloadProjection';
-import type { DownloadBookView, DownloadReadingTarget, DownloadStorageSummary } from '../features/downloads/SharedDownloadProjection';
+import { SharedDownloadActionTarget, formatDownloadStorageBytes } from '../features/downloads/SharedDownloadProjection';
+import type { DownloadBookView, DownloadReadingTarget, DownloadStorageSummary, DownloadStoragePolicyView } from '../features/downloads/SharedDownloadProjection';
 import type { SettingsOperationProjection, SettingsCacheCleanupSnapshot } from '../features/settings/SettingsHost';
 import { SettingsGateway } from '../features/settings/SettingsGateway';
 import { RulesManagementPage } from '../features/settings/RulesManagementPage';
@@ -286,6 +286,7 @@ interface MangaSourceSwitchSelection {
 }
 
 interface MangaDownloadDeleteRequest { session: RemoteReadingSession; chapterIndex: number | undefined; }
+interface ReaderDownloadExitDestination { identity: string; detailKey: string; }
 
 
 /** Chinese one-liner for a book-source failure kind (user confirmation UI). */
@@ -367,9 +368,14 @@ struct Index {
   @State private downloadLoading: boolean = false;
   @State private downloadError: string = '';
   @State private downloadStorageSummary: DownloadStorageSummary = {};
+  @State private downloadStoragePolicy: DownloadStoragePolicyView | undefined = undefined;
   @State private downloadPendingMessage: string = '';
   private downloadHost: SharedDownloadHost | undefined = undefined;
   private downloadPresentationIdentity: string = '';
+  private downloadReturnTarget: 'settings' | 'reading' | 'detail' | 'directory' = 'settings';
+  private downloadReturnBook: ShelfBook | undefined;
+  private downloadsAfterReaderExit: ReaderDownloadExitDestination | undefined;
+  private readingFromDownloads: boolean = false;
   private downloadViewState: SharedDownloadViewState = { query: '', type: 'all', state: 'all',
     sourceId: 'all', sort: 'recent', direction: 'desc', listScroll: 0, detailKey: '' };
   @StorageLink('readerBookshelfReadingFilter') private shelfReadingFilter: string = 'all';
@@ -868,7 +874,7 @@ struct Index {
       return true;
     }
     if (this.route === 'downloads') {
-      this.returnToSettings();
+      this.returnFromDownloads();
       return true;
     }
     if (this.route === 'directory') {
@@ -1081,8 +1087,8 @@ struct Index {
       onStop: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.stopSearch(); },
       onClearHistory: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.clearSearchHistory(); },
       onRetryHistory: (): void => { if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) host.retryHistory(); },
-      onSelectResult: (book: SearchBook, variants: SearchBook[]): void => {
-        if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.onSearchResultSelected(book, variants);
+      onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string): void => {
+        if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.onSearchResultSelected(book, variants, displayCoverUrl);
       },
       onVisibleGroups: (groups: SearchBook[][]): void => {
         if (this.isCurrentSearchPresentation(generation, owner, mounting, host)) this.scheduleSearchDetailWarmups(groups);
@@ -1168,7 +1174,7 @@ struct Index {
           onMangaLogin: (): Promise<void> => this.loginMangaSource(),
           bookId: this.detailBook.bookId,
           bookTitle: this.detailBook.title,
-          bookAuthor: this.detailBook.author, bookCoverUrl: this.detailBook.coverUrl ?? '',
+          bookAuthor: this.detailBook.author, bookCoverUrl: this.detailBook.coverUrl ?? this.detailBook.displayCoverUrl ?? '',
           latestChapterTitle: this.detailBook.lastChapter ?? '',
           sourceId: this.detailBook.sourceId,
           sourceName: this.detailBook.sourceName,
@@ -1250,6 +1256,7 @@ struct Index {
             this.onReaderBookmarkSelected(bookmarkId, chapterIndex, chapterOffset, positionScope),
           onDownloadChapter: (chapterIndex: number): void => this.downloadDirectoryChapter(chapterIndex),
           onDownloadBook: (): void => this.downloadDirectoryBook(),
+          onOpenDownloads: (): void => this.requestReaderDownloads(),
           onClearBookOffline: (): void => this.requestClearDirectoryBookOffline(),
           onDeleteBookmarks: (bookmarkTimes: number[]): void => this.deleteDirectoryBookmarks(bookmarkTimes),
           onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]): void =>
@@ -1719,7 +1726,7 @@ struct Index {
       return;
     }
     const generation = this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.selectedRssSubscription = undefined;
@@ -1768,7 +1775,7 @@ struct Index {
       return;
     }
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'discover';
@@ -1807,7 +1814,7 @@ struct Index {
   private openSettings(): void {
     this.settingsSection = 'home';
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
@@ -1818,9 +1825,14 @@ struct Index {
     }
   }
 
-  private openDownloads(): void {
+  private openDownloads(detailKey: string = '', preserveReturn: boolean = false): void {
     const owner = this.mountedRuntimeOwner;
-    if (this.route !== 'settings' || this.readingSessionActive || owner === undefined || !this.isCurrentRuntime(owner)) return;
+    if (this.readingSessionActive || owner === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(owner)) return;
+    if (!preserveReturn) {
+      this.downloadReturnTarget = this.route === 'detail' || this.route === 'directory' ? this.route : 'settings';
+      this.downloadReturnBook = this.downloadReturnTarget === 'settings' ? undefined : this.currentDownloadBook();
+    }
+    if (detailKey.length > 0 || !preserveReturn) this.downloadViewState = { ...this.downloadViewState, detailKey };
     const generation = this.nextNavigationGeneration();
     const identity = JSON.stringify([this.rssInstanceIdentity, this.detailShelfAdmissionMount, generation, 'downloads']);
     this.route = 'downloads';
@@ -1837,9 +1849,62 @@ struct Index {
       this.downloadLoading = snapshot.loading;
       this.downloadError = snapshot.error;
       this.downloadStorageSummary = snapshot.storageSummary;
+      this.downloadStoragePolicy = snapshot.storagePolicy;
     });
     this.downloadHost = host;
     void host.reload(current);
+  }
+
+  private currentDownloadBook(): ShelfBook | undefined {
+    const book = this.detailBook;
+    if (book === undefined) return undefined;
+    const shelf = this.shelfBooks.find((row: ShelfBook): boolean => row.sourceId === book.sourceId && row.bookId === book.bookId);
+    return { sourceId: book.sourceId, sourceName: book.sourceName, bookId: book.bookId,
+      title: book.title, author: book.author, kind: book.kind, contentKind: book.contentKind,
+      coverUrl: book.coverUrl, intro: book.intro, lastChapter: book.lastChapter,
+      addedAt: shelf?.addedAt ?? 0, lastReadAt: shelf?.lastReadAt, group: shelf?.group,
+      sortIndex: shelf?.sortIndex, unreadCount: shelf?.unreadCount, lastCheckAt: shelf?.lastCheckAt,
+      currentChapterTitle: shelf?.currentChapterTitle, currentChapterIndex: shelf?.currentChapterIndex,
+      chapterCount: shelf?.chapterCount, readProgress: shelf?.readProgress, readingPosition: shelf?.readingPosition };
+  }
+
+  private requestReaderDownloads(detailKey: string = ''): void {
+    const book = this.currentDownloadBook();
+    if (book === undefined || this.shelfReceiptRetired || !this.isCurrentRuntime(this.mountedRuntimeOwner)) return;
+    if (!this.readingSessionActive) { this.openDownloads(detailKey); return; }
+    const exit = this.readingExitRequest;
+    if (exit === undefined) { this.showOfflineDownloadFeedback('阅读位置尚未就绪，请稍后打开下载管理'); return; }
+    this.downloadReturnTarget = 'reading'; this.downloadReturnBook = book;
+    this.downloadsAfterReaderExit = { identity: this.currentReaderPresentationIdentity(), detailKey };
+    exit('navigation');
+  }
+
+  private returnFromDownloads(): void {
+    const target = this.downloadReturnTarget, book = this.downloadReturnBook;
+    this.readingFromDownloads = false;
+    if (target === 'settings' || book === undefined) { this.returnToSettings(); return; }
+    if (target === 'reading') {
+      this.readingOriginRoute = 'detail'; this.openShelfBook(book); return;
+    }
+    this.openShelfBookInfo(book);
+    if (target === 'directory') this.route = 'directory';
+  }
+
+  private async submitReaderDownload(owner: ReaderRuntimeOwner, session: RemoteReadingSession,
+    chapterIndexes: number[] | undefined, openProgress: boolean): Promise<void> {
+    const generation = this.navigationGeneration;
+    const current = (): boolean => !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
+      this.isCurrentRuntime(owner) && generation === this.navigationGeneration && this.remoteReadingSession === session;
+    try {
+      const receipt = await owner.getDownloadCoordinator().submit(session, chapterIndexes);
+      if (!current()) return;
+      if (!receipt.accepted) { this.showOfflineDownloadFeedback('下载请求尚未确认，请重试'); return; }
+      if (openProgress) this.requestReaderDownloads(receipt.key);
+      else this.showOfflineDownloadFeedback(receipt.alreadyRunning ? '本章已在下载中' : '已加入下载，可在下载管理查看进度');
+    } catch (error) {
+      if (current()) this.showOfflineDownloadFeedback(`下载失败：${readingOfflineFailureHint(error as Error) || '请重试。'}`);
+      hilog.warn(DOMAIN, 'Reader', 'Download admission: %{private}s', errorMessageOf(error));
+    }
   }
 
   private isCurrentDownloadPresentation(generation: number, owner: ReaderRuntimeOwner | undefined, identity: string): boolean {
@@ -1859,7 +1924,7 @@ struct Index {
   private downloadsSurface(generation: number, owner: ReaderRuntimeOwner | undefined, identity: string) {
     SharedDownloadPage({
       books: this.downloadBooks, loading: this.downloadLoading, error: this.downloadError,
-      storageSummary: this.downloadStorageSummary,
+      storageSummary: this.downloadStorageSummary, storagePolicy: this.downloadStoragePolicy,
       pendingMessage: this.downloadPendingMessage, presentationIdentity: identity, initialViewState: this.downloadViewState,
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
         if (this.isCurrentDownloadPresentation(generation, owner, identity))
@@ -1869,7 +1934,7 @@ struct Index {
         if (this.isCurrentDownloadPresentation(generation, owner, identity)) this.downloadViewState = state;
       },
       onBack: (): void => {
-        if (this.isCurrentDownloadPresentation(generation, owner, identity)) this.returnToSettings();
+        if (this.isCurrentDownloadPresentation(generation, owner, identity)) this.returnFromDownloads();
       },
       onRefresh: (): void => {
         if (this.isCurrentDownloadPresentation(generation, owner, identity))
@@ -1906,12 +1971,12 @@ struct Index {
       new SharedDownloadActionTarget(target.sourceId, target.bookId, target.chapterIndices));
     void (async (): Promise<void> => {
       try {
-        await host.runAction(intent.action, targets, current,
+        const feedback = await host.runAction(intent.action, targets, current,
           intent.cacheLimitMb, intent.cleanupAfterDays);
         if (!current()) return;
         const label = intent.action === 'download' ? '下载任务已提交' : intent.action === 'pause' ? '下载已暂停' :
           intent.action === 'cancel' ? '下载任务已取消' : intent.action === 'deleteLocal' ? '本地内容已删除' : '存储设置已保存';
-        this.showOfflineDownloadFeedback(label);
+        this.showOfflineDownloadFeedback(feedback ?? label);
         await host.reload(current);
       } catch (error) {
         if (current()) this.showOfflineDownloadFeedback(`下载操作未完成：${readingOfflineFailureHint(error as Error) || '请稍后重试。'}`);
@@ -1927,10 +1992,21 @@ struct Index {
     const book = this.downloadBooks.find((entry: DownloadBookView): boolean =>
       entry.sourceId === target.sourceId && entry.bookId === target.bookId);
     if (book === undefined || book.contentKind === undefined || book.projectionStatus !== 'ready') return;
+    const chapter = book.chapters.find(row => row.navigable && row.index === target.chapterIndex &&
+      (book.sourceId === LOCAL_SOURCE_ID || row.chapterId === target.chapterId));
+    if (chapter === undefined) { this.showOfflineDownloadFeedback('目录已变化，请刷新下载页后重新选择'); return; }
     const current = (): boolean => !this.shelfReceiptRetired && this.mountedRuntimeOwner === owner &&
       this.isCurrentRuntime(owner) && this.route === 'downloads' && generation === this.navigationGeneration &&
       identity === this.downloadPresentationIdentity;
     try {
+      owner.setDownloadReadingProtection(book.sourceId, book.bookId, chapter.index);
+      if (book.sourceId === LOCAL_SOURCE_ID) {
+        this.readingOriginRoute = 'detail';
+        this.openLocalBookDetail(book.shelfBook, true);
+        this.requestedChapterIndex = chapter.index;
+        this.readingFromDownloads = true;
+        return;
+      }
       const seed: RemoteReadingBookSeed = {
         sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
         title: book.title, author: book.author, coverUrl: book.coverUrl,
@@ -1942,11 +2018,15 @@ struct Index {
       // A download entry is a reader entry, so reuse the same admission path
       // as bookshelf resume. The validated cached session prevents a network
       // detail request and preserves the selected chapter index.
-      this.readingOriginRoute = 'bookshelf';
-      this.openRemoteBookDetail(seed, book.sourceLabel, book.shelfBook, true, [], [], 'bookshelf', session);
+      if (!session.entries.some(row => row.navigable !== false && row.index === chapter.index && row.url === chapter.chapterId))
+        throw new Error('目录已变化，请刷新下载页后重新选择');
+      this.readingOriginRoute = 'detail';
+      this.openRemoteBookDetail(seed, book.sourceLabel, book.shelfBook, true, [], [], undefined, session);
       if (this.readingSessionActive && this.detailBook?.sourceId === target.sourceId && this.detailBook?.bookId === target.bookId)
         this.requestedChapterIndex = target.chapterIndex;
+      this.readingFromDownloads = true;
     } catch (error) {
+      if (current()) owner.setDownloadReadingProtection();
       if (current()) this.showOfflineDownloadFeedback(`无法打开阅读页：${readingOfflineFailureHint(error as Error) || '本地目录尚未完整，请先重新校验下载。'}`);
       hilog.warn(DOMAIN, 'Reader', 'Download reading admission failed: %{private}s', errorMessageOf(error));
     }
@@ -1959,9 +2039,15 @@ struct Index {
     identity: string): Promise<void> {
     if (!this.isCurrentDownloadPresentation(generation, owner, identity) || owner === undefined) return;
     try {
-      await owner.clearDownloadRebuildableCache();
+      const cleanup = await owner.clearDownloadRebuildableCache();
       if (!this.isCurrentDownloadPresentation(generation, owner, identity)) return;
-      this.showOfflineDownloadFeedback('自动保存缓存已清理，永久下载与阅读记录已保留');
+      const contentBytes = typeof cleanup['removedContentBytes'] === 'number' ? cleanup['removedContentBytes'] as number : 0;
+      const imageBytes = typeof cleanup['deletedBytes'] === 'number' ? cleanup['deletedBytes'] as number : 0;
+      const files = typeof cleanup['deletedFiles'] === 'number' ? cleanup['deletedFiles'] as number : 0;
+      const partial = typeof cleanup['cleanupError'] === 'string';
+      this.showOfflineDownloadFeedback(contentBytes > 0 || imageBytes > 0 || files > 0 ?
+        `已清理正文缓存 ${formatDownloadStorageBytes(contentBytes)}，回收图片 ${formatDownloadStorageBytes(imageBytes)}（${files} 个文件）${partial ? '；部分清理未完成，请重试' : ''}` :
+        partial ? '缓存清理未完成，请重试；已下载与受保护内容保留' : '当前没有可清理的缓存；已下载与受保护内容保留');
       await this.downloadHost?.reload((): boolean => this.isCurrentDownloadPresentation(generation, owner, identity));
     } catch (error) {
       if (!this.isCurrentDownloadPresentation(generation, owner, identity)) return;
@@ -2386,7 +2472,7 @@ struct Index {
 
   private openBookshelfManagement(): void {
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'bookshelfManagement';
@@ -2396,7 +2482,7 @@ struct Index {
 
   private openBookshelfMultiSelect(initialBook?: ShelfBook): void {
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.bookshelfMultiSelectInitialKey = initialBook === undefined ? '' : this.shelfBookKey(initialBook);
@@ -2422,7 +2508,7 @@ struct Index {
   private openRulesManagement(): void {
     this.nextNavigationGeneration();
     this.rulesManagementReturnTarget = 'settings';
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'rulesManagement';
@@ -2445,7 +2531,7 @@ struct Index {
   private presentRulesManagementFromReader(): void {
     this.nextNavigationGeneration();
     this.rulesManagementReturnTarget = 'reader';
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'rulesManagement';
@@ -2642,7 +2728,7 @@ struct Index {
   private openSourceManagement(returnTarget: SourceManagementReturnTarget = 'settings',
     searchKeyword: string = ''): void {
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.sourceManagementReturnTarget = returnTarget;
@@ -2689,7 +2775,7 @@ struct Index {
   }
 
   private openSourceTools(): void {
-    this.nextNavigationGeneration(); this.readingSessionActive = false; this.readingExitRequest = undefined;
+    this.nextNavigationGeneration(); this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.(); this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false; this.route = 'sourceTools';
     this.getSourceToolsOrchestrator().open(this.sourceSources);
   }
@@ -2702,7 +2788,7 @@ struct Index {
 
   private returnToSettings(): void {
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'settings';
@@ -2739,7 +2825,7 @@ struct Index {
       return;
     }
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'search';
@@ -3039,7 +3125,7 @@ struct Index {
       return;
     }
     this.nextNavigationGeneration();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.syncSnapshotReady = false;
@@ -3698,7 +3784,7 @@ struct Index {
     this.searchHost.prepareEntry();
     this.nextNavigationGeneration();
     this.resetSearchDetailWarmups();
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.route = 'search';
@@ -3817,7 +3903,7 @@ struct Index {
   }
 
 
-  private onSearchResultSelected(book: SearchBook, variants: SearchBook[] = []): void {
+  private onSearchResultSelected(book: SearchBook, variants: SearchBook[] = [], displayCoverUrl?: string): void {
     this.searchDetailCandidates = [book, ...variants.filter((candidate: SearchBook): boolean =>
       candidate.category === book.category &&
       (candidate.sourceId !== book.sourceId || candidate.bookId !== book.bookId) &&
@@ -3869,7 +3955,8 @@ struct Index {
         contentKind: saved.contentKind,
         detailUrl: saved.bookId, title: saved.title, author: saved.author, coverUrl: saved.coverUrl,
         intro: saved.intro, kind: saved.kind, lastChapter: saved.lastChapter };
-      this.openRemoteBookDetail(seed, saved.sourceName ?? this.sourceDisplayName(saved.sourceId), saved);
+      this.openRemoteBookDetail(seed, saved.sourceName ?? this.sourceDisplayName(saved.sourceId), saved,
+        false, [], [], undefined, undefined, false, displayCoverUrl);
       return;
     }
     // Unsaved works retain every source candidate. The shared scheduler bounds concurrency.
@@ -3898,7 +3985,7 @@ struct Index {
     const shelfSnapshot = this.shelfBooks.find((item: ShelfBook): boolean =>
       item.sourceId === book.sourceId && item.bookId === book.bookId);
     this.openRemoteBookDetail(seeds[0], sourceNames[0], shelfSnapshot, false,
-      seeds.slice(1), sourceNames.slice(1));
+      seeds.slice(1), sourceNames.slice(1), undefined, undefined, false, displayCoverUrl);
   }
 
   private openShelfBook(selection: ShelfBook): void {
@@ -4188,7 +4275,7 @@ struct Index {
     this.readingOriginRoute = entryRoute;
     this.shelfReadingPreparation = entryRoute === 'bookshelf';
     this.detailReturnRoute = originRoute === 'search' ? 'search' : 'bookshelf';
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.sourceSwitchFailureMessage = '';
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
@@ -4216,6 +4303,7 @@ struct Index {
     retainedDetailReturnRoute: DetailReturnRoute | undefined = undefined,
     validatedSession: RemoteReadingSession | undefined = undefined,
     retainAdmissionThroughProbe: boolean = false,
+    displayCoverUrl?: string,
   ): void {
     const owner = this.mountedRuntimeOwner;
     if (owner === undefined || !this.isCurrentRuntime(owner) || this.shelfReceiptRetired) return;
@@ -4231,7 +4319,7 @@ struct Index {
     this.readingOriginRoute = entryRoute;
     this.shelfReadingPreparation = entryRoute === 'bookshelf';
     this.detailReturnRoute = retainedDetailReturnRoute ?? (originRoute === 'search' ? 'search' : 'bookshelf');
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
     this.sourceSwitchFailureMessage = '';
@@ -4254,7 +4342,7 @@ struct Index {
     void host.openRemote({ seed, sourceName, shelfSnapshot, shelfBooks: this.shelfBooks,
       fromSearch: originRoute === 'search', sourceSwitchPending: this.pendingSourceSwitch !== undefined,
       resumeImmediately, fallbackSeeds, fallbackSourceNames, candidates, validatedSession, retainedSession,
-      retainAdmissionThroughProbe }, this.readingEntryLease(owner));
+      retainAdmissionThroughProbe, displayCoverUrl }, this.readingEntryLease(owner));
     if (resumeImmediately) this.openReading(undefined);
   }
 
@@ -4269,8 +4357,7 @@ struct Index {
     if (session.contentKind === 'manga' && !owner.supportsCoreCapability('manga.offline.v1')) {
       this.showOfflineDownloadFeedback('漫画离线下载尚未开放'); return;
     }
-    const host = this.getReadingOfflineHost(owner);
-    if (host !== undefined) void host.downloadChapter(chapterIndex, this.offlineBinding(owner, session));
+    void this.submitReaderDownload(owner, session, [chapterIndex], false);
   }
 
   private async loadMangaDownloadActions(chapterIndex?: number): Promise<MangaDownloadAction[]> {
@@ -4319,13 +4406,9 @@ struct Index {
     if (session.contentKind === 'manga' && !owner.supportsCoreCapability('manga.offline.v1')) {
       this.showOfflineDownloadFeedback('漫画离线下载尚未开放'); return;
     }
-    const host = this.getReadingOfflineHost(owner);
-    if (host === undefined) return;
-    if (host.busy()) { this.showOfflineDownloadFeedback('章节下载正在进行，请在目录查看进度'); return; }
     const total = session.entries.filter(entry => entry.navigable !== false && entry.url.trim().length > 0).length;
     if (total === 0) { this.showOfflineDownloadFeedback('当前书籍没有可下载的在线章节'); return; }
-    this.showOfflineDownloadFeedback(`开始下载 ${total} 章，可在目录查看进度`);
-    void host.downloadBook(this.offlineBinding(owner, session));
+    void this.submitReaderDownload(owner, session, undefined, true);
   }
 
   private offlineBinding(owner: ReaderRuntimeOwner, session: RemoteReadingSession): ReadingOfflineBinding {
@@ -4802,7 +4885,7 @@ struct Index {
     this.directoryChapterTitle = '';
     // The existing reader owns chapter acquisition, loading and recovery.
     // Neither a catalog nor a successful body is a navigation prerequisite.
-    this.readingSessionActive = true;
+    this.readingSessionActive = true; this.mountedRuntimeOwner?.setDownloadReadingProtection?.(this.detailBook?.sourceId, this.detailBook?.bookId);
     this.route = 'reading';
     this.bindReadingEntryReader();
     this.shelfReadingPreparation = false;
@@ -4982,6 +5065,7 @@ struct Index {
     return (chapterIndex: number): void => {
       if (!this.readingSessionActive || this.detailBook?.sourceId !== sourceId || this.detailBook?.bookId !== bookId ||
         this.readingReadyGeneration !== generation) return;
+      this.mountedRuntimeOwner?.setDownloadReadingProtection?.(sourceId, bookId, chapterIndex);
       this.presentPreparedReading(chapterIndex);
       this.scheduleNavigationBackfillAfterReady(sourceId, bookId, generation);
     };
@@ -5072,7 +5156,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.requestedChapterIndex = undefined;
     this.mangaChapterStartRequestGeneration = -1;
     this.requestedMangaDirectoryTargetProof = undefined;
@@ -5114,6 +5198,7 @@ struct Index {
       readerIdentity !== this.currentReaderPresentationIdentity()) return;
     this.systemFileOpenNavigation?.cancelExit(readerIdentity);
     this.bookInfoAfterReaderExit = undefined;
+    this.downloadsAfterReaderExit = undefined;
     this.mangaShelfMutationAfterExit = undefined;
     this.mangaDownloadDeleteAfterExit = undefined;
     this.openRulesManagementAfterReaderExit = false;
@@ -5123,13 +5208,30 @@ struct Index {
   private onReaderExited(readerIdentity: string): void {
     if (this.shelfReceiptRetired || !this.isCurrentRuntime(this.mountedRuntimeOwner) ||
       readerIdentity !== this.currentReaderPresentationIdentity()) return;
+    if (this.readingContentKind === 'manga' && this.detailBook !== undefined)
+      this.mountedRuntimeOwner?.finishMangaOfflineProbe?.(this.detailBook.sourceId, this.detailBook.bookId);
+    this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.readingExitRequest = undefined;
     if (this.systemFileOpenNavigation?.readerExited(readerIdentity) === true) {
       this.bookInfoAfterReaderExit = undefined;
       this.mangaDownloadDeleteAfterExit = undefined;
       this.openRulesManagementAfterReaderExit = false;
+      this.downloadsAfterReaderExit = undefined; this.readingFromDownloads = false;
       this.returnToBookshelf();
       this.consumeSystemFileOpen();
+      return;
+    }
+    const downloadDestination = this.downloadsAfterReaderExit;
+    this.downloadsAfterReaderExit = undefined;
+    if (downloadDestination?.identity === readerIdentity) {
+      this.bookInfoAfterReaderExit = undefined;
+      this.readingSessionActive = false;
+      this.openDownloads(downloadDestination.detailKey, true);
+      return;
+    }
+    if (this.readingFromDownloads && this.bookInfoAfterReaderExit === undefined && !this.openRulesManagementAfterReaderExit) {
+      this.readingFromDownloads = false; this.readingSessionActive = false;
+      this.openDownloads(this.downloadViewState.detailKey ?? '', true);
       return;
     }
     const bookInfoIdentity = this.bookInfoAfterReaderExit;
@@ -5434,7 +5536,7 @@ struct Index {
         this.detailToc = []; this.installRemoteReadingSession(undefined);
         this.requestedChapterIndex = undefined; this.requestedBookmarkAnchor = undefined; this.readingExitRequest = undefined;
       }
-      this.readingSessionActive = true; this.preparedReaderRoute = 'reading'; this.route = 'reading'; this.refreshBookshelf();
+      this.readingSessionActive = true; this.mountedRuntimeOwner?.setDownloadReadingProtection?.(this.detailBook?.sourceId, this.detailBook?.bookId); this.preparedReaderRoute = 'reading'; this.route = 'reading'; this.refreshBookshelf();
     } else if (effect.kind === 'acquisitionFailed') {
       if (this.detailBook?.sourceId !== effect.identity.sourceId || this.detailBook?.bookId !== effect.identity.bookId) return;
       if (!this.readingSessionActive) this.openReading(undefined);
@@ -5936,7 +6038,7 @@ struct Index {
       title: book.title, author: book.author, coverUrl: book.coverUrl, intro: book.intro,
       lastChapter: book.lastChapter, sourceVersion: session.sourceVersion };
     this.readingContentKind = session.contentKind === 'manga' ? 'manga' : 'text';
-    this.readingSessionActive = true;
+    this.readingSessionActive = true; this.mountedRuntimeOwner?.setDownloadReadingProtection?.(this.detailBook?.sourceId, this.detailBook?.bookId);
     const committedSession: RemoteReadingSession = {
       contentKind: session.contentKind, sourceVersion: session.sourceVersion, catalogAt: session.catalogAt,
       catalogVersion: session.catalogVersion, contextVersion: session.contextVersion,
@@ -6128,7 +6230,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.requestedChapterIndex = undefined;
     this.mangaChapterStartRequestGeneration = -1;
     this.requestedMangaDirectoryTargetProof = undefined;
@@ -6157,7 +6259,7 @@ struct Index {
     this.nextNavigationGeneration();
     this.readingExitRequest = undefined;
     this.exitToDetailOriginAfterReader = false;
-    this.readingSessionActive = false;
+    this.readingSessionActive = false; this.mountedRuntimeOwner?.setDownloadReadingProtection?.();
     this.requestedChapterIndex = undefined;
     this.mangaChapterStartRequestGeneration = -1;
     this.requestedMangaDirectoryTargetProof = undefined;
@@ -6338,6 +6440,7 @@ struct Index {
       return;
     }
     this.directoryCurrentChapterIndex = chapterIndex;
+    if (this.readingSessionActive) this.mountedRuntimeOwner?.setDownloadReadingProtection?.(this.detailBook?.sourceId, this.detailBook?.bookId, chapterIndex);
     this.directoryChapterTitle = chapterTitle;
     if (this.readingContentKind === 'manga') this.mangaCommittedRequestGeneration = this.mangaChapterRequestGeneration;
   }
@@ -6573,6 +6676,7 @@ struct Index {
   }
 
   private nextNavigationGeneration(): number {
+    if (this.route !== 'reading' && this.route !== 'directory' && this.route !== 'downloads') this.readingFromDownloads = false;
     this.downloadHost?.retire();
     this.downloadHost = undefined;
     this.downloadPresentationIdentity = '';

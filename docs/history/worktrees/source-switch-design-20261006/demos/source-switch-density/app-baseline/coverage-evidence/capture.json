@@ -1,0 +1,91 @@
+{
+  "checkedAt": "2026-10-05T05:09:53.673Z",
+  "scope": "Current local design prototype, no native or backend operations",
+  "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+  "designSourceSha256": "cfba3202ace579ede5b073b592bde38c9bc331fe8ea68c7a2c36d962f3212a5b",
+  "records": [
+    {
+      "file": "01-shelf-list.png",
+      "sha256": "34a0d02cebed7a48f9b19350c02f73b9b22e0e24e365579208baca33b5b4acf1",
+      "page": "bookshelf",
+      "screen": "bookshelf",
+      "variant": "list",
+      "overlays": [],
+      "text": "书架\n暂无封面\n继续阅读\n山间札记\n\n林远\n\n阅读\n我的书架\n暂无封面\n山间札记\n\n林远\n\n第三章 山路\n已读 24%\n示例书源\n暂无封面\n山间札记\n\n林远\n\n第三章 山路\n未读\n本地 TXT\n暂无封面\n山间札记\n\n林远\n\n第三章 山路\n已读 62%\n目录示例\n书架\n设置"
+    },
+    {
+      "file": "02-book-actions.png",
+      "sha256": "3da5f153438312d8dbdac3d892266beb61c563b8bf580386486661e41239e19b",
+      "page": "bookshelf",
+      "screen": "book-actions",
+      "variant": "default",
+      "overlays": [
+        "book-actions"
+      ],
+      "text": "书架\n暂无封面\n继续阅读\n山间札记\n\n林远\n\n阅读\n我的书架\n暂无封面\n山间札记\n\n林远\n\n第三章 山路\n已读 24%\n示例书源\n暂无封面\n山间札记\n\n林远\n\n第三章 山路\n未读\n本地 TXT\n暂无封面\n山间札记\n\n林远\n\n第三章 山路\n已读 62%\n目录示例\n书架\n设置\n书籍操作\n多选\n书籍信息\n编辑分组\n移除书架"
+    },
+    {
+      "file": "03-removal-from-shelf.png",
+      "sha256": "c8d04aadada820c747144ee27d2875294bf1705ba0974e906b2f69c832fbc096",
+      "page": "detail",
+      "screen": "book-removal",
+      "variant": "online",
+      "overlays": [
+        "book-removal"
+      ],
+      "text": "书籍详情\n暂无封面\n山间札记\n\n作者：林远\n\n最新：第三章 山路\n书源：示例书源\n更换书源\n分组：默认\n简介\n\n暂无简介\n\n章节信息\n完整目录\n第一章 清晨第二章 林间第三章 山路第四章 远村第五章 灯火\n继续阅读\n移除书架\n移除书架\n\n确定将“山间札记”从书架移除吗？书源、阅读进度和已缓存正文不会删除，可再次通过搜索加入书架。\n\n取消\n移除"
+    },
+    {
+      "file": "04-removal-cancel.png",
+      "sha256": "3da5f153438312d8dbdac3d892266beb61c563b8bf580386486661e41239e19b",
+      "page": "bookshelf",
+      "screen": "book-actions",
+      "variant": "default",
+      "overlays": [
+        "book-actions"
+      ],
+      "text": "书架\n暂无封面\n继续阅读\n山间札记\n\n林远\n\n阅读\n我的书架\n暂无封面\n山间札记\n\n林远\n\n第三章 山路\n已读 24%\n示例书源\n暂无封面\n山间札记\n\n林远\n\n第三章 山路\n未读\n本地 TXT\n暂无封面\n山间札记\n\n林远\n\n第三章 山路\n已读 62%\n目录示例\n书架\n设置\n书籍操作\n多选\n书籍信息\n编辑分组\n移除书架"
+    },
+    {
+      "file": "05-login-host.png",
+      "sha256": "e69ca8c9b9d6a462773489723d8949fbf2d8f8f62efa538e5bc65f6ce68c9024",
+      "page": "source-login",
+      "screen": "source-login",
+      "variant": "default",
+      "overlays": [],
+      "text": "取消\n示例书源 · 登录 / 验证\n完成"
+    },
+    {
+      "file": "06-source-debug-error.png",
+      "sha256": "bfc7f84cbf11a3c45927b7c321de53caf67da18a5da81cdc52da848823898f03",
+      "page": "source-tools",
+      "screen": "source-tools",
+      "variant": "debug-error",
+      "overlays": [],
+      "text": "批量管理与书源工具\n书源调试失败：当前 Core 不支持分项书源检测，请使用配套 Native；不会将发现检测降级为搜索\n书源导出\n\nCore 生成 Legado 兼容 JSON；Host 只通过系统文件选择器写入。\n\n导出全部书源\n批量管理（已选 0/2）\n全选\n清空\n导出所选\n检测所选\n启用\n停用\n删除\n\n批量操作复用 source.export / source.check.run / source.update / source.delete；删除由系统确认框二次确认。\n\n书源编辑（2）\n示例书源\nhttps://source.example\n选择\n编辑\n调试\n目录示例\nhttps://catalogue.example\n选择\n编辑\n调试\n最近一次检测详情\n搜索\n发现\n列表\n详情\n目录\n正文\n\n检测对象：https://source.example"
+    }
+  ],
+  "errors": [],
+  "missingEditableIds": [
+    "source-import",
+    "source-editor",
+    "source-debug"
+  ],
+  "editableVariantCoverage": [
+    {
+      "id": "json-import",
+      "keyboardSamples": []
+    },
+    {
+      "id": "source-tools",
+      "keyboardSamples": []
+    },
+    {
+      "id": "reader-replace",
+      "keyboardSamples": [
+        "quick",
+        "quick"
+      ]
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { mangaDirectoryContextEntries, mangaDirectoryDownloadStatusWidth } from './MangaDirectoryState';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';
 import { MangaDirectoryPressFeedback } from './MangaDirectoryPressFeedback';
@@ -98,7 +99,7 @@ export struct MangaReadingDirectoryFallback {
       query.length > 0 ? this.admittedEntries : mangaDirectoryVisibleEntries(this.admittedEntries, this.presentation, this.collapsedGroups);
     // The compact Quick viewport can browse the entire admitted catalog.
     // Core target indexes, disabled rows and full-tree metadata remain intact.
-    const projected = projectReaderDirectoryEntries(visible, query, this.ascending, true);
+    const projected = projectReaderDirectoryEntries(mangaDirectoryContextEntries(visible, this.presentation), query, this.ascending, true);
     if (!sameReaderDirectoryData(this.projectedEntries, projected)) this.projectedEntries = projected;
     this.prepareLayout();
   }
@@ -118,7 +119,10 @@ export struct MangaReadingDirectoryFallback {
   private prepareLayout(): void {
     this.layoutRows = mangaDirectoryEntryRows(this.projectedEntries, this.presentation,
       this.mangaCatalogNarrow !== undefined ? this.mangaCatalogNarrow : (this.viewportWidth > 0 && this.viewportWidth <= visual.narrowWidth),
-      this.fontScale(), this.viewportWidth, this.chapterDownloadEnabled ? visual.downloadGridWidth : 0);
+      this.fontScale(), this.viewportWidth, (entry: LocalReadingTocEntry): number => {
+        const glyph = this.chapterDownloadEnabled && entry.navigable !== false && entry.downloadState !== 'unknown';
+        return (glyph ? visual.downloadGridWidth : 0) + mangaDirectoryDownloadStatusWidth(entry.downloadState, glyph, this.fontScale());
+      }, this.query);
   }
 
   private fontScale(): number {
@@ -144,7 +148,8 @@ export struct MangaReadingDirectoryFallback {
     if (this.mangaCatalogDisplay || this.query.trim().length > 0) return false;
     const rowIndex = this.layoutRows.findIndex((row: MangaDirectoryLayoutRow): boolean => row.entries[0]?.index === entry.index);
     const previousEntry = rowIndex > 0 ? this.layoutRows[rowIndex - 1].entries[0] : undefined;
-    return previousEntry === undefined || this.rowPresentation(previousEntry)?.contextTitle !== this.rowPresentation(entry)?.contextTitle;
+    return previousEntry === undefined || (previousEntry.contextTitle ?? this.rowPresentation(previousEntry)?.contextTitle) !==
+      (entry.contextTitle ?? this.rowPresentation(entry)?.contextTitle);
   }
 
   private onLayoutInputsChanged(): void {

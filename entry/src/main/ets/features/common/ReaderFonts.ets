@@ -56,6 +56,7 @@ export function readerFontFamilyReady(family: string): boolean {
  * for every checked receipt, including dynamic current/group text roles. */
 export function prepareMangaSheetFonts(): Promise<boolean> {
   const families: string[] = [READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+    READER_FONT_NOTO_SANS_SC_UI_BOLD,
     READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
     READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600,
     READER_FONT_NOTO_SANS_SC_UI_650,

@@ -492,3 +492,18 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
  checkpoints.push('actual-manga-display-old-response-cannot-borrow-new-book-scope-or-generation');
 }
 console.log(JSON.stringify({status:'PASS',checkpoints,scope:'complete production owner and Gateways through installed SDK emitter + actual coordinator/preparation; controlled native IO; Index/native target proof remains separate'}));
+
+{
+ const f=fixture(), canonical={...seed(),coverUrl:''};
+ await f.host.openRemote({seed:canonical,sourceName:'Source',displayCoverUrl:' https://cover.invalid/search.png ',resumeImmediately:true},f.lease);
+ assert.equal(f.host.snapshot().book.displayCoverUrl,'https://cover.invalid/search.png');
+ assert.equal(f.host.snapshot().book.coverUrl,'');assert.equal(f.host.snapshot().seed.coverUrl,'');
+ const admitted={...session(),book:{...session().book,coverUrl:''}};
+ assert.equal(f.host.readerSessionReady(admitted),true);
+ assert.equal(f.host.snapshot().book.displayCoverUrl,'https://cover.invalid/search.png');
+ assert.equal(admitted.book.coverUrl,'','display fallback cannot become persisted source metadata');
+ await f.host.openRemote({seed:{...canonical,bookId:'different'},sourceName:'Source',resumeImmediately:true},f.lease);
+ assert.equal(f.host.snapshot().book.displayCoverUrl,undefined,'a different identity cannot inherit the prior visible cover');
+ f.close();
+}
+console.log('PASS display-only cover survives admitted same-book metadata and never leaks to a different identity');

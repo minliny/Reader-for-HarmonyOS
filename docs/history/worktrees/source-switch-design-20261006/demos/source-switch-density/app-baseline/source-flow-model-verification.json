@@ -1,0 +1,18 @@
+{
+  "status": "pass",
+  "checks": 11,
+  "verified": [
+    "incremental success-only admission and immutable snapshots",
+    "stop preserves results and ignores late callbacks",
+    "restart retains, deduplicates and appends by composite key",
+    "selection freezes discovery and commits source only after all switch phases",
+    "completed source is excluded when controls reopen the sheet",
+    "a lower latest chapter follows the chosen source while reading position survives reopening",
+    "dismiss during opening cancels and cannot revive an old sheet",
+    "dismiss during discovery retains successful rows across reopening",
+    "reset and destroy invalidate every outstanding phase",
+    "reduced motion skips entrance movement, preserves asynchronous discovery and switching",
+    "a change listener can cancel a phase before its timers are queued"
+  ],
+  "evidence": "injected-time model only"
+}

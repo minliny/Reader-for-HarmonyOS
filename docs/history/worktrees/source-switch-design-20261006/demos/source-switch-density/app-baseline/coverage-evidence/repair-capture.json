@@ -1,0 +1,51 @@
+{
+  "checkedAt": "2026-10-05T06:25:23.567Z",
+  "scope": "Local browser design visual inspection and scroll endpoints",
+  "sourceTreeSha256": "92b940d7025171f03b5fa113ecfaeeac6ae0740df81cfe4b329faf95a3ae8b91",
+  "designSourceSha256": "6450923adf20d05407aa31ee0afb919afc1777635bf71340d43a1ccb438b9652",
+  "native": false,
+  "backend": false,
+  "errors": [],
+  "records": [
+    {
+      "name": "after-source-debug-logs",
+      "screen": "source-tools",
+      "variant": "debug-failed",
+      "background": "source-tools",
+      "backgroundVariant": "debug-failed",
+      "sha256": "b6f1b89cddf3726d98ec3e693bb91296eb814ab1eabd31a9e98fcc27bcae07ad"
+    },
+    {
+      "name": "after-source-editor-readback",
+      "screen": "source-tools",
+      "variant": "editor-readback-error",
+      "background": "source-tools",
+      "backgroundVariant": "editor-readback-error",
+      "sha256": "274d975487e322765a5944863dc2fc10403ef297d432b9482fe01670b6b787d9"
+    },
+    {
+      "name": "after-local-removal-from-shelf",
+      "screen": "book-removal",
+      "variant": "local",
+      "background": "bookshelf",
+      "backgroundVariant": "list",
+      "sha256": "249930764bb674a4fa7b086b82a34a868e49789bd34ca716c5c0bb3a2dfb8c34"
+    },
+    {
+      "name": "after-local-removal-cancel",
+      "screen": "bookshelf",
+      "variant": "list",
+      "background": "bookshelf",
+      "backgroundVariant": "list",
+      "sha256": "9c519e39ae607fa7cbefdde123a78856ccf4111b81f3197d11d6cb13ac4e92b0"
+    },
+    {
+      "name": "after-tts-online-engine",
+      "screen": "reader-tts",
+      "variant": "full-online-configured-playing",
+      "background": "reader",
+      "backgroundVariant": "normal",
+      "sha256": "c8941d3360eeae283f5accafb1d8f7b6a5f4ca1551883bb35d4c4e835dbc901b"
+    }
+  ]
+}

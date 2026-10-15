@@ -1,3 +1,4 @@
+import * as directoryState from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
 import * as visual from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -14,12 +15,12 @@ import { sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/
 const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets', import.meta.url), 'utf8');
 const names = ['row', 'presentation', 'scheme', 'currentChapterIndex', 'collapsedBranches', 'query', 'showContext',
   'interactionEnabled', 'chapterDownloadEnabled', 'branchControlsEnabled', 'onSelectEntry', 'onToggleBranch', 'onDownloadEntry',
-  'fontScale', 'cellHeight', 'windowMetricsRevision', 'liveEntry', 'liveLabel', 'facts', 'color', 'current', 'expanded', 'downloadable', 'title', 'status', 'gridLabel', 'accessibility', 'activateEntry',
+  'fontScale', 'cellHeight', 'windowMetricsRevision', 'liveEntry', 'liveLabel', 'facts', 'color', 'current', 'expanded', 'downloadable', 'title', 'contextTitle', 'status', 'gridLabel', 'accessibility', 'activateEntry',
   'download', 'numberCell', 'branchToggle', 'fullWidthEntry', 'fullWidthEntryBody', 'emptySlots', 'build'];
 const fonts = { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600 };
 function mount(entries, options = {}, candidate = source) {
   const properties = createArkUIPropertyRuntimeProbe();
-  const { owner } = createReaderBuilderProbe(candidate, names, { ...visual, mangaDirectoryDisplay, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: options.systemFontScale ?? 1 }) }, ...fonts, ...properties.sdk }, properties.hooks);
+  const { owner } = createReaderBuilderProbe(candidate, names, { ...visual, ...directoryState, mangaDirectoryDisplay, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: options.systemFontScale ?? 1 }) }, ...fonts, ...properties.sdk }, properties.hooks);
   const selected = [], folded = [], downloaded = [];
   const presentation = mangaDirectoryPresentation(entries);
   Object.assign(owner, { row: mangaDirectoryEntryRows(entries, presentation)[0], presentation,
@@ -69,7 +70,7 @@ assert.equal(parent.nodes().find(node => node.type === 'Row' && node.constraintS
 
 const paid = mount([{ index: 13, title: '特别篇', navigable: true, downloadState: 'completed', isVip: true, isPay: true },
   { index: 14, title: '番外篇', navigable: true, downloadState: 'missing', isVip: true, isPay: false }]);
-assert.ok(paid.nodes().some(node => node.type === 'Text' && node.create === 'VIP · 已购'), 'paid VIP status is rendered from explicit Core facts');
+assert.ok(paid.nodes().some(node => node.type === 'Text' && node.create === 'VIP · 已购 · 已下载'), 'paid VIP status is rendered from explicit Core facts');
 assert.equal(mangaDirectoryDisplay({ title: '第14话', isVip: true, isPay: false }).statusText, 'VIP',
   'unpaid VIP status remains distinct from purchased');
 
@@ -171,7 +172,7 @@ function retainedContent(candidate = source) {
     const selected = [], downloaded = [];
     state.owner.onSelectEntry = entry => selected.push([entry.index, entry.title, entry.navigable]);
     state.owner.onDownloadEntry = entry => downloaded.push([entry.index, entry.title, entry.downloadState]);
-    const nodes = state.nodes(), texts = nodes.filter(node => node.type === 'Text');
+    const nodes = state.nodes(), texts = nodes.filter(node => node.type === 'Text' && !['已暂停', '已下载', '已保存'].includes(node.create));
     const actor = nodes.find(node => (node.type === 'Row' || node.type === 'Stack') && node.onClick && node.accessibilityText?.includes('打开章节'));
     const download = nodes.find(node => node.accessibilityText?.startsWith('管理'));
     const marker = nodes.find(node => node.type === 'Image' && String(node.create).includes('marker'));
@@ -211,7 +212,7 @@ for (const [label, candidate, failure] of [
   state.owner.row = mangaDirectoryEntryRows([{ ...original, title: '禁用章节', navigable: false }], new Map())[0];
   state.properties.flush();
   assert.equal(read.enabled, false); assert.equal(read.opacity, .36);
-  assert.equal(read.accessibilityText, '禁用章节，暂不可读');
+  assert.equal(read.accessibilityText, '禁用章节，暂不可读，已暂停');
   read.onClick(); download.onClick();
   assert.deepEqual(state.selected, []); assert.deepEqual(state.downloaded, [], 'latest disabled facts fence retained chapter and download callbacks');
   state.owner.row = { kind: 'row', columns: 1, startIndex: 0, entries: [], labels: [] };

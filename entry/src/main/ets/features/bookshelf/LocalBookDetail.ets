@@ -1,3 +1,6 @@
+import type { MeasureOptions } from '@ohos.measure';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+import { bookCoverDisplayUrl } from '../common/BookCoverDisplay';
 import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 import { readerPageAreaLength } from '../common/ReaderPageShell';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryColor, mangaDirectoryContentTop, mangaDirectoryPositionStacked } from '../manga/MangaDirectoryVisual';
@@ -88,6 +91,11 @@ export struct LocalBookDetail {
   onBack: () => void = (): void => {};
   @State private viewportWidth: number = 0;
   @State private introExpanded: boolean = false;
+  @State private introOverflow: boolean = false;
+  @State private introMeasured: boolean = false;
+  private introMeasuredWidth: number = 0;
+  private introMeasurementGeneration: number = 0;
+  private introMeasurementSignature: string = '';
   @State private collapsedGroups: number[] = [];
   @State private mangaPresentation: Map<number, MangaDirectoryRowPresentation> = new Map<number, MangaDirectoryRowPresentation>();
   @State private mangaPreviewRows: MangaDirectoryLayoutRow[] = [];
@@ -111,6 +119,8 @@ export struct LocalBookDetail {
     this.mounted = false;
     this.mangaFontGeneration += 1;
     this.mangaFontTask = undefined;
+    this.introMeasurementGeneration += 1;
+    this.introMeasurementSignature = '';
   }
 
   build() {
@@ -195,7 +205,7 @@ export struct LocalBookDetail {
   private mangaHero() {
     Row({ space: visual.heroGap }) {
       if (this.hasCover()) {
-        Image(this.book.coverUrl as string).width(visual.heroWidth).height(visual.heroHeight)
+        Image(this.displayCoverUrl() as string).width(visual.heroWidth).height(visual.heroHeight)
           .objectFit(ImageFit.Cover).borderRadius(visual.heroRadius)
           .border({ width: visual.borderWidth, color: mangaDirectoryColor('frame', this.appThemeScheme) });
       } else {
@@ -286,7 +296,7 @@ export struct LocalBookDetail {
   private standardHero() {
     Row({ space: 18 }) {
       if (this.hasCover()) {
-        Image(this.book.coverUrl as string).width(84).height(122).objectFit(ImageFit.Cover).borderRadius(8);
+        Image(this.displayCoverUrl() as string).width(84).height(122).objectFit(ImageFit.Cover).borderRadius(8);
       } else {
         NoCoverCover({ coverWidth: 84, coverHeight: 122 });
       }
@@ -398,11 +408,17 @@ export struct LocalBookDetail {
         .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale()))
         .fontColor(mangaDirectoryColor('ink', this.appThemeScheme));
       Text(this.displayIntro() || '暂无简介').width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
-        .fontWeight(visual.bodyFontWeight).fontSize(visual.introBodyFontSize).lineHeight(visual.introBodyLineHeight).halfLeading(true)
+        .fontWeight(visual.bodyFontWeight).fontSize(visual.introBodyFontSize).lineHeight(visual.introBodyLineHeight).halfLeading(false).wordBreak(WordBreak.BREAK_WORD)
         .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale()))
         .fontColor(mangaDirectoryColor('muted', this.appThemeScheme)).margin({ top: visual.introBodyTop })
-        .maxLines(this.introExpanded ? 10000 : 3).textOverflow({ overflow: TextOverflow.Ellipsis });
-      if (this.displayIntro().length > 0) {
+        .maxLines(this.introExpanded || !this.introMeasured ? 10000 : 3).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .onAreaChange((_old: Area, area: Area): void => {
+          const width = readerPageAreaLength(area.width);
+          if (Number.isFinite(width) && width > 0 && Math.abs(width - this.introMeasuredWidth) > .1) {
+            this.introMeasuredWidth = width; this.measureIntro();
+          }
+        });
+      if (this.introOverflow) {
         Row({ space: visual.sectionActionGap }) {
           Text(this.introExpanded ? '收起' : '展开').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
             .fontWeight(visual.bodyFontWeight).fontSize(visual.sectionActionFontSize).lineHeight(visual.sectionActionLineHeight)
@@ -424,9 +440,15 @@ export struct LocalBookDetail {
     Column({ space: 8 }) {
       Text('简介').fontSize(15).fontWeight(FontWeight.Bold).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       Text(this.displayIntro() || '暂无简介').width('100%').fontFamily('ReaderNotoSansSC')
-        .fontSize(13).lineHeight(24).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .maxLines(this.introExpanded ? 10000 : 3).textOverflow({ overflow: TextOverflow.Ellipsis });
-      if (this.displayIntro().length > 0) {
+        .fontWeight(400).fontSize(13).lineHeight(24).halfLeading(false).wordBreak(WordBreak.BREAK_WORD).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .maxLines(this.introExpanded || !this.introMeasured ? 10000 : 3).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .onAreaChange((_old: Area, area: Area): void => {
+          const width = readerPageAreaLength(area.width);
+          if (Number.isFinite(width) && width > 0 && Math.abs(width - this.introMeasuredWidth) > .1) {
+            this.introMeasuredWidth = width; this.measureIntro();
+          }
+        });
+      if (this.introOverflow) {
         Text(this.introExpanded ? '收起' : '展开').height(32).fontSize(12)
           .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
           .onClick((): void => { this.introExpanded = !this.introExpanded; });
@@ -655,6 +677,7 @@ export struct LocalBookDetail {
       this.mangaFontTask = undefined;
       this.mangaFontsReady = ready;
       this.mangaFontsFailed = !ready;
+      if (ready) this.measureIntro();
     }).catch((_error: Error): void => {
       if (!this.mounted || generation !== this.mangaFontGeneration || identity !== this.mangaFontIdentity || this.book.contentKind !== 'manga') return;
       this.mangaFontTask = undefined;
@@ -685,6 +708,66 @@ export struct LocalBookDetail {
   private topInset(): number { return readerInteractiveSafeTop(ReaderWindowCoordinator.metrics()); }
   private bottomInset(): number { return readerInteractiveSafeBottom(ReaderWindowCoordinator.metrics()); }
   private displayIntro(): string { return bookIntroText(this.book.intro); }
+  private measureIntro(): void {
+    if (!this.mounted || this.book === undefined || (this.book.contentKind === 'manga' && !this.mangaFontsReady)) return;
+    const text = this.displayIntro();
+    const width = this.introMeasuredWidth > 0 ? this.introMeasuredWidth : this.contentFrame().width;
+    const context = this.getUIContext();
+    let vpUnit: number;
+    let fpUnit: number;
+    try { vpUnit = context.px2vp(1); fpUnit = context.fp2px(1); }
+    catch (_) {
+      this.introOverflow = false; this.introMeasured = false; this.introMeasurementSignature = '';
+      return;
+    }
+    const signature = JSON.stringify([this.book.sourceId, this.book.bookId, text, width,
+      this.mangaFontScale(), this.book.contentKind === 'manga' ? READER_FONT_NOTO_SANS_SC_UI_REGULAR : 'ReaderNotoSansSC', visual.introBodyFontSize,
+      visual.introBodyLineHeight, vpUnit, fpUnit, this.mangaFontGeneration]);
+    if (signature === this.introMeasurementSignature) return;
+    this.introMeasurementSignature = signature;
+    const generation = ++this.introMeasurementGeneration;
+    this.introOverflow = false;
+    this.introMeasured = false;
+    if (text.length === 0) {
+      this.introExpanded = false;
+      this.introMeasured = true;
+      return;
+    }
+    // MeasureUtils and Text receive the same fp font/line height, family,
+    // weight and word-break. Width is explicitly vp; returned heights are px.
+    // Comparing two platform layouts accounts for glyph leading and newlines
+    // without estimating character widths or multiplying the system scale.
+    const options: MeasureOptions = { textContent: text, constraintWidth: `${width}vp`,
+      fontFamily: this.book.contentKind === 'manga' ? READER_FONT_NOTO_SANS_SC_UI_REGULAR : 'ReaderNotoSansSC', fontSize: `${visual.introBodyFontSize}fp`,
+      lineHeight: `${visual.introBodyLineHeight}fp`, fontWeight: visual.bodyFontWeight,
+      wordBreak: WordBreak.BREAK_WORD, overflow: TextOverflow.Ellipsis, maxLines: 10000 };
+    void Promise.resolve().then((): void => {
+      if (!this.mounted || (this.book.contentKind === 'manga' && !this.mangaFontsReady) || generation !== this.introMeasurementGeneration ||
+        signature !== this.introMeasurementSignature) return;
+      try {
+        const measure = context.getMeasureUtils();
+        const full = Number(measure.measureTextSize(options).height);
+        options.maxLines = 3;
+        const folded = Number(measure.measureTextSize(options).height);
+        if (!Number.isFinite(full) || !Number.isFinite(folded) || full <= 0 || folded <= 0)
+          throw new Error('DETAIL_INTRO_MEASURE_INVALID');
+        if (!this.mounted || generation !== this.introMeasurementGeneration ||
+          signature !== this.introMeasurementSignature) return;
+        this.introOverflow = full > folded + .5;
+        if (!this.introOverflow) this.introExpanded = false;
+        this.introMeasured = true;
+      } catch (_) {
+        if (!this.mounted || generation !== this.introMeasurementGeneration ||
+          signature !== this.introMeasurementSignature) return;
+        // A measurement failure keeps the entire synopsis readable and hides
+        // the unavailable action; the next content/geometry change can retry.
+        this.introOverflow = false;
+        this.introMeasured = false;
+        this.introMeasurementSignature = '';
+        hilog.warn(0xD003210, 'Reader', 'Detail synopsis platform measurement unavailable');
+      }
+    });
+  }
   private chapterEmptyMessage(): string {
     return this.loadingMessage.trim() || (!this.readingEnabled ? this.readingBlockedReason.trim() : '') || '暂无章节信息';
   }
@@ -715,12 +798,16 @@ export struct LocalBookDetail {
   private onBookChanged(): void {
     if (this.mounted) this.onMangaFontIdentityChanged();
     const identity = `${this.book.sourceId}\u0000${this.book.bookId}`;
-    if (identity === this.collapseIdentity) { this.prepareMangaPreview(); return; }
+    if (identity === this.collapseIdentity) { this.prepareMangaPreview(); this.measureIntro(); return; }
+    this.introExpanded = false;
+    this.introMeasuredWidth = 0;
+    this.introMeasurementSignature = '';
     this.collapseIdentity = identity;
     this.collapsedGroups = [];
     this.collapseEntries = this.toc.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => ({
       index: entry.index, title: entry.title, level: entry.level, navigable: entry.navigable, downloadState: entry.downloadState }));
     this.prepareMangaPreview();
+    this.measureIntro();
   }
   private onTocChanged(): void {
     const previous = this.collapseEntries;
@@ -736,6 +823,8 @@ export struct LocalBookDetail {
   }
   private onMangaGeometryChanged(): void {
     if (this.book !== undefined && this.book.contentKind === 'manga') this.prepareMangaPreview();
+    this.introMeasuredWidth = 0;
+    this.measureIntro();
   }
 
   private prepareMangaPreview(): void {
@@ -758,8 +847,8 @@ export struct LocalBookDetail {
   private previewShowsContext(row: MangaDirectoryLayoutRow): boolean {
     const rowIndex = this.mangaPreviewRows.findIndex((item: MangaDirectoryLayoutRow): boolean => item.entries[0]?.index === row.entries[0]?.index);
     const previousEntry = rowIndex > 0 ? this.mangaPreviewRows[rowIndex - 1].entries[0] : undefined;
-    return previousEntry === undefined || this.mangaPresentation.get(previousEntry.index)?.contextTitle !==
-      this.mangaPresentation.get(row.entries[0]?.index)?.contextTitle;
+    return previousEntry === undefined || (previousEntry.contextTitle ?? this.mangaPresentation.get(previousEntry.index)?.contextTitle) !==
+      (row.entries[0]?.contextTitle ?? this.mangaPresentation.get(row.entries[0]?.index)?.contextTitle);
   }
 
   private selectMangaPreviewEntry(entry: LocalReadingTocEntry): void {
@@ -793,7 +882,7 @@ export struct LocalBookDetail {
     return this.inBookshelf ? '移除书架' : '加入书架';
   }
   private detailBookAvailable(): boolean { return this.book.sourceId !== 'local' || this.inBookshelf; }
-  private hasCover(): boolean {
-    return this.book.coverUrl !== undefined && /^(https?:\/\/|data:image\/(png|jpeg|bmp|webp);base64,|file:\/\/)/.test(this.book.coverUrl.trim());
-  }
+  private displayCoverUrl(): string | undefined { return bookCoverDisplayUrl(this.book.displayCoverUrl) ?? bookCoverDisplayUrl(this.book.coverUrl); }
+
+  private hasCover(): boolean { return this.displayCoverUrl() !== undefined; }
 }

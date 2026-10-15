@@ -1,3 +1,5 @@
+import * as directoryState from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
 import { mangaDirectoryEntryRows } from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
@@ -26,7 +28,7 @@ const completedScrolls = [];
 const Edge = { Top: 'top', Bottom: 'bottom' };
 let metrics = { windowRect: { width: 390, height: 844 }, systemFontScale: 1, systemInsets: { left: 0, right: 0, top: 48, bottom: 34 },
   cutoutInsets: {}, gestureInsets: {}, navigationInsets: {}, keyboardInsets: {} };
-const deps = { ...fonts, ...directoryVisual, visual: directoryVisual.MANGA_DIRECTORY_VISUAL, EMPTY_READING_DIRECTORY_RECOVERY, mangaDirectoryEntryRows, mangaDirectoryPresentation, mangaDirectoryVisibleEntries, projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
+const deps = { ...directoryState, mangaDirectoryDisplay, ...fonts, ...directoryVisual, visual: directoryVisual.MANGA_DIRECTORY_VISUAL, EMPTY_READING_DIRECTORY_RECOVERY, mangaDirectoryEntryRows, mangaDirectoryPresentation, mangaDirectoryVisibleEntries, projectReaderDirectoryEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
   SurfaceWidthSpec, SurfaceHorizontalFrame, resolveHorizontalFrame, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop,
   readerInteractiveSafeBottom, ReaderWindowCoordinator: { metrics: () => metrics },
   TOK_CONTENT_MAX_W_TABLET: 720, registerReaderFonts() {}, prepareReaderFontFamily: async () => {}, prepareMangaSheetFonts: async () => true, Edge, ScrollAlign: { START: 'start' }, LengthMetrics: { vp: value => ({ value }) },

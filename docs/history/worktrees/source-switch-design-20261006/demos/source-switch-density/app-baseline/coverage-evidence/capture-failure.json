@@ -1,0 +1,17 @@
+{
+  "kind": "audit-harness-selector",
+  "result": "failed",
+  "symptom": "strict-mode violation: close selector matched backdrop and cancel button",
+  "scope": "local prototype capture only",
+  "applicationFailure": false,
+  "resolution": "select cancel button by role and exact accessible name; rerun required",
+  "recovered": true,
+  "rerunEvidence": "capture.json",
+  "referenceAuditHarnessCorrection": {
+    "kind": "incorrect source reference path",
+    "initialResult": "ENOENT for features/reading/ReaderShell.ets",
+    "applicationFailure": false,
+    "correctedPath": "features/shell/ReaderShell.ets",
+    "rerun": "passed; all finding references resolve"
+  }
+}

@@ -46,9 +46,19 @@ export function auditTypographyConsumers(source, file = '/tmp/TypographyConsumer
  * Their producer implementations, variants and propagation have separate
  * actual-source/SDK contracts; this closes local helper-name laundering. */
 const getterPolicies = {
-  'ReaderActionMenuSurface.ets': { owner: 'ReaderActionMenuSurface', getter: 'spec', resolver: 'resolvePopupSpec', module: 'ReaderSurfaceSpecs', argument: 'this.specId', fields: ['actionFontFamily','actionFontWeight','actionFontSize','actionLineHeight'] },
+  'ReaderActionMenuSurface.ets': { owner: 'ReaderActionMenuSurface', getter: 'spec', resolver: 'resolvePopupSpec', module: 'ReaderSurfaceSpecs', argument: 'this.specId', fields: ['actionFontFamily','actionFontWeight','actionFontSize','actionLineHeight'],
+    additionalGetters: [{ getter: 'actionSheetSpec', resolver: 'resolveActionSheetSpec', module: 'ReaderSurfaceSpecs', argument: "this.variant === 'quick' ? 'quick' : 'grouped'", fields: [
+      'sectionHeadingFontSize', 'sectionHeadingLineHeight', 'quickLabelFontSize', 'quickLabelLineHeight',
+      'quickSecondaryFontSize', 'quickSecondaryLineHeight', 'labelFontSize', 'labelLineHeight',
+      'secondaryFontSize', 'secondaryLineHeight', 'trailingFontSize', 'trailingLineHeight',
+      'regularFontFamily', 'emphasisFontFamily', 'regularFontWeight', 'emphasisFontWeight',
+    ] }] },
   'ReaderDialogSurface.ets': { owner: 'ReaderDialogSurface', getter: 'spec', resolver: 'resolveDialogSpec', module: 'ReaderSurfaceSpecs', argument: 'this.specId', fields: ['headerFontFamily','headerFontWeight','headerFontSize','headerLineHeight'] },
-  'ReaderSheetActionList.ets': { owner: 'ReaderSheetActionList', getter: 'surfaceSpec', resolver: 'resolveSheetSpec', module: 'ReaderSurfaceSpecs', argument: "'bookshelf-book-action'", fields: ['actionLabelFontFamily','actionLabelFontWeight','actionLabelFontSize','actionLabelLineHeight'] },
+  'ReaderBoundedSurfaceHeader.ets': { owner: 'ReaderBoundedSurfaceHeader', getter: 'drawerSpec', resolver: 'resolveDrawerSpec', module: 'ReaderSurfaceSpecs', argument: "'reader-action-sheet'", fields: [
+    'titleFontFamily', 'titleFontWeight', 'titleFontSize', 'titleLineHeight',
+    'sideTitleFontFamily', 'sideTitleFontWeight', 'sideTitleFontSize', 'sideTitleLineHeight',
+    'titleMinFontScale', 'titleMaxFontScale',
+  ] },
   'ReaderChoiceRow.ets': { owner: 'ReaderChoiceRow', getter: 'spec', resolver: 'resolveReaderChoiceSpec', module: 'ReaderChoiceSpecs', argument: 'this.specId', fields: ['selectedWeight','text','selectedText'], textGetter: 'textStyle' },
   'ReaderSearchField.ets': { owner: 'ReaderSearchField', getter: 'textStyle', roles: ['TYPE_SEARCH_SOURCE_INPUT','TYPE_SEARCH_DIRECTORY_INPUT','TYPE_SEARCH_MANGA_DIRECTORY_INPUT','TYPE_SEARCH_READER_QUICK_INPUT'], fields: ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'] },
 };
@@ -69,6 +79,13 @@ export function typographyExpressionContext(source, file) {
   for(const n of tree.statements)if(ts.isImportDeclaration(n)&&ts.isNamedImports(n.importClause?.namedBindings))
     for(const e of n.importClause.namedBindings.elements)imports.set(e.name.text,{ exported:(e.propertyName??e.name).text,module:n.moduleSpecifier.text });
   const bind=(name,fields)=>bindings.set(policy.owner+'#'+name,new Set(fields));
+  for (const getterPolicy of policy.additionalGetters ?? []) {
+    const imported=imports.get(getterPolicy.resolver),getter=methods.get(getterPolicy.getter),statements=getter?.body?.statements;
+    const returned=statements?.length===1&&ts.isReturnStatement(statements[0])?statements[0].expression:undefined;
+    if(imported?.exported===getterPolicy.resolver&&imported.module==='./'+getterPolicy.module&&
+      ts.isCallExpression(returned)&&ts.isIdentifier(returned.expression)&&returned.expression.text===getterPolicy.resolver&&
+      returned.arguments.length===1&&returned.arguments[0].getText(tree)===getterPolicy.argument) bind(getterPolicy.getter,getterPolicy.fields);
+  }
   if(policy.resolver){
     const imported=imports.get(policy.resolver),getter=methods.get(policy.getter);
     const statements=getter?.body?.statements;

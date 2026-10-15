@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "task": "library design remediation after 47-gap reaudit",
+  "sourceHead": "9b70ff4e219f522efa36f994b12944d61fe93436",
+  "scope": {
+    "modules": 11,
+    "states": 89,
+    "ownedFiles": [
+      "ui-library.mjs",
+      "library.css",
+      "spec-library.mjs",
+      "routes-library.json"
+    ],
+    "nativeModified": false,
+    "browserExecuted": false
+  },
+  "items": [
+    {
+      "id": "LIB-01",
+      "status": "TEMPLATE_FIXED_ROOT_INTEGRATION",
+      "result": "统一3本稳定样例身份，所有书籍入口带id/kind/content/index；按原index预选，多选统一library-selection，详情局部状态按book.id隔离。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/ui-library.mjs",
+        "line": 17
+      }
+    },
+    {
+      "id": "LIB-02",
+      "status": "FIXED_DESIGN_LOCAL_STATE",
+      "result": "显示方式、当前内容/来源两组筛选、搜索两组类别/草稿/清空及自动检查开关使用独立本地choice；render不重置选择。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/ui-library.mjs",
+        "line": 33
+      }
+    },
+    {
+      "id": "LIB-03",
+      "status": "TEMPLATE_CONTRACT_FIXED_ROOT_RESTORE",
+      "result": "提供持久草稿、书籍隔离局部状态与稳定入口；历史、返回滚动及焦点恢复由root统一实现，当前子代理未运行浏览器验证。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/ui-library.mjs",
+        "line": 157
+      }
+    },
+    {
+      "id": "LIB-04",
+      "status": "SOURCE_DRIFT_SUPERSEDED_REBUILT",
+      "result": "撤回旧282目录卡根因；按HEAD9b70ff4e当前详情重做小说/漫画hero、facts、position、简介、自然目录和浮动dock，保留目录加载/空/失败/无可读/分组不可导航/移除禁用有效分支。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/ui-library.mjs",
+        "line": 185
+      }
+    },
+    {
+      "id": "LIB-05",
+      "status": "FIXED_DESIGN_STRUCTURE",
+      "result": "实际img封面与无封面双分支覆盖书架、搜索、详情、多选；封面fit/radius/shadow按源。原始SVG为预览fixture，不声明Core支持格式。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/ui-library.mjs",
+        "line": 52
+      }
+    },
+    {
+      "id": "LIB-06",
+      "status": "FIXED_DESIGN_STRUCTURE",
+      "result": "搜索结果真实渲染非空简介，最多2行；空简介不占行。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/ui-library.mjs",
+        "line": 146
+      }
+    },
+    {
+      "id": "LIB-07",
+      "status": "FIXED_DESIGN_GEOMETRY",
+      "result": "phone3列卡宽与gap按源公式计算，320/352/390不裁第三列；wide保持当前卡上限与断点。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/library.css",
+        "line": 5
+      }
+    },
+    {
+      "id": "LIB-08",
+      "status": "TEMPLATE_FIXED_ROOT_MEASUREMENT",
+      "result": "提供真实更多触发器测量锚点、24x12三角和独立可滚动body；root按源公式夹取x/y/visibleH/pointerX。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/ui-library.mjs",
+        "line": 234
+      }
+    },
+    {
+      "id": "LIB-09",
+      "status": "AUDIT_CORRECTION",
+      "result": "原app.css最后已有44目标/24图标override，原审计误判36；不重复冒充修复。当前详情源漂移另按floating52/19实现。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/library.css",
+        "line": 22
+      }
+    },
+    {
+      "id": "LIB-10",
+      "status": "FIXED_DESIGN_VISUAL_STATE",
+      "result": "显示方式与筛选展开/条件存在分别产生选中背景/边框/active图标，34视觉+44响应；当前筛选胶囊暗绿态。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/ui-library.mjs",
+        "line": 64
+      }
+    },
+    {
+      "id": "LIB-11",
+      "status": "FIXED_DESIGN_GEOMETRY",
+      "result": "空书架在350卡内显式y137/y173/y219/y281，次按钮使用真实soft/green/primary-text。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/library.css",
+        "line": 7
+      }
+    },
+    {
+      "id": "LIB-12",
+      "status": "TEMPLATE_FIXED_ROOT_MEASUREMENT",
+      "result": "导入结果header/summary/items/list/footer实测slot和常规/compact结构，20行长批次样本；自然items+2边线，原footer承接receipt核对。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/ui-library.mjs",
+        "line": 250
+      }
+    },
+    {
+      "id": "LIB-13",
+      "status": "FIXED_DESIGN_SHARED_COMPONENT",
+      "result": "空态/无源/历史失败复用36高/r999主次胶囊；secondary按当前card/muted/border。",
+      "evidence": {
+        "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/ui-library.mjs",
+        "line": 137
+      }
+    }
+  ],
+  "currentSourceRebase": [
+    "Bookshelf: current compact continue/list facts and content/source filters",
+    "Search: current source + content type rows and filtered-empty",
+    "LocalBookDetail: current novel/manga natural directory presentation",
+    "Group/import/removal receipt recovery remains original presentation; library-error standalone module removed"
+  ],
+  "aliases": {
+    "batch-partial": "bookshelf/remove-unknown",
+    "batch-readback-error": "bookshelf/remove-unknown",
+    "shelf-remove-error": "bookshelf/remove-unknown",
+    "detail-remove-error": "bookshelf/remove-unknown",
+    "shelf-refresh-warning": "bookshelf/shelf-refresh-pending",
+    "detail-refresh-warning": "bookshelf/shelf-refresh-pending",
+    "local-cleanup-warning": "bookshelf/local-cleanup-warning"
+  },
+  "nativeRisk": {
+    "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/search/SearchPage.ets",
+    "lines": [
+      422,
+      423,
+      424,
+      425,
+      446,
+      447,
+      448
+    ],
+    "fact": "build画来源与类型两行共83，但searchHeaderHeight仍仅加41.5。",
+    "conclusion": "代码不一致；原生运行未验证。稿件按52/56+83修正，并在spec明确为迁移修正；未修原生。"
+  },
+  "approvedVisualException": "book-actions retains user-approved old4197 manga demo appearance, native not synchronized",
+  "checks": {
+    "screens": 11,
+    "variants": 89,
+    "renders": 534,
+    "sourceRefs": 186,
+    "icons": 38,
+    "checks": [
+      "stable route identities and preselection bits",
+      "local filters/category/draft/toggle contracts",
+      "current detail novel/manga structure and non-readable groups",
+      "receipt feedback stays in original shelf",
+      "cover and intro branch presence",
+      "measured import slots and 20-row structure",
+      "fixed search statistics and independent sweep actor structure",
+      "source refs in current files",
+      "320/352/390 grid geometry formula",
+      "no obsolete dock CSS overrides; narrow selection list retains horizontal access"
+    ],
+    "visualVerification": "not performed; browser/file access restriction retained"
+  },
+  "verificationBoundaries": [
+    "设计模板/当前源码引用/几何模型已检查；不等同浏览器视觉或原生运行",
+    "根层已完成统一路由、历史、焦点、更多锚点与导入预算的代码及离线集成验证",
+    "当前SearchPage源公式不一致需要原生账项保留"
+  ],
+  "files": {
+    "ui-library.mjs": "cf948fbf84a334f3cf258d5b8d843ea5ada25015f57f8280619534fa02b1d524",
+    "library.css": "09d00a7d002d7c571485eacbabc997a31fee1477e2b8e6b4783d5098597276db",
+    "spec-library.mjs": "30e031cc249026f11942b08d79a5acc1bcd87587f1e190f4975b9b815f3a2532",
+    "routes-library.json": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56"
+  },
+  "currentBinding": {
+    "hostHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+    "sourceTreeSha256": "7ba0dbddfab49fe87a7b36d4993b301dc0e38e1ef5cd05dbd0d6f60075201c2b",
+    "designSourceSha256": "cfcf577a266c6da4343c82586482b5aac6363555ad234f51167a1a5568418e7e",
+    "logicSha256": "8871335274baa1717fd259df755df4015e3965963f77f4820e53c6f71869c393",
+    "rootVerification": "repair-verification.json"
+  },
+  "rootIntegrationStatus": "VERIFIED_CURRENT_CODE_AND_OFFLINE",
+  "followUpReturnRepair": "back-button-audit.json"
+}

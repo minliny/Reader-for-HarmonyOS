@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
+import { mangaSurfaceSdkDependencies, mangaSurfaceBoundedControls } from './lib/manga-surface-sdk-probe.mjs';
 import { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } from './lib/manga-directory-adaptive-probe.mjs';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryQuickMinimumListHeight } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 
@@ -14,7 +14,8 @@ const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Stud
 const componentMap = require(`${sdkRoot}/lib/component_map.js`);
 for (const match of source.matchAll(/@Builder\s+private (\w+)\(/g)) componentMap.CUSTOM_BUILDER_METHOD.add(match[1]);
 const members = [...mangaDirectoryAdaptiveFields, ...mangaDirectoryAdaptiveMembers,
-  'panelOverlay', 'directoryPanel', 'directoryTools', 'directoryBody', 'directoryFallback',
+  'panelOverlay', 'isActionPanel', 'actionPanelInsets', 'actionPanelSurface', 'actionPanelHeader', 'actionPanelBody',
+  'directoryPanel', 'directoryTools', 'directoryBody', 'directoryFallback',
   'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition',
   'directoryFontScale', 'directoryToolHeight', 'directoryHeaderChrome', 'directoryInitialWidth', 'directoryQuickHeight',
   'onDirectoryMetricsChanged', 'panelHeight', 'panelContentHeight', 'panelContentInset', 'panelWidth',
@@ -26,7 +27,8 @@ const members = [...mangaDirectoryAdaptiveFields, ...mangaDirectoryAdaptiveMembe
 function fixture({ candidate = source, width = 320, height = 480, scale = 3.2 } = {}) {
   const timers = [], actions = [], animations = [];
   const state = { scale };
-  const { owner } = createReaderBuilderProbe(candidate, members, { ...mangaDirectoryAdaptiveDependencies, ...mangaSurfaceSdkDependencies,
+  const shared = mangaSurfaceBoundedControls();
+  const { owner } = createReaderBuilderProbe(candidate, members, { ...mangaDirectoryAdaptiveDependencies, ...mangaSurfaceSdkDependencies, ...shared.deps,
     setTimeout: action => { timers.push(action); return timers.length; },
     curves: { interpolatingSpring: (...args) => ({ args }) },
     uiContext: { animateTo: (params, apply) => { apply(); animations.push(params); } },
@@ -34,7 +36,7 @@ function fixture({ candidate = source, width = 320, height = 480, scale = 3.2 } 
       systemInsets: { top: 0, right: 0, bottom: 0, left: 0 }, cutoutInsets: { top: 0, right: 0, bottom: 0, left: 0 },
       gestureInsets: { top: 0, right: 0, bottom: 0, left: 0 }, navigationInsets: { top: 0, right: 0, bottom: 0, left: 0 },
       statusBarRect: { top: 0, height: 0 } }) },
-  });
+  }, shared.hooks);
   const entries = Array.from({ length: 681 }, (_, index) => ({ index: index * 2 + 1, title: 'Chapter ' + (index + 1), navigable: true }));
   Object.assign(owner, { mounted: true, sourceId: 'source', bookId: 'book', directoryOpenRevision: 3,
     panel: 'directory', panelPhase: 'open', panelGeneration: 1, panelOffset: 0, panelScrimOpacity: 1, backgroundPreference: 'paper',

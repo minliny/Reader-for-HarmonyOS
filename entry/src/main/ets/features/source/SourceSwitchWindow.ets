@@ -3,6 +3,7 @@ import curves from '@ohos.curves';
 import { SOURCE_SWITCH_VISUAL } from './SourceSwitchVisual';
 import { SourceSwitchSpinner } from './SourceSwitchSpinner';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
 import { TYPE_SOURCE_SWITCH_NOVEL_NAME, TYPE_SOURCE_SWITCH_NOVEL_CHAPTER, TYPE_SOURCE_SWITCH_NOVEL_LATENCY,
   TYPE_SOURCE_SWITCH_NOVEL_HEADING, TYPE_SOURCE_SWITCH_NOVEL_BOOK_TITLE, TYPE_SOURCE_SWITCH_NOVEL_METADATA,
   TYPE_SOURCE_SWITCH_NOVEL_CAPTION, TYPE_SOURCE_SWITCH_NOVEL_ACTION, TYPE_SOURCE_SWITCH_NOVEL_COLUMN,
@@ -462,7 +463,7 @@ export struct SourceSwitchWindow {
     if (this.busy()) return '正在切换书源…';
     if (this.state.kind === 'success') return '已切换书源';
     if (this.state.kind === 'failure') return this.requiresReconciliation() ? '换源结果未确认' : '换源失败';
-    if (this.state.kind === 'discoveryError') return '查找失败';
+    if (this.state.kind === 'discoveryError' || this.state.kind === 'candidates' && (this.state.refreshError?.trim().length ?? 0) > 0) return '查找失败';
     if ((this.state.kind === 'candidates' || this.state.kind === 'empty') && this.state.stopped === true) {
       return this.contentKind === 'manga' ? `已停止 · 已发现 ${count} 个` : `已停止 · 已找到 ${count} 个书源`;
     }
@@ -607,7 +608,7 @@ export struct SourceSwitchWindow {
     if (this.busy()) return '正在切换书源…';
     if (this.state.kind === 'success') return '已切换书源';
     if (this.state.kind === 'failure') return this.requiresReconciliation() ? '换源结果未确认' : '换源失败';
-    if (this.state.kind === 'discoveryError') return '查找失败';
+    if (this.state.kind === 'discoveryError' || this.state.kind === 'candidates' && (this.state.refreshError?.trim().length ?? 0) > 0) return '查找失败';
     if ((this.state.kind === 'candidates' || this.state.kind === 'empty') && this.state.stopped === true) return '已停止';
     return '查找结束';
   }
@@ -751,7 +752,7 @@ export struct SourceSwitchWindow {
       .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center).width('100%').height(this.footerHeight());
   }
   @Builder
-  private novelDrawer() {
+  private novelDrawerBody() {
     Column() {
       if (!this.compactWindow() && !this.flowChrome()) {
         Row().width(SOURCE_SWITCH_VISUAL.gripWidth).height(SOURCE_SWITCH_VISUAL.gripHeight).borderRadius(SOURCE_SWITCH_VISUAL.gripRadius)
@@ -769,8 +770,12 @@ export struct SourceSwitchWindow {
         this.recoveryNotice();
         if (!this.flowChrome()) { this.novelFooter(); }
       }.width('100%').layoutWeight(1).padding({ left: this.novelSafeLeft() + this.sideInset(), right: this.novelSafeRight() + this.sideInset(), bottom: this.safeBottom() });
-    }.width('100%').constraintSize({ maxWidth: SOURCE_SWITCH_VISUAL.drawerMaxWidth }).height(this.drawerHeight())
-      .backgroundColor(readerAppColor('TOK_SS_WINDOW_BG', this.appThemeScheme)).borderRadius({ topLeft: SOURCE_SWITCH_VISUAL.drawerCornerRadius, topRight: SOURCE_SWITCH_VISUAL.drawerCornerRadius }).clip(true)
+    }.width('100%').height('100%');
+  }
+  @Builder
+  private novelDrawer() {
+    ReaderBoundedSurface({ specId: 'source-switch-drawer', surfaceWidth: '100%', surfaceHeight: this.drawerHeight(),
+      body: (): void => this.novelDrawerBody() })
       .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
         TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: SOURCE_SWITCH_VISUAL.openDurationMs, curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) }),
         TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: SOURCE_SWITCH_VISUAL.closeDurationMs, curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1, SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) })));

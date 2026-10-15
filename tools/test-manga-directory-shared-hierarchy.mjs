@@ -1,3 +1,5 @@
+import * as directoryState from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
 import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -31,9 +33,9 @@ assert.deepEqual(mangaDirectoryVisibleEntries(entries, model, [7]).map(row => ro
 assert.deepEqual(mangaDirectoryVisibleEntries(entries, model, [17]).map(row => row.index), [7, 17, 29, 41, 53]);
 
 const Detail = productionMotionMethods(new URL('features/bookshelf/LocalBookDetail.ets', base),
-  ['visibleToc', 'chapterIsGroup', 'chapterIndent', 'onBookChanged', 'onTocChanged', 'prepareMangaPreview',
+  ['visibleToc', 'chapterIsGroup', 'chapterIndent', 'onBookChanged', 'measureIntro', 'onTocChanged', 'prepareMangaPreview',
     'contentFrame', 'safeLeft', 'safeRight'], {
-    ...windowPorts,
+    ...windowPorts, ...directoryState, mangaDirectoryDisplay,
     mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup, mangaDirectoryEntryRows,
     mangaDirectoryNearbyEntries, CHAPTER_PREVIEW_LIMIT: 8, TEXT_CHAPTER_PREVIEW_LIMIT: 20,
   });
@@ -56,7 +58,7 @@ const Page = productionMotionMethods(new URL('features/bookshelf/BookDirectoryPa
   ['identity', 'admitEntries', 'mangaIsGroup', 'mangaVisibleEntries', 'locateCurrent', 'selectMangaEntry', 'rowIsCurrent',
     'toggleMangaBranch', 'prepareMangaLayout', 'publishProjection', 'onListUserScroll', 'mangaEntryIsDisplayed',
     'contentFrame', 'mangaNarrow', 'mangaFontScale', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaVisibleTopInset', 'topInset'], {
-    ...windowPorts,
+    ...windowPorts, ...directoryState, mangaDirectoryDisplay,
     mangaDirectoryPresentation, mangaDirectoryVisibleEntries, snapshotReaderDirectoryData, sameReaderDirectoryData,
     mangaDirectoryEntryRows, projectReaderDirectoryEntries, ScrollAlign: { START: 'start' }, LengthMetrics: { vp: value => ({ value }) }, setTimeout: fn => timers.push(fn),
   });
@@ -69,7 +71,7 @@ const page = Object.assign(new Page(), { sourceId: 's', bookId: 'b', contentKind
 page.admitEntries(false);
 assert.deepEqual(page.mangaLayoutRows.flatMap(row => row.entries.map(entry => entry.index)), entries.map(entry => entry.index),
   'the explicitly admitted manga fixture initializes layout with every original canonical entry');
-page.toggleMangaBranch(entries[1], page.identity()); page.toggleMangaBranch(entries[0], page.identity());
+page.toggleMangaBranch(page.projectedEntries.find(row => row.index === entries[1].index), page.identity()); page.toggleMangaBranch(entries[0], page.identity());
 assert.deepEqual(page.mangaVisibleEntries().map(row => row.index), [7, 29, 41, 53]);
 assert.equal(page.mangaPresentation.get(entries[3].index).parentTitle, undefined);
 page.selectMangaEntry(entries[4], page.identity());

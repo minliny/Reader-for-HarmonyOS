@@ -69,6 +69,7 @@ export class SettingsHost {
     return SettingsCacheCleanupOwner.peekForRuntime(owner)?.current();
   }
 
+  /** Uses the Runtime storage owner; historical unsafe scopes are read-only. */
   clearCache(owner: ReaderRuntimeOwner, current: () => boolean): Promise<SettingsCacheCleanupSnapshot> {
     if (!this.cacheCleanupAdmitted(owner, current)) return Promise.resolve(this.cacheCleanup?.current() ?? new SettingsCacheCleanupOwner(owner, (_snapshot: SettingsCacheCleanupSnapshot): void => {}).current());
     return this.cacheCleanupOwner(owner).clear(current);

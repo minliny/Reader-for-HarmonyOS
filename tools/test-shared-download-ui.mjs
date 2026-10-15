@@ -379,3 +379,47 @@ assert.equal(progressSnapshots.at(-1).books.find(book => book.key === comicKey),
   'unchanged row remains the same object');
 progressHost.retire();
 console.log('PASS shared-download: real cache/body/manifest projection, unknown/partial status, filters/direction, exact wired reading targets, scoped intents, latest scroll, single-flight and stale publication');
+
+// Read the committed device-sized policy, including a non-preset and fractional
+// MiB value; opening the settings sheet must not select a fabricated preset.
+owner.storagePolicy = { capacityBytes: 777 * storageMiB + 123, expiryDays: 19 };
+owner.sheet = ''; owner.storagePolicyDraftChanged = false; owner.syncStoragePolicy();
+assert.equal(owner.cacheLimitMb * storageMiB, owner.storagePolicy.capacityBytes);
+assert.equal(owner.limitChoices()[owner.limitIndex()] * storageMiB, owner.storagePolicy.capacityBytes);
+assert.equal(owner.dayChoices()[owner.daysIndex()], 19);
+owner.sheet = 'settings'; owner.storagePolicyDraftChanged = true;
+owner.cacheLimitMb = 1024; owner.cleanupAfterDays = 3; owner.syncStoragePolicy();
+assert.equal(owner.cacheLimitMb, 1024); assert.equal(owner.cleanupAfterDays, 3, 'background policy read cannot overwrite an open dirty draft');
+owner.storagePolicyDraftChanged = false; owner.syncStoragePolicy();
+assert.equal(owner.cacheLimitMb * storageMiB, owner.storagePolicy.capacityBytes);
+console.log('PASS actual download policy selector preserves measured non-preset bytes and a dirty settings draft');
+
+// Accepted Runtime intent progress also batches only changed books. A second
+// job in the snapshot is not a reason to re-query the entire shelf.
+{
+  let intentLoads = 0, subscriber;
+  const jobs = [novel, comic].map(book => ({ key: JSON.stringify([book.sourceId, book.bookId]),
+    sourceId: book.sourceId, bookId: book.bookId, book, revision: 1, status: 'paused', updatedAt: 1,
+    requestedIndexes: [], pausedIndexes: [], retainedIndexes: [], preservedRetentions: [], chapters: [] }));
+  const coordinator = { restore: async () => {}, books: () => [novel, comic], jobs: () => jobs,
+    job: (sourceId, bookId) => jobs.find(job => job.sourceId === sourceId && job.bookId === bookId),
+    projectionRevision: (sourceId, bookId) => String(jobs.find(job => job.sourceId === sourceId && job.bookId === bookId)?.revision),
+    subscribe(fn) { subscriber = fn; fn({ books: [novel, comic], jobs }); return () => { subscriber = undefined; }; },
+  };
+  class IntentStatusPort { async load(book) { intentLoads++; return { ...book,
+    projectionStatus: 'ready', chapters: [], totalChapters: 1, downloadedChapters: 0, progressPercent: 0 }; } }
+  const intentExports = {};
+  new Function('exports', 'BookshelfFlowGateway', 'SharedDownloadGateway', 'createDownloadBookView', hostBody)(
+    intentExports, ShelfPort, IntentStatusPort, createDownloadBookView);
+  const snapshots = [], intentHost = new intentExports.SharedDownloadHost({ getDownloadCoordinator: () => coordinator },
+    snapshot => snapshots.push(snapshot));
+  await intentHost.reload(() => true);
+  const beforeIntentLoads = intentLoads, unchanged = snapshots.at(-1).books.find(book => book.key === comicKey);
+  jobs[0] = { ...jobs[0], revision: 2, updatedAt: 2 };
+  subscriber({ books: [novel, comic], jobs }); subscriber({ books: [novel, comic], jobs });
+  await new Promise(resolve => setTimeout(resolve, 140));
+  assert.equal(intentLoads - beforeIntentLoads, 1);
+  assert.equal(snapshots.at(-1).books.find(book => book.key === comicKey), unchanged);
+  intentHost.retire(); assert.equal(subscriber, undefined, 'retiring a page releases its observer, not the Runtime accepted job');
+}
+console.log('PASS accepted download intent bursts refresh one changed book and retain unrelated row objects');

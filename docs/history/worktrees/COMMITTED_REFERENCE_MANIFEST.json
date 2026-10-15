@@ -1,0 +1,496 @@
+{
+  "schema": 1,
+  "status": "INACTIVE_COMMITTED_HISTORY_REFERENCE",
+  "files": [
+    {
+      "sourceCommit": "5f140ec980247c52416d27a02aa2cc0e96207837",
+      "sourcePath": "docs/PHASE2_DIALOG_CONSUMER_BOUNDARY_20261002.md",
+      "archivePath": "docs/history/worktrees/phase2-dialog-20261002/docs/PHASE2_DIALOG_CONSUMER_BOUNDARY_20261002.md",
+      "bytes": 2801,
+      "sha256": "026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee"
+    },
+    {
+      "sourceCommit": "5f140ec980247c52416d27a02aa2cc0e96207837",
+      "sourcePath": "docs/PHASE2_DIALOG_EXECUTION_20261002.md",
+      "archivePath": "docs/history/worktrees/phase2-dialog-20261002/docs/PHASE2_DIALOG_EXECUTION_20261002.md",
+      "bytes": 5503,
+      "sha256": "71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a"
+    },
+    {
+      "sourceCommit": "5f140ec980247c52416d27a02aa2cc0e96207837",
+      "sourcePath": "tools/test-dialog-consumer-boundary.mjs",
+      "archivePath": "docs/history/worktrees/phase2-dialog-20261002/tools/test-dialog-consumer-boundary.mjs",
+      "bytes": 1510,
+      "sha256": "e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513"
+    },
+    {
+      "sourceCommit": "151dfb5d71b9d552b302327ddd36f30757ccbd56",
+      "sourcePath": "docs/PHASE2_DIALOG_CONSUMER_BOUNDARY_20261002.md",
+      "archivePath": "docs/history/worktrees/phase2-dialog-schema34-20261002/docs/PHASE2_DIALOG_CONSUMER_BOUNDARY_20261002.md",
+      "bytes": 2801,
+      "sha256": "026b2298eadccc1e11a42af3cf7184b80cf97051dacfad832f4cef4a9303bbee"
+    },
+    {
+      "sourceCommit": "151dfb5d71b9d552b302327ddd36f30757ccbd56",
+      "sourcePath": "docs/PHASE2_DIALOG_EXECUTION_20261002.md",
+      "archivePath": "docs/history/worktrees/phase2-dialog-schema34-20261002/docs/PHASE2_DIALOG_EXECUTION_20261002.md",
+      "bytes": 5503,
+      "sha256": "71df49466118b91d9111ff5129c1f6474985ff7f50bbbe15160a89c67da9e10a"
+    },
+    {
+      "sourceCommit": "151dfb5d71b9d552b302327ddd36f30757ccbd56",
+      "sourcePath": "docs/PHASE2_DIALOG_SCHEMA34_REPAIR_20261002.md",
+      "archivePath": "docs/history/worktrees/phase2-dialog-schema34-20261002/docs/PHASE2_DIALOG_SCHEMA34_REPAIR_20261002.md",
+      "bytes": 2772,
+      "sha256": "2a957c946bbe3965c530fa50af488fcf55778c7862fcdbe6ea71ad7f7eb28439"
+    },
+    {
+      "sourceCommit": "151dfb5d71b9d552b302327ddd36f30757ccbd56",
+      "sourcePath": "tools/test-dialog-consumer-boundary.mjs",
+      "archivePath": "docs/history/worktrees/phase2-dialog-schema34-20261002/tools/test-dialog-consumer-boundary.mjs",
+      "bytes": 1510,
+      "sha256": "e40bb95f0e844c4239823112c525b933403449ea39ef73d0f9524fa495fc4513"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/BUILD_REPAIR.md",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/BUILD_REPAIR.md",
+      "bytes": 5154,
+      "sha256": "cfd6b94618c93c71962af49b2d2dc92ce9f96c5b03c3a316c84f7ee07cdd5684"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/MAIN_UI_SYNC.md",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/MAIN_UI_SYNC.md",
+      "bytes": 4543,
+      "sha256": "542f67c823dd08be19b27e6f2d80ccdd19f1d429da4687853d917b1bf866f88a"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/README.md",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/README.md",
+      "bytes": 6611,
+      "sha256": "912ec2f1a9fa235380dbe6c7feb57aa36b29c04cf76c75b41a3c5e654d79e4d9"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/REAL_PAGE_REPLACEMENT.md",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/REAL_PAGE_REPLACEMENT.md",
+      "bytes": 21820,
+      "sha256": "d0dbcf50ca8b1deb8704e644df31e25d675e417c52882c35e500e5ac3dfa8e20"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/UI_REGRESSION_AUDIT_20261001.md",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/UI_REGRESSION_AUDIT_20261001.md",
+      "bytes": 21878,
+      "sha256": "aa2c89dc9fb0eb8752eb1da15c69e196712cfe020a7b89b8bb90590ec24d8425"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/UI_REGRESSION_FIX_20261001.md",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/UI_REGRESSION_FIX_20261001.md",
+      "bytes": 8605,
+      "sha256": "a92d60781c84b99d9eb2e1714f5511970fbb43ba8736e0ee93b04df4ce081532"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/bookshelf-empty-fix-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/bookshelf-empty-fix-result.json",
+      "bytes": 3657,
+      "sha256": "02f0fd4666252206bfd346d7babbfc8a007687216e1245e3621dcc7b68c36257"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/bookshelf-empty-fixed-vm.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/bookshelf-empty-fixed-vm.jpeg",
+      "bytes": 133181,
+      "sha256": "3818ab0a13a9334af4f373abe7f42c9e3880b15907ea9553778ed71246484ffb"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/browser-demo.jpg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/browser-demo.jpg",
+      "bytes": 67534,
+      "sha256": "edf4ad1da695ceee0a95ac6a7f63ed9a928227936e3aa54a90a0245370c6509d"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/continue-reading-publication-red-green.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/continue-reading-publication-red-green.json",
+      "bytes": 6108,
+      "sha256": "19524b95f4dcb8afc06cc50019d44b51603680f12203770e35c08783dc0f1d4b"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/core-isolation-recovery.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/core-isolation-recovery.json",
+      "bytes": 4360,
+      "sha256": "82844a0bd1a0601c1db57f7b69c4702f1cf48d55bdbe6561add789fea97fa523"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/main-ui-sync-live-check.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/main-ui-sync-live-check.json",
+      "bytes": 1088,
+      "sha256": "cdd1c0b5b5aa8c4881ece6da1b9cdebfde95954986b59c6f9574af31d9577e44"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/main-ui-sync-metadata.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/main-ui-sync-metadata.json",
+      "bytes": 16614,
+      "sha256": "7d9dce5058295ce6220b5f533f4c6cc60cc614cc998491da11eb37cbbd53e855"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/real-page-build-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/real-page-build-result.json",
+      "bytes": 2335,
+      "sha256": "055cde60d9bdde6725c7415da3be66634928e21fad276bd6dd4bea023582a446"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/real-page-fixed-build-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/real-page-fixed-build-result.json",
+      "bytes": 6117,
+      "sha256": "e336c2199064b2d53c1da5142e94fee23fd8662ff496525edbb38b7bed3aeeca"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/real-page-vm-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/real-page-vm-result.json",
+      "bytes": 7754,
+      "sha256": "c8c71d50eed2c5cec7be7fc8018ba75b56352eab08a58feb1034798143fc382f"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/real-page-vm.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/real-page-vm.jpeg",
+      "bytes": 172255,
+      "sha256": "01af1a3d08aebf45af3992036ad5ee4714fb14903433e7414fa42a44bb1bee79"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/setup-provenance.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/setup-provenance.json",
+      "bytes": 1850,
+      "sha256": "4c3a46f290d4e863ca06fa5d8a346d979a9274e352f1993c366dc668eafe7901"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/signed-build-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/signed-build-result.json",
+      "bytes": 3128,
+      "sha256": "784a57a5e3c30e64aaa95962d3af5bfaab6a649b4af9746aab3828863a860b2d"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/test-input-recovery.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/test-input-recovery.json",
+      "bytes": 5517,
+      "sha256": "7f9d43ff756e6085bc3cd49f26536c8ac47619e6376b2d935f6753df9de3fad9"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/title-recipe-lifetime-red-green.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/title-recipe-lifetime-red-green.json",
+      "bytes": 5264,
+      "sha256": "1225e212abf4f557490e133f1d25338af7d61a1554e21c3c3898d70760141674"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-after-fixture-removal.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-after-fixture-removal.jpeg",
+      "bytes": 133708,
+      "sha256": "ea9f2ba7977b8b0d148129308db8d3fc6a3f34bd27c5eb49c7ac2c969bc3c03f"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-after-fixture-removal.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-after-fixture-removal.json",
+      "bytes": 32845,
+      "sha256": "08a75e493643277c8791d504c0a2e6e8ada4733edeef1a980ea6e997261a9bc8"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-card-long.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-card-long.jpeg",
+      "bytes": 134929,
+      "sha256": "1d0577b344aa5426d2f0788399805f66f3a0169f33ddec1d12531d2abf352092"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-card-long.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-card-long.json",
+      "bytes": 89846,
+      "sha256": "569989f3b4c15fcac3e70ff183806bcb8ccd7201ef73c3b569ddcd0ce96d614c"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-card-short.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-card-short.jpeg",
+      "bytes": 135407,
+      "sha256": "e79e9c4f6e5368c395d3295289126ce1b7dd1a65b52648f8fc911a05864c4d74"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-card-short.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-card-short.json",
+      "bytes": 89848,
+      "sha256": "105c6d7f01cf58d9630b2d37b1c0c6d80531d9c3b83e9cde5c09b9c4fce8056d"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-general-day-retained.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-general-day-retained.jpeg",
+      "bytes": 131208,
+      "sha256": "6760e5fc3b2298079c2f30569a3c0950e385576c254e9c40600b49c0c71ce1d2"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-general-day-retained.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-general-day-retained.json",
+      "bytes": 36134,
+      "sha256": "bfc223020a0ac4aef01c2f83be9916faace50cc14c263e9ea4792ebbea43ca3d"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-general-night.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-general-night.jpeg",
+      "bytes": 138147,
+      "sha256": "11463f110a95e34a5c6855e734cd854cfbc83f0e660cf24aec03fca12654329f"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-general-night.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-general-night.json",
+      "bytes": 36134,
+      "sha256": "018117b4e80975632d0a7a688ec83762ce32ad5986504908d9fbfe78cc251c7d"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-general-restored.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-general-restored.jpeg",
+      "bytes": 131166,
+      "sha256": "2b79cc8450aae5c00b459ed7a8f75a377978079cb403016157c388f7511197e0"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-general-restored.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-general-restored.json",
+      "bytes": 36134,
+      "sha256": "606e7f414385d25a810c81db862b5e4946652eb310f9be00b6a2a3301c383dc5"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-long-chapter2.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-long-chapter2.jpeg",
+      "bytes": 327131,
+      "sha256": "47dcb1a442bf992d80015ffb94ea5c4a3ae9a76d188ee3aa330986a359f0b52e"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-long-chapter2.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-long-chapter2.json",
+      "bytes": 46805,
+      "sha256": "6f98509e449ce7f4d482a14c6b16ea4d6f4b85bd4d93cc9c46a2c6f1fe6ed56b"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-long-detail.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-long-detail.jpeg",
+      "bytes": 164362,
+      "sha256": "5a270aef42f7c5244d2a2a11bf9ef3be6526adfcb58afdd4bbc1165d16e5c020"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-long-detail.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-long-detail.json",
+      "bytes": 34389,
+      "sha256": "7ca67e4ea13afafd61b43a260b1bd42afda6cc3456668023834a53734302cee5"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-more-menu.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-more-menu.jpeg",
+      "bytes": 143987,
+      "sha256": "b3f0455f9cf02f331a42cac83b505ab883f52964722435b739c05691e718d58e"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-more-menu.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-more-menu.json",
+      "bytes": 108022,
+      "sha256": "97ddd82237ca313ab4546236438d25241d358181ede679ffe93133149572b1c2"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-resident-mid-reopen.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-resident-mid-reopen.jpeg",
+      "bytes": 328448,
+      "sha256": "6bf20770816028e13080eb7d5feb40dd5fcde3095b18ecd165866a6ab29bdce8"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-resident-mid-reopen.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-resident-mid-reopen.json",
+      "bytes": 48963,
+      "sha256": "dd9c3cac3b45e0be63bcc8dfe387b90d625f8c8a80ee1fabd14b180887ebac51"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-shelf-settings-night.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-shelf-settings-night.jpeg",
+      "bytes": 98312,
+      "sha256": "6a5dcaf13072386b32d36887a39393ad75a9cc8690ef112cd7cad146dd40d99c"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-shelf-settings-night.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-shelf-settings-night.json",
+      "bytes": 12688,
+      "sha256": "876bd77b83e49527d42f34388240ee9f3efb9d00d44a4cd7652afa44aa0f6da1"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-short-detail.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-short-detail.jpeg",
+      "bytes": 144805,
+      "sha256": "d0801b882b0fdd4b5f10723d17667a4b6595f4eb330e6c4bd0db026b440e634a"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-short-detail.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-short-detail.json",
+      "bytes": 29108,
+      "sha256": "d952b4fd0fc240a5a9e41ce6fdc7678ed3d69b8807da7a2615c2bdba4f1cfd0c"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-short-reading.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-short-reading.jpeg",
+      "bytes": 154242,
+      "sha256": "ba88676e13ffbb464d8e8fbbac50206d944f2cb628e5684ae339512794d029f2"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-fix-vm/ui-final-short-reading.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-fix-vm/ui-final-short-reading.json",
+      "bytes": 38741,
+      "sha256": "eda28658462e1b5c1ce096c955621d719260600c923cea139728c4a27b17526c"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-regression-audit-evidence.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-regression-audit-evidence.json",
+      "bytes": 47656,
+      "sha256": "09e47ea4fc608b063a94b375d8c3c25f47aa6e3d1cec0650f4a9d34883077133"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-regression-concurrency-profile.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-regression-concurrency-profile.json",
+      "bytes": 144333,
+      "sha256": "31dc3f18951fe3cced240fef553d0dbabecd91cd20c85394322f7b35b375138a"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-regression-final-build-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-regression-final-build-result.json",
+      "bytes": 2237,
+      "sha256": "85d2f79164f0729dd526d89ab082d63dc7d4a59cf7a7365be50febe1d6e54996"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-regression-final-vm-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-regression-final-vm-result.json",
+      "bytes": 21339,
+      "sha256": "cb21019fb31e5fea8a3f6be3f29ef089a4da63ce6308977ca22dee88d2ae9088"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-regression-fix-local-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-regression-fix-local-result.json",
+      "bytes": 5829,
+      "sha256": "286e8ee2dc615e74de598faeee0732bad9904e3089d865c181e3252363914b82"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-regression-full-gate-first-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-regression-full-gate-first-result.json",
+      "bytes": 914,
+      "sha256": "e9b682563be6223532962eb8292c12e95b1e30be2394b5b09f1b4ec0a2712f50"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-regression-full-gate-fourth-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-regression-full-gate-fourth-result.json",
+      "bytes": 1420,
+      "sha256": "b32f329d293faf9ad62a537d0bf7dc82e27701b6e56cf0c75034f904c396b39c"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-regression-full-gate-second-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-regression-full-gate-second-result.json",
+      "bytes": 467,
+      "sha256": "af453fd087d258011d37b6e662aa98469b52e46ae842c5d2ef670b0864aa8228"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-regression-owner-tests-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-regression-owner-tests-result.json",
+      "bytes": 868,
+      "sha256": "d0f011237edee3bed9bffd6d1158bd80613252cd389f366fd60ef9b39afe9a3b"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/ui-regression-vm-first-package-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/ui-regression-vm-first-package-result.json",
+      "bytes": 13292,
+      "sha256": "6da47376d95692416fa39d1a5fab7e4c0b17f6ea87e0ded892584c04c01b9088"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/vm-demo.jpeg",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/vm-demo.jpeg",
+      "bytes": 173350,
+      "sha256": "323b0fe5dd2a6b8a6df8a1cf016defe99431f68bbd2dbcfa19196c8bcafc7005"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "docs/demos/source-switch/vm-install-result.json",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/docs/demos/source-switch/vm-install-result.json",
+      "bytes": 2779,
+      "sha256": "2a70ae2c227b6bc209217c004ffc98560bfe5e838cd03b21d74b682dc95072c9"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "tools/fixtures/platform-paragraph/README.md",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/tools/fixtures/platform-paragraph/README.md",
+      "bytes": 544,
+      "sha256": "0617db338b46e006071de23a02d5fc79d7ed91e9776598d193ebb559149bcec9"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "tools/test-local-contract-runner.mjs",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/tools/test-local-contract-runner.mjs",
+      "bytes": 2946,
+      "sha256": "6c8c531eeba70bdb57f05ca95b7413431c6077389c72fee4ebf468e9a81bae6d"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "tools/test-source-switch-live-window.mjs",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/tools/test-source-switch-live-window.mjs",
+      "bytes": 9303,
+      "sha256": "b355b18450c0e678b103f5c3e170affead33a70a81923048b5cabe4e04e7fe4f"
+    },
+    {
+      "sourceCommit": "c000882d7616b6947ba06f1d5e62688489db13aa",
+      "sourcePath": "tools/test-source-switch-page-flow.mjs",
+      "archivePath": "docs/history/worktrees/source-switch-demo-20260930/tools/test-source-switch-page-flow.mjs",
+      "bytes": 6314,
+      "sha256": "9a9ea65a4f1381b7b6ad8369c2005c4500b66b401d3b3b096a8dc0f957a61ca3"
+    }
+  ]
+}

@@ -73,7 +73,7 @@ assert.ok(action, 'actual shared menu action-row typography carrier');
 assert.equal(action.modifiers.fontWeight.expression, 'this.spec().actionFontWeight');
 const weight = action.modifiers.fontWeight;
 assert.throws(() => verifySource(menu.slice(0, weight.start) + 'FontWeight.Medium' + menu.slice(weight.end), menuFile),
-  /private style.*FontWeight\.Medium/, 'retired menu weight must not regain admission');
+  /private style.*FontWeight\.Medium|finite shared physical inputs\/role bindings changed/, 'retired menu weight must not regain admission');
 
 const selectFile = 'settings/SettingsSelectOverlay.ets';
 const select = readFileSync(new URL(selectFile, root), 'utf8');

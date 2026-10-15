@@ -10,6 +10,7 @@ const popupSource=read('features/common/ReaderMangaDownloadPopup.ets');
 const panelSource=read('features/manga/MangaDownloadOperationsPanel.ets');
 const pageSource=read('features/bookshelf/BookDirectoryPage.ets');
 const sdk=boundedSurfaceSdk();
+sdk.hooks.lifecycleChildren=true;
 const deps={...sdk.deps,READER_MANGA_DOWNLOAD_POPUP,READER_FONT_NOTO_SANS_SC_UI_REGULAR,
   Placement:{BottomLeft:'Placement.BottomLeft'}};
 sdk.hooks.childSources.MangaDownloadOperationsPanel=panelSource;
@@ -18,12 +19,14 @@ sdk.hooks.childSources.ReaderMangaDownloadPopup=popupSource;
 deps.ReaderMangaDownloadPopup=createReaderBuilderProbe(popupSource,boundedMembers(popupSource),deps,sdk.hooks).Component;
 const ownNodes=owner=>[...owner.nodes.values()];
 const buttonLabel=node=>Array.isArray(node.createWithLabel)?node.createWithLabel[0]:node.createWithLabel;
-function panelNodes(owner){
+function panel(owner){
   const panels=sdk.walk(owner).filter(child=>child instanceof deps.MangaDownloadOperationsPanel);
   assert.equal(panels.length,1,'mount the actual existing MangaDownloadOperationsPanel instance');
-  return ownNodes(panels[0]);
+  return panels[0];
 }
-const actionButton=(owner,label)=>panelNodes(owner).find(node=>node.type==='Button'&&buttonLabel(node)===label);
+const panelNodes=owner=>sdk.nodes(panel(owner));
+const actionButton=(owner,label)=>panelNodes(owner).find(node=>
+  (node.type==='Button'&&buttonLabel(node)===label)||(node.type==='Row'&&node.accessibilityText===label));
 const action={id:'downloadChapter',label:'下载本章'};
 function popup(params){return createReaderBuilderProbe(popupSource,boundedMembers(popupSource),deps,
   {...sdk.hooks,initialParams:{specId:'manga-download',visible:true,generation:7,actions:[action],...params}}).owner;}
@@ -42,8 +45,11 @@ for(const availableWidth of [180,240,400]){
   assert.deepEqual([scroll.width,scroll.constraintSize.maxHeight,scroll.padding],[Math.min(240,availableWidth),340,8],
     'original native popup keeps measured width clamp including narrow windows');
   const button=actionButton(owner,action.label);
-  assert.ok(button,'actual unchanged MangaDownloadOperationsPanel renders the action');
-  assert.deepEqual([button.height,button.borderRadius,button.fontSize,button.fontFamily],[48,14,13,READER_FONT_NOTO_SANS_SC_UI_REGULAR]);
+  assert.ok(button,'actual shared grouped action row is mounted inside the existing manga panel');
+  assert.equal(button.constraintSize.minHeight,50,'the action exposes the shared minimum touch row while allowing larger text');
+  const label=panelNodes(owner).find(n=>n.type==='Text'&&n.create===action.label);
+  assert.deepEqual([label.fontSize,label.fontFamily],[14,READER_FONT_NOTO_SANS_SC_UI_REGULAR]);
+  assert.ok(panelNodes(owner).some(n=>n.type==='Text'&&n.create==='下载任务'),'the download category is visible');
   button.onClick();native.onStateChange({isVisible:false});
   assert.deepEqual(calls,['open',['action',action.id,7],['closed',7]],'native popup callbacks retain their opening generation');
 }
@@ -53,6 +59,23 @@ assert.ok(panelNodes(loading).some(n=>n.type==='Text'&&n.create==='正在读取�
 const retryCalls=[],failed=popup({failureMessage:'下载状态暂时无法读取，请重试',onRetry:g=>retryCalls.push(g)});
 failed.popupContent(7);actionButton(failed,'重试').onClick();
 assert.deepEqual(retryCalls,[7]);
+
+// The visual adapter cannot dispatch a row whose authoritative action list has
+// changed while its captured callback is still reachable.
+const revokedCalls=[],revoked=popup({onAction:id=>revokedCalls.push(id)});
+revoked.popupContent(7);const revokedButton=actionButton(revoked,action.label),revokedPanel=panel(revoked);
+revokedPanel.loading=true;revokedButton.onClick();
+revokedPanel.loading=false;revokedPanel.failureMessage='状态读取失败';revokedButton.onClick();
+revokedPanel.failureMessage='';revokedPanel.actions=[];revokedButton.onClick();
+assert.deepEqual(revokedCalls,[],'loading, failed and revoked rows cannot dispatch');
+const cleanup=popup({actions:[action,{id:'deleteDownloads',label:'删除下载'},{id:'clearCache',label:'清除普通阅读缓存'}]});
+cleanup.popupContent(7);
+const cleanupTexts=panelNodes(cleanup).filter(n=>n.type==='Text');
+assert.deepEqual(cleanupTexts.filter(n=>['下载任务','存储清理'].includes(n.create)).map(n=>n.create),['下载任务','存储清理']);
+const deleteLabel=cleanupTexts.find(n=>n.create==='删除下载');
+assert.notEqual(deleteLabel.fontColor,cleanupTexts.find(n=>n.create===action.label).fontColor,'storage deletion has a distinct danger tone');
+assert.equal(panelNodes(loading).some(n=>n.type==='Row'&&n.accessibilityText===action.label),false,'loading does not expose stale actions');
+assert.equal(panelNodes(failed).some(n=>n.type==='Row'&&n.accessibilityText===action.label),false,'failure exposes retry only');
 
 // Exercise original parent methods and captured native callbacks. The shared
 // chrome cannot bypass book identity, load generation, ready rows or teardown.
@@ -87,4 +110,4 @@ actionButton(active.child,action.label).onClick();
 assert.deepEqual(downloads,[[action.id,4]]);assert.equal(page.downloadMenuVisible,false);
 page.mounted=false;active.child.onOpen();active.child.onRetry(page.downloadMenuGeneration);
 assert.equal(pending.length,3,'unmounted parent cannot reopen');
-console.log('PASS existing manga native popup: finite recipe, unchanged geometry/font, native generation capture, actual parent old-identity/old-load/teardown fencing');
+console.log('PASS manga native popup: grouped shared download actions, danger hierarchy, loading/failure/revocation admission, finite popup geometry, native generation and parent identity/teardown fencing');

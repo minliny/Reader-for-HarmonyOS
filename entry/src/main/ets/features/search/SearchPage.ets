@@ -347,7 +347,7 @@ export struct SearchPage {
   onStop: () => void = (): void => {};
   onClearHistory: () => void = (): void => {};
   onRetryHistory: () => void = (): void => {};
-  onSelectResult: (book: SearchBook, variants: SearchBook[]) => void =
+  onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string) => void =
     (_book: SearchBook, _variants: SearchBook[]): void => {};
   onVisibleGroups: (groups: SearchBook[][]) => void = (_groups: SearchBook[][]): void => {};
   private visibleStart: number = 0;
@@ -1043,7 +1043,7 @@ export struct SearchPage {
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
             ListItem() {
               SearchResultCard({ group, isTablet: this.isTablet, cardWidth: this.contentFrame().width,
-                onSelectResult: (book: SearchBook, variants: SearchBook[]): void => this.onSelectResult(book, variants) });
+                onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string): void => this.onSelectResult(book, variants, displayCoverUrl) });
             }
           }, (group: SearchBookGroup): string =>
             this.resultGroupKey(group.book));
@@ -1503,7 +1503,7 @@ struct SearchResultCard {
   @ObjectLink group: SearchBookGroup;
   @Prop isTablet: boolean = false;
   @Prop cardWidth: number = 0;
-  onSelectResult: (book: SearchBook, variants: SearchBook[]) => void = (): void => {};
+  onSelectResult: (book: SearchBook, variants: SearchBook[], displayCoverUrl?: string) => void = (): void => {};
 
   private displayIntro(): string {
     return bookIntroText(this.group.book.intro);
@@ -1694,7 +1694,7 @@ struct SearchResultCard {
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: TOK_SPACE_CARD_PADDING, bottom: 14.5 })
     .alignItems(VerticalAlign.Top)
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('TOK_BORDER', this.appThemeScheme) } })
-      .onClick((): void => this.onSelectResult(this.group.book, this.group.variants));
+      .onClick((): void => this.onSelectResult(this.group.book, this.group.variants, this.group.coverUrl));
   }
 
   @Builder

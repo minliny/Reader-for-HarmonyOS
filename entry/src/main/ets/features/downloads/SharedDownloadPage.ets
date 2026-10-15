@@ -14,7 +14,7 @@ import {
 } from '../common/ReaderTypography';
 import { ReaderWindowCoordinator, ReaderWindowChromeStyle } from '../../app/ReaderWindowCoordinator';
 import { ReaderWindowMetricsSnapshot, readerVisualSafeLeft, readerVisualSafeRight, readerVisualSafeTop, readerInteractiveSafeBottom } from '../common/ReaderWindowMetrics';
-import type { DownloadBookView, DownloadChapterView, SharedDownloadFilters, DownloadReadingTarget, DownloadStorageSummary } from './SharedDownloadProjection';
+import type { DownloadBookView, DownloadChapterView, SharedDownloadFilters, DownloadReadingTarget, DownloadStorageSummary, DownloadStoragePolicyView } from './SharedDownloadProjection';
 import { filterDownloadBooks, describeDownloadReadingTarget, downloadChapterDetailLabel, formatDownloadStorageBytes, canCleanDownloadStorage } from './SharedDownloadProjection';
 import { FrameCallback, TextModifier, SymbolGlyphModifier } from '@kit.ArkUI';
 import { ReaderInlineSelect } from '../common/ReaderInlineSelect';
@@ -53,6 +53,7 @@ export struct SharedDownloadPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop books: DownloadBookView[] = [];
   @Prop storageSummary: DownloadStorageSummary = {};
+  @Prop @Watch('syncStoragePolicy') storagePolicy: DownloadStoragePolicyView | undefined = undefined;
   @Prop loading: boolean = false;
   @Prop error: string = '';
   @Prop pendingMessage: string = '';
@@ -102,6 +103,7 @@ export struct SharedDownloadPage {
   @State private bookContentHeights: Map<string, number> = new Map<string, number>();
   @State private cacheLimitMb: number = 2048;
   @State private cleanupAfterDays: number = 7;
+  private storagePolicyDraftChanged: boolean = false;
   private listScroller: Scroller = new Scroller();
   private chapterScroller: Scroller = new Scroller();
   private listOffset: number = 0;
@@ -124,9 +126,19 @@ export struct SharedDownloadPage {
     this.detailKey = this.initialViewState.detailKey ?? '';
     this.listOffset = this.initialViewState.listScroll ?? 0;
     this.mounted = true;
+    this.syncStoragePolicy();
     this.syncOverlayChrome();
     this.prepareFonts();
     this.onTemporaryBackBridge((): boolean => this.consumeBack(), this.mountedIdentity);
+  }
+
+  private syncStoragePolicy(): void {
+    const policy = this.storagePolicy;
+    if (policy === undefined || (this.sheet === 'settings' && this.storagePolicyDraftChanged)) return;
+    if (!Number.isSafeInteger(policy.capacityBytes) || policy.capacityBytes < 0 ||
+      !Number.isSafeInteger(policy.expiryDays) || policy.expiryDays < 1) return;
+    this.cacheLimitMb = policy.capacityBytes / (1024 * 1024);
+    this.cleanupAfterDays = policy.expiryDays;
   }
   aboutToDisappear(): void {
     this.fontPreparationGeneration += 1;
@@ -677,7 +689,7 @@ export struct SharedDownloadPage {
           .width(DOWNLOAD_VISUAL.moreIconSize).height(DOWNLOAD_VISUAL.moreIconSize);
       }.width(DOWNLOAD_VISUAL.dockIconWidth).height(DOWNLOAD_VISUAL.headerIconHeight).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
         .responseRegion({ x: (DOWNLOAD_VISUAL.dockIconWidth - DOWNLOAD_VISUAL.touchTarget) / 2, y: 0, width: DOWNLOAD_VISUAL.touchTarget, height: DOWNLOAD_VISUAL.touchTarget })
-        .accessibilityText('存储管理').onClick((): void => { this.sheet = 'settings'; });
+        .accessibilityText('存储管理').onClick((): void => { this.storagePolicyDraftChanged = false; this.syncStoragePolicy(); this.sheet = 'settings'; });
     }.width('100%').padding({ left: DOWNLOAD_VISUAL.dockPaddingX, right: DOWNLOAD_VISUAL.dockPaddingX,
       top: DOWNLOAD_VISUAL.dockPaddingY, bottom: DOWNLOAD_VISUAL.dockPaddingY })
       .backgroundColor(downloadVisualColor('surface', this.appThemeScheme))
@@ -913,11 +925,11 @@ export struct SharedDownloadPage {
         .fontSize(TYPE_DOWNLOAD_BODY.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BODY.lineHeightFp as number).halfLeading(true)
         .fontColor(downloadVisualColor('ink', this.appThemeScheme));
       ReaderInlineSelect({
-        value: this.cacheLimitMb === 512 ? '512 MB' : `${this.cacheLimitMb / 1024} GB`,
-        options: ['512 MB', '1 GB', '2 GB', '4 GB'],
+        value: formatDownloadStorageBytes(this.cacheLimitMb * 1024 * 1024),
+        options: this.limitChoices().map((limit: number): string => formatDownloadStorageBytes(limit * 1024 * 1024)),
         selectedIndex: this.limitIndex(),
         controlWidth: this.storageSelectWidth(),
-        onSelect: (index: number, _value: string): void => { this.cacheLimitMb = [512, 1024, 2048, 4096][index]; },
+        onSelect: (index: number, _value: string): void => { const limit = this.limitChoices()[index]; if (limit === undefined) return; this.cacheLimitMb = limit; this.storagePolicyDraftChanged = true; },
       });
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.storageSettingsHeight })
       .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
@@ -927,10 +939,10 @@ export struct SharedDownloadPage {
         .fontColor(downloadVisualColor('ink', this.appThemeScheme));
       ReaderInlineSelect({
         value: `${this.cleanupAfterDays} 天`,
-        options: ['3 天', '7 天', '14 天', '30 天'],
+        options: this.dayChoices().map((days: number): string => `${days} 天`),
         selectedIndex: this.daysIndex(),
         controlWidth: this.storageSelectWidth(),
-        onSelect: (index: number, _value: string): void => { this.cleanupAfterDays = [3, 7, 14, 30][index]; },
+        onSelect: (index: number, _value: string): void => { const days = this.dayChoices()[index]; if (days === undefined) return; this.cleanupAfterDays = days; this.storagePolicyDraftChanged = true; },
       });
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.storageSettingsHeight })
       .border({ width: { bottom: DOWNLOAD_VISUAL.borderWidth }, color: downloadVisualColor('line', this.appThemeScheme) });
@@ -1486,8 +1498,18 @@ export struct SharedDownloadPage {
     else if (index === 3) this.selectedChapterIndices = book.chapters
       .filter((chapter: DownloadChapterView): boolean => chapter.navigable).map((chapter: DownloadChapterView): number => chapter.index);
   }
-  private limitIndex(): number { return [512, 1024, 2048, 4096].indexOf(this.cacheLimitMb); }
-  private daysIndex(): number { return [3, 7, 14, 30].indexOf(this.cleanupAfterDays); }
+  private limitChoices(): number[] {
+    const choices = [512, 1024, 2048, 4096];
+    if (choices.indexOf(this.cacheLimitMb) < 0) choices.push(this.cacheLimitMb);
+    return choices;
+  }
+  private dayChoices(): number[] {
+    const choices = [3, 7, 14, 30];
+    if (choices.indexOf(this.cleanupAfterDays) < 0) choices.push(this.cleanupAfterDays);
+    return choices;
+  }
+  private limitIndex(): number { return this.limitChoices().indexOf(this.cacheLimitMb); }
+  private daysIndex(): number { return this.dayChoices().indexOf(this.cleanupAfterDays); }
   private publishViewState(): void {
     if (!this.mounted) return;
     if (this.detailKey.length === 0) this.captureListOffset();

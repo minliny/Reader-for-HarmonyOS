@@ -4,13 +4,18 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { novelSourceSwitchSuccessorPath, sharedSourceSwitchTypographySuccessorPath,
- validateSharedSourceSwitchTypographySuccessor } from './approved-manga-typography-carriers.mjs';
+ validateSharedSourceSwitchTypographySuccessor, unifiedActionSheetTypographySuccessorPath,
+ validateUnifiedActionSheetTypographySuccessor, mangaDirectoryWorktreeSuccessorPath,
+ validateMangaDirectoryWorktreeSuccessor, approvedTypographyContract, sourceSwitchFrameSuccessorPath,
+ validateSourceSwitchFrameSuccessor } from './approved-manga-typography-carriers.mjs';
+
 import {fullDirectoryLayoutSuccessorPath,verifyFullDirectoryLayoutSuccession} from './reader-full-directory-layout-successor.mjs';
 import {indexSyncColdLayoutSuccessorPath,verifyIndexSyncColdLayoutSuccession} from './index-sync-cold-layout-successor.mjs';
 const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript'),options=createRequire(import.meta.url)(sdk+'/lib/ets_checker.js').compilerOptions;
 const physical=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin','width','height','constraintSize','opacity','clip','responseRegion']);
-const appearance=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin']);
+const callerPhysical=new Set([...physical,'minFontScale','maxFontScale']);
+const appearance=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin','minFontScale','maxFontScale']);
 const print=(node,file)=>ts.createPrinter().printNode(ts.EmitHint.Unspecified,node,file);
 export function sharedProducerShape(source,file){
  const tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.equal(tree.parseDiagnostics.length,0,file+' SDK AST');
@@ -20,7 +25,9 @@ export function sharedProducerShape(source,file){
   if(ts.isStructDeclaration(node)||ts.isClassDeclaration(node))declarations.push({name:node.name.text,
     publicFields:node.members.filter(n=>ts.isPropertyDeclaration(n)&&!n.modifiers?.some(m=>m.kind===ts.SyntaxKind.PrivateKeyword)).map(n=>({name:n.name.getText(tree),type:n.type?print(n.type,tree):'',decorators:ts.getAllDecorators(n).map(d=>print(d,tree))}))});
  }
- const walk=node=>{if(ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&physical.has(node.expression.name.text)){
+ const boundedHeaderScale=file==='entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets';
+ const walk=node=>{if(ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&(physical.has(node.expression.name.text)||
+    boundedHeaderScale&&['minFontScale','maxFontScale'].includes(node.expression.name.text))){
   let method=node.parent;while(method&&!ts.isMethodDeclaration(method))method=method.parent;
   let owner=node.parent;while(owner&&!ts.isStructDeclaration(owner)&&!ts.isClassDeclaration(owner))owner=owner.parent;
   styles.push({owner:owner?.name.text??'@module',method:method?.name.getText(tree)??'@module',property:node.expression.name.text,args:node.arguments.map(n=>print(n,tree))});
@@ -54,8 +61,17 @@ function edge(element,row){
  const obj=tree.statements[0]?.declarationList?.declarations[0]?.initializer;
  assert.ok(ts.isObjectLiteralExpression(obj),'actual shared props object: '+row.file+':'+element.line);
  const keys=obj.properties.map(p=>p.name?.getText(tree)??'spread');
- const spec=obj.properties.find(p=>p.name?.getText(tree)==='specId');
- return{file:row.file,method:element.method,component:element.kind,specId:spec?.initializer?print(spec.initializer,tree):null,keys};
+ // The action-content producer uses an explicit finite variant, while every
+ // retained surface keeps its existing specId edge. This is not a generic
+ // style-bag or helper-name admission.
+ const selector=element.kind==='ReaderActionSheetContent'?'variant':'specId';
+ const spec=obj.properties.find(p=>p.name?.getText(tree)===selector);
+ const base={file:row.file,method:element.method,component:element.kind,specId:spec?.initializer?print(spec.initializer,tree):null,keys};
+ if(element.kind==='ReaderActionMenuSurface'){
+  const variant=obj.properties.find(p=>p.name?.getText(tree)==='variant');
+  return{...base,variant:variant?.initializer?print(variant.initializer,tree):null};
+ }
+ return base;
 }
 export function producerConsumerEdges(inventory,name){return inventory.rows.flatMap(row=>row.elements.filter(e=>e.kind===name&&e.customTarget?.endsWith('#'+name+'#build')).map(e=>edge(e,row)));}
 /** Exact inputs to existing shared controls from one approved recovery slot.
@@ -107,6 +123,14 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
  ],'only the exact finite page-shell TypeScript policy gains spec ownership');
  const specFiles=new Set(boundedSpecs.map(spec=>spec.file));
  const legacyOwners=baseline.sharedOwners.filter(r=>!producerFiles.has(r.file)&&!specFiles.has(r.file));
+ // Promote exactly the existing action-menu implementation to a finite
+ // contract while reconstructing its immutable original shared-owner row.
+ // No common-directory owner may gain the same transfer by naming a helper.
+ assert.equal(contract.legacyActionMenuOrigin,'tools/fixtures/architecture-action-menu-owner-origin-20261014.json','one exact existing action-menu owner origin');
+ const menuOrigin=JSON.parse(readSource(contract.legacyActionMenuOrigin));
+ assert.deepEqual(menuOrigin,{schema:1,previousLegacySharedOwnersSha256:'82c4c61426bf926ad9708e8953b6a7b6e45478f9cf84e1ffcfe524c87cec0521',row:{file:'entry/src/main/ets/features/common/ReaderActionMenuSurface.ets',counts:{fontSize:1,backgroundColor:2},kind:'spec-driven-shared-menu-implementation',proof:'tools/test-action-menu-surface.mjs'}},'exact unchanged existing action-menu origin');
+ assert.ok(producerFiles.has(menuOrigin.row.file),'existing action-menu renderer must have a finite producer contract');
+ legacyOwners.unshift(menuOrigin.row);
  assert.equal(createHash('sha256').update(JSON.stringify(legacyOwners)).digest('hex'),contract.legacySharedOwnersSha256,'shared owner must be an exact legacy owner or a finite producer contract');
  const registry=[...baseline.rows,...(baseline.sharedOwners??[]),...(baseline.uiPolicies??[])];
  assert.equal(new Set(registry.map(r=>r.file)).size,registry.length,'one bounded policy per file');
@@ -131,7 +155,8 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
   'entry/src/main/ets/features/source/SourceSwitchProgress.ets'], 'only exact selected novel source background actors');
  assert.equal(novel.completion?.path,'entry/src/main/ets/features/source/SourceSwitchCompletionOverlay.ets','only the exact additional completion view');
  const shared=validateSharedSourceSwitchTypographySuccessor(JSON.parse(readSource(sharedSourceSwitchTypographySuccessorPath)),readSource);
- const sourceActors=shared.files.map((entry,index)=>({entry,origin:novel.files[index],successorPath:sharedSourceSwitchTypographySuccessorPath}));
+ const sourceFrame=validateSourceSwitchFrameSuccessor(JSON.parse(readSource(sourceSwitchFrameSuccessorPath)),readSource);
+ const sourceActors=shared.files.map((entry,index)=>({entry:index===0?sourceFrame.files[0]:entry,origin:novel.files[index],successorPath:index===0?sourceSwitchFrameSuccessorPath:sharedSourceSwitchTypographySuccessorPath}));
  sourceActors.push({entry:novel.completion,origin:novel.completion,successorPath:novelSourceSwitchSuccessorPath});
  for(const {entry,origin,successorPath} of sourceActors){
   const policy=baseline.uiPolicies.find(row=>row.file===entry.path);assert.ok(policy,'actual selected novel source UI policy');
@@ -152,6 +177,18 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
    assert.deepEqual(sharedProducerShape(readSource(entry.path),entry.path),entry.shape,'exact completion view class/props/native styles changed');
   }
  }
+ const actionSheetSuccessor=validateUnifiedActionSheetTypographySuccessor(JSON.parse(readSource(unifiedActionSheetTypographySuccessorPath)),readSource);
+ for(const entry of actionSheetSuccessor.files){
+  const policy=baseline.uiPolicies.find(row=>row.file===entry.path);assert.ok(policy,'actual action-sheet consumer retains a bounded owner policy');
+  assert.equal(policy.actionSheetSuccessorContract,unifiedActionSheetTypographySuccessorPath,'shared action-content policy binds exact successor witness');
+ }
+ const directoryWorktree = validateMangaDirectoryWorktreeSuccessor(JSON.parse(readSource(mangaDirectoryWorktreeSuccessorPath)), readSource);
+ for (const entry of directoryWorktree.files) {
+  const policy = baseline.uiPolicies.find(row => row.file === entry.path);
+  assert.equal(policy?.directoryWorktreeSuccessorContract, mangaDirectoryWorktreeSuccessorPath, 'finite directory integration policy binds exact witness');
+  assert.deepEqual(policy.counts, entry.architectureCounts, 'finite outside100 directory state counts cannot grow');
+  approvedTypographyContract(readSource(entry.path), entry.path);
+ }
  for(const producer of contract.producers){
   if(producer.registrationKind==='legacy-business-budget'){
     // These three named existing controls retain their immutable historical
@@ -169,6 +206,7 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
   }else{
     assert.equal(producer.registrationKind??'shared-owner','shared-owner','unknown producer registration mode');
     const registration=baseline.sharedOwners.find(r=>r.file===producer.file);assert.equal(registration?.contractId,producer.id,'shared owner must bind exact approved contract');
+    if(producer.architectureCounts)assert.deepEqual(registration.counts,producer.architectureCounts,'finite shared producer keeps its exact architecture counts');
   }
   assert.ok(producer.specPolicy&&producer.removalProofs.length&&producer.sdkProofs.length,'spec→delete→SDK chain required');
   for(const proof of [...producer.removalProofs,...producer.sdkProofs])assert.ok(readSource(proof).length>0,'actual existing proof: '+proof);
@@ -179,7 +217,7 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
   const edges=producerConsumerEdges(inventory,producer.component);assert.ok(edges.length>0,'shared producer must be consumed');
   assert.deepEqual(edges.map(({keys,...e})=>e),producer.consumers.map(({keys,...e})=>e),'actual producer/consumer/spec edges changed: '+producer.id);
   for(const e of edges)for(const key of e.keys)assert.ok(publicFields.has(key),'illegal shared input '+producer.id+':'+key);
-  for(const row of inventory.rows)for(const e of row.elements.filter(e=>e.kind===producer.component))assert.equal(e.modifiers.some(m=>(['ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup','ReaderPageScaffold','ReaderFixedHeaderHost','ReaderStandardPage'].includes(producer.component)?physical:appearance).has(m.property)),false,'caller privately overrides shared appearance '+row.file+':'+e.line);
+  for(const row of inventory.rows)for(const e of row.elements.filter(e=>e.kind===producer.component))assert.equal(e.modifiers.some(m=>(['ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup','ReaderPageScaffold','ReaderFixedHeaderHost','ReaderStandardPage','ReaderActionSheetContent','ReaderActionMenuSurface'].includes(producer.component)?callerPhysical:appearance).has(m.property)),false,'caller privately overrides shared appearance '+row.file+':'+e.line);
   // A finite domain wrapper must also prove its actual child delegation;
   // registering five incoming callers alone cannot prove shared rendering.
   for(const delegate of producer.delegates??[]){

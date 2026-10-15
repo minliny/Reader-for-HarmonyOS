@@ -1,3 +1,4 @@
+import { formatDownloadStorageBytes } from '../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes, createRequire } from 'node:module';
@@ -17,10 +18,10 @@ let installed;const Runtime=runtimeOwnerIdentityProbe(()=>installed);
 let ActualCacheStore;
 class CacheClearOperationIntentStore { constructor(...args){return new ActualCacheStore(...args);} }
 const Gateway=load('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',{CacheClearOperationIntentStore});
-const CleanupOwner=load('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,SettingsCacheGateway:Gateway});
+const CleanupOwner=load('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,formatDownloadStorageBytes,SettingsCacheGateway:Gateway});
 const tick=()=>new Promise(done=>setImmediate(done)),defer=()=>{let resolve;const promise=new Promise(done=>resolve=done);return{resolve,promise};};
 async function until(predicate){for(let i=0;i<100;i++){if(predicate())return;await tick();}assert.fail('cache cleanup did not settle');}
-const good=()=>({scope:'cache',cacheEntriesRemoved:4,chapterEntriesRemoved:2,queueEntriesRemoved:1,removedContentBytes:10});
+const good=()=>({scope:'text',removedContentBytes:10,deletedBytes:20,deletedFiles:3});
 const typedPending=()=>new ReaderCoreRequestError({protocolVersion:1,requestId:1,type:'error',error:{code:'TRANSACTION_PENDING',message:'pre-execution gate',retryable:true,details:{transactionKind:'persistenceMutation',pendingHostOperationCount:0,retryAfterMillis:0}}});
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 const sdkRequire=createRequire(import.meta.url),sdkRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
@@ -29,7 +30,7 @@ function field(index,Host){const text=source('pages/Index.ets'),start=text.index
  const expression=text.slice(start,end).split('=').slice(1).join('=').trim().replace(/;$/,'');
  return new Function('SettingsHost',ordinary('const value='+expression+';')+'return value;').call(index,Host);}
 function fixture(mode='valid'){
- const calls=[],notices=[];let currentMode=mode,gate,report=good(),remainingEntries=10,head,receipt,raw='',uuid=0,queryMode,committedParams;const queries=[];
+ const calls=[],notices=[];let currentMode=mode,gate,report=good(),textJournal,remainingEntries=10,head,receipt,raw='',uuid=0,queryMode,committedParams;const queries=[];
  const fileIo={OpenMode:{READ_ONLY:0,READ_WRITE:2},async readText(){return raw;},async open(){return{fd:1};},async close(){},async fsync(){},
   AtomicFile:class {startWrite(){return{on(){},end:(value,_encoding,callback)=>{this.raw=value;queueMicrotask(callback);}};}finishWrite(){raw=this.raw;}failWrite(){}}};
  const replaceReaderAtomicSnapshot=load('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo});
@@ -47,13 +48,34 @@ function fixture(mode='valid'){
    return{data:{head:head??null,receipt:actual}};
   }
   if(method==='cache.clear.operation.settle'){assert.deepEqual(params,receipt.binding);receipt.phase='settled';return{data:structuredClone(receipt)};}
-  assert.equal(method,'cache.clear');assert.equal(params.scope,'cache');assert.ok(params.operationId.endsWith('/'+params.sequence));calls.push({method,params,options});
+  assert.ok(['cache.clear','cache.storage.cleanup'].includes(method));
+  if(method==='cache.clear'){assert.equal(params.scope,'cache');assert.ok(params.operationId.endsWith('/'+params.sequence));}
+  else assert.equal(params.contentScope,'text');
+  calls.push({method,params,options});
   if(options.canDispatch?.()===false)throw Error('actual adapter refused before send');options.onDispatch?.();
   const pause=gate;gate=undefined;if(pause)await pause.promise;
   if(currentMode==='typed')throw typedPending();if(currentMode==='lost-before')throw Error('clear ACK unavailable');
   if(currentMode==='message-only')throw Object.assign(Error('TRANSACTION_PENDING'),{code:'TRANSACTION_PENDING'});
-  remainingEntries=0;committedParams=structuredClone(params);head={operationId:params.operationId,sequence:params.sequence,payloadFingerprint:'a'.repeat(64)};receipt={binding:head,phase:'committed',result:structuredClone(report)};
-  if(currentMode==='lost-after')throw Error('clear ACK unavailable');return{data:report};}};
+  remainingEntries=0;
+  if(method==='cache.storage.cleanup'){if(currentMode==='lost-after')throw Error('clear ACK unavailable');return{data:report};}
+  committedParams=structuredClone(params);head={operationId:params.operationId,sequence:params.sequence,payloadFingerprint:'a'.repeat(64)};receipt={binding:head,phase:'committed',result:{scope:'cache',cacheEntriesRemoved:4,chapterEntriesRemoved:2,queueEntriesRemoved:1,removedContentBytes:10}};
+  if(currentMode==='lost-after')throw Error('clear ACK unavailable');return{data:receipt.result};}};
+
+ // The Runtime port is the storage owner seam. The actual Storage/Disk suite
+ // executes its whole production body and file handoff; this matrix owns SDK
+ // presentation, dispatch evidence and exact legacy receipt recovery.
+ runtime.readSettingsTextCleanup=async()=>structuredClone(textJournal);
+ runtime.clearTextRebuildableCache=async(evidence,current)=>{
+  if(textJournal?.phase==='pending')throw Error('TEXT_CACHE_CLEANUP_UNCONFIRMED');
+  textJournal={version:2,scope:'text',phase:'pending'};
+  try{
+   const actual=(await runtime.request('cache.storage.cleanup',{contentScope:'text'},
+    {canDispatch:current,onDispatch:()=>evidence.dispatched()})).data;
+   for(const key of ['removedContentBytes','deletedBytes','deletedFiles'])if(!Number.isSafeInteger(actual[key])||actual[key]<0)throw Error('MALFORMED_STORAGE_ACK');
+   evidence.confirmed();textJournal={version:2,scope:'text',phase:'confirmed',result:structuredClone(actual)};return actual;
+  }catch(error){if(isReaderCoreTransactionPendingError(error))evidence.rejectedBeforeExecution();
+   if(evidence.confirmation()==='undispatched')textJournal=undefined;throw error;}
+ };
 
  installed=runtime;
  const general=generalSettingsFixture();general.setActive(runtime);const actual=general.host();assert.equal(actual.host.bindPresentation(runtime,'cache-compiler',()=>true),true);
@@ -79,7 +101,7 @@ function fixture(mode='valid'){
   return{owner,row:()=>sdk.nodes(owner).find(node=>node.type==='Row'&&node.onClick),label:()=>{owner.replay();return sdk.nodes(owner).find(node=>node.type==='Text'&&node.create===owner.cacheActionLabel)?.create;},
    update(){owner.updateStateVars({...props()});owner.onCacheCleanupChanged();owner.replay();}};
  }
- return{index,runtime,calls,notices,page,props,remainingEntries:()=>remainingEntries,snapshot:()=>index.settingsHost.cacheCleanupSnapshot(runtime),mode:v=>{currentMode=v;},report:v=>{report=v;},queryMode:v=>{queryMode=v;},queries,disk:()=>raw,setOwner:v=>{installed=v;},pause(){gate=defer();return gate;}};
+ return{index,runtime,calls,notices,page,props,remainingEntries:()=>remainingEntries,snapshot:()=>index.settingsHost.cacheCleanupSnapshot(runtime),seedLegacy:async()=>{try{await new ActualCacheStore(runtime).execute('cache.clear',{scope:'cache'},{sourceId:'cache',bookId:'global-text'},x=>x,new ReaderWriteEvidence(),()=>true);}catch{}},mode:v=>{currentMode=v;},report:v=>{report=v;},queryMode:v=>{queryMode=v;},queries,disk:()=>raw,setOwner:v=>{installed=v;},pause(){gate=defer();return gate;}};
 }
 {
  const f=fixture(),p=f.page();assert.equal(p.owner.cacheActionLabel,'清理文字缓存');p.row().onClick();p.row().onClick();await until(()=>f.snapshot()?.confirmation==='confirmed');p.update();
@@ -88,12 +110,12 @@ function fixture(mode='valid'){
 }
 for(const mode of ['lost-before','lost-after','message-only']){
  const f=fixture(mode),p=f.page();p.row().onClick();await until(()=>f.snapshot()?.confirmation==='unknown');p.update();
- assert.equal(p.owner.cacheActionLabel,'结果未确认');assert.equal(p.label(),'结果未确认');if(mode==='lost-after')assert.equal(f.remainingEntries(),0);if(mode==='lost-before')assert.equal(f.remainingEntries(),10);assert.equal(f.snapshot().operation.fact,'pendingReconciliation');assert.equal(f.snapshot().operation.canRetry,true);
+ assert.equal(p.owner.cacheActionLabel,'结果未确认');assert.equal(p.label(),'结果未确认');if(mode==='lost-after')assert.equal(f.remainingEntries(),0);if(mode==='lost-before')assert.equal(f.remainingEntries(),10);assert.equal(f.snapshot().operation.fact,'blocked');assert.equal(f.snapshot().operation.canRetry,true);
  p.row().onClick();await tick();assert.equal(f.calls.length,1);assert.match(f.notices[0],/尚未确认/);
  p.owner.mounted=false;f.index.route='bookshelf';f.index.openSettings();const reopened=f.page('settings-back:next');
  assert.equal(reopened.owner.cacheActionLabel,'清理中','reopen projects exact read reconciliation as busy');reopened.row().onClick();await tick();assert.equal(f.calls.length,1,'reopen cannot blind replay an uncertain clear');
  await until(()=>f.snapshot()?.busy===false);reopened.update();
- assert.equal(reopened.owner.cacheActionLabel,mode==='lost-after'?'已清理':'结果未确认','only exact same-ID committed receipt permits settlement; absent query keeps unknown');
+ assert.equal(reopened.owner.cacheActionLabel,'结果未确认','an empty cache cannot confirm a lost safe-cleanup ACK or replay it');
  assert.equal(f.calls.length,1,'pure read plus metadata settlement never replays cache.clear');
 }
 {
@@ -101,7 +123,7 @@ for(const mode of ['lost-before','lost-after','message-only']){
  assert.equal(f.snapshot().operation.canRetry,true);f.mode('valid');p.row().onClick();await until(()=>f.snapshot()?.confirmation==='confirmed');p.update();assert.equal(f.calls.length,2);assert.equal(p.owner.cacheActionLabel,'已清理');
 }
 for(const queryMode of ['null','wrong-id','wrong-fingerprint','error']){
- const f=fixture('lost-after'),p=f.page();p.row().onClick();await until(()=>f.snapshot()?.confirmation==='unknown');
+ const f=fixture('lost-after');await f.seedLegacy();const p=f.page();p.row().onClick();await until(()=>f.snapshot()?.confirmation==='unknown');
  assert.equal(f.remainingEntries(),0,'matching empty cache is not an operation receipt');f.queryMode(queryMode);
  p.owner.mounted=false;f.index.route='bookshelf';f.index.openSettings();const current=f.page('settings-back:exact-'+queryMode);
  await until(()=>f.snapshot()?.busy===false);current.update();
@@ -109,7 +131,7 @@ for(const queryMode of ['null','wrong-id','wrong-fingerprint','error']){
  current.row().onClick();await tick();assert.equal(f.calls.length,1,'mismatched/absent/error query cannot authorize fresh cache.clear');
  assert.ok(f.queries.some(q=>q.operationId===f.calls[0].params.operationId&&q.expected.scope==='cache'),'current UI uses exact original identity, not just matching cache contents');
 }
-for(const mutate of [r=>({...r,scope:'all'}),r=>({...r,cacheEntriesRemoved:-1}),r=>({...r,chapterEntriesRemoved:'2'}),r=>({...r,queueEntriesRemoved:0.5}),r=>({...r,removedContentBytes:Number.NaN}),r=>({scope:r.scope})]){
+for(const mutate of [r=>({...r,deletedBytes:-1}),r=>({...r,deletedFiles:'2'}),r=>({...r,deletedFiles:0.5}),r=>({...r,removedContentBytes:Number.NaN}),r=>({scope:r.scope})]){
  const f=fixture(),p=f.page();f.report(mutate(good()));p.row().onClick();await until(()=>f.snapshot()?.confirmation==='unknown');p.update();assert.equal(p.owner.cacheActionLabel,'结果未确认');
  p.row().onClick();await tick();assert.equal(f.calls.length,1,'malformed ACK does not certify success or permit replay');
 }

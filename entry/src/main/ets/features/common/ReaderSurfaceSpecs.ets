@@ -1,4 +1,54 @@
 import type { ReaderAppColorRole } from './ReaderThemeRegistry';
+import { SOURCE_SWITCH_VISUAL } from '../source/SourceSwitchVisual';
+
+/** Actual drawer frames, including the selected source drawer. Owners supply
+ * measured geometry and safe insets; the existing bounded surface paints it. */
+export type DrawerSpecId = 'reader-action-sheet' | 'source-switch-drawer';
+export class DrawerSurfaceSpec {
+  readonly maxWidth: number;
+  readonly cornerRadius: number;
+  readonly surfaceRole: ReaderAppColorRole;
+  readonly lineRole: ReaderAppColorRole = 'TOK_DOWNLOAD_LINE';
+  readonly scrimRole: ReaderAppColorRole;
+  readonly inkRole: ReaderAppColorRole = 'TOK_INK';
+  readonly minimumContentHeight: number = 260;
+  readonly contentInset: number = 18;
+  readonly sideContentInset: number = 20;
+  readonly compactSideContentInset: number = 16;
+  readonly compactViewportWidth: number = 700;
+  readonly handleWidth: number = 42;
+  readonly handleHeight: number = 5;
+  readonly handleZone: number = 30;
+  readonly closeSize: number = 44;
+  readonly closeIcon: number = 18;
+  readonly closeTop: number = 24;
+  readonly closeRight: number = 12;
+  readonly titleFontFamily: string = 'ReaderMangaSans900';
+  readonly titleFontWeight: number = 900;
+  readonly titleFontSize: number = 18;
+  readonly titleLineHeight: number = 26;
+  readonly titleMinFontScale: number = 0;
+  readonly titleMaxFontScale: number = 2;
+  readonly titleBottom: number = 14;
+  readonly sideTitleFontFamily: string = 'ReaderMangaSans600';
+  readonly sideTitleFontWeight: number = 600;
+  readonly sideTitleFontSize: number = 15;
+  readonly sideTitleLineHeight: number = 24;
+  readonly sideHeaderHeight: number = 66;
+  readonly sideHeaderBottom: number = 17;
+  readonly handleRole: ReaderAppColorRole = 'TOK_SS_DRAWER_HANDLE';
+  constructor(id: DrawerSpecId) {
+    this.maxWidth = id === 'source-switch-drawer' ? SOURCE_SWITCH_VISUAL.drawerMaxWidth : 0;
+    this.cornerRadius = id === 'source-switch-drawer' ? SOURCE_SWITCH_VISUAL.drawerCornerRadius : 22;
+    this.surfaceRole = id === 'source-switch-drawer' ? 'TOK_SS_WINDOW_BG' : 'TOK_DOWNLOAD_SURFACE';
+    this.scrimRole = id === 'source-switch-drawer' ? 'TOK_SS_DRAWER_SCRIM' : 'TOK_DOWNLOAD_SCRIM';
+  }
+}
+const DRAWER_SPECS: Record<DrawerSpecId, DrawerSurfaceSpec> = {
+  'reader-action-sheet': new DrawerSurfaceSpec('reader-action-sheet'),
+  'source-switch-drawer': new DrawerSurfaceSpec('source-switch-drawer'),
+};
+export function resolveDrawerSpec(id: DrawerSpecId): DrawerSurfaceSpec { return DRAWER_SPECS[id]; }
 
 /**
  * Finite dialog surface specs. Data-only registry; the surface component
@@ -331,6 +381,143 @@ const SHEET_SPECS: Record<SheetSpecId, SheetSurfaceSpec> = {
 
 export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {
   return SHEET_SPECS[id];
+}
+
+/** Shared content-only action-sheet recipes. Hosts still own the scrim,
+ * placement and dismissal; these values keep row rhythm identical across
+ * reading, bookshelf and future download action surfaces. */
+export type ActionSheetSpecId = 'grouped' | 'quick';
+
+export interface ActionSheetSurfaceSpecInit {
+  sectionHeadingHeight: number;
+  sectionHeadingFontSize: number;
+  sectionHeadingLineHeight: number;
+  quickActionHeight: number;
+  quickActionGap: number;
+  quickLabelFontSize: number;
+  quickLabelLineHeight: number;
+  quickSecondaryFontSize: number;
+  quickSecondaryLineHeight: number;
+  rowHeight: number;
+  rowSecondaryHeight: number;
+  rowGap: number;
+  rowInsetLeft: number;
+  rowInsetRight: number;
+  labelFontSize: number;
+  labelLineHeight: number;
+  secondaryFontSize: number;
+  secondaryLineHeight: number;
+  trailingFontSize: number;
+  trailingLineHeight: number;
+  iconSize: number;
+  chevronSize: number;
+  dividerHeight: number;
+  dividerInset: number;
+  quickSeparatorTop: number;
+  quickSeparatorBottom: number;
+  quickActionCount: number;
+}
+
+export class ActionSheetSurfaceSpec {
+  readonly regularFontFamily: string = 'ReaderNotoSansSCUIRegular';
+  readonly emphasisFontFamily: string = 'ReaderNotoSansSCUIBold';
+  readonly regularFontWeight: number = 400;
+  readonly emphasisFontWeight: number = 700;
+  readonly inkRole: ReaderAppColorRole = 'TOK_INK';
+  readonly mutedRole: ReaderAppColorRole = 'TOK_MUTED';
+  readonly dangerRole: ReaderAppColorRole = 'TOK_DOWNLOAD_DANGER';
+  readonly lineRole: ReaderAppColorRole = 'TOK_DOWNLOAD_LINE';
+  readonly groupRole: ReaderAppColorRole = 'TOK_DOWNLOAD_SOFT';
+  readonly groupRadius: number = 14;
+  readonly groupGap: number = 12;
+  readonly quickIconContainer: number = 40;
+  readonly sectionHeadingHeight: number;
+  readonly sectionHeadingFontSize: number;
+  readonly sectionHeadingLineHeight: number;
+  readonly quickActionHeight: number;
+  readonly quickActionGap: number;
+  readonly quickLabelFontSize: number;
+  readonly quickLabelLineHeight: number;
+  readonly quickSecondaryFontSize: number;
+  readonly quickSecondaryLineHeight: number;
+  readonly rowHeight: number;
+  readonly rowSecondaryHeight: number;
+  readonly rowGap: number;
+  readonly rowInsetLeft: number;
+  readonly rowInsetRight: number;
+  readonly labelFontSize: number;
+  readonly labelLineHeight: number;
+  readonly secondaryFontSize: number;
+  readonly secondaryLineHeight: number;
+  readonly trailingFontSize: number;
+  readonly trailingLineHeight: number;
+  readonly iconSize: number;
+  readonly chevronSize: number;
+  readonly dividerHeight: number;
+  readonly dividerInset: number;
+  readonly quickSeparatorTop: number;
+  readonly quickSeparatorBottom: number;
+  readonly quickActionCount: number;
+
+  constructor(init: ActionSheetSurfaceSpecInit) {
+    this.sectionHeadingHeight = init.sectionHeadingHeight;
+    this.sectionHeadingFontSize = init.sectionHeadingFontSize;
+    this.sectionHeadingLineHeight = init.sectionHeadingLineHeight;
+    this.quickActionHeight = init.quickActionHeight;
+    this.quickActionGap = init.quickActionGap;
+    this.quickLabelFontSize = init.quickLabelFontSize;
+    this.quickLabelLineHeight = init.quickLabelLineHeight;
+    this.quickSecondaryFontSize = init.quickSecondaryFontSize;
+    this.quickSecondaryLineHeight = init.quickSecondaryLineHeight;
+    this.rowHeight = init.rowHeight;
+    this.rowSecondaryHeight = init.rowSecondaryHeight;
+    this.rowGap = init.rowGap;
+    this.rowInsetLeft = init.rowInsetLeft;
+    this.rowInsetRight = init.rowInsetRight;
+    this.labelFontSize = init.labelFontSize;
+    this.labelLineHeight = init.labelLineHeight;
+    this.secondaryFontSize = init.secondaryFontSize;
+    this.secondaryLineHeight = init.secondaryLineHeight;
+    this.trailingFontSize = init.trailingFontSize;
+    this.trailingLineHeight = init.trailingLineHeight;
+    this.iconSize = init.iconSize;
+    this.chevronSize = init.chevronSize;
+    this.dividerHeight = init.dividerHeight;
+    this.dividerInset = init.dividerInset;
+    this.quickSeparatorTop = init.quickSeparatorTop;
+    this.quickSeparatorBottom = init.quickSeparatorBottom;
+    this.quickActionCount = init.quickActionCount;
+  }
+}
+
+interface ActionSheetSpecs {
+  grouped: ActionSheetSurfaceSpec;
+  quick: ActionSheetSurfaceSpec;
+}
+
+const ACTION_SHEET_SPECS: ActionSheetSpecs = {
+  grouped: new ActionSheetSurfaceSpec({
+    sectionHeadingHeight: 26, sectionHeadingFontSize: 12, sectionHeadingLineHeight: 18,
+    quickActionHeight: 88, quickActionGap: 4, quickLabelFontSize: 13, quickLabelLineHeight: 18,
+    quickSecondaryFontSize: 10, quickSecondaryLineHeight: 14,
+    rowHeight: 50, rowSecondaryHeight: 58, rowGap: 12, rowInsetLeft: 8, rowInsetRight: 4,
+    labelFontSize: 14, labelLineHeight: 20, secondaryFontSize: 11, secondaryLineHeight: 16,
+    trailingFontSize: 12, trailingLineHeight: 18, iconSize: 22, chevronSize: 14,
+    dividerHeight: 1, dividerInset: 42, quickSeparatorTop: 4, quickSeparatorBottom: 8, quickActionCount: 3,
+  }),
+  quick: new ActionSheetSurfaceSpec({
+    sectionHeadingHeight: 26, sectionHeadingFontSize: 12, sectionHeadingLineHeight: 18,
+    quickActionHeight: 88, quickActionGap: 4, quickLabelFontSize: 13, quickLabelLineHeight: 18,
+    quickSecondaryFontSize: 10, quickSecondaryLineHeight: 14,
+    rowHeight: 50, rowSecondaryHeight: 58, rowGap: 12, rowInsetLeft: 8, rowInsetRight: 4,
+    labelFontSize: 14, labelLineHeight: 20, secondaryFontSize: 11, secondaryLineHeight: 16,
+    trailingFontSize: 12, trailingLineHeight: 18, iconSize: 22, chevronSize: 14,
+    dividerHeight: 1, dividerInset: 42, quickSeparatorTop: 4, quickSeparatorBottom: 8, quickActionCount: 3,
+  }),
+};
+
+export function resolveActionSheetSpec(id: ActionSheetSpecId): ActionSheetSurfaceSpec {
+  return id === 'quick' ? ACTION_SHEET_SPECS.quick : ACTION_SHEET_SPECS.grouped;
 }
 
 /**

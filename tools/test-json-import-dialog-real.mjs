@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 import {bookshelfDialogPresentationFixture} from './lib/bookshelf-dialog-presentation-sdk.mjs';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
@@ -23,8 +24,8 @@ const selectorSource = readFileSync(file('features/bookshelf/BookshelfGroupSelec
 const specTree = ts.createSourceFile('/tmp/JsonImportSpecProbe.ets', specSource,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 assert.equal(specTree.parseDiagnostics.length, 0, 'production spec registry parses');
-const { resolveDialogSpec } = new Function('TextAlign', stripTypeScriptTypes(specSource)
-  .replace(/^export /gm, '') + '; return { resolveDialogSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' });
+const { resolveDialogSpec } = new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', stripTypeScriptTypes(specSource)
+  .replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '') + '; return { resolveDialogSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' }, SOURCE_SWITCH_VISUAL);
 const actionModel = ts.createSourceFile('/tmp/JsonImportSurfaceProbe.ets', surfaceSource,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options)
   .statements.find(node => node.name?.text === 'DialogActionView');

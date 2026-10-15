@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-06",
+  "scope": "redrawn visual design concepts after user rejected earlier minor layout changes",
+  "order": "current ideation set actual image display order",
+  "targetLogicalViewport": {
+    "width": 390,
+    "height": 844
+  },
+  "data": "fictional samples",
+  "demoModifiedInThisIteration": false,
+  "nativeVerification": false,
+  "options": [
+    {
+      "displayedOption": 1,
+      "file": "01.png",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-6bddea89-a56c-4020-b1a3-a685387822df.png",
+      "sha256": "1b6930739ddab4717fc5fcf444fe0075ed90c0fcc107ca85bef3854874e6b539",
+      "direction": "editorial chapter comparison table"
+    },
+    {
+      "displayedOption": 2,
+      "file": "02.png",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-fb410c88-a527-4333-89e1-1e68a6974857.png",
+      "sha256": "a9ba6642c5a44174e7eb54b5f3d13552b426e2104e67aa71e4e3a37fe5c4493f",
+      "direction": "green book banner and source card grid"
+    },
+    {
+      "displayedOption": 3,
+      "file": "03.png",
+      "original": "/Users/minliny/.codex/generated_images/01a10cb1-36b8-7b73-ba1d-3c24036e2046/exec-6a2df9ce-d320-410e-b92c-cfa33d7b68d1.png",
+      "sha256": "37d26af323c707532ba7555d31713ad6b488baa3c0bf588f44d8c3c4517992ca",
+      "direction": "reading-context source drawer"
+    }
+  ],
+  "designConstraints": [
+    "Preserve Reader palette and typography character, redesign page composition and components.",
+    "Book context has title, author, latest chapter and current source.",
+    "Current source is not repeated among targets.",
+    "Per-source chapter metadata can be unknown and differs across sources.",
+    "Search request time does not prove body reading speed or reliability."
+  ],
+  "imageLimitations": [
+    "Generated illustrative text is not measured source data.",
+    "An aggregate 2.4-second label generated in the drawer is not a requested field; retain per-source search timing semantics if refined or implemented."
+  ]
+}

@@ -310,14 +310,19 @@ const readingSource=component('MangaReadingSurface','../entry/src/main/ets/featu
   'directory action isolation uses sibling click regions, not a missing ClickEvent API or exclusive parent gesture capture');
 }
 {
- const called=[],{owner}=createReaderBuilderProbe(panelSource,['build','ink','paper'],fonts);
+ const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs'),p=boundedSurfaceSdk();
+ p.hooks.lifecycleChildren=true;
+ const called=[],owner=p.consumer(panelSource);
  Object.assign(owner,{actions:[{id:'pause',label:'暂停下载'},{id:'updateChapter',label:'更新本话'}],loading:false,failureMessage:'',
-  appThemeScheme:'day',panelInkColor:'#ink',panelPaperColor:'#paper',onAction:id=>called.push(id)});
- owner.initialRender();const buttons=[...owner.nodes.values()].filter(row=>row.type==='Button');assert.equal(buttons.length,2);
- for(const button of buttons){assert.equal(button.height,48);assert.equal(button.fontSize,13);assert.equal(button.borderRadius,14);
-  assert.equal(button.fontColor,'#ink');assert.equal(button.backgroundColor,'#paper');button.onClick();}
+  appThemeScheme:'day',panelScheme:'night',panelInkColor:'#ink',panelPaperColor:'#paper',onAction:id=>called.push(id)});
+ owner.initialRender();const rows=p.nodes(owner).filter(row=>row.type==='Row'&&['暂停下载','更新本话'].includes(row.accessibilityText));assert.equal(rows.length,2);
+ for(const row of rows){assert.equal(row.constraintSize.minHeight,50);row.onClick();}
+ const labels=p.nodes(owner).filter(row=>row.type==='Text'&&['暂停下载','更新本话'].includes(row.create));
+ for(const label of labels){assert.equal(label.fontSize,14);assert.equal(label.fontFamily,fonts.READER_FONT_NOTO_SANS_SC_UI_REGULAR);assert.equal(label.fontColor,p.deps.readerAppColor('TOK_INK','night'));}
+ assert.ok(p.nodes(owner).some(row=>row.type==='Image'&&row.create==='app.media.download_visual_pause_theme_night'),
+  'explicit reading surface scheme controls action icons');
  assert.deepEqual(called,['pause','updateChapter']);
- const retry=createReaderBuilderProbe(panelSource,['build','ink','paper'],fonts).owner;let retried=0;
+ const retry=p.consumer(panelSource);let retried=0;
  Object.assign(retry,{actions:[],loading:false,failureMessage:'读取失败',appThemeScheme:'day',panelInkColor:'',panelPaperColor:'',onRetry:()=>retried++});
  retry.initialRender();[...retry.nodes.values()].find(row=>row.type==='Button').onClick();assert.equal(retried,1);
 }
@@ -329,19 +334,34 @@ const readingSource=component('MangaReadingSurface','../entry/src/main/ets/featu
  // execute the unchanged download branch and keep all transform diagnostics.
  for(const member of surface.members) if(member.getText(tree).includes('@Builder'))
   require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(member.name.getText(tree));
- const {mangaSurfaceSdkDependencies}=await import('./lib/manga-surface-sdk-probe.mjs');
- const called=[],{owner}=createReaderBuilderProbe(readingSource,[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,'panelOverlay'],{...mangaDirectoryAdaptiveDependencies,...fonts,...mangaSurfaceSdkDependencies,MangaDownloadOperationsPanel:Child});
+ const {mangaSurfaceSdkDependencies,mangaSurfaceBoundedControls}=await import('./lib/manga-surface-sdk-probe.mjs');
+ const {boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
+ const shared=mangaSurfaceBoundedControls();
+ shared.hooks.childSources.MangaDownloadOperationsPanel=panelSource;
+ shared.deps.MangaDownloadOperationsPanel=createReaderBuilderProbe(panelSource,boundedMembers(panelSource),shared.deps,shared.hooks).Component;
+ const called=[],{owner}=createReaderBuilderProbe(readingSource,[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,
+  'panelOverlay','isActionPanel','actionPanelInsets','actionPanelSurface','actionPanelHeader','actionPanelBody'],
+  {...mangaDirectoryAdaptiveDependencies,...fonts,...mangaSurfaceSdkDependencies,...shared.deps},shared.hooks);
  const actions=[{id:'pause',label:'暂停下载'}];
  Object.assign(owner,{panel:'downloads',panelOffset:0,panelScrimOpacity:1,downloadActions:actions,
-  downloadActionsLoading:false,downloadActionsFailure:'',downloadActionsChapterIndex:7,backgroundPreference:'paper',
+  downloadActionsLoading:false,downloadActionsFailure:'',downloadActionsChapterIndex:7,backgroundPreference:'paper',panelPhase:'open',stageWidth:400,windowMetricsRevision:0,
   widePanel:()=>false,panelTitle:()=> '下载管理',panelContentInset:()=>18,panelContentHeight:()=>600,panelWidth:()=>400,
+  panelHeight:()=>600,
   panelInsets:()=>({left:0,right:0,top:0,bottom:0}),inkColor:()=> '#ink',paperColor:()=> '#paper',surfaceColor:()=> '#surface',
   performDownloadAction:id=>called.push(['action',id]),openDownloadActions:index=>called.push(['retry',index])});
- owner.panelOverlay();const props=[...owner.children.values()].find(child=>child.params?.actions===actions)?.params;
- assert.ok(props,'the actual reading sheet renders its download child');
- assert.equal(props.panelInkColor,'#ink');assert.equal(props.panelPaperColor,'#paper');
- assert.equal(props.loading,false);assert.equal(props.failureMessage,'');
- props.onAction('pause');props.onRetry();assert.deepEqual(called,[['action','pause'],['retry',7]]);
+ owner.panelOverlay();const panel=shared.walk(owner).find(child=>child instanceof shared.deps.MangaDownloadOperationsPanel);
+ assert.ok(panel,'the actual reading sheet mounts its download child through the shared frame');
+ assert.deepEqual(Array.from(panel.actions,item=>({id:item.id,label:item.label})),actions,
+  'official @Prop observation preserves the admitted business projection');assert.equal(panel.panelScheme,'day');
+ assert.equal(panel.loading,false);assert.equal(panel.failureMessage,'');
+ const frame=shared.walk(owner).find(child=>child instanceof shared.deps.ReaderBoundedSurface);
+ const header=shared.walk(owner).find(child=>child instanceof shared.deps.ReaderBoundedSurfaceHeader);
+ assert.ok(frame);assert.ok(header);assert.equal(frame.specId,'reader-action-sheet');assert.equal(header.title,'下载管理');
+ const frameNode=[...frame.nodes.values()].find(row=>row.type==='Column'&&row.width===400);
+ assert.ok(frameNode);assert.equal(frameNode.constraintSize.maxHeight,600);
+ assert.equal(frameNode.backgroundColor,shared.deps.readerAppColor(shared.deps.resolveDrawerSpec('reader-action-sheet').surfaceRole,'day'));
+ const row=shared.nodes(panel).find(node=>node.accessibilityText==='暂停下载');assert.ok(row);row.onClick();
+ panel.onRetry();assert.deepEqual(called,[['action','pause'],['retry',7]]);
 }
 const downloadMethods=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets',import.meta.url),['canDownloadTarget','downloadTarget']);
 const targetNode={nodeId:'target',kind:'target',title:'Chapter',depth:1,chapterIndex:7,hasChildren:false,expanded:false};
@@ -393,7 +413,7 @@ for(const state of ['missing','cached','queued','paused','inProgress','completed
  assert.equal(child.params.chapterDownloadEnabled,true);assert.equal(child.params.chapterDownloadActionsEnabled,true);
  child.params.onDownloadChapter(7);assert.equal(selected,7);
 }
-console.log('PASS actual SDK operation buttons reuse 48/13/theme geometry; manga queued/paused/completed markers open management without chapter taps, preserve Core target proof and novel marker rules');
+console.log('PASS actual SDK operation actions reuse grouped touch rows and explicit host scheme; manga queued/paused/completed markers open management without chapter taps, preserve Core target proof and novel marker rules');
 
 const BookActions=productionMotionMethods(new URL('../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets',import.meta.url),
  ['openDownloadActions','performDownloadAction','identity','onIdentityChanged']);
@@ -525,19 +545,34 @@ const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/Rea
 }
 console.log('PASS actual SDK Index→Shell→manga surface/catalog ports preserve projected Core download states, chapter scope and old-reader callback identity fences');
 {
- const calls=[],owner=createReaderBuilderProbe(readingSource,['morePanel','option'],fonts).owner;
- Object.assign(owner,{downloadEnabled:true,title:'Chapter',opened:true,offline:false,inBookshelf:true,inkColor:()=> '#ink',paperColor:()=> '#paper',
+ const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs'),p=boundedSurfaceSdk();p.hooks.lifecycleChildren=true;
+ const calls=[],owner=p.consumer(readingSource,['morePanel','moreActions','performMoreAction','performMorePanelAction']);
+ Object.assign(owner,{downloadEnabled:true,title:'Chapter',opened:true,offline:false,inBookshelf:true,backgroundPreference:'paper',
+  moreMenuVariant:'grouped',panelGeneration:12,morePresentationGeneration:12,directoryCurrentChapterIndex:3,panel:'more',panelPhase:'open',mounted:true,exiting:false,refreshing:false,isReaderIdentityCurrent:()=>true,
   performPanelAction:async action=>{await action();return true;},onDownloadChapter:()=>calls.push('chapter'),
   onDownloadBook:()=>calls.push('book'),openDownloadActions:async()=>calls.push('manage')});
- owner.morePanel();const label=button=>Array.isArray(button.createWithLabel)?button.createWithLabel[0]:button.createWithLabel;
- const buttons=[...owner.nodes.values()].filter(row=>row.type==='Button');
+ owner.morePanel();const rows=p.nodes(owner).filter(row=>row.type==='Row');
  for(const text of ['下载本话','下载全部章节','下载管理']){
-  const button=buttons.find(row=>label(row)===text);assert.ok(button,`${text} has a real product entry`);
-  assert.deepEqual([button.height,button.fontSize,button.borderRadius],[48,13,14]);button.onClick();
+  const row=rows.find(row=>row.accessibilityText===text);assert.ok(row,`${text} has a real product entry`);
+  assert.equal(row.constraintSize.minHeight,50);row.onClick();
  }
  await tick();assert.deepEqual(calls,['chapter','book','manage']);
+ owner.panelGeneration++;owner.morePresentationGeneration++;rows.find(row=>row.accessibilityText==='下载管理').onClick();
+ await tick();assert.deepEqual(calls,['chapter','book','manage'],'captured more menu cannot dispatch after a new opening');
+ owner.panelGeneration=12;owner.morePresentationGeneration=12;
+ const sourceRow=p.nodes(owner).find(row=>row.accessibilityText==='更换书源');
+ const detailRow=p.nodes(owner).find(row=>row.accessibilityText==='漫画详情');
+ owner.onSwitchSource=()=>calls.push('source');owner.onDetail=()=>calls.push('detail');
+ owner.exiting=true;sourceRow.onClick();detailRow.onClick();await tick();
+ assert.deepEqual(calls,['chapter','book','manage'],'reader exit blocks retained More callbacks');
+ owner.exiting=false;let current=false;owner.isReaderIdentityCurrent=()=>current;
+ sourceRow.onClick();detailRow.onClick();await tick();
+ assert.deepEqual(calls,['chapter','book','manage'],'foreign reader identity blocks retained More callbacks');
+ current=true;owner.performPanelAction=async action=>{current=false;await action();return true;};
+ sourceRow.onClick();await tick();
+ assert.deepEqual(calls,['chapter','book','manage'],'identity is checked again after the existing close/save boundary');
 }
-console.log('PASS actual manga more-sheet download chapter/book/management entries keep existing option geometry and dispatch each production port');
+console.log('PASS actual manga more-sheet chapter/book/management entries use shared action rows and dispatch each production port with opening generation admission');
 
 {
  const f=indexFixture();f.rows.find(row=>row.chapterIndex===3).state='completed';

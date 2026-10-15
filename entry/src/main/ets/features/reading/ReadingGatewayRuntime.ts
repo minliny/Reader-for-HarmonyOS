@@ -2,6 +2,7 @@ import type { BookRequestOptions } from '../../app/BookRequestScheduler';
 import type { common } from '@kit.AbilityKit';
 import type { BookAcquisitionCoordinator } from '../../app/BookAcquisitionCoordinator';
 import type { RemoteReadingSession } from './RemoteReadingFlowGateway';
+import type { SharedDownloadCoordinator } from '../downloads/SharedDownloadCoordinator';
 import type { image } from '@kit.ImageKit';
 import type {
   JsonObject,
@@ -62,6 +63,12 @@ export interface ReadingGatewayRuntime {
   readonly allowSourceContentCorrection?: boolean;
   /** Runtime/content lifetime for already displayed position persistence. */
   captureReadingContentValidity?(sourceId: string, bookId: string): () => boolean;
+  /** Accepted explicit downloads outlive page/catalog metadata reads, while
+   * source/content/restore mutations revoke their original resource epoch. */
+  captureMangaImageContentValidity?(sourceId: string, bookId: string): () => boolean;
+  getDownloadCoordinator?(): SharedDownloadCoordinator;
+  waitForDownloadStorageIdle?(): Promise<void>;
+  releaseLegacyDownloadProtection?(sourceId: string, bookId: string, chapterIndexes?: number[]): Promise<void>;
   supportsCoreCapability?(capability: string): boolean;
   /** One bounded, read-only persisted entry; never dispatches asynchronous work. */
   readPreparedEntry?(params: JsonObject): JsonObject;
@@ -128,6 +135,7 @@ export interface ReadingGatewayRuntime {
   isOfflineImageChapterMaterialized?(sourceId: string, bookId: string, chapterIndex: number): Promise<boolean>;
 
   clearOfflineBookImages?(sourceId: string, bookId: string, manga?: boolean): Promise<void>;
+  clearOfflineChapterImages?(sourceId: string, bookId: string, chapterIndex: number, manga?: boolean): Promise<void>;
 
   listMangaDownloadChapters?(sourceId: string, bookId: string, isCurrent?: () => boolean):
     Promise<Array<{ sourceId: string; bookId: string; chapterId: string; }>>;

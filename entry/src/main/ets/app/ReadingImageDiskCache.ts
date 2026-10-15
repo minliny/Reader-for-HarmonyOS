@@ -76,6 +76,16 @@ export interface MangaExternalStorage {
 }
 export interface MangaWriteReservation { release(): void; }
 type MangaInventoryFile = MangaExternalFile & { size: number; physicalKey: string; external: boolean; };
+export type SharedDownloadStoragePolicy = { capacityBytes: number; expiryDays: number; };
+export type ReadingTextStorageChapter = { sourceId: string; bookId: string; chapterIndex: number; };
+export type ReadingTextStorageImageChapter = ReadingTextStorageChapter & { contentBytes: number; cachedAtSeconds?: number; };
+export type ReadingTextStoragePolicy = { retained: boolean; inUse: boolean; };
+export type ReadingImageStorageSummary = { totalBytes: number; retainedBytes: number; automaticBytes: number;
+  cleanableBytes?: number; availableBytes?: number; classificationKnown: boolean; };
+type ReadingInventoryFile = MangaInventoryFile & { textOwner?: ReadingTextStorageChapter; };
+export type ReadingImageStorageSnapshot = { files: ReadingInventoryFile[]; writeRevision: number;
+  hostImageChapters: ReadingTextStorageImageChapter[]; protectedChapters: ReadingTextStorageChapter[]; };
+
 
 interface ReadingImageDigestProof { fingerprint: string; digest: string; }
 
@@ -168,6 +178,7 @@ export class ReadingImageDiskCache {
   // Reuse the platform LRU; this contains no pixels or credentials.
   private readonly verifiedDigests: util.LRUCache<string, ReadingImageDigestProof> = new util.LRUCache<string, ReadingImageDigestProof>(16384);
   private readonly inFlightWrites = new Map<string, Promise<void>>();
+  private inFlightWriteRevision: number = 0;
   /**
    * Serializes destructive/constructive mutations for one book identity.
    * A chapter clear or corrupt-resource removal must not race a background
@@ -412,6 +423,10 @@ export class ReadingImageDiskCache {
       !Number.isSafeInteger(cleanupAfterDays) || cleanupAfterDays < 1 || cleanupAfterDays > 365) {
       throw new Error('MANGA_CACHE_STORAGE_POLICY_INVALID');
     }
+    await this.persistStoragePolicy(limitMb, cleanupAfterDays);
+  }
+
+  private async persistStoragePolicy(limitMb: number | undefined, cleanupAfterDays: number): Promise<void> {
     await this.loadStoragePolicy();
     await this.enqueueMangaPolicy(async (): Promise<void> => {
       if (this.closed) throw new Error('MANGA_CACHE_CLOSED');
@@ -421,10 +436,226 @@ export class ReadingImageDiskCache {
         JSON.stringify({ version: 1, limitMb, cleanupAfterDays })));
       // Publish only after the durable write succeeds, so a rejected setting
       // cannot silently alter the running budget or differ after restart.
-      this.configuredCacheLimitBytes = limitMb * 1024 * 1024;
+      this.configuredCacheLimitBytes = limitMb === undefined ? undefined : limitMb * 1024 * 1024;
       this.configuredCleanupTtlSeconds = cleanupAfterDays * 24 * 60 * 60;
       this.mangaLastForegroundCheck = 0;
     });
+  }
+
+  /** The same durable, volume-bounded policy governs ordinary text and image
+   * storage. There is no second preference with a fixed 10 GiB default. */
+  async readPolicy(): Promise<SharedDownloadStoragePolicy> {
+    const capacity = await this.mangaStorageCapacity();
+    return { capacityBytes: capacity.cacheBudgetBytes,
+      expiryDays: (this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS) / 86400 };
+  }
+
+  async configurePolicy(policy: SharedDownloadStoragePolicy): Promise<SharedDownloadStoragePolicy> {
+    if (!Number.isSafeInteger(policy.expiryDays) || policy.expiryDays < 1 || policy.expiryDays > 365 ||
+      !Number.isSafeInteger(policy.capacityBytes) || policy.capacityBytes < 0)
+      throw new Error('MANGA_CACHE_STORAGE_POLICY_INVALID');
+    const capacity = await this.mangaStorageCapacity();
+    // A measured automatic limit need not be a whole MiB. Saving the current
+    // selection preserves its automatic/configured provenance and exact bytes.
+    if (policy.capacityBytes === capacity.cacheBudgetBytes) {
+      await this.persistStoragePolicy(this.configuredCacheLimitBytes === undefined ? undefined :
+        this.configuredCacheLimitBytes / (1024 * 1024), policy.expiryDays);
+    } else {
+      const maximum = capacity.totalBytes === undefined ? MANGA_CACHE_BUDGET_MAX_BYTES :
+        Math.min(MANGA_CACHE_BUDGET_MAX_BYTES, Math.max(0, capacity.totalBytes - capacity.systemReserveBytes));
+      if (policy.capacityBytes < 128 * 1024 * 1024 || policy.capacityBytes > maximum ||
+        policy.capacityBytes > MANGA_CACHE_BUDGET_MAX_BYTES || policy.capacityBytes % (1024 * 1024) !== 0)
+        throw new Error('MANGA_CACHE_STORAGE_POLICY_INVALID');
+      await this.configureStoragePolicy(policy.capacityBytes / (1024 * 1024), policy.expiryDays);
+    }
+    return this.readPolicy();
+  }
+
+  /** One actual file inventory is shared by the global summary, Core's
+   * image-only selectors and all book rows. No per-book full disk walks. */
+  async captureReadingStorageInventory(): Promise<ReadingImageStorageSnapshot> {
+    await this.mangaAuthorityReady;
+    const writeRevision = this.inFlightWriteRevision;
+    const files = await this.readingInventory();
+    const physical = new Map<string, ReadingInventoryFile[]>();
+    for (const file of files) {
+      const aliases = physical.get(file.physicalKey) ?? [];
+      aliases.push(file); physical.set(file.physicalKey, aliases);
+    }
+    const chapters = new Map<string, ReadingTextStorageImageChapter>();
+    const protectedChapters = new Map<string, ReadingTextStorageChapter>();
+    for (const aliases of physical.values()) {
+      const text = aliases.filter(file => file.textOwner !== undefined);
+      const owner = text[0]?.textOwner;
+      if (owner === undefined) continue;
+      const key = this.textStorageKey(owner);
+      const measured = chapters.get(key) ?? { ...owner, contentBytes: 0 };
+      measured.contentBytes += Math.max(...aliases.map(file => file.size));
+      for (const file of aliases) {
+        if (file.textOwner === undefined || file.live || this.inFlightWrites.has(file.path) ||
+          this.bookMutationTails.has(this.bookMutationKey(owner.sourceId, owner.bookId)) ||
+          this.textStorageKey(file.textOwner) !== key) protectedChapters.set(key, owner);
+        if (!(await fileIo.access(file.path))) continue;
+        const stat = await fileIo.stat(file.path);
+        const seconds = Math.floor(Number(stat.mtimeNs) / 1000000000);
+        if (Number.isSafeInteger(seconds) && seconds >= 0)
+          measured.cachedAtSeconds = Math.max(measured.cachedAtSeconds ?? 0, seconds);
+      }
+      if (protectedChapters.has(key)) for (const file of text) {
+        const known = file.textOwner!;
+        protectedChapters.set(this.textStorageKey(known), known);
+      }
+      chapters.set(key, measured);
+    }
+    return { files, writeRevision,
+      hostImageChapters: Array.from(chapters.values()), protectedChapters: Array.from(protectedChapters.values()) };
+  }
+
+  isReadingStorageInventoryCurrent(snapshot: ReadingImageStorageSnapshot): boolean {
+    return !this.closed && snapshot.writeRevision === this.inFlightWriteRevision;
+  }
+
+  async readingStorageSummary(snapshot: ReadingImageStorageSnapshot,
+    textPolicy: (chapter: ReadingTextStorageChapter) => ReadingTextStoragePolicy | undefined): Promise<ReadingImageStorageSummary> {
+    const physical = new Map<string, ReadingInventoryFile[]>();
+    const owners = new Map<string, MangaStorageChapter>();
+    for (const file of snapshot.files) {
+      const aliases = physical.get(file.physicalKey) ?? [];
+      aliases.push(file); physical.set(file.physicalKey, aliases);
+      for (const owner of file.owners) owners.set(this.mangaChapterKey(owner), owner);
+    }
+    const classes = await this.mangaStorageClassSnapshot(Array.from(owners.values()));
+    const mangaEligible = await this.mangaCleanablePhysicalKeys(snapshot.files);
+    const protectedText = new Set(snapshot.protectedChapters.map(chapter => this.textStorageKey(chapter)));
+    let totalBytes = 0, retainedBytes = 0, automaticBytes = 0, cleanableBytes = 0, classificationKnown = true;
+    for (const [physicalKey, aliases] of physical) {
+      const size = Math.max(...aliases.map(file => file.size));
+      let retained = false, known = true, removable = true;
+      const hasText = aliases.some(file => file.textOwner !== undefined);
+      for (const file of aliases) {
+        if (file.live || this.inFlightWrites.has(file.path)) removable = false;
+        if (file.textOwner !== undefined) {
+          const policy = textPolicy(file.textOwner);
+          if (policy === undefined) { known = false; removable = false; }
+          else { retained = retained || policy.retained; removable = removable && !policy.retained && !policy.inUse; }
+          if (protectedText.has(this.textStorageKey(file.textOwner))) removable = false;
+          if (this.bookMutationTails.has(this.bookMutationKey(file.textOwner.sourceId, file.textOwner.bookId))) removable = false;
+        } else if (file.owners.length > 0) {
+          for (const owner of file.owners) {
+            const classification = classes.get(this.mangaChapterKey(owner)) ?? 'unknown';
+            if (classification === 'unknown' || classification === 'missing') known = false;
+            retained = retained || (!file.external && classification === 'download');
+          }
+          if (hasText || !mangaEligible.has(physicalKey)) removable = false;
+        } else {
+          // Policy and durable clear metadata are accounted, never candidates.
+          if (!file.path.endsWith('/storage-policy.json') && !file.path.startsWith(`${this.rootDirectory()}/.clear/`)) known = false;
+          removable = false;
+        }
+      }
+      totalBytes += size;
+      if (retained) retainedBytes += size;
+      else {
+        automaticBytes += size;
+        if (known && removable) cleanableBytes += size;
+      }
+      classificationKnown = classificationKnown && known;
+    }
+    const capacity = await this.mangaStorageCapacity();
+    return { totalBytes, retainedBytes, automaticBytes,
+      cleanableBytes: !this.closed && snapshot.writeRevision === this.inFlightWriteRevision ? cleanableBytes : undefined,
+      availableBytes: capacity.freeBytes, classificationKnown };
+  }
+
+  /** Book rows read this index built from the same snapshot, including physical
+   * manga and text images. Inode aliases count once for each actual owner. */
+  async readingStorageBookIndex(snapshot: ReadingImageStorageSnapshot): Promise<Map<string, number | undefined>> {
+    const byBook = new Map<string, Map<string, number>>();
+    for (const file of snapshot.files) {
+      const owners: { sourceId: string; bookId: string; }[] = file.textOwner === undefined ? file.owners : [file.textOwner];
+      for (const owner of owners) {
+        const key = JSON.stringify([owner.sourceId, owner.bookId]);
+        const physical = byBook.get(key) ?? new Map<string, number>();
+        physical.set(file.physicalKey, Math.max(file.size, physical.get(file.physicalKey) ?? 0));
+        byBook.set(key, physical);
+      }
+    }
+    const unknown = new Set<string>();
+    for (const file of snapshot.files) if (file.textOwner === undefined && file.owners.length === 0) {
+      for (const root of [this.rootDirectory(), this.legacyRootDirectory()]) {
+        if (!file.path.startsWith(`${root}/`)) continue;
+        const hash = file.path.substring(root.length + 1).split('/')[0];
+        if (/^[0-9a-f]{64}$/.test(hash)) unknown.add(hash);
+      }
+    }
+    const index = new Map<string, number | undefined>();
+    for (const [key, physical] of byBook) {
+      const [sourceId, bookId] = JSON.parse(key) as string[];
+      const unknownOwner = unknown.has(await this.bookHash(sourceId, bookId)) || unknown.has(await this.legacyBookHash(sourceId, bookId));
+      index.set(key, unknownOwner ? undefined : Array.from(physical.values()).reduce((sum, bytes) => sum + bytes, 0));
+    }
+    return index;
+  }
+
+  /** A successful Core image-only cleanup selector is not a disk receipt.
+   * Compare actual remaining paths and inodes only after Host unlink settles. */
+  async readingStorageCleanupReceipt(before: ReadingImageStorageSnapshot): Promise<MangaStorageCleanup> {
+    const after = await this.readingInventory();
+    const retained = new Set(after.map(file => file.physicalKey));
+    const released = new Set<string>();
+    let deletedBytes = 0, deletedFiles = 0;
+    for (const file of before.files) {
+      if (await fileIo.access(file.path)) continue;
+      deletedFiles += 1;
+      if (!retained.has(file.physicalKey) && !released.has(file.physicalKey)) {
+        released.add(file.physicalKey); deletedBytes += file.size;
+      }
+    }
+    return { deletedBytes, deletedFiles };
+  }
+
+  private textStorageKey(chapter: ReadingTextStorageChapter): string {
+    return JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterIndex]);
+  }
+
+  private async readingInventory(): Promise<ReadingInventoryFile[]> {
+    const result: ReadingInventoryFile[] = await this.mangaInventory();
+    for (const root of [this.rootDirectory(), this.legacyRootDirectory()]) if (await fileIo.access(root))
+      await this.collectTextStorageFiles(root, result);
+    const paths = new Map<string, ReadingInventoryFile>();
+    for (const file of result) {
+      const previous = paths.get(file.path);
+      if (previous === undefined || file.textOwner !== undefined) paths.set(file.path, file);
+    }
+    return Array.from(paths.values());
+  }
+
+  private async collectTextStorageFiles(directory: string, result: ReadingInventoryFile[]): Promise<void> {
+    let owner: ReadingTextStorageChapter | undefined;
+    const knownFiles = new Set<string>();
+    for (const format of [CACHE_FORMAT_VERSION, LEGACY_CACHE_FORMAT_VERSION]) {
+      for (const name of format === CACHE_FORMAT_VERSION ? ['manifest.json', 'text-identity.json'] : ['manifest.json']) {
+        const manifest = await this.readTextManifestIdentity(directory, format, name, true);
+        if (manifest === undefined || !this.isTextOwnership(manifest)) continue;
+        const expected = format === CACHE_FORMAT_VERSION ? await this.ordinalChapterDirectory(manifest) :
+          await this.legacyChapterDirectory(manifest);
+        if (directory !== expected || (name === 'text-identity.json' && manifest.cacheOwner !== TEXT_CACHE_OWNER)) continue;
+        owner = { sourceId: manifest.sourceId, bookId: manifest.bookId, chapterIndex: manifest.chapterIndex };
+        knownFiles.add(name);
+        for (const hash of manifest.resourceHashes) knownFiles.add(`${hash}.bin`);
+      }
+    }
+    for (const name of await fileIo.listFile(directory)) {
+      const path = `${directory}/${name}`;
+      if (!(await fileIo.access(path))) continue;
+      const stat = await fileIo.stat(path);
+      if (stat.isDirectory()) {
+        if (name !== '.manga' && name !== '.clear') await this.collectTextStorageFiles(path, result);
+      } else if (stat.isFile() && owner !== undefined && knownFiles.has(name)) {
+        result.push({ path, owners: [], textOwner: owner, live: false, size: stat.size,
+          physicalKey: this.mangaPhysicalKey(stat), external: false });
+      }
+    }
   }
 
   private async loadStoragePolicy(): Promise<void> {
@@ -438,10 +669,11 @@ export class ReadingImageDiskCache {
     try {
       const bytes = await this.readMangaMetadata(path, MANGA_IDENTITY_METADATA_BYTES);
       const value = JSON.parse(util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes)) as
-        { version: number; limitMb: number; cleanupAfterDays: number; };
-      if (value.version !== 1 || !Number.isSafeInteger(value.limitMb) || value.limitMb < 128 || value.limitMb > 10 * 1024 ||
+        { version: number; limitMb?: number; cleanupAfterDays: number; };
+      if (value.version !== 1 || (value.limitMb !== undefined &&
+        (!Number.isSafeInteger(value.limitMb) || value.limitMb < 128 || value.limitMb > 10 * 1024)) ||
         !Number.isSafeInteger(value.cleanupAfterDays) || value.cleanupAfterDays < 1 || value.cleanupAfterDays > 365) return;
-      this.configuredCacheLimitBytes = value.limitMb * 1024 * 1024;
+      this.configuredCacheLimitBytes = value.limitMb === undefined ? undefined : value.limitMb * 1024 * 1024;
       this.configuredCleanupTtlSeconds = value.cleanupAfterDays * 24 * 60 * 60;
     } catch (_) { /* Damaged settings use the safe volume default, never a guessed budget. */ }
   }
@@ -875,8 +1107,16 @@ export class ReadingImageDiskCache {
   }
 
   private async mangaCleanableBytes(files: MangaInventoryFile[]): Promise<number> {
+    const physical = await this.mangaCleanablePhysicalKeys(files);
+    const sizes = new Map<string, number>();
+    for (const file of files) if (physical.has(file.physicalKey))
+      sizes.set(file.physicalKey, Math.max(file.size, sizes.get(file.physicalKey) ?? 0));
+    return Array.from(sizes.values()).reduce((sum, bytes) => sum + bytes, 0);
+  }
+
+  private async mangaCleanablePhysicalKeys(files: MangaInventoryFile[]): Promise<Set<string>> {
     const authority = this.mangaAuthority;
-    if (authority?.policy === undefined || files.length === 0) return 0;
+    if (authority?.policy === undefined || files.length === 0) return new Set<string>();
     const ordinaryCandidates = new Set((await authority.candidates('clear')).map(chapter => this.mangaChapterKey(chapter)));
     const chapters = new Map<string, MangaStorageChapter>();
     for (const file of files) if (file.external) for (const owner of file.owners)
@@ -909,7 +1149,6 @@ export class ReadingImageDiskCache {
       if (this.mangaDerivedPolicyEligible(policy, 'clear')) eligible.add(key);
     });
     const physical = new Set<string>();
-    let total = 0;
     const isEligible = (file: MangaInventoryFile): boolean => {
       if (file.live || this.inFlightWrites.has(file.path) || file.owners.length === 0) return false;
       const ownersEligible = file.external ?
@@ -926,9 +1165,8 @@ export class ReadingImageDiskCache {
       if (!isEligible(file) || files.some(alias => alias.physicalKey === file.physicalKey && !isEligible(alias)) ||
         physical.has(file.physicalKey)) continue;
       physical.add(file.physicalKey);
-      total += file.size;
     }
-    return total;
+    return physical;
   }
 
   private mangaDerivedDeletionFiles(chapter: MangaStorageChapter, files: MangaInventoryFile[]): MangaExternalFile[] | undefined {
@@ -981,6 +1219,7 @@ export class ReadingImageDiskCache {
             if (!(await current())) return;
             const selected = this.mangaDerivedDeletionFiles(chapter, await this.mangaInventory());
             if (selected === undefined || !(await current())) return;
+            this.inFlightWriteRevision += 1;
             await external.removeDerived!(chapter, selected, current);
           });
         } catch (_) {
@@ -1019,7 +1258,10 @@ export class ReadingImageDiskCache {
         if (matching === undefined || isCurrent?.() === false) return;
         const external = matching.filter(file => file.external);
         // Do not hold a display mutation lock during a Core operation.
-        if (external.length > 0 && (this.mangaExternal === undefined || !(await this.mangaExternal.remove(grant, external)))) return;
+        if (external.length > 0) {
+          this.inFlightWriteRevision += 1;
+          if (this.mangaExternal === undefined || !(await this.mangaExternal.remove(grant, external))) return;
+        }
         for (const file of matching) if (!file.external && !file.path.endsWith('/manga-identity.json')) {
           this.verifiedDigests.remove(file.path); await this.unlinkIfPresent(file.path);
         }
@@ -1471,7 +1713,48 @@ export class ReadingImageDiskCache {
     if (await this.isMangaBook(sourceId, bookId)) await this.maintainMangaStorage('clear', { sourceId, bookId });
   }
 
+  /** Core and the download coordinator revoke the exact text consumer first.
+   * A durable chapter intent shares the existing book mutation serialization. */
+  async clearChapter(sourceId: string, bookId: string, chapterIndex: number): Promise<void> {
+    this.assertNonBlank(sourceId, 'sourceId'); this.assertNonBlank(bookId, 'bookId');
+    if (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0) throw new Error('invalid chapterIndex');
+    const key = this.bookMutationKey(sourceId, bookId);
+    this.bookClearGenerations.set(key, (this.bookClearGenerations.get(key) ?? 0) + 1);
+    await this.enqueueBookMutation(key, async (): Promise<void> => {
+      await this.ensureDirectory(`${this.rootDirectory()}/.clear`);
+      const marker = `${await this.clearMarkerPath(sourceId, bookId)}.chapter-${chapterIndex}`;
+      await this.writeAtomicBytes(marker, new util.TextEncoder().encodeInto('clear'));
+      await this.finishPendingChapterClears(sourceId, bookId);
+    });
+  }
+
+  private async finishPendingChapterClears(sourceId: string, bookId: string): Promise<void> {
+    const clearRoot = `${this.rootDirectory()}/.clear`;
+    if (!(await fileIo.access(clearRoot))) return;
+    const prefix = `${await this.bookHash(sourceId, bookId)}.pending.chapter-`;
+    for (const name of await fileIo.listFile(clearRoot)) {
+      if (!name.startsWith(prefix) || !/^(0|[1-9][0-9]*)$/.test(name.substring(prefix.length))) continue;
+      const ordinal = name.substring(prefix.length);
+      const chapter = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}/${ordinal}`;
+      if (await fileIo.access(chapter)) {
+        for (const version of await fileIo.listFile(chapter)) {
+          if (!/^[0-9a-f]{64}$/.test(version)) continue;
+          const directory = `${chapter}/${version}`;
+          if (!(await fileIo.stat(directory)).isDirectory()) continue;
+          for (const proof of this.verifiedDigests.keys()) if (proof.startsWith(`${directory}/`)) this.verifiedDigests.remove(proof);
+          await this.clearOwnedTextDirectory(directory, CACHE_FORMAT_VERSION, sourceId, bookId, ordinal, version);
+        }
+        await this.removeEmptyDirectory(chapter);
+      }
+      const legacy = `${this.legacyRootDirectory()}/${await this.legacyBookHash(sourceId, bookId)}/${ordinal}`;
+      if (await fileIo.access(legacy) && (await fileIo.stat(legacy)).isDirectory())
+        await this.clearOwnedTextDirectory(legacy, LEGACY_CACHE_FORMAT_VERSION, sourceId, bookId, ordinal);
+      await this.unlinkIfPresent(`${clearRoot}/${name}`);
+    }
+  }
+
   private async finishPendingClear(sourceId: string, bookId: string): Promise<void> {
+    await this.finishPendingChapterClears(sourceId, bookId);
     const marker = await this.clearMarkerPath(sourceId, bookId);
     if (!(await fileIo.access(marker))) return;
     const book = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`;
@@ -1725,12 +2008,14 @@ export class ReadingImageDiskCache {
     const operation = this.enqueueWrite(async (): Promise<void> => {
       await this.performAtomicWrite(path, bytes, isCurrent);
     });
+    this.inFlightWriteRevision += 1;
     this.inFlightWrites.set(path, operation);
     try {
       await operation;
     } finally {
       if (this.inFlightWrites.get(path) === operation) {
         this.inFlightWrites.delete(path);
+        this.inFlightWriteRevision += 1;
       }
     }
   }
@@ -1845,6 +2130,7 @@ export class ReadingImageDiskCache {
   private async unlinkIfPresent(path: string): Promise<void> {
     if (await fileIo.access(path)) {
       await fileIo.unlink(path);
+      this.inFlightWriteRevision += 1;
     }
   }
 

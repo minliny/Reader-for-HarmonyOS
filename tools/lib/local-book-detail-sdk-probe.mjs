@@ -1,3 +1,4 @@
+import {bookCoverDisplayUrl} from '../../entry/src/main/ets/features/common/BookCoverDisplay.ts';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
@@ -27,7 +28,7 @@ class Cover {constructor(owner, params, _storage, id) {Object.assign(this, {owne
 export function localBookDetailSdk(dependencies = {}, hooks = {}, properties = createArkUIPropertyRuntimeProbe()) {
   const source = hooks.source ?? localBookDetailSource;
   const manga = mangaDirectoryEntryRowSdk({properties});
-  const deps = {...properties.sdk, ...readerFoundationTokens, ...geometry, ...metrics, ...fonts,
+  const deps = {bookCoverDisplayUrl,...properties.sdk, ...readerFoundationTokens, ...geometry, ...metrics, ...fonts,
     ...author, ...intro, ...mangaDirectory, ...mangaLayout, ...manga.deps, ...constants,
     ReaderWindowCoordinator: {metrics: metrics.createDefaultReaderWindowMetrics},
     ImageFit: {Cover: 'cover'}, NoCoverCover: Cover, registerReaderFonts() {},

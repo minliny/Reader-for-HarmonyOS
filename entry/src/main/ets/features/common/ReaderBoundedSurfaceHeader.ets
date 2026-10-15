@@ -1,6 +1,6 @@
 import { TYPE_SOURCE_SWITCH_HEADING, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_FILE_IMPORT_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE } from './ReaderTypography';
 import { readerAppColor } from './ReaderThemeRegistry';
-import { SheetSurfaceSpec, resolveSheetSpec } from './ReaderSurfaceSpecs';
+import { SheetSurfaceSpec, DrawerSurfaceSpec, resolveSheetSpec, resolveDrawerSpec } from './ReaderSurfaceSpecs';
 import type { ReaderBoundedSurfaceId } from './ReaderBoundedSurface';
 
 /** Only set attributes present in the selected original header. In particular
@@ -29,15 +29,22 @@ export struct ReaderBoundedSurfaceHeader {
   @Prop title: string = '';
   @Prop surfaceWidth: number = 300;
   @Prop actionEnabled: boolean = true;
+  @Prop placement: 'bottom' | 'side' = 'bottom';
+  @Prop scheme: 'auto' | 'day' | 'night' = 'auto';
   @BuilderParam leading: () => void = this.emptySlot;
   @BuilderParam accessory: () => void = this.emptySlot;
   onAreaChanged: (oldValue: Area, next: Area) => void = (_oldValue: Area, _next: Area): void => {};
   onClose: () => void = (): void => {};
+  onHandlePanStart: () => void = (): void => {};
+  onHandlePanUpdate: (offset: number) => void = (_offset: number): void => {};
+  onHandlePanEnd: (offset: number, velocity: number) => void = (_offset: number, _velocity: number): void => {};
 
   @Builder private emptySlot() {}
 
   build() {
-    if (this.specId === 'local-import-selection' || this.specId === 'local-import-result-content') {
+    if (this.specId === 'reader-action-sheet') {
+      this.actionSheetHeader();
+    } else if (this.specId === 'local-import-selection' || this.specId === 'local-import-result-content') {
       this.localImportHeader();
     } else if (this.specId === 'reader-replace-editor') {
       Row({ space: 8 }) { this.leading();
@@ -55,6 +62,59 @@ export struct ReaderBoundedSurfaceHeader {
           .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
       }.width('100%').height(34);
     } else { this.headerRow(); }
+  }
+
+  private drawerSpec(): DrawerSurfaceSpec { return resolveDrawerSpec('reader-action-sheet'); }
+  private drawerScheme(): string { return this.scheme === 'auto' ? this.appThemeScheme : this.scheme; }
+  private drawerInset(): number {
+    const spec = this.drawerSpec();
+    return this.surfaceWidth <= spec.compactViewportWidth ? spec.compactSideContentInset : spec.sideContentInset;
+  }
+
+  @Builder private actionSheetHeader() {
+    if (this.placement === 'side') {
+      Column() {
+        Row({ space: 12 }) {
+          Text(this.title).fontFamily(this.drawerSpec().sideTitleFontFamily).fontWeight(this.drawerSpec().sideTitleFontWeight)
+            .fontSize(this.drawerSpec().sideTitleFontSize).lineHeight(this.drawerSpec().sideTitleLineHeight)
+            .minFontScale(this.drawerSpec().titleMinFontScale).maxFontScale(this.drawerSpec().titleMaxFontScale)
+            .fontColor(readerAppColor(this.drawerSpec().inkRole, this.drawerScheme())).layoutWeight(1);
+          this.drawerClose();
+        }.width('100%').height(this.drawerSpec().sideHeaderHeight)
+          .border({ width: { bottom: 1 }, color: readerAppColor(this.drawerSpec().lineRole, this.drawerScheme()) });
+      }.width('100%').padding({ left: this.drawerInset(), right: this.drawerInset() })
+        .margin({ bottom: this.drawerSpec().sideHeaderBottom });
+    } else {
+      Stack({ alignContent: Alignment.TopEnd }) {
+        Column() {
+          Row() {
+            Blank().width(this.drawerSpec().handleWidth).height(this.drawerSpec().handleHeight).borderRadius(3)
+              .backgroundColor(readerAppColor(this.drawerSpec().handleRole, this.drawerScheme()));
+          }.width('100%').height(this.drawerSpec().handleZone).justifyContent(FlexAlign.Center)
+            .gesture(PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 1 })
+              .onActionStart((): void => this.onHandlePanStart())
+              .onActionUpdate((event: GestureEvent): void => this.onHandlePanUpdate(event.offsetY))
+              .onActionEnd((event: GestureEvent): void => this.onHandlePanEnd(event.offsetY, event.velocityY))
+              .onActionCancel((): void => this.onHandlePanEnd(0, 0)));
+          Text(this.title).fontFamily(this.drawerSpec().titleFontFamily).fontWeight(this.drawerSpec().titleFontWeight)
+            .fontSize(this.drawerSpec().titleFontSize).lineHeight(this.drawerSpec().titleLineHeight)
+            .minFontScale(this.drawerSpec().titleMinFontScale).maxFontScale(this.drawerSpec().titleMaxFontScale)
+            .fontColor(readerAppColor(this.drawerSpec().inkRole, this.drawerScheme())).width('100%')
+            .padding({ left: this.drawerSpec().contentInset, right: this.drawerSpec().contentInset + this.drawerSpec().closeSize, bottom: this.drawerSpec().titleBottom });
+        }.width('100%');
+        this.drawerClose();
+      }.width('100%');
+    }
+  }
+
+  @Builder private drawerClose() {
+    Row() {
+      Image(this.drawerScheme() === 'night' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close'))
+        .width(this.drawerSpec().closeIcon).height(this.drawerSpec().closeIcon);
+    }.width(this.drawerSpec().closeSize).height(this.drawerSpec().closeSize).justifyContent(FlexAlign.Center)
+      .margin(this.placement === 'side' ? {} : { top: this.drawerSpec().closeTop, right: this.drawerSpec().closeRight })
+      .enabled(this.actionEnabled).accessibilityText(this.placement === 'side' ? '关闭宽屏面板' : '关闭面板')
+      .onClick((): void => { if (this.actionEnabled) this.onClose(); });
   }
 
   @Builder private localImportHeader() {

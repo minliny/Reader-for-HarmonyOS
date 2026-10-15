@@ -7,6 +7,7 @@ import { loadReaderTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerFloatingTabContentInset } from './lib/reader-floating-bar-metrics-probe.mjs';
+import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 import './test-surface-repair.mjs';
 const read=f=>readFileSync(new URL(`../entry/src/main/ets/${f}`,import.meta.url),'utf8');
 const shelf=read('features/bookshelf/BookshelfPage.ets');
@@ -14,8 +15,8 @@ const batch=read('features/bookshelf/BookshelfMultiSelectPage.ets');
 const list=read('features/bookshelf/ShelfBookListDetails.ets');
 const menu=read('features/bookshelf/BookshelfMoreMenu.ets');
 const popupSpecs=read('features/common/ReaderSurfaceSpecs.ets');
-const { resolveSheetSpec } = new Function('TextAlign', stripTypeScriptTypes(popupSpecs)
-  .replace(/^export /gm,'') + '; return { resolveSheetSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' });
+const { resolveSheetSpec } = new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', stripTypeScriptTypes(popupSpecs)
+  .replace(/^import[^;]+;\s*/gm,'').replace(/^export /gm,'') + '; return { resolveSheetSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' }, SOURCE_SWITCH_VISUAL);
 const bookActionSpec=resolveSheetSpec('bookshelf-book-action');
 const action=read('features/bookshelf/BookshelfBookActionSheet.ets');
 const actionRows=read('features/common/ReaderSheetActionList.ets');
@@ -115,7 +116,10 @@ assert.deepEqual([bookActionSpec.actionY(0), bookActionSpec.actionY(1), bookActi
   'sheet action row positions retain the current four-row visual contract');
 assert.match(action,/ReaderBoundedSurface\(\{ specId: 'bookshelf-book-action'/);
 assert.match(actionRows,/resolveSheetSpec\('bookshelf-book-action'\)/);
-assert.match(actionRows,/'编辑分组'.*onEditGroup/);
+// The action DTO now holds the label and captured token independently of
+// dispatchToken. Reuse the actual SDK composition/physical-click regression
+// to prove each label still reaches its exclusive business callback.
+await import('./test-bookshelf-sheet-shared-composition.mjs');
 assert.match(boundedFrame,/borderRadius\(\{ topLeft: spec\.borderRadius/);
 assert.doesNotMatch(action,/const BOOK_ACTION_(SHEET_HEIGHT|INSET|HEIGHT)\s*=/,'sheet geometry is owned by the shared sheet contract');
 assert.match(popupSpecs,/'bookshelf-more-menu': new PopupSurfaceSpec\(\{[\s\S]*?width: 176/);

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {actionMenuProbe,resolvePopupSpec} from './lib/reader-action-menu-probe.mjs';
+import {actionMenuProbe,resolvePopupSpec,ReaderMenuActionView} from './lib/reader-action-menu-probe.mjs';
 
 const source=name=>readFileSync(new URL(`../entry/src/main/ets/features/${name}.ets`,import.meta.url),'utf8');
 const spec=(fontDelta=0,variantDelta=0)=>id=>{
@@ -55,4 +55,16 @@ for(const [common,variant] of [[0,0],[2,0],[0,7]]) {
   info.onClick();assert.deepEqual(reader.actions,[]);
   reader.owner.moreMenuVisible=true;info.onClick();info.onClick();assert.deepEqual(reader.actions,['fresh']);
 }
-console.log('PASS shared action menu: two real SDK consumers, common/variant propagation, retained Props, live guards and current intents');
+{
+  const oldContract = new ReaderMenuActionView('compat', '兼容', false, 'icon', '读出兼容');
+  assert.equal(oldContract.enabled, false); assert.equal(oldContract.icon, 'icon');
+  assert.equal(oldContract.accessibilityLabel, '读出兼容');
+  assert.equal(oldContract.section, ''); assert.equal(oldContract.secondary, '');
+  assert.equal(oldContract.trailing, ''); assert.equal(oldContract.tone, 'default');
+  assert.equal(oldContract.showChevron, false, 'old five-argument constructor retains popup behavior');
+  const reader = render('reader', spec());
+  const info = reader.nodes().find(n => n.accessibilityText === '书籍信息');
+  reader.child.aboutToDisappear(); info.onClick();
+  assert.deepEqual(reader.actions, [], 'retired shared renderer refuses the old enabled callback');
+}
+console.log('PASS shared action menu: two real SDK consumers, common/variant propagation, retained Props, live guards/current intents, legacy constructor and retired renderer');

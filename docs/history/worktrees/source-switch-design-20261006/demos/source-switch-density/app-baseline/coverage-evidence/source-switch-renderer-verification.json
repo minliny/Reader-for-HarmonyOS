@@ -1,0 +1,15 @@
+{
+  "renders": 56,
+  "checks": 18,
+  "assets": [
+    "reader_chevron_right",
+    "source_switch_close"
+  ],
+  "sourceRefs": 11,
+  "errors": [],
+  "currentBinding": {
+    "sourceTreeSha256": "fa7d894f5fafb7292f57c5e061a8c3f671993e91a09b374570703d9ea556c17d",
+    "designSourceSha256": "e3717758b1963d7428cfa516f51fbb8371ceec8bb55512b1515579263596bf58",
+    "rootVerification": "repair-verification.json"
+  }
+}

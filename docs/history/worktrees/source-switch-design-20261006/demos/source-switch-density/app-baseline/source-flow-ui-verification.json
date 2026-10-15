@@ -1,0 +1,11 @@
+{
+  "status": "pass",
+  "rendererFrames": 21,
+  "switchPhaseTemplates": 3,
+  "pointerContracts": 5,
+  "entry": "existing reading-control source button",
+  "resources": 9,
+  "stableRowUpdateContract": true,
+  "browser": false,
+  "native": false
+}

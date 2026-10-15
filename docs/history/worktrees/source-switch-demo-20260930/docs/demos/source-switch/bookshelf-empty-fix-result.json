@@ -1,0 +1,99 @@
+{
+  "recordedAt": "2026-09-30T16:41:54.660012+00:00",
+  "scope": "Empty bookshelf title and header-to-content spacing regression; existing VM only",
+  "runId": "20260930T163930Z-c6ac46d3-a0ec9f03",
+  "manifest": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/.reader-artifacts/hap/20260930T163930Z-c6ac46d3-a0ec9f03/manifest.json",
+  "artifact": {
+    "kind": "signed",
+    "path": "entry-default-signed.hap",
+    "bytes": 178204507,
+    "sha256": "e8e2416f8dbb00479ea7b8a69255bb969d4ece29fa9ab3669874ef8062e10ee4",
+    "signature": {
+      "status": "signed",
+      "verified": true,
+      "profileType": "debug",
+      "appIdSha256": "ff8e00ed180524004dd842c160f410ac46644a7bba5bf7c4ce309876ce53bcd8",
+      "appIdentifierSha256": "8fb560b4b330d1b0b70f7ad9c7a9e410600e7c0177306f0eb0257ae9c26d2d01",
+      "certificateSha256": "3a563778e5bf17cd3ead0218e13b4a5030de3f5d7d4e21e0336d8eb37b676dc4"
+    },
+    "nativeEntries": [
+      "libs/arm64-v8a/libc++_shared.so",
+      "libs/arm64-v8a/libreader_bookturn_napi.so",
+      "libs/arm64-v8a/libreader_core_napi.so"
+    ],
+    "embeddedCoreNapi": {
+      "path": "libs/arm64-v8a/libreader_core_napi.so",
+      "bytes": 16867016,
+      "sha256": "4ea7f5e465c7a6d700d94d1d0e4badc3ab3e10623a9892a686c1927f887c8a45"
+    }
+  },
+  "source": {
+    "harmony": {
+      "repo": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS",
+      "commit": "c6ac46d311744dd0d0bbbb8078385ea31e26ab9f",
+      "dirty": false,
+      "status": []
+    },
+    "core": {
+      "commit": "e2a2db0b1f6b2d9a4300c2577eaae4155bddef2f",
+      "dirty": true
+    },
+    "buildInputsFingerprint": "a0ec9f0304c04044ce4e471511ce67599a31115267189607999216e065ed3ec9"
+  },
+  "validation": {
+    "targetedRed": {
+      "passed": 18,
+      "failed": 2
+    },
+    "targetedGreen": {
+      "passed": 20,
+      "failed": 0
+    },
+    "relatedContractsPassed": 5,
+    "fullGate": {
+      "passed": 385,
+      "failed": 0,
+      "cancelled": 0,
+      "durationMs": 68626.312125
+    },
+    "compileAndSigning": "PASS",
+    "compileDurationMs": 31570,
+    "signatureAuthority": "minliny_HarmonyOS",
+    "vmInspect": "PASS",
+    "vmInstall": "PASS",
+    "launch": "PASS",
+    "dataPreserved": true,
+    "receipt": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-demo-20260930/Reader-for-HarmonyOS/.reader-artifacts/hap/20260930T163930Z-c6ac46d3-a0ec9f03/deploy-vm-6460677a198b-20260930T164031Z.json",
+    "userAcceptance": "OPEN",
+    "physicalDevice": "NOT_TESTED"
+  },
+  "visual": {
+    "screenshot": "bookshelf-empty-fixed-vm.jpeg",
+    "dimensionsPx": [
+      1280,
+      2832
+    ],
+    "density": 3.5,
+    "title": {
+      "type": "Text",
+      "bounds": "[70,180][839,313]",
+      "leftVp": 20,
+      "observation": "Native text at shared 20vp left inset; bitmap blur/centering no longer present"
+    },
+    "scrollBounds": "[0,339][1280,2496]",
+    "contentBoundsBefore": "[67,506][1214,2330]",
+    "contentBoundsAfter": "[67,339][1214,2163]",
+    "removedVerticalCenterGapPx": 167,
+    "removedVerticalCenterGapVp": 47.714285714285715,
+    "sectionRowTopBeforePx": 534,
+    "sectionRowTopAfterPx": 367,
+    "sectionRowGapAfterVp": 8,
+    "bottomNavigationBoundsUnchanged": true
+  },
+  "boundary": [
+    "Harmony branch only, not merged to main.",
+    "Core dirty snapshot unchanged; iteration, not acceptance.",
+    "DNS cause-envelope fix is now included in installed code; this capture does not validate complete dynamic source-switch journey.",
+    "No claim about populated bookshelf VM pixels from empty bookshelf evidence."
+  ]
+}

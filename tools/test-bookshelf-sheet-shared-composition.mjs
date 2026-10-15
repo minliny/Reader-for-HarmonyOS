@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const source = read('features/bookshelf/BookshelfBookActionSheet.ets');
@@ -23,10 +24,12 @@ function open(id = 'opening:1', options = {}, extra = {}) {
     onEditGroup: () => calls.push('group'), onRemoveFromBookshelf: () => calls.push('remove'), ...extra });
   owner.initialRender();
   const actionOwner = p.walk(owner).find(child => child instanceof p.deps.ReaderSheetActionList);
+  const content = p.walk(owner).find(child => child instanceof p.deps.ReaderActionSheetContent);
   const frame = p.walk(owner).find(child => child instanceof p.deps.ReaderBoundedSurface);
   const header = p.walk(owner).find(child => child instanceof p.deps.ReaderBoundedSurfaceHeader);
   return { p, owner, actionOwner, frame, header, calls,
-    buttons: () => [...actionOwner.nodes.values()].filter(node => node.onClick) };
+    content,
+    buttons: () => p.walk(actionOwner).flatMap(child => [...child.nodes.values()]).filter(node => node.onClick) };
 }
 const physical = node => Object.fromEntries(Object.entries(node).filter(([key, value]) => key !== 'id' && key !== 'onClick' && typeof value !== 'function'));
 
@@ -37,10 +40,19 @@ for (const scheme of ['day', 'night']) {
   const original = next.p.consumer(baseline.source);
   original.appThemeScheme = scheme; original.initialRender();
   const oldNodes = [...original.nodes.values()];
-  const nextNodes = [...next.frame.nodes.values(), ...next.header.nodes.values(), ...next.actionOwner.nodes.values()]
-    .filter(node => node.type !== 'If' && node.type !== 'ForEach' &&
-      !(node.type === 'Stack' && !node.backgroundColor));
-  assert.deepEqual(nextNodes.map(physical), oldNodes.map(physical), `${scheme}: every original physical property, AUTO omission, row order and danger color`);
+  const nextNodes = [...next.frame.nodes.values(), ...next.header.nodes.values()]
+    .filter(node => node.type !== 'If' && node.type !== 'ForEach');
+  assert.deepEqual(nextNodes.map(physical), oldNodes.slice(0, 4).map(physical), `${scheme}: shared frame/header retain the existing host geometry`);
+  const contentNodes = next.p.walk(next.content).flatMap(child => [...child.nodes.values()]);
+  for (const label of ['多选', '书籍信息', '编辑分组', '移除书架']) {
+    assert.ok(contentNodes.some(node => node.type === 'Text' && node.create === label), `${scheme}: shared content renders ${label}`);
+  }
+  assert.ok(contentNodes.some(node => node.type === 'Text' && node.create === '多选' && node.fontColor === readerAppColor('TOK_INK', scheme)),
+    `${scheme}: ordinary action keeps the current theme ink`);
+  assert.ok(contentNodes.some(node => node.type === 'Text' && node.create === '移除后可在书籍详情中重新加入' && node.fontColor === readerAppColor('TOK_MUTED', scheme)),
+    `${scheme}: secondary state keeps the current theme muted role`);
+  assert.ok(contentNodes.some(node => node.type === 'Text' && node.create === '移除书架' && node.fontColor === readerAppColor('TOK_DOWNLOAD_DANGER', scheme)),
+    `${scheme}: danger action keeps the shared danger role`);
   assert.equal(next.p.walk(next.owner).filter(child => child instanceof next.p.deps.ReaderBoundedSurface).length, 1);
 }
 for (const [index, action] of ['select', 'info', 'group', 'remove'].entries()) {
@@ -88,4 +100,4 @@ const tts = changed.p.consumer(read('features/reading/ReaderTtsConfigOverlay.ets
 tts.initialRender();
 const ttsFrame = changed.p.walk(tts).find(child => child instanceof changed.p.deps.ReaderBoundedSurface);
 assert.equal([...ttsFrame.nodes.values()].find(node => node.type === 'Column').height, tts.panelHeight(), 'sheet-only variant change cannot alter TTS geometry');
-console.log('bookshelf shared Sheet PASS: real SDK leaf→Frame/Header/keyed ActionList, exact original day/night physical properties and AUTO, four operations/once-only dispatch, stale handlers/reopen/retirement/faults, lexical binding and variant isolation; native dismiss/focus/layout remains OPEN');
+console.log('bookshelf shared Sheet PASS: real SDK leaf→Frame/Header/keyed ActionList→quick content, retained host geometry and live day/night roles, four operations/once-only dispatch, stale handlers/reopen/retirement/faults, lexical binding and variant isolation; native dismiss/focus/layout remains OPEN');

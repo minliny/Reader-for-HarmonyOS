@@ -51,7 +51,7 @@ assert.throws(() => decodeReaderDirectoryOpen({ ...wire, nodes: [{ ...wireChild,
 assert.throws(() => decodeReaderDirectoryPage({ viewId: 'v1', visibleTotal: 319,
   nodes: [{ ...wireChild, parentTitle: ' ' }] }, 'v1', 256), /parent title/);
 
-const rowNames = ['mangaPaintNode', 'mangaChapter', 'mangaRowAccessibility', 'mangaRowAdmitted', 'mangaFontScale', 'mangaFirstDisplayRow', 'mangaRowBody', 'mangaRow', 'selectMangaRow', 'toggleMangaRow', 'mangaColor', 'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft', 'isCurrentMangaNode'];
+const rowNames = [...mangaGridBuilderMembers, 'mangaPaintNode', 'mangaChapter', 'mangaRowAccessibility', 'mangaRowAdmitted', 'mangaFontScale', 'mangaFirstDisplayRow', 'mangaRowBody', 'mangaRow', 'selectMangaRow', 'toggleMangaRow', 'mangaColor', 'displayLevel', 'mangaGroupNode', 'mangaGroupSpacing', 'mangaRowIndex', 'mangaRowPaddingLeft', 'isCurrentMangaNode'];
 const gridNames = [...new Set(['row', ...rowNames, ...mangaGridBuilderMembers])];
 function rowProbe(source, node, { scheme = 'day', current = false, search = false, index = 0, height = 58, catalog = false, narrow = false } = {}) {
   const { owner } = createReaderBuilderProbe(source, rowNames, { ...mangaGridProbeDependencies, ...fontFamilies });

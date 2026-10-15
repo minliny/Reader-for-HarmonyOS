@@ -1,0 +1,234 @@
+{
+  "status": "owned-files-frozen",
+  "editedFiles": [
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/ui-reading.mjs",
+      "sha256": "c10abe4020dfad30b2914a98c6ec3d56f4b879be833a864fb1203dbda5508d1d"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/reading.css",
+      "sha256": "dac5a18f0d7c2ab1b0d720d6da31f5bf429f3472121614be41907019afdcb5a4"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/spec-reading.mjs",
+      "sha256": "4699b0b1e509b2a3b1c062da2e5dce13245de034f7e75a6700dbf22e9bca421b"
+    },
+    {
+      "path": "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/docs/ui-design/app-baseline/routes-reading.json",
+      "sha256": "44ed9ffdc753cbe44f1d847f40a114f529bbd086fff8c50527b556f499586481"
+    }
+  ],
+  "sourceOld": "bdc5e3a91c9b9effe43fe4da6752dba7c8aee536",
+  "sourceCurrent": "9b70ff4e219f522efa36f994b12944d61fe93436",
+  "applicationChanged": false,
+  "browserUsed": false,
+  "runtimeVisualVerified": false,
+  "coverage": {
+    "modules": 20,
+    "states": 226,
+    "renderCombinations": 904,
+    "referencedMedia": 96,
+    "sourceRefs": 423,
+    "checks": 22,
+    "errors": []
+  },
+  "findings": [
+    {
+      "id": "READING-01",
+      "status": "repaired-design-and-static-verified",
+      "change": "自动翻页恢复原生播放、停止资源和首行结构。"
+    },
+    {
+      "id": "READING-02",
+      "status": "repaired-design-and-static-verified",
+      "change": "自动翻页Quick不增加假返回按钮；原生helper未被实际调用。"
+    },
+    {
+      "id": "READING-03",
+      "status": "repaired-design-and-static-verified",
+      "change": "内容搜索恢复查询栏、原生结果行、摘录、高亮和分页状态。"
+    },
+    {
+      "id": "READING-04",
+      "status": "repaired-design-and-static-verified",
+      "change": "搜索/自动翻页Quick/Full形态映射保留查询、运行及结果状态。"
+    },
+    {
+      "id": "READING-05",
+      "status": "repaired-design-and-static-verified",
+      "change": "目录及书签恢复原生tabs、工具、元数据、查询、折叠和页脚。"
+    },
+    {
+      "id": "READING-06",
+      "status": "repaired-design-and-static-verified",
+      "change": "小说快捷/完整/详情独立目录与漫画独立宿主分开，Core节点语义一致。"
+    },
+    {
+      "id": "READING-07",
+      "status": "repaired-design-and-static-verified",
+      "change": "TTS恢复语音badge、配置切换和系统/在线服务本地tabs。"
+    },
+    {
+      "id": "READING-08",
+      "status": "repaired-design-and-static-verified",
+      "change": "TTS准备/恢复/停止状态使用真实控制图标与状态门控。"
+    },
+    {
+      "id": "READING-09",
+      "status": "repaired-design-and-static-verified",
+      "change": "TTS完整seek仅activeQueue且totalSlices>1，Quick/Full保持朗读阶段。"
+    },
+    {
+      "id": "READING-10",
+      "status": "repaired-design-and-static-verified",
+      "change": "TTS选择层恢复原生锚点、宽度与待选值，交由根层实测定位。"
+    },
+    {
+      "id": "READING-11",
+      "status": "repaired-design-and-static-verified",
+      "change": "在线服务管理恢复真实字段、草稿有效性、格式、清空密钥及busy门控。"
+    },
+    {
+      "id": "READING-12",
+      "status": "repaired-design-and-static-verified",
+      "change": "外观恢复真实主题/字体/偏好控件、字体预览及排序状态。"
+    },
+    {
+      "id": "READING-13",
+      "status": "repaired-design-and-static-verified",
+      "change": "设置恢复真实分组、分段控件及仿真不可用门控。"
+    },
+    {
+      "id": "READING-14",
+      "status": "repaired-design-and-static-verified",
+      "change": "替换恢复Quick标题、返回、空状态及Full滚动列表内预览。"
+    },
+    {
+      "id": "READING-15",
+      "status": "repaired-design-and-static-verified",
+      "change": "未知写入Quick/Full保持核对结果并禁写入，新增quick-write-uncertain。"
+    },
+    {
+      "id": "READING-16",
+      "status": "repaired-design-and-static-verified",
+      "change": "换源候选恢复原生状态点/延迟、当前不可选及失败候选仍可选。"
+    },
+    {
+      "id": "READING-17",
+      "status": "repaired-design-and-static-verified",
+      "change": "用户指定样式调整：小说更多共用漫画phone底部／wide右侧sheet，保留三项小说业务、local/busy门禁及先关闭菜单；原生仍bindPopup，稿件不再采用旧popup锚点。",
+      "priorRepairChange": "阅读更多恢复真实popup、锚点及动作先关闭菜单的承载关系。"
+    },
+    {
+      "id": "READING-18",
+      "status": "repaired-design-and-static-verified",
+      "change": "本地书籍上下文门控换源/远程下载，保留真实Core数据语义。"
+    },
+    {
+      "id": "READING-19",
+      "status": "repaired-design-and-static-verified",
+      "change": "阅读恢复/失败保留原阅读上下文及原生关闭限制。"
+    },
+    {
+      "id": "READING-21",
+      "status": "repaired-design-and-static-verified",
+      "change": "文本内图像fragment正向样例独立于专用漫画正文，并保留缺像素样例。"
+    },
+    {
+      "id": "READING-22",
+      "status": "repaired-design-and-static-verified",
+      "change": "小说正文恢复原生justify排版。"
+    },
+    {
+      "id": "COM-01",
+      "status": "repaired-design-and-static-verified",
+      "change": "目录/朗读/外观/设置子模块激活资源和标签恢复原生白色active图标。"
+    }
+  ],
+  "rootOwned": [
+    "READING-20/LIB-01稳定书籍上下文",
+    "COM-02原生抓手会话/连续形态驱动",
+    "所有动态锚点定位/焦点/交互状态与总账",
+    "漫画面板Pan门控及话末openPanel清chapterEnd"
+  ],
+  "corrections": [
+    "READING-02原审计误以为自动翻页Quick需要返回；真实normalContent/launchSourceContent未调用quickBack，因此删除稿件假按钮。",
+    "旧HEAD无专用Manga owner和无BookDirectoryPage manga分支结论已被新HEAD提交变化替代。",
+    "漫画换源首图核验是内部准备；preparing可取消，仅commitStarted阻取消，不绘独立核验/成功确认页。",
+    "漫画恢复默认真实亮度78，方向vertical、fit width、页码true；保留当前背景。",
+    "替换未知写入允许改变形态，必须保持write-uncertain结果；新增唯一Quick映射避免丢状态。"
+  ],
+  "sourceDriftRepairs": [
+    "ReaderShell按contentKind挂载MangaReadingSurface；漫画正文/顶底控制使用专用宿主。",
+    "新增4个真实可达模块：manga-mode、manga-settings、manga-more、manga-downloads。",
+    "漫画阅读目录phone sheet/wide右栏/常驻左栏及详情独立mangaPage按真实尺寸与能力门控还原。",
+    "漫画fallback空目录条件入口经Index会话/detailToc/route门禁到ReaderFullDirectory，作为兼容状态而非sheet展开。",
+    "漫画source选择目标章、可取消准备、原子提交保留既有目录结构与原阅读背景。",
+    "漫画loading/error/adjacent-error/recovery/replacement/login保持同阅读视口，无额外过程页。",
+    "独立目录漫画下载popup使用顶部BottomLeft anchor，章行仅改变scope；无箭头。",
+    "小说独立目录当前书签/离线回执恢复通知与门控随新源补齐。"
+  ],
+  "parentInterfaces": {
+    "context": "ctx.book / readerVariant / viewportWidth / viewportHeight / deviceType / tablet / size / theme / choices",
+    "newAction": [
+      "manga-reset-settings"
+    ],
+    "attributes": [
+      "data-control-grabber",
+      "data-manga-panel-grabber",
+      "data-popup-anchor",
+      "data-anchored-popup",
+      "data-reading-select",
+      "data-reading-select-panel",
+      "data-reader-chapter",
+      "data-reading-font",
+      "data-choice",
+      "data-choice-value",
+      "data-choice-clear",
+      "data-dismiss-overlay"
+    ],
+    "backgroundByVariant": "{background,backgroundVariant} schema",
+    "rootAgreed": [
+      "image-loaded按novel种子；manga-fragments是真正漫画正文",
+      "漫画openPanel清话末端点",
+      "manga-selection-busy可取消；manga-selection-commit阻关闭",
+      "漫画窄屏grabber阈值offset>96或velocity>550关闭，widePanel禁drag"
+    ]
+  },
+  "proof": {
+    "script": "/private/tmp/verify-reading-fixes.mjs",
+    "report": "/private/tmp/reader-reading-static-verification.json",
+    "sourceRefRemap": "/private/tmp/reader-reading-source-ref-remap.json",
+    "checks": [
+      "node --check ui-reading.mjs",
+      "node --check spec-reading.mjs",
+      "git diff --check -- owned four files",
+      "22组纯Node结构/状态检查，904次双宽日夜render、96资源、423当前源码refs"
+    ]
+  },
+  "limitations": [
+    "本结果为设计稿/逻辑稿和纯静态交互结构修复；未声称HarmonyOS运行、HAP、VM、设备、视觉或无障碍验收。",
+    "已由根层合并并通过全量离线回归及源码绑定；未运行浏览器、Playwright或截图工具。",
+    "原生系统选区/Alert由平台管理，HTML尺寸仍为明确标注的评审近似。",
+    "原生HarmonyOS Sans系统预览在浏览器中使用同名family与fallback；已包字体使用实际资源。",
+    "未提交，未修改entry原生应用文件。"
+  ],
+  "currentBinding": {
+    "hostHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+    "sourceTreeSha256": "7ba0dbddfab49fe87a7b36d4993b301dc0e38e1ef5cd05dbd0d6f60075201c2b",
+    "designSourceSha256": "cfcf577a266c6da4343c82586482b5aac6363555ad234f51167a1a5568418e7e",
+    "logicSha256": "8871335274baa1717fd259df755df4015e3965963f77f4820e53c6f71869c393",
+    "rootVerification": "repair-verification.json"
+  },
+  "rootIntegrationStatus": "VERIFIED_CURRENT_CODE_AND_OFFLINE",
+  "followUpReturnRepair": "back-button-audit.json",
+  "latestUserStyleAdjustment": {
+    "record": "novel-more-redraw.json",
+    "change": "用户指定样式调整：小说更多共用漫画phone底部／wide右侧sheet，保留三项小说业务、local/busy门禁及先关闭菜单；原生仍bindPopup，稿件不再采用旧popup锚点。"
+  },
+  "latestReplacementRepair": {
+    "record": "replace-ui-repair.json",
+    "groups": 5,
+    "currentVisualVerified": false
+  }
+}

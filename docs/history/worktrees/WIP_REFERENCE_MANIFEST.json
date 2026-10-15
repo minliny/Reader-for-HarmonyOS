@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "scope": "Missing untracked historical docs/fixtures/test adapters; no active production registration",
+  "files": [
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
+      "originHead": "e74ef51e10da90570ea3a12587ae3373a5f0eaba",
+      "path": "docs/BOOK_DETAIL_VISUAL_SUCCESSOR_20261008.md",
+      "destination": "docs/history/worktrees/manga-directory-rules-20261007/docs/BOOK_DETAIL_VISUAL_SUCCESSOR_20261008.md",
+      "sha256": "8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa",
+      "bytes": 2373,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
+      "originHead": "e74ef51e10da90570ea3a12587ae3373a5f0eaba",
+      "path": "docs/SEARCH_LAYOUT_AND_DISPLAY_COVER_SUCCESSOR_20261008.md",
+      "destination": "docs/history/worktrees/manga-directory-rules-20261007/docs/SEARCH_LAYOUT_AND_DISPLAY_COVER_SUCCESSOR_20261008.md",
+      "sha256": "1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1",
+      "bytes": 2527,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
+      "originHead": "e74ef51e10da90570ea3a12587ae3373a5f0eaba",
+      "path": "tools/fixtures/design/shared-book-detail-typography-successor-20261008.json",
+      "destination": "docs/history/worktrees/manga-directory-rules-20261007/tools/fixtures/design/shared-book-detail-typography-successor-20261008.json",
+      "sha256": "af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed",
+      "bytes": 21368,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
+      "originHead": "e74ef51e10da90570ea3a12587ae3373a5f0eaba",
+      "path": "tools/fixtures/icon-button-family/approved-search-layout-20261008.json",
+      "destination": "docs/history/worktrees/manga-directory-rules-20261007/tools/fixtures/icon-button-family/approved-search-layout-20261008.json",
+      "sha256": "1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f",
+      "bytes": 20208,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
+      "originHead": "e74ef51e10da90570ea3a12587ae3373a5f0eaba",
+      "path": "tools/test-book-detail-intro-measurement-sdk.mjs",
+      "destination": "docs/history/worktrees/manga-directory-rules-20261007/tools/test-book-detail-intro-measurement-sdk.mjs",
+      "sha256": "4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148",
+      "bytes": 9416,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
+      "originHead": "e74ef51e10da90570ea3a12587ae3373a5f0eaba",
+      "path": "tools/test-shared-download-coordinator.mjs",
+      "destination": "docs/history/worktrees/manga-directory-rules-20261007/tools/test-shared-download-coordinator.mjs",
+      "sha256": "bd693e07b71193f1438dd38aa76892da22dca917b0ac385c7c0176c4d12f436e",
+      "bytes": 16419,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
+      "originHead": "e74ef51e10da90570ea3a12587ae3373a5f0eaba",
+      "path": "tools/test-shared-download-reader-route.mjs",
+      "destination": "docs/history/worktrees/manga-directory-rules-20261007/tools/test-shared-download-reader-route.mjs",
+      "sha256": "735c427acd02551a32579b1c36b6cecea06d985c57e880e542c07207bb6b0b9c",
+      "bytes": 9827,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-directory-rules-20261007/Reader-for-HarmonyOS",
+      "originHead": "e74ef51e10da90570ea3a12587ae3373a5f0eaba",
+      "path": "tools/test-shared-download-storage.mjs",
+      "destination": "docs/history/worktrees/manga-directory-rules-20261007/tools/test-shared-download-storage.mjs",
+      "sha256": "fc24a4bd3cd549ea9f615a42414ae9da7752bf18ca71a57635b6e0c8ceea3b6b",
+      "bytes": 6314,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "docs/BOOK_DETAIL_VISUAL_SUCCESSOR_20261008.md",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/docs/BOOK_DETAIL_VISUAL_SUCCESSOR_20261008.md",
+      "sha256": "8d1c17daf492c37fb3ce35a0f43ecad07fcac9ae797cc5b07126330932d90efa",
+      "bytes": 2373,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "docs/MANGA_DIRECTORY_RULES_REPAIR_20261007.md",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/docs/MANGA_DIRECTORY_RULES_REPAIR_20261007.md",
+      "sha256": "754c21ec42795f93b1ad51fa4c72266e938f12565fc21e9e345744d63b365b7c",
+      "bytes": 2497,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "docs/SEARCH_LAYOUT_AND_DISPLAY_COVER_SUCCESSOR_20261008.md",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/docs/SEARCH_LAYOUT_AND_DISPLAY_COVER_SUCCESSOR_20261008.md",
+      "sha256": "1c9ce6f208a66c9f40eaf3597ebaefb1a4706820094cce8f3ba52fe0c34672e1",
+      "bytes": 2527,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/fixtures/design/manga-dropdown-successor-20261010.json",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/fixtures/design/manga-dropdown-successor-20261010.json",
+      "sha256": "34e34286739795185c40019661fbfd5434a165603a87112978b0d086f38955ed",
+      "bytes": 363660,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/fixtures/design/reading-sheets-feedback-successor-20261009.json",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/fixtures/design/reading-sheets-feedback-successor-20261009.json",
+      "sha256": "3414f85b4f1a5b6ae33472bfd67c36e5a51f958afe6e361929f3b8049917f261",
+      "bytes": 234524,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/fixtures/design/shared-book-detail-typography-successor-20261008.json",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/fixtures/design/shared-book-detail-typography-successor-20261008.json",
+      "sha256": "af957a2ddebeae32d1f28af27879f9ce47548887751b1fcef3af29d4d28d15ed",
+      "bytes": 21368,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/fixtures/icon-button-family/approved-search-layout-20261008.json",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/fixtures/icon-button-family/approved-search-layout-20261008.json",
+      "sha256": "1f2c88126594ce13ebce0d57732c3e0713e8ed3dff4f4f2c2b4df1239f7f5b4f",
+      "bytes": 20208,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/fixtures/manga-directory-rules-20261007.json",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/fixtures/manga-directory-rules-20261007.json",
+      "sha256": "1f4922d4a71d7f453c8cef803d0b30f28b0f0f62020d8d8f9f0ae734bf195810",
+      "bytes": 218215,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/lib/manga-display-platform-probe.mjs",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/lib/manga-display-platform-probe.mjs",
+      "sha256": "7c9b4b2188e416ccf6bb9bfe34e455002de20511053cb1a3261bdbf32cc74961",
+      "bytes": 2729,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/lib/platform-lru-cache-port.mjs",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/lib/platform-lru-cache-port.mjs",
+      "sha256": "72bb98cff4464c9186ea94573c3a2bf1eb379f9cde53af5d22842b31a8581f46",
+      "bytes": 1281,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/lib/reader-manga-choice-select-probe.mjs",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/lib/reader-manga-choice-select-probe.mjs",
+      "sha256": "6bd240353b370b20bea1b0e1666201303d515b3219452aee1104b3762f764d54",
+      "bytes": 3429,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/test-book-detail-intro-measurement-sdk.mjs",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/test-book-detail-intro-measurement-sdk.mjs",
+      "sha256": "4f11e714ea15de11a9b958a1e69af4d685dda1592ff6877eb0b585af0f597148",
+      "bytes": 9416,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/test-reader-manga-choice-select.mjs",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/test-reader-manga-choice-select.mjs",
+      "sha256": "fd2c71539bb59fd1fec02f9815c10b587e5c782155088dfc2bd17d43b3f292d5",
+      "bytes": 5045,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/test-shared-download-coordinator.mjs",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/test-shared-download-coordinator.mjs",
+      "sha256": "75fa71f4490e816371a2f5f0bdbd594a997569323444f253833d8936ac204b95",
+      "bytes": 37411,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/test-shared-download-reader-route.mjs",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/test-shared-download-reader-route.mjs",
+      "sha256": "d478f04ce4e30af471b8bb00c2670bb57db363ba54ee15979dfc8a5395ce3488",
+      "bytes": 10448,
+      "active": false
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/manga-three-agent-20261009/Reader-for-HarmonyOS",
+      "originHead": "493e631560088f342daef6a8f2535b2cfeec2907",
+      "path": "tools/test-shared-download-storage.mjs",
+      "destination": "docs/history/worktrees/manga-three-agent-20261009/tools/test-shared-download-storage.mjs",
+      "sha256": "567e227902f383339300706ab9068ff1a60b9239f5141b7f887a8d36704338a4",
+      "bytes": 10332,
+      "active": false
+    }
+  ]
+}

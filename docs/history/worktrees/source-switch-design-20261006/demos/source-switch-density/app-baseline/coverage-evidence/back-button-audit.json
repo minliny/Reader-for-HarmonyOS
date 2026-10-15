@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "status": "REPAIRED_OFFLINE_VERIFIED_PENDING_VISUAL",
+  "sourceHead": "9b70ff4e219f522efa36f994b12944d61fe93436",
+  "userObserved": [
+    "reader-search 返回按钮排版异常",
+    "reader-replace 返回按钮排版异常"
+  ],
+  "sourceLocation": [
+    "ui-reading.mjs:27",
+    "reading.css:180"
+  ],
+  "codeFinding": "Quick 返回容器宽 51，左右 padding 合计 18、图标 11、gap 4、两个 10px 汉字 20，总需求 53；默认 flex shrink 与可换行文本存在挤压换行。",
+  "scope": "All draft page and overlay back/navigation controls; native source read only",
+  "verificationBoundary": "Offline code/layout checks only. Browser automation remains blocked by prior security rejection; no visual pass claimed.",
+  "findings": [
+    {
+      "id": "BACK-01",
+      "title": "内容搜索Quick返回内边距导致图文挤压换行，字族和底色不匹配",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-search"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-02",
+      "title": "替换Quick返回误用搜索的内边距，未按原生居中gap5",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-replace"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-03",
+      "title": "替换编辑返回缺独立38×28文字槽和primary色",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-replace"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-04",
+      "title": "全局viewport按钮颜色规则压过语义返回样式",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "shared-buttons"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-05",
+      "title": "阅读Full子模块标题与收起按钮依靠flex而非真实header几何",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-directory",
+        "reader-tts",
+        "reader-appearance",
+        "reader-settings",
+        "reader-search",
+        "reader-autopage",
+        "reader-replace"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-06",
+      "title": "小说阅读顶部标题/章节/换源行高及边线不匹配",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-controls",
+        "reader-directory",
+        "reader-tts",
+        "reader-appearance",
+        "reader-settings",
+        "reader-search",
+        "reader-autopage",
+        "reader-replace"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-07",
+      "title": "兼容完整目录更多宽度被reading-action覆盖，标题/收起样式不匹配",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-directory"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-08",
+      "title": "TTS配置返回/关闭将28响应区域误作为正常流尺寸",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "reader-tts-config",
+        "reader-tts-manager"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-09",
+      "title": "普通返回顶栏无trailing仍渲染空操作槽",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "general",
+        "sources",
+        "source-tools",
+        "bookshelf-settings"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-10",
+      "title": "200%顶栏返回按钮顶对齐而非居中",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "shared-topbar"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-11",
+      "title": "详情浮动返回栏和内容重复计算顶部安全区",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "detail"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-12",
+      "title": "书籍搜索返回圆角未按专用navigation-back规格",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "search"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-13",
+      "title": "多选标题与取消/全选在文字压力下互相挤压，列表未避让实际头高",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "multiselect"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-14",
+      "title": "登录顶部取消/完成及标题URL在文字压力下溢出固定栏",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "source-login"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-15",
+      "title": "JSON关闭文字在200%压力下超过固定目标高度",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "json-import"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    },
+    {
+      "id": "BACK-16",
+      "title": "换源仍画旧小弹窗，顶部返回和列表承载与当前应用整页结构不符",
+      "status": "FIXED_DRAFT",
+      "nativeBugClaim": false,
+      "modules": [
+        "source-switch"
+      ],
+      "evidence": "coverage-evidence/repair-verification.json",
+      "evidenceTier": "code + offline geometry/font/template regression; visual unverified"
+    }
+  ],
+  "observedSourceChange": {
+    "previousHead": "9b70ff4e219f522efa36f994b12944d61fe93436",
+    "currentHead": "bb68a364248022e8ecaa3c16ecce03851f845be2",
+    "changedNativeFiles": [
+      "entry/src/main/ets/app/ErrorMessage.ts",
+      "entry/src/main/ets/features/source/SourceSwitchHost.ts"
+    ],
+    "sourceSwitchWindowChanged": false,
+    "note": "整页换源为此前稿件漏修，不是本次源码变更。未修改原生应用。"
+  },
+  "checkedAt": "2026-10-05T12:55:09.846808+00:00",
+  "hostHead": "bb68a364248022e8ecaa3c16ecce03851f845be2",
+  "sourceTreeSha256": "fa7d894f5fafb7292f57c5e061a8c3f671993e91a09b374570703d9ea556c17d",
+  "designSourceSha256": "e3717758b1963d7428cfa516f51fbb8371ceec8bb55512b1515579263596bf58",
+  "logicSha256": "72b40240a9a9be42dddc8cbd7fb377e62ea1ffabb41d9174cb33ad65895bbf1a",
+  "currentKnownReturnFindings": 0,
+  "coverage": {
+    "modules": 41,
+    "states": 441,
+    "profiles": 9,
+    "fontPressureFactors": [
+      1,
+      1.3,
+      2
+    ],
+    "backLayoutModelCount": 27,
+    "inventoryRenderCount": 3969,
+    "returnOrCloseControls": 5886,
+    "integratedChecks": 20
+  },
+  "verification": "coverage-evidence/repair-verification.json"
+}

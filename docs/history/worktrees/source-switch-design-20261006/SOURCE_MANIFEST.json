@@ -1,0 +1,887 @@
+{
+  "schemaVersion": 1,
+  "originHead": "e16f41addd7e42b574eaa50370fe2e612ed442fc",
+  "generatedAtUTC": "2026-10-15T00:36:23.256608+00:00",
+  "files": [
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/01.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/01.png",
+      "bytes": 1130879,
+      "sha256": "308b8643b889aa6fccf903a7caef75b3d49cf8acde3709c79fa11e7029ff9e2f",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/02.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/02.png",
+      "bytes": 1143436,
+      "sha256": "f53db526835e9c421a90be73653364985db9c12b6c6d036ac74bc7ca6aac6439",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/03.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/03.png",
+      "bytes": 1123922,
+      "sha256": "cc67ca4b619f58f7ff8ef15c6d0515734065265f6aa7d200c964b43bd4f0c962",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/README.md",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/README.md",
+      "bytes": 1808,
+      "sha256": "113514d16ad11612efd38671036ccb7a0b32b9db38ee05ea5c2252c00f141861",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/dynamic-redraw/01-discovering.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/dynamic-redraw/01-discovering.png",
+      "bytes": 968001,
+      "sha256": "ad4e676fb4d139edd31ef6479dcae00eae42fce933c013575c245da3f66bbbdd",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/dynamic-redraw/02-incremental.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/dynamic-redraw/02-incremental.png",
+      "bytes": 1148977,
+      "sha256": "e35d4941cb7e0299cf8da36798189466e58f94132a3cb8d39a70f612e4e90a51",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/dynamic-redraw/03-rechecking.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/dynamic-redraw/03-rechecking.png",
+      "bytes": 1116707,
+      "sha256": "76fb1da0c6f92c3d0bcbe6e4df16cc35684c0396eb586c069cad4105f2adf1cd",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/dynamic-redraw/04-ended-superseded.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/dynamic-redraw/04-ended-superseded.png",
+      "bytes": 1095105,
+      "sha256": "10d3d6018961c1d1e403ac35eeebcae6b1b50cb1d81b676c7aa6744795db3b4d",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/dynamic-redraw/04-ended.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/dynamic-redraw/04-ended.png",
+      "bytes": 1389675,
+      "sha256": "1bbb6fc4854714a7208c4182dfda64d9903c47fccd0eb99feb1af21a1c774f7e",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/dynamic-redraw/README.md",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/dynamic-redraw/README.md",
+      "bytes": 1070,
+      "sha256": "b395a42b358042129bf0ba04db5bb48e75540a20e7073a8939ffae0491586636",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/dynamic-redraw/manifest.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/dynamic-redraw/manifest.json",
+      "bytes": 4416,
+      "sha256": "b4bdf347e2cbdcaaa79992b82a887c38d6c6e59e43274598eef11185450266f5",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/manifest.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/manifest.json",
+      "bytes": 1941,
+      "sha256": "ca22fddd366e4bfc5ac8e253080cff8bf8b46b539844803e8fee81f19a0b9d2a",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/page-alternatives-success-only/01-bookshelf-list.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/page-alternatives-success-only/01-bookshelf-list.png",
+      "bytes": 1140656,
+      "sha256": "c0ac1565b121c9a9fe2345e186b2af117b5f4041fc5adbabb53cb5006f6f5656",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/page-alternatives-success-only/02-chapter-ledger.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/page-alternatives-success-only/02-chapter-ledger.png",
+      "bytes": 1155186,
+      "sha256": "d3491123c843dd126000399e3055bb3ebad1d5e25c5b971c339b87cb0a9922d3",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/page-alternatives-success-only/03-reading-drawer.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/page-alternatives-success-only/03-reading-drawer.png",
+      "bytes": 1274723,
+      "sha256": "c9ca2789a959b881b9fc0769f5585e81e49f7c07146842fa02afcc531f3b6140",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/page-alternatives-success-only/README.md",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/page-alternatives-success-only/README.md",
+      "bytes": 923,
+      "sha256": "2918e5acc6f2f4d6fa47b70687774101b650a1f36b1874c1016b9cfabe0fca4f",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/page-alternatives-success-only/manifest.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/page-alternatives-success-only/manifest.json",
+      "bytes": 4781,
+      "sha256": "433466ddaeb546248644c76d5bb05f7e2330de8fd27c6ac2588ad8ecf6db3446",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/page-alternatives/01-bookshelf-list.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/page-alternatives/01-bookshelf-list.png",
+      "bytes": 1161561,
+      "sha256": "b5e1f3c8a0aca04e2ea077b760434acb11e7abe2b8635e8143ef737c399bd606",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/page-alternatives/02-chapter-ledger.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/page-alternatives/02-chapter-ledger.png",
+      "bytes": 1114410,
+      "sha256": "412157d305c5170d9177c780cb16bf5ac9b9a2cf6c23406fe2db8efc9abc7d70",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/page-alternatives/03-reading-drawer.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/page-alternatives/03-reading-drawer.png",
+      "bytes": 1166728,
+      "sha256": "3f8b750ef470d8daf7c3ed8654b7d0cd1e237df6a4a1af9b7fbbb01323224eb8",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/page-alternatives/README.md",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/page-alternatives/README.md",
+      "bytes": 1296,
+      "sha256": "9efa10d8161de7cf70f0abb504bdf0bd3c95b8bf7eb9a77fd8d177af37d0b3bc",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/page-alternatives/manifest.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/page-alternatives/manifest.json",
+      "bytes": 5024,
+      "sha256": "b49453d36fbfefe96681b632e11974606ca88fd99119211934bbb4ab8dde7a21",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/redrawn/01.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/redrawn/01.png",
+      "bytes": 1153981,
+      "sha256": "1b6930739ddab4717fc5fcf444fe0075ed90c0fcc107ca85bef3854874e6b539",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/redrawn/02.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/redrawn/02.png",
+      "bytes": 1225997,
+      "sha256": "a9ba6642c5a44174e7eb54b5f3d13552b426e2104e67aa71e4e3a37fe5c4493f",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/redrawn/03.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/redrawn/03.png",
+      "bytes": 1224218,
+      "sha256": "37d26af323c707532ba7555d31713ad6b488baa3c0bf588f44d8c3c4517992ca",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/redrawn/README.md",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/redrawn/README.md",
+      "bytes": 605,
+      "sha256": "30289bb354f15ffc03c29f5b569697bd14cb0276850bf0175c9fddb3202664f6",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-concepts-20261006/redrawn/manifest.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-concepts-20261006/redrawn/manifest.json",
+      "bytes": 2075,
+      "sha256": "0fbf09a5a2df3c8f7465c217b6a3fc104ac52c2cf2422ca2776a4cd333a0d663",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/AUDIT.md",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/AUDIT.md",
+      "bytes": 21797,
+      "sha256": "dc7d7973698b311bf3e387e9605d163f7154151494798a99ea4d0e8ab927f0ec",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/FLOW.md",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/FLOW.md",
+      "bytes": 1986,
+      "sha256": "e1d197e61f9870026b58a58408b2b7a7274722b7b470cca2b897eeb9f83fc1ba",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/LOGIC.md",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/LOGIC.md",
+      "bytes": 467575,
+      "sha256": "af63b6f1a1f4bf05079cd4252a5bb8329394be8040b9b6bb1c2f441578ffde37",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/app.bundle.js",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/app.bundle.js",
+      "bytes": 1265758,
+      "sha256": "a95c63f14e02929c7c54d3c107859550c259d8609140406a43bbf63783b02d38",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/app.css",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/app.css",
+      "bytes": 9792,
+      "sha256": "77415956ae6aa2548d00f1c6702d8b9aac14ece6cc3ff5f384bbeed6ae454d40",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/app.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/app.mjs",
+      "bytes": 40527,
+      "sha256": "12990a537c68206d5eae446f589305342368ec1074204d4d252f2f928a92b95e",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/assets/source-flow-cover.png",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/assets/source-flow-cover.png",
+      "bytes": 2116978,
+      "sha256": "a4760ecc3ec0f5742444cb6780fb9d7fb9186ed484a1e074761b4419582ff7a2",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/baseline.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/baseline.json",
+      "bytes": 133134,
+      "sha256": "707f24a86577b45188fb991deff7895973a0e8395db113bfecd25ff6ea9d6005",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/build.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/build.mjs",
+      "bytes": 5274,
+      "sha256": "f5e3f680b52367920c3bb1575ad166594915f32ecd36aa184740309efce7183e",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/catalogue.html",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/catalogue.html",
+      "bytes": 4219,
+      "sha256": "50cbd7c1f183c4c4486fa9af24a3b8737b1278c0f78b219b05ca4dc5fd06b243",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/cleanup.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/cleanup.json",
+      "bytes": 21473,
+      "sha256": "ac31ae79f2da4ecdce2f532fb3179075756d005089ffde5ae07875f826611494",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/control-gesture.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/control-gesture.mjs",
+      "bytes": 8674,
+      "sha256": "a6ed0dfda4ff6476e5301007b9b1ce11790e1cb6996ec076e91606c595857c56",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-audit.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-audit.json",
+      "bytes": 151990,
+      "sha256": "00cef6e016e21b831d8d1af36e567e80c83970c1e09b094bce534532689e8645",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/back-button-audit.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/back-button-audit.json",
+      "bytes": 8662,
+      "sha256": "71759fc91cd14e988016ea0c4623a64fe2558d15993fee0a862f35649a4d58f6",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/back-layout-model-regression.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/back-layout-model-regression.mjs",
+      "bytes": 6325,
+      "sha256": "68e2666bdc316d03f1d13078b5651c22f55397c624c4a7c49f0f1832238af44b",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/back-layout-verification.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/back-layout-verification.json",
+      "bytes": 44004,
+      "sha256": "8f2c1caaa055f8e9f255f516050758ed1bdedffdcdf33220b2f5ac27f334eb20",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/backbar-library-audit.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/backbar-library-audit.json",
+      "bytes": 7287,
+      "sha256": "f2f7eed118e2f10dc1ed5f33db5e9a3cb97e2339bb8400b6d29fc87056a86723",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/backbar-library-checks.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/backbar-library-checks.json",
+      "bytes": 526,
+      "sha256": "8e472be637216147318da200486afe8e1dc3221c3e99a5afe0f3a46d49ee4f3b",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/book-actions-canvas-inputs.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/book-actions-canvas-inputs.json",
+      "bytes": 1416,
+      "sha256": "f542e835f9999ca67dbf1c154539c23a2c92960d0ef670923d497d8f285925b8",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/book-actions-style-audit.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/book-actions-style-audit.json",
+      "bytes": 2758,
+      "sha256": "74178e230e7849fff54a37d421683e9e7c2528c5e00084e9a00a86bef50b9e44",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/capture-failure.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/capture-failure.json",
+      "bytes": 671,
+      "sha256": "2a56b3903fe39247045da93b1606c85eb0c649afadd09f349df89e0216c62d9b",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/capture.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/capture.json",
+      "bytes": 4825,
+      "sha256": "9547ffbf1e8d90515e3cb6eedd1348e1160da567ab66866523b37381173e34ea",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/full-reaudit.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/full-reaudit.json",
+      "bytes": 225045,
+      "sha256": "1f8e3658292f94d5e46fa6d59aa06e0a97fbae6474527c9f40fd3b467c0367e3",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/full-repair.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/full-repair.json",
+      "bytes": 93807,
+      "sha256": "aa46d70edd9439c47b417d3aad4b53e7d10609cd768bdf0fd1c3a528267292b5",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/interaction-round-1.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/interaction-round-1.json",
+      "bytes": 3072,
+      "sha256": "fc44bad7269f541bbe682a55c08a115cd6833f28589d4750f34ffcbf83a078be",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/library-fix-result.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/library-fix-result.json",
+      "bytes": 9021,
+      "sha256": "51a1fc6e46aabd300c0e8a60966d2e19c9b3ba59269b480131b95cac317f28f2",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/library-model-regression.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/library-model-regression.mjs",
+      "bytes": 8818,
+      "sha256": "42605314e158c149e7d58c4c108b43da73cc9fa8ea3f5ccbdfff325bef3c73c7",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/novel-more-redraw.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/novel-more-redraw.json",
+      "bytes": 4457,
+      "sha256": "1976b836fc6e4d240c1f04012f052cea34e834449714e51ed48e907902ec41b6",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/pre-repair-audit.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/pre-repair-audit.json",
+      "bytes": 269330,
+      "sha256": "1e9343365ef1dcdd604598c0cd43c444ad7a229eb7001b19ba2f4e7deb487a1a",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/reading-fix-result.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/reading-fix-result.json",
+      "bytes": 10466,
+      "sha256": "55a8abef78bec37c1b5632c079ea72aab3e0c6eaa6f6b44a2e41c37ca2ff4225",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/reading-model-regression.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/reading-model-regression.mjs",
+      "bytes": 21198,
+      "sha256": "adf8143f1fd8709ab6c7f07cf06a7cbd09cad990e31c78d3e819921d3ada8c60",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/repair-capture.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/repair-capture.json",
+      "bytes": 1778,
+      "sha256": "ff6110f67b195813eec2b5cbcddedb2cfc7e39aa48ef6a9ca52c4249cee6f7e3",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/repair-verification-history.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/repair-verification-history.json",
+      "bytes": 8872,
+      "sha256": "a85c38a84ecb65a1224ddc7170e7140783c0503ba1f2ab9776267210ff21b2dd",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/repair-verification.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/repair-verification.json",
+      "bytes": 54988,
+      "sha256": "8105370bbbb92df1f6a9f82c44bf9100e38a5d5653ee768efba4d709fb915b83",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/replace-ui-repair.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/replace-ui-repair.json",
+      "bytes": 5440,
+      "sha256": "a02ce1893007ae5c748295f7efe677f227dc944a20ea80e5a76719a487cf06d7",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/settings-model-regression.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/settings-model-regression.mjs",
+      "bytes": 12694,
+      "sha256": "0252e43622d1efa494a7f4a19b15fe214221984795a872ffd9159905618bc0a3",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/source-rebase.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/source-rebase.json",
+      "bytes": 12303,
+      "sha256": "238de07555337b85eb04cb997a17a19ce5e883e3b77e40dbfee9c0bc05ed250f",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/coverage-evidence/source-switch-renderer-verification.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/source-switch-renderer-verification.json",
+      "bytes": 409,
+      "sha256": "253a80bf167b2b25b5bf3ac51588e79eff909714a246b95f711fc4951bd47100",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/delivery-config.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/delivery-config.mjs",
+      "bytes": 10524,
+      "sha256": "725ba1a46cc99d6b3b7ffa5a0d70c995e442a849728258a12b1594b8b46f6a44",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/delivery-ui.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/delivery-ui.mjs",
+      "bytes": 8449,
+      "sha256": "d45a5255f38ea2b3c880ca3f69e8563167cdd43808799dd65c0c02415066dccc",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/delivery.css",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/delivery.css",
+      "bytes": 8056,
+      "sha256": "2f8a90cf87d21c6a5b276f45b15157bd005df11deb62e538b3df852492fea81b",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/delivery.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/delivery.json",
+      "bytes": 951857,
+      "sha256": "53dfcc1c74cf74f11c3faac98e14645f4f98c4645df85ab7263ca2a71ee92051",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/demo-state.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/demo-state.mjs",
+      "bytes": 2795,
+      "sha256": "83481ef90c8ac064ab0342613151a381ed1f8fc92f8449f9e54a41d424c6231d",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/design-qa.md",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/design-qa.md",
+      "bytes": 3093,
+      "sha256": "4187ee4d2f31fcf41b14d46c8dec2235fb8f89be086b6b98c44e8d1437c281f9",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/design-qa.previous-concepts.md",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/design-qa.previous-concepts.md",
+      "bytes": 1566,
+      "sha256": "048247deabc8361d1b0e31e91f9f7c9f6e08e46a8267f445cf28a8791462f49b",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/generate-delivery.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/generate-delivery.mjs",
+      "bytes": 14028,
+      "sha256": "caa1e1396e81dc4c51fa6fbbd7e7aa8ed89aeb81ec97d8c86f636cf851cb105e",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/index.html",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/index.html",
+      "bytes": 3284,
+      "sha256": "59b05bb2a30a03cd22bb0fede4e77ed71374be359b2faa9ecc8e68fb0b7b0e0a",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/interaction-verification.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/interaction-verification.json",
+      "bytes": 2465,
+      "sha256": "537dafb8a1219ae40803be3788bbedd0b638585052deccf81728b06bf5c6c2de",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/library.css",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/library.css",
+      "bytes": 53302,
+      "sha256": "497477593ee24eed663c55fd3444004933590ec57e8e007b126965cc420f8de2",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/logic-overview.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/logic-overview.mjs",
+      "bytes": 9989,
+      "sha256": "b93899c51a5ca60adfb01000a4f677f9d99267e1fa89c2424e538763386e8d97",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/motion-preview.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/motion-preview.mjs",
+      "bytes": 7912,
+      "sha256": "5e338a0d11e8d34e1dd9606cc76107b31fb46b6f95b6fd9dc92b133bb5b2d660",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/reading.css",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/reading.css",
+      "bytes": 99922,
+      "sha256": "9608630307e4d2bed93c54aa8243d3235560b43fb8ffe99ee7a345635ef05b6c",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/render-references.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/render-references.mjs",
+      "bytes": 9757,
+      "sha256": "ae9b53198135a9e60011ee960d10eac3844d8de6ae76aa5d7ba3b5430ca3c894",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/routes-library.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/routes-library.json",
+      "bytes": 15485,
+      "sha256": "fe74c2bb440ef424898230ba0def4b7631cd3181b07a29256af225681b4c6c56",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/routes-reading.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/routes-reading.json",
+      "bytes": 26907,
+      "sha256": "ab5d1cc6ea0619c3a02837a80256d4a249f4de35744dd6efef9e3fb855bceaf3",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/routes-settings.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/routes-settings.json",
+      "bytes": 16446,
+      "sha256": "9dc67a788fb83b6d33cfdbe2f0ef8b9d8abc959eb0a8f3058dd498a0d247c4b7",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/routes-verification.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/routes-verification.json",
+      "bytes": 11555,
+      "sha256": "fdeaf73faf55956ae0868766fa8f88cf39f5924033aa1d0b75bab501a173526c",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/settings.css",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/settings.css",
+      "bytes": 20447,
+      "sha256": "847ba2241f936540d596aec3380a0fe8672f425e46e309bd397b4622c2b97d80",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/shared.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/shared.mjs",
+      "bytes": 3880,
+      "sha256": "b115e606a2ab0350a8d8bbcde7a560405bc4698dabdd3654c2e0193ed6924b69",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-flow-discovery-refinement-20261007.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-flow-discovery-refinement-20261007.json",
+      "bytes": 2474,
+      "sha256": "f6b411157ea9d8a39c9aefadb1c3f854f99bdea01540655004e471866b6d5334",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-flow-evidence.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-flow-evidence.json",
+      "bytes": 5318,
+      "sha256": "fc80b1ffa0f42be1a9d21b95e1152bcb62931bed377c4b42312ad497b9e512af",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-flow-light-toolbar-20261007.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-flow-light-toolbar-20261007.json",
+      "bytes": 3967,
+      "sha256": "1382712dfb081399a357a59c6b2a901b0b9023a69d19469b97cbebf0c47d2b2d",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-flow-model-verification.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-flow-model-verification.json",
+      "bytes": 907,
+      "sha256": "a71bfb3a1e0a1efe6bf5c19c79758f78db74c7e57c2af2803f43b113375d0400",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-flow-model.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-flow-model.mjs",
+      "bytes": 8112,
+      "sha256": "f8a4075058c080e4d1389c77c8a870eba01fa5f7b89c914cd333f07dc48f9236",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-flow-pointer.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-flow-pointer.mjs",
+      "bytes": 661,
+      "sha256": "0ab63d39a3e1e2f91ae15a48c6838708226f6738ec1db8f25225ff4f397a9dfe",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-flow-renderer.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-flow-renderer.mjs",
+      "bytes": 4193,
+      "sha256": "b0945bcb35a20e9612efd3f6cf9a1030e720f378a6eb63c838a2c790cff08372",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-flow-ui-verification.json",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-flow-ui-verification.json",
+      "bytes": 246,
+      "sha256": "3b124df677d335cb5982af4a4c8c06bc0bc25d7bf5b173a852182cf9e9378f0d",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-flow.bundle.js",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-flow.bundle.js",
+      "bytes": 206718,
+      "sha256": "265e20b053f3e982195c2bc8c2aeeb2fe2d9d8a52e0ffce98cfdf701d25f3f63",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-flow.css",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-flow.css",
+      "bytes": 13147,
+      "sha256": "9e2a8ef5e5fdbb207f808ce935dd27c11215aaf77a1b0de0c1d18cd1852bb21d",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-flow.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-flow.mjs",
+      "bytes": 11815,
+      "sha256": "8731182669e81a5815c61f2557be72141bc2a38d80252beb7155f8e5bf9a6c26",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-switch-renderer.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-switch-renderer.mjs",
+      "bytes": 19808,
+      "sha256": "00d8abf9b701ca40ddaa3fbff503d2c3858ab18a77c7db23e28521f78a126bf8",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/source-switch.css",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/source-switch.css",
+      "bytes": 13311,
+      "sha256": "0b66eb0d4d60ec4a363ae80678ca18a80ac7e9a5d6c0d1ace9f6c22b5e60e8a5",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/spec-library.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/spec-library.mjs",
+      "bytes": 49765,
+      "sha256": "e85b1a38d22db894018627fa3a979f47f9b29e038c057208327eff2cdafc8fe4",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/spec-reading.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/spec-reading.mjs",
+      "bytes": 92874,
+      "sha256": "d931ce94dee28e2a8f4e6cc5d61bc9f29f4f18aedd3738657d7707dc45f8d63a",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/spec-settings.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/spec-settings.mjs",
+      "bytes": 48661,
+      "sha256": "9d0b7fab57fcbd6f05a2696b929d2bd66dcad42f7dabc0198e6746afea94876a",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/tokens.css",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/tokens.css",
+      "bytes": 158245,
+      "sha256": "921db3f034c6d32ac5b62c39147c27f47eb08e83fcb92ca0c1b3cf89355577ea",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/ui-library.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/ui-library.mjs",
+      "bytes": 55224,
+      "sha256": "69416eabc7d80a70c60770ef7bd4daa0825d9a1ead133daf5eac9539806b9da0",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/ui-reading.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/ui-reading.mjs",
+      "bytes": 110805,
+      "sha256": "0e90f332a983e66bb9c7ebc0eebae19c989f09c5e4eb35fa06ba1a7e06a0caba",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/ui-settings.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/ui-settings.mjs",
+      "bytes": 60821,
+      "sha256": "43ff2002b47f97dda23ce339c51d5abdacd63d57fc5fdea1e15fe7e4a51feec1",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/verify-interactions.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/verify-interactions.mjs",
+      "bytes": 18327,
+      "sha256": "acf41f60583f1c38abcbd3cc7dd4164d7d1d3907b0465eca46f3feb8f1368fb1",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/verify-repairs.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/verify-repairs.mjs",
+      "bytes": 18598,
+      "sha256": "f201a571bd6c0b35de67e6c66a84efb9622f06bd782ca92b05f02aadba0c53e5",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/verify-source-flow-ui.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/verify-source-flow-ui.mjs",
+      "bytes": 4147,
+      "sha256": "ff12ebe75e6229a5d26851147525e3627ffad85e1ecf352b77ebc1b5dce4b6ed",
+      "kind": "historical-design-reference-not-production"
+    },
+    {
+      "originWorktree": "/Users/minliny/Documents/Reader/.reader-isolated/source-switch-design-20261006/Reader-for-HarmonyOS",
+      "originPath": "demos/source-switch-density/app-baseline/verify-source-flow.mjs",
+      "destination": "docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/verify-source-flow.mjs",
+      "bytes": 12918,
+      "sha256": "4fcf4797f4e047e3f49f32e68b7c9be2d490d51315f78c7e288be755b2571325",
+      "kind": "historical-design-reference-not-production"
+    }
+  ]
+}

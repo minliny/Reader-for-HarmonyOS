@@ -13,7 +13,7 @@ const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_R
 const ts=require(`${sdk}/node_modules/typescript`);
 const tree=ts.createSourceFile('ReaderRuntimeOwner.ts',owner,ts.ScriptTarget.Latest,true);
 const type=tree.statements.find(n=>n.name?.getText(tree)==='ReaderRuntimeOwner');
-const names=new Set(['install','current','waitForPredecessorClose','start','release','close','closeRuntime','startAfterPredecessor']);
+const names=new Set(['install','current','waitForPredecessorClose','start','release','close','closeDownloadsAndRuntime','closeRuntime','startAfterPredecessor']);
 const members=type.members.filter(n=>ts.isPropertyDeclaration(n)||ts.isConstructorDeclaration(n)||names.has(n.name?.getText(tree)))
   .map(n=>n.getText(tree)).join('\n');
 let releasePlatform;const teardown=new Promise(resolve=>releasePlatform=resolve);const events=[];

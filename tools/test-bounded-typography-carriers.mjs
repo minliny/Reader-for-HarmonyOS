@@ -1,5 +1,8 @@
-import {approvedTypographyContract, approvedMangaTypography, novelSourceSwitchSuccessor, mangaDirectoryTypographySuccessor, mangaDirectoryTypographySuccessorPath, validateMangaDirectoryTypographySuccessor,
- sharedSourceSwitchTypographySuccessor, sharedSourceSwitchTypographySuccessorPath, validateSharedSourceSwitchTypographySuccessor} from './lib/approved-manga-typography-carriers.mjs';
+import {approvedTypographyContract, approvedTypographyFile, approvedMangaTypography, novelSourceSwitchSuccessor, mangaDirectoryTypographySuccessor, mangaDirectoryTypographySuccessorPath, validateMangaDirectoryTypographySuccessor,
+ sharedSourceSwitchTypographySuccessor, sharedSourceSwitchTypographySuccessorPath, validateSharedSourceSwitchTypographySuccessor,
+ unifiedActionSheetTypographySuccessor, unifiedActionSheetTypographySuccessorPath, validateUnifiedActionSheetTypographySuccessor,
+ sourceSwitchFrameSuccessor, sourceSwitchFrameSuccessorPath, validateSourceSwitchFrameSuccessor,
+ mangaDirectoryWorktreeSuccessor, mangaDirectoryWorktreeSuccessorPath, validateMangaDirectoryWorktreeSuccessor} from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
@@ -37,6 +40,17 @@ assert.ok(approvedMangaTypography.files.find(entry=>entry.path===approvedSource)
 assert.equal(sharedSourceSwitchTypographySuccessorPath,'tools/fixtures/design/shared-source-switch-typography-successor-20261007.json');
 assert.equal(validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor),sharedSourceSwitchTypographySuccessor);
 assert.equal(approvedTypographyContract(novelWindow,approvedSource).count,21,'exact selected novel drawer carriers are shared, with the original two recovery tuples retained');
+assert.equal(sourceSwitchFrameSuccessorPath,'tools/fixtures/design/source-switch-frame-successor-20261014.json');
+assert.equal(validateSourceSwitchFrameSuccessor(sourceSwitchFrameSuccessor),sourceSwitchFrameSuccessor);
+assert.equal(sourceSwitchFrameSuccessor.files[0].architectureCounts.backgroundColor,6,'only the source frame background retires');
+assert.throws(()=>validateSourceSwitchFrameSuccessor(sourceSwitchFrameSuccessor,path=>path===sourceSwitchFrameSuccessor.previousFixture?read(path)+'\n':read(path)),/frame origin stays byte immutable/,'frame reuse cannot recapture the prior selected shared drawer');
+const copiedFrame=structuredClone(sourceSwitchFrameSuccessor);copiedFrame.files.push(structuredClone(copiedFrame.files[0]));
+assert.throws(()=>validateSourceSwitchFrameSuccessor(copiedFrame),/only one exact source drawer frame successor/,'no copied source frame actor can gain admission');
+const textChangedFrame=structuredClone(sourceSwitchFrameSuccessor);textChangedFrame.files[0].carriers.pop();
+assert.throws(()=>validateSourceSwitchFrameSuccessor(textChangedFrame),/retains every selected text tuple/,'moving the frame cannot silently remove source content');
+const budgetChangedFrame=structuredClone(sourceSwitchFrameSuccessor);budgetChangedFrame.files[0].architectureCounts.backgroundColor++;
+assert.throws(()=>validateSourceSwitchFrameSuccessor(budgetChangedFrame),/cannot acquire a new private budget/,'frame successor cannot preserve the retired background as new private debt');
+assert.throws(()=>approvedTypographyContract(novelWindow.replace("specId: 'source-switch-drawer'","specId: 'source-switch-window'"),approvedSource),/actual finite existing-frame variant binding/,'the real drawer cannot fall back to the old unused popup variant');
 assert.doesNotMatch(novelWindow,/struct SourceSwitchLiveRow\b/,'retired local manga row is not kept as a second production implementation');
 const sharedPreviousChanged=path=>path===sharedSourceSwitchTypographySuccessor.previousFixture?read(path)+'\n':read(path);
 assert.throws(()=>validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor,sharedPreviousChanged),/selected novel fixture stays byte immutable/,'the shared successor cannot recapture selected novel history');
@@ -99,7 +113,7 @@ assert.equal(mangaDirectoryTypographySuccessor.historicalFixtureSha256, novelSou
 assert.equal(validateMangaDirectoryTypographySuccessor(mangaDirectoryTypographySuccessor), mangaDirectoryTypographySuccessor);
 for (const entry of mangaDirectoryTypographySuccessor.files) {
   const source = read(entry.path);
-  assert.equal(approvedTypographyContract(source, entry.path).count, entry.carriers.length, 'exact selected directory carriers remain mounted and recognized');
+  assert.equal(approvedTypographyContract(source, entry.path).count, approvedTypographyFile(entry.path).carriers.length, 'exact latest selected carriers remain mounted and recognized; historical directory witness stays retained');
 }
 const changedHistoricalRead = path => path === mangaDirectoryTypographySuccessor.historicalFixture ? read(path) + '\n' : read(path);
 assert.throws(() => validateMangaDirectoryTypographySuccessor(mangaDirectoryTypographySuccessor, changedHistoricalRead), /historical manga typography fixture stays immutable/, 'even whitespace cannot silently recapture historical approval bytes');
@@ -201,9 +215,51 @@ for (const [path, from, to, message] of [
   }
   assert.deepEqual(calls, [['discover', 7], ['rss', 7], ['settings', 7]], 'the current title stays selected and all original other routes dispatch through actual public owner callbacks');
 }
+// Action-menu unification uses a new, closed successor. The independent
+// directory and original manga witness bytes remain immutable.
+assert.equal(unifiedActionSheetTypographySuccessorPath, 'tools/fixtures/design/unified-action-sheet-typography-successor-20261014.json');
+assert.equal(validateUnifiedActionSheetTypographySuccessor(unifiedActionSheetTypographySuccessor), unifiedActionSheetTypographySuccessor);
+assert.deepEqual(unifiedActionSheetTypographySuccessor.files.map(entry=>entry.retiredCarrierIndices), [[23,28],[3]], 'only formerly local More and download item actors retire');
+for(const entry of unifiedActionSheetTypographySuccessor.files){
+ const source=read(entry.path);
+ assert.equal(approvedTypographyContract(source,entry.path).count,entry.carriers.length,'unrelated reading/settings/download loading/retry carriers remain exact');
+ const missingDelegate=source.replace('ReaderActionSheetContent({','ReaderPrivateActionContent({');
+ assert.notEqual(missingDelegate,source);
+ assert.throws(()=>approvedTypographyContract(missingDelegate,entry.path),/one actual shared action-content binding/,'comments or renamed child cannot claim a rendered replacement');
+ const selector=entry.delegate.variant,privateVariant=source.replace('variant: '+selector,"variant: 'private99'");
+ assert.notEqual(privateVariant,source);
+ assert.throws(()=>approvedTypographyContract(privateVariant,entry.path),/actual finite action-content variant binding/,'successor binds its actual finite variant, not a private recipe');
+}
+const previousActionWitnessRead=path=>path===unifiedActionSheetTypographySuccessor.previousDirectoryFixture?read(path)+'\n':read(path);
+assert.throws(()=>validateUnifiedActionSheetTypographySuccessor(unifiedActionSheetTypographySuccessor,previousActionWitnessRead),/previous directory witness stays byte immutable/,'new action menu cannot silently recapture prior directory history');
+const wildcardActions=structuredClone(unifiedActionSheetTypographySuccessor);wildcardActions.files[0].path='entry/src/main/ets/features/manga/*';
+assert.throws(()=>validateUnifiedActionSheetTypographySuccessor(wildcardActions),/only the two exact manga action-content successors/,'action successor grants no manga folder exemption');
+const missingRetainedActions=structuredClone(unifiedActionSheetTypographySuccessor);missingRetainedActions.files[0].carriers.shift();
+assert.throws(()=>validateUnifiedActionSheetTypographySuccessor(missingRetainedActions),/every unrelated manga text tuple remains retained/,'unifying actions cannot remove another reading carrier');
+const extraRetirement=structuredClone(unifiedActionSheetTypographySuccessor);extraRetirement.files[0].retiredCarrierIndices.push(0);
+assert.throws(()=>validateUnifiedActionSheetTypographySuccessor(extraRetirement),/only the three exact replaced action text occurrences retire/,'page-number text cannot gain retirement through an action-menu witness');
 
 const file = baseline.files.find(file => file.path.endsWith('/LocalImportDialog.ets'));
 for (const node of file.nodes.filter(node => node.method === 'fileSelectionPanel' && [1, 2, 3].includes(node.index))) {
   assert.equal(typographyCarrierMethod(file.path, node, read(file.path)), 'fileSelectionBody');
 }
 console.log('bounded typography carriers PASS: retained import/source/directory witnesses and exact tuple/AUTO/public roles; 11 style +4 AUTO framework owner relocations, original 18 shelf occurrences with one actual wide shared rail/font/four-title callback proof; all prior controls plus 9 framework witness/count/slot/rail negative controls reject');
+
+// Worktree integration admits exactly two existing metadata status actors.
+assert.equal(mangaDirectoryWorktreeSuccessorPath, 'tools/fixtures/design/manga-directory-worktree-successor-20261015.json');
+assert.equal(validateMangaDirectoryWorktreeSuccessor(mangaDirectoryWorktreeSuccessor), mangaDirectoryWorktreeSuccessor);
+const statusFile = 'entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', statusSource = read(statusFile);
+assert.equal(approvedTypographyContract(statusSource, statusFile).count, 18);
+for (const [field, expression] of [['fontSize', '99'], ['fontFamily', "'private-font'"]]) {
+ const changed = structuredClone(mangaDirectoryWorktreeSuccessor), carrier = changed.files[1].carriers.find(node => node.text === 'this.mangaStatusText(item.node)');
+ carrier.modifiers[field].expression = expression;
+ assert.throws(() => validateMangaDirectoryWorktreeSuccessor(changed), /finite integration typography/, 'finite status cannot recapture private font tuple');
+}
+const changedStatusColor = statusSource.replace(".fontColor(this.mangaColor('muted')).margin({ left: MANGA_DIRECTORY_VISUAL.contentGap })", ".fontColor('#ff0000').margin({ left: MANGA_DIRECTORY_VISUAL.contentGap })");
+assert.notEqual(changedStatusColor, statusSource);
+assert.throws(() => approvedTypographyContract(changedStatusColor, statusFile), /finite metadata status paint/, 'finite status cannot accept arbitrary paint at the same count');
+const inflatedStatus = structuredClone(mangaDirectoryWorktreeSuccessor); inflatedStatus.files[1].architectureCounts.fontSize++;
+assert.throws(() => validateMangaDirectoryWorktreeSuccessor(inflatedStatus), /finite outside100 counts/, 'two approved metadata carriers cannot expand a private budget');
+const recapturedDirectoryRead = path => path === mangaDirectoryWorktreeSuccessor.previousDirectoryFixture ? read(path) + '\n' : read(path);
+assert.throws(() => validateMangaDirectoryWorktreeSuccessor(mangaDirectoryWorktreeSuccessor, recapturedDirectoryRead), /cannot rewrite the f4 directory witness/, 'finite integration never rewrites original witness');
+console.log('PASS finite directory integration metadata successors: exact fonts, colors, counts and immutable prior witnesses; private overrides rejected');

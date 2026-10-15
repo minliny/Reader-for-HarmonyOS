@@ -8,6 +8,7 @@ import { ReadingOfflineGateway, type ReadingOfflineBookProgress } from './Readin
 import type { RemoteReadingSession } from './RemoteReadingFlowGateway';
 import { MangaDownloadActionsGateway, type MangaDownloadAction, type MangaDownloadActionId,
   type MangaDownloadChapterStatus, type MangaDownloadSnapshot, type MangaDownloadDeleteOutcome } from '../manga/MangaDownloadActionsGateway';
+import type { SharedDownloadCoordinator } from '../downloads/SharedDownloadCoordinator';
 
 interface MangaDownloadIntent {
   session: RemoteReadingSession;
@@ -54,6 +55,7 @@ export interface ReadingOfflineDependencies {
   mangaActions?: MangaDownloadActionsGateway;
   ownsRuntime: () => boolean;
   deliveryFailed?: (error: Error) => void;
+  coordinator?: SharedDownloadCoordinator;
 }
 
 /** Finite manual-download/cache-clear coordination. Core retains its real
@@ -75,7 +77,8 @@ export class ReadingOfflineHost {
       return ReadingOfflineHost.retainedHost;
     }
     const host = new ReadingOfflineHost({ gateway: new ReadingOfflineGateway(runtime, intents),
-      mangaActions: new MangaDownloadActionsGateway(runtime), ownsRuntime, deliveryFailed });
+      mangaActions: new MangaDownloadActionsGateway(runtime), ownsRuntime, deliveryFailed,
+      coordinator: runtime.getDownloadCoordinator?.() });
     ReadingOfflineHost.retainedRuntime = runtime;
     ReadingOfflineHost.retainedHost = host;
     return host;
@@ -153,11 +156,17 @@ export class ReadingOfflineHost {
   async downloadChapter(chapterIndex: number, binding: ReadingOfflineBinding, update: boolean = false): Promise<void> {
     if (!Number.isSafeInteger(chapterIndex) || !binding.session.entries.some(entry => entry.index === chapterIndex &&
       entry.navigable !== false && entry.url.trim().length > 0)) return;
+    if (!update && this.dependencies.coordinator !== undefined) {
+      await this.submitAcceptedDownload(binding, [chapterIndex]); return;
+    }
     await this.write('chapter', binding, chapterIndex, undefined, update);
   }
 
   async downloadBook(binding: ReadingOfflineBinding, onlyIndexes?: number[]): Promise<void> {
     if (!binding.session.entries.some(entry => entry.navigable !== false && entry.url.trim().length > 0)) return;
+    if (this.dependencies.coordinator !== undefined) {
+      await this.submitAcceptedDownload(binding, onlyIndexes); return;
+    }
     await this.write('book', binding, undefined, onlyIndexes);
   }
 
@@ -189,6 +198,19 @@ export class ReadingOfflineHost {
     if (action === 'downloadChapter') { if (chapterIndex !== undefined) await this.downloadChapter(chapterIndex, binding); return undefined; }
     if (action === 'downloadBook') { await this.downloadBook(binding); return undefined; }
     if (action === 'clearCache') { await this.clearBook(binding); return undefined; }
+    if (this.dependencies.coordinator !== undefined &&
+      (action === 'pause' || action === 'resume' || action === 'cancel' || action === 'deleteDownloads')) {
+      const entry = chapterIndex === undefined ? undefined : binding.session.entries.find(row => row.index === chapterIndex);
+      if (chapterIndex !== undefined && (entry === undefined || entry.navigable === false || !entry.url.trim()))
+        throw new Error('目录已变化，目标章节操作已停止，请重新读取目录');
+      await this.dependencies.coordinator.operate(action === 'deleteDownloads' ? 'delete' : action, {
+        book: { ...binding.session.book, ...binding.session.identity, contentKind: binding.session.contentKind, addedAt: Date.now() },
+        chapterIndexes: chapterIndex === undefined ? undefined : [chapterIndex],
+        expectedChapters: entry === undefined ? undefined : [{ chapterIndex: entry.index, chapterId: entry.url }],
+      });
+      if (this.admitted(binding)) await this.load(binding);
+      return undefined;
+    }
     if (this.mangaActionActive) return undefined;
     const gateway = this.dependencies.mangaActions;
     if (gateway === undefined) throw new Error('MANGA_DOWNLOAD_ACTIONS_HOST_REQUIRED');
@@ -277,6 +299,20 @@ export class ReadingOfflineHost {
 
   private async drainMangaContinuations(intent: MangaDownloadIntent): Promise<void> {
     while (intent.continuations.size > 0) await Promise.all(Array.from(intent.continuations));
+  }
+
+  private async submitAcceptedDownload(binding: ReadingOfflineBinding, indexes?: number[]): Promise<void> {
+    if (!this.admitted(binding)) return;
+    try {
+      await this.dependencies.coordinator!.submit(binding.session, indexes);
+      const selected = indexes === undefined ? undefined : new Set(indexes);
+      this.deliver(binding, (): void => binding.emitEntries(binding.currentEntries().map(entry =>
+        entry.navigable === false || entry.downloadState === 'completed' || entry.downloadState === 'cached' ||
+          (selected !== undefined && !selected.has(entry.index)) ? entry : { ...entry, downloadState: 'queued' })));
+    } catch (error) {
+      this.deliver(binding, (): void => binding.failed?.(error as Error));
+      throw error;
+    }
   }
 
   /** Exact receipt reads may settle metadata; availability reads never dispatch

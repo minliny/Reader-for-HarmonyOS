@@ -1,3 +1,4 @@
+import { formatDownloadStorageBytes } from '../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire, stripTypeScriptTypes} from 'node:module';
@@ -35,6 +36,7 @@ let instance=0;
 function navigation(text=indexSource){
   const f=fixture(), context=f.runtime.getUIAbilityContext(), platformReads=[];
   context.filesDir='/settings-return-test-no-real-files';
+  f.runtime.readSettingsTextCleanup=async()=>undefined;
   const facts=load('app/ReaderOperationFacts.ts','{projectOperationFacts,projectCommitReadback}');
   const receipt=load('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',facts);
   const common={ReaderRuntimeOwner:f.Runtime,ReaderWriteEvidence:f.Write.ReaderWriteEvidence,...facts,projectPersistedReceipt:receipt,
@@ -47,7 +49,7 @@ function navigation(text=indexSource){
     replaceReaderAtomicSnapshot:async()=>{throw Error('Unexpected persistent write in return-navigation contract');},
     util:{generateRandomUUID(){throw Error('Unexpected mutation identity');}},isReaderCoreTransactionPendingError:()=>false});
   const CacheGateway=load('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',intents);
-  const CacheOwner=load('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{...common,SettingsCacheGateway:CacheGateway});
+  const CacheOwner=load('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{...common,formatDownloadStorageBytes,SettingsCacheGateway:CacheGateway});
   const createDefaultSettingsSnapshot=load('features/settings/SettingsGateway.ts','createDefaultSettingsSnapshot');
   const SettingsOrchestrator=load('features/settings/SettingsOrchestrator.ets','SettingsOrchestrator',{
     ...common,SettingsGateway:f.Gateway,createDefaultSettingsSnapshot});

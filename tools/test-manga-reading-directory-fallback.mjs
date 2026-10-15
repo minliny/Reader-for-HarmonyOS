@@ -1,3 +1,5 @@
+import * as directoryState from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
 import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
 import assert from 'node:assert/strict';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryColor } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
@@ -19,7 +21,7 @@ import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 const path = fileURLToPath(new URL('../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets', import.meta.url));
 const source = readFileSync(path, 'utf8');
 const timers = [];
-const deps = { visual, mangaDirectoryScale, mangaDirectoryColor, ReaderWindowCoordinator: {metrics: () => ({systemFontScale: 1})}, mangaDirectoryPresentation, mangaDirectoryVisibleEntries, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600, projectReaderDirectoryEntries, sameReaderDirectoryData, snapshotReaderDirectoryData,
+const deps = { ...directoryState, mangaDirectoryDisplay, visual, mangaDirectoryScale, mangaDirectoryColor, ReaderWindowCoordinator: {metrics: () => ({systemFontScale: 1})}, mangaDirectoryPresentation, mangaDirectoryVisibleEntries, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600, projectReaderDirectoryEntries, sameReaderDirectoryData, snapshotReaderDirectoryData,
   mangaDirectoryEntryRows, mangaDirectoryLabel, mangaDirectoryNearbyEntries,
   readerDirectoryAccessibilityText, LengthMetrics: { vp: value => ({ value }) }, ScrollAlign: { START: 'start', CENTER: 'center' },
   setTimeout(action) { timers.push(action); } };
@@ -62,7 +64,7 @@ const hierarchy = Object.freeze([
   owner.aboutToAppear(); owner.onFirstLayout(); flush();
   assert.equal(owner.rowPresentation(hierarchy[0]).readableDescendantCount, 3);
   assert.deepEqual(owner.rowPresentation(hierarchy[3]).ancestorGroupIndexes, [7, 17]);
-  owner.toggleBranch(hierarchy[2], owner.identity());
+  owner.toggleBranch(owner.projectedEntries.find(row => row.index === hierarchy[2].index), owner.identity());
   assert.deepEqual(owner.collapsedGroups, [17]);
   assert.deepEqual(owner.projectedEntries.map(entry => entry.index), [7, 11, 17, 29, 41, 53, 67, 79, 83]);
   owner.toggleBranch(hierarchy[0], owner.identity());
@@ -85,7 +87,7 @@ const hierarchy = Object.freeze([
   owner.onLocateCurrent(); flush();
   assert.deepEqual(owner.collapsedGroups, [], 'locate expands exactly the current target ancestors');
   assert.deepEqual(scrolled.at(-1), [6, true, 'start', { extraOffset: { value: -12 } }]);
-  owner.selectEntry(hierarchy[4], owner.identity()); assert.deepEqual(selected, [23, 29]);
+  owner.selectEntry(owner.projectedEntries.find(row => row.index === hierarchy[4].index), owner.identity()); assert.deepEqual(selected, [23, 29]);
   owner.selectEntry(hierarchy[7], owner.identity());
   owner.selectEntry(hierarchy[9], owner.identity());
   assert.deepEqual(owner.collapsedGroups, [], 'disabled rows without explicit children cannot manufacture groups');
@@ -143,9 +145,9 @@ assert.equal(requests[0].method, 'reading.directory.view.open.v2');
   assert.equal(owner.projectedEntries.length, 681);
   assert.deepEqual(scrolled, [], 'a timer is not evidence that the native List has mounted');
   owner.onFirstLayout(); flush();
-  assert.deepEqual(scrolled.at(-1), [679, false, 'start', { extraOffset: { value: -50 } }], 'locate uses visible rank of the original chapter index');
+  assert.deepEqual(scrolled.at(-1), [171, false, 'start', { extraOffset: { value: -50 } }], 'locate uses visible rank of the original chapter index');
   owner.onLocateCurrent(); flush();
-  assert.deepEqual(scrolled.at(-1), [679, true, 'start', { extraOffset: { value: -12 } }],
+  assert.deepEqual(scrolled.at(-1), [171, true, 'start', { extraOffset: { value: -12 } }],
     'explicit manga locate uses the demo smooth top inset without replacing chapter identity');
   owner.selectEntry(owner.projectedEntries[679], owner.identity());
   assert.deepEqual(selected, [1359], 'flat selection preserves the exact sparse Core index');
@@ -174,7 +176,7 @@ assert.equal(requests[0].method, 'reading.directory.view.open.v2');
   assert.equal(owner.projectedEntries.length, 0);
   owner.entries = entries; owner.onEntriesChanged(); flush();
   assert.equal(owner.projectedEntries.length, 681, 'late canonical TOC replaces the empty fallback');
-  assert.deepEqual(scrolled.at(-1), [679, false, 'start', { extraOffset: { value: -50 } }]);
+  assert.deepEqual(scrolled.at(-1), [171, false, 'start', { extraOffset: { value: -50 } }]);
   const original = owner.projectedEntries[0], oldIdentity = owner.identity();
   owner.entries = [{ ...original, title: 'new catalog title' }];
   owner.selectEntry(original, oldIdentity);
@@ -214,7 +216,8 @@ function nativeList(owner) { return [...owner.children.values()].find(child => c
   const state = fixture(); Object.assign(owner, state.owner);
   owner.aboutToAppear(); flush(); owner.initialRender();
   const list = nativeList(owner);
-  assert.equal(list.params.entries.length, 681, 'full catalog retains all named canonical rows');
+  assert.equal(list.params.entries.length, 172, 'recognized numeric chapter labels use compact rows without dropping canonical chapters');
+  assert.deepEqual(owner.layoutRows.flatMap(row => row.entries.map(entry => entry.index)), entries.map(entry => entry.index), 'all 681 canonical targets remain present');
   assert.equal(list.params.naturalRowHeight, true); assert.equal(list.params.rowHeight, 44);
   assert.equal(list.params.listPaddingBottom, 18, 'full catalog owns its 18vp native scroll tail');
   assert.ok(!shared.nodes(owner).some(node => node.border?.width?.top === 1), 'viewport has no stationary top border');
@@ -292,7 +295,7 @@ function checkExternalScroller(candidate = source) {
   assert.equal(viewport.create.scroller, external);
   viewport.onAreaChange({}, { width: 393, height: 220 }); shared.properties.flush(); flush();
   assert.equal(firstLayouts, 1, 'the actual first native layout notifies Full interaction readiness');
-  assert.equal(externalScrolls.at(-1)[0], 679, 'initial current position also uses the supplied Scroller');
+  assert.equal(externalScrolls.at(-1)[0], 171, 'initial current position also uses the supplied Scroller');
   assert.deepEqual(state.scrolled, [], 'the private default does not receive external viewport commands');
   viewport.onAreaChange({}, { width: 390, height: 220 }); shared.properties.flush(); flush();
   assert.equal(firstLayouts, 1, 'ordinary viewport resize never repeats first-layout admission');
@@ -369,7 +372,7 @@ for (const [label, candidate, listCandidate, failure] of [
   assert.equal(action.height, undefined); assert.deepEqual(action.constraintSize, { minHeight: 44 });
   action.onClick(); assert.equal(opens, 1, 'no-data fallback keeps the existing full-directory business action');
   const list = probe.list(); owner.entries = entries; owner.onEntriesChanged(); probe.shared.properties.flush();
-  assert.equal(probe.list(), list); assert.equal(list.entries.length, 681, 'late canonical data keeps the same native List');
+  assert.equal(probe.list(), list); assert.equal(list.entries.length, 172, 'late canonical data keeps the same native List with compact display rows');
   owner.aboutToDisappear(); flush();
 }
 const responsiveParts = [{ index: 7, title: '41 上', navigable: true },
@@ -435,12 +438,12 @@ function checkRetainedGroupFold(candidate = source, childCandidate = mangaDirect
 }
 function checkRetainedNamed(candidate = mangaDirectoryEntryRowSource) {
   const shared = mangaDirectoryEntryRowSdk({ source: candidate });
-  const entry = { index: 11, title: '第1话', level: 2, navigable: true, downloadState: 'unknown' };
+  const entry = { index: 11, title: '起始章节', level: 2, navigable: true, downloadState: 'unknown' };
   const presentation = mangaDirectoryPresentation([entry]);
   const owner = new shared.deps.MangaDirectoryEntryRow(undefined, { row: mangaDirectoryEntryRows([entry], presentation)[0],
     presentation, scheme: 'day', currentChapterIndex: 11 }, undefined, -1);
   owner.initialRender();
-  const nodes = shared.nodes(owner), row = nodes.find(node => node.type === 'Row'), title = nodes.find(node => node.type === 'Text' && node.create === '第1话');
+  const nodes = shared.nodes(owner), row = nodes.find(node => node.type === 'Row'), title = nodes.find(node => node.type === 'Text' && node.create === '起始章节');
   const actors = [...owner.observers];
   assert.equal(title.fontFamily, READER_FONT_NOTO_SANS_SC_UI_550); assert.deepEqual(title.fontWeight, [550, {enableVariableFontWeight: true}]);
   owner.currentChapterIndex = -1; shared.properties.flush();
@@ -488,7 +491,7 @@ assert.throws(() => checkRetainedGroupFold(source, disabledGroup), /proved canon
   const { owner, selected, scrolled } = fixture(); Object.assign(owner, { mangaCatalogDisplay: false, currentChapterIndex: entries[345].index });
   owner.aboutToAppear(); owner.onFirstLayout(); flush();
   assert.equal(owner.projectedEntries.length, entries.filter(entry => entry.navigable !== false).length, 'Quick exposes the complete canonical catalog within its compact viewport');
-  assert.equal(owner.projectedEntries[344].index, entries[345].index); assert.equal(scrolled.at(-1)[0], 344);
+  assert.equal(owner.projectedEntries[344].index, entries[345].index); assert.equal(scrolled.at(-1)[0], 86);
   owner.selectEntry(owner.projectedEntries[344], owner.identity()); assert.deepEqual(selected, [entries[345].index]);
   owner.query = '第681'; owner.onViewInputsChanged(); flush();
   assert.deepEqual(owner.projectedEntries.map(entry => entry.index), [1361], 'quick search still sees the complete canonical catalog');
@@ -520,8 +523,8 @@ assert.throws(() => checkRetainedGroupFold(source, disabledGroup), /proved canon
   owner.aboutToDisappear(); flush();
 }
 const wideOpening = fixture(); wideOpening.owner.currentOpenInset = 7; wideOpening.owner.aboutToAppear(); wideOpening.owner.onFirstLayout(); flush();
-assert.deepEqual(wideOpening.scrolled.at(-1), [679, false, 'start', { extraOffset: { value: -7 } }]);
-wideOpening.owner.onLocateCurrent(); flush(); assert.deepEqual(wideOpening.scrolled.at(-1), [679, true, 'start', { extraOffset: { value: -12 } }]);
+assert.deepEqual(wideOpening.scrolled.at(-1), [171, false, 'start', { extraOffset: { value: -7 } }]);
+wideOpening.owner.onLocateCurrent(); flush(); assert.deepEqual(wideOpening.scrolled.at(-1), [171, true, 'start', { extraOffset: { value: -12 } }]);
 wideOpening.owner.aboutToDisappear(); flush();
 console.log('PASS manga fallback: v2 miss/full681/Quick full canonical named/numeric/parts, explicit folds/parents, sparse targets, complete search/count, stale guards, actual SDK shared rows and retained State/Prop/arrow/font, compact demo heights and negative controls');
 console.log(JSON.stringify(propertyEvidence));
