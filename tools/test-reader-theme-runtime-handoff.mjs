@@ -19,7 +19,7 @@ function fixture(){
   preferences:{async getPreferences(){return{get:async()=>disk.cache,put:async(_key,value)=>{events.push(['put',JSON.parse(value).activeTheme]);disk.cache=value;},
    flush:async()=>{disk.raw=disk.cache;if(disk.failFlush){disk.failFlush=false;throw Error('flush ACK lost');}}};}}});
  const authority=runtimeOwnerIdentityProbe(()=>current);
- const Owner=productionMotionMethods(file('app/ReaderRuntimeOwner.ts'),['getAppearanceStore','close','closeRuntime','waitForPredecessorClose'],
+ const Owner=productionMotionMethods(file('app/ReaderRuntimeOwner.ts'),['getAppearanceStore','close','closeDownloadsAndRuntime','closeRuntime','waitForPredecessorClose'],
   {ReaderRuntimeOwner:authority,ReaderAppearanceStore,ReaderAppearancePreferences:Preferences,LOG_DOMAIN:0,
    MangaChapterPreparationCoordinator:{forRuntime:()=>({close:async()=>{}})},
    ReadingBodyImageHost:{instance:{setMangaMetadataInspector(){},releaseAllDisplayFiles(){events.push(['release']);}}},hilog:{warn(){}}});

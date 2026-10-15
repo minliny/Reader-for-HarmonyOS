@@ -58,7 +58,7 @@ assert.match(cache, /text-identity\.json/,
   'partial text writes require ownership distinct from offline completion');
 assert.match(cache, /manga-identity\.json[\s\S]*manifest-script-bgra-v2\.json/,
   'clear must recognize the actual upstream manga storage formats');
-assert.match(owner, /this\.state = 'closing';\s*ReadingBodyImageHost\.instance\.setMangaMetadataInspector\(undefined\);\s*this\.readingImageDiskCache\.close\(\)/);
+assert.match(owner, /this\.state = 'closing';\s*ReadingBodyImageHost\.instance\.setMangaMetadataInspector\(undefined\);\s*this\.closeTask = this\.closeDownloadsAndRuntime\(\)/);
 assert.doesNotMatch(cache, /bodyBase64|PixelMap/,
   'persistent offline image storage must contain bounded bytes, not protocol Base64 or native handles');
 
@@ -73,6 +73,47 @@ function deferred() {
   let resolve, reject;
   const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
   return { promise, resolve, reject };
+}
+// The actual close helper drains dispatched download and storage ownership
+// before shutting disk admission, then always closes Core/display resources.
+function closeFixture() {
+  const events=[],download=deferred(),mutation=deferred();
+  const authority={instance:undefined};
+  const Runtime=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),
+    ['close','closeDownloadsAndRuntime','closeRuntime'],{
+      ReaderRuntimeOwner:authority,
+      ReadingBodyImageHost:{instance:{setMangaMetadataInspector(value){events.push(['inspector',value]);},releaseAllDisplayFiles(){events.push(['display-release']);}}},
+      MangaChapterPreparationCoordinator:{forRuntime:()=>({close:async()=>{events.push(['chapter-close']);}})},
+      hilog:{warn(){}},LOG_DOMAIN:0,errorMessageOf:error=>error.message,
+    });
+  const runtime=new Runtime();authority.instance=runtime;
+  Object.assign(runtime,{state:'ready',predecessorClose:Promise.resolve(),sourceSupplyTask:Promise.resolve(),importFinalizeTask:Promise.resolve(),
+    mangaImageTail:Promise.resolve(),flushTail:Promise.resolve(),preparationWakeTimer:-1,
+    downloadCoordinator:{close:()=>{events.push(['download-close']);return download.promise;}},
+    downloadStorageGateway:{waitForActiveMutation:()=>{events.push(['storage-drain']);return mutation.promise;}},
+    readingImageDiskCache:{close(){events.push(['disk-close']);}},ttsHost:{close:async()=>{events.push(['tts-close']);}},
+    host:{setResponseAssetBridge(value){events.push(['bridge',value]);}},
+    runtime:{async request(method){assert.equal(method,'runtime.storage.flush');events.push(['core-flush']);},close(){events.push(['core-close']);}}});
+  return{runtime,authority,events,download,mutation};
+}
+for(const failure of [undefined,'download','storage']) {
+  const f=closeFixture(),error=Error(`${failure} close failed`);
+  const closing=f.runtime.close(),other=f.runtime.close();
+  const observed=failure===undefined?Promise.all([closing,other]):
+    Promise.all([assert.rejects(closing,value=>value===error),assert.rejects(other,value=>value===error)]);
+  assert.equal(f.runtime.state,'closing','retire admission synchronously');
+  assert.deepEqual(f.events[0],['inspector',undefined]);
+  await tick();assert.ok(!f.events.some(event=>event[0]==='disk-close'),'live download owns its finite handoff');
+  if(failure==='download')f.download.reject(error);else f.download.resolve();
+  await tick();assert.ok(!f.events.some(event=>event[0]==='disk-close'),'live cleanup owns its physical file handoff');
+  if(failure==='storage')f.mutation.reject(error);else f.mutation.resolve();
+  await observed;
+  assert.equal(f.events.filter(event=>event[0]==='disk-close').length,1);
+  assert.equal(f.events.filter(event=>event[0]==='core-close').length,1,'concurrent close calls share one actual cleanup');
+  assert.equal(f.events.filter(event=>event[0]==='display-release').length,1);
+  assert.ok(f.events.findIndex(event=>event[0]==='disk-close')<f.events.findIndex(event=>event[0]==='core-flush'));
+  assert.ok(f.events.findIndex(event=>event[0]==='core-close')<f.events.findIndex(event=>event[0]==='display-release'));
+  assert.equal(f.runtime.state,'closed');assert.equal(f.authority.instance,undefined);
 }
 function runtimeFixture(cachedBytes) {
   const events = [], failures = [], storage = deferred();
@@ -105,9 +146,9 @@ function runtimeFixture(cachedBytes) {
     captureValidity(sourceId, bookId, current) {
       assert.deepEqual([sourceId, bookId], [identity.sourceId, identity.bookId]); return current;
     },
-    async loadResource(actual, current) { assert.equal(actual, identity); assertCurrent(current); events.push('disk'); return cachedBytes; },
+    async loadResource(actual, current) { assert.deepEqual(actual, identity); assertCurrent(current); events.push('disk'); return cachedBytes; },
     async storeResource(actual, bytes, current) {
-      assert.equal(actual, identity); assert.equal(bytes, networkBytes); assertCurrent(current);
+      assert.deepEqual(actual, identity); assert.equal(bytes, networkBytes); assertCurrent(current);
       events.push('store-start'); await storage.promise; events.push('store-end');
     },
     async removeResource() { assert.fail('these valid/missing fixtures must not remove cached bytes'); },

@@ -86,9 +86,13 @@ readerDirectoryClearViewportAnchors();
   const view = { viewId: 'quick-view', navigationRevision: 'rev', visibleTotal: 50000 };
   const list = Object.assign(new List(), { mounted: true, generation: 5, selectionGeneration: 0,
     bookId: 'unmount', view, pendingPages: [], firstVisibleIndex: 14000,
+    mangaLayoutByNode: new Map([['cached', {}]]), mangaGridSpans: new Map([['cached', 1]]),
+    mangaLayoutPageRefs: new Map([[0, []]]), mangaLayoutSignature: 'old-projection',
     dataSource: { currentView: () => view, loadedNode: index => index === 14000 ? node('last-visible') : undefined },
     scroller: { getItemRect: () => ({ y: -18, height: 40 }) } });
   list.aboutToDisappear();
+  assert.deepEqual([list.mangaLayoutByNode.size, list.mangaGridSpans.size, list.mangaLayoutPageRefs.size, list.mangaLayoutSignature],
+    [0, 0, 0, ''], 'unmount releases the finite prepared layout facts after preserving the viewport anchor');
   assert.deepEqual([readerDirectoryViewportAnchor('unmount').nodeId,
     readerDirectoryViewportAnchor('unmount').rowFraction], ['last-visible', 0.45],
     'unmount during inertial motion captures its final row offset before Full takes ownership');

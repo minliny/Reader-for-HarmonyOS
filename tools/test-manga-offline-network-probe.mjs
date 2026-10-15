@@ -373,6 +373,7 @@ declare const MangaChapterPreparationCoordinator: {forRuntime(owner:object):{clo
 class RuntimeSeam {
 private state:'new'|'starting'|'ready'|'closing'|'closed'='ready';
 private mangaImageTail:Promise<void>=Promise.resolve();
+private downloadStorageGateway:{waitForActiveMutation():Promise<void>}|undefined;
 private mangaDisplaySessions:Map<number,{current:()=>boolean}>=new Map();
 endMangaDisplaySession(sessionId:number):void{}
 private readingImageDiskCache:{withMangaStorageRestore<T>(restore:()=>Promise<T>):Promise<T>;
@@ -380,7 +381,7 @@ maintainMangaStorage(reason:'clear',scope?:{sourceId:string;bookId:string}):Prom
 clearMangaRebuildableCache(scope?:{sourceId:string;bookId:string}):Promise<{deletedBytes:number;deletedFiles:number}>};
 private preparationIntentEpoch=0;private runtime:ReaderCoreRuntime|undefined;private mangaOfflineProbe:MangaOfflineNetworkProbe|undefined;
 private async start():Promise<void>{}private wakeReadingPreparations():void{}
-private readingEntryPreparations():{beginRequest(method:string,params:JsonObject):boolean;finishRequest(method:string,params:JsonObject):void}{throw Error();}
+private readingEntryPreparations():{beginRequest(method:string,params:JsonObject):boolean;finishRequest(method:string,params:JsonObject):void;invalidateCachedChapters(chapters:{sourceId:string;bookId:string;chapterIndex:number}[]):void}{throw Error();}
 ${requestMethod}
 }`;
   const options={noEmit:true,skipLibCheck:true,moduleResolution:ts.ModuleResolutionKind.NodeJs,target:ts.ScriptTarget.ES2022,
@@ -561,7 +562,7 @@ try {
   const registry=new Registry();registry.mangaOfflineProbe=probe;registry.responseAssetBridge={};const router=registry.createCapabilityRouter();
   const Runtime=productionMotionMethods(url('app/ReaderRuntimeOwner.ts'),['requestDirect','loadReadingImage','loadReadingImageOwned','prefetchReadingImage',
    'prefetchReadingImageOwned','runMangaImageWork','drainMangaImageWork','mangaStorageChapter','prepareReadingImageBytes','assertReadingImageCurrent','admitReadingImage','releaseReadingImage',
-   'bindMangaReadingProbe','detachMangaReadingProbe','observeMangaReadingImageWork','captureReadingContentValidity',
+   'bindMangaReadingProbe','detachMangaReadingProbe','observeMangaReadingImageWork','captureReadingContentValidity','captureMangaImageContentValidity',
    'mangaDisplaySessions','nextMangaDisplaySession','beginMangaDisplaySession','endMangaDisplaySession',
    'tryAcquireMangaPreparedImage','mangaDisplaySessionKey','publishMangaPreparedImage','clearOfflineBookImages','closeRuntime'],{
    ReadingBodyImageHost:BodyPort,DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,
@@ -628,6 +629,26 @@ try {
   assert.equal(resources.tryAcquirePage(resourceScope,pages[0],()=>true,0,true),undefined,'preview mode owns a distinct presentation');
   resources.endDisplaySession();resources.endDisplaySession();
   assert.equal(f.owner.mangaDisplaySessions.size,0);assert.equal(body.displayFileReferences.size,0,'chapter close releases all owner and caller leases');
+  for(const method of ['book.detail','book.toc','bookshelf.add']) {
+   resources.beginDisplaySession(resourceScope,()=>true,false);
+   await resources.prefetchPage(resourceScope,pages[0],()=>true,false,'chapter');
+   const ownerLeases=[...body.displayFileReferences.values()];
+   const ioBefore=[f.http(),f.originalReads(),atomicReads,hashes,nativeSources,nativePixels,nativePackers];
+   const params={sourceId:scope.sourceId,bookId:scope.bookId};
+   f.preparations.beginRequest(method,params);
+   const during=resources.tryAcquirePage(resourceScope,pages[0],()=>true);
+   assert.ok(during && !(during instanceof Promise),`${method} preserves synchronous prepared acquisition`);
+   resources.release(during);
+   assert.deepEqual([...body.displayFileReferences.values()],ownerLeases,'metadata keeps the existing owner lease exactly once');
+   f.preparations.finishRequest(method,params);
+   const after=resources.tryAcquirePage(resourceScope,pages[0],()=>true);
+   assert.ok(after,`${method} does not expire immutable manga display after completion`);
+   resources.release(after);
+   assert.deepEqual([f.http(),f.originalReads(),atomicReads,hashes,nativeSources,nativePixels,nativePackers],ioBefore,
+     'metadata refresh cannot cause a network/read/hash/decode/allocation on prepared return');
+   resources.endDisplaySession();
+   assert.equal(body.displayFileReferences.size,0,'ending this exact session releases its final owner lease');
+  }
   resources.beginDisplaySession(resourceScope,()=>true,false);await resources.prefetchPage(resourceScope,pages[0],()=>true,false,'chapter');
   f.preparations.beginRequest('source.update',{sourceId:scope.sourceId});f.preparations.finishRequest('source.update',{sourceId:scope.sourceId});
   assert.equal(resources.tryAcquirePage(resourceScope,pages[0],()=>true),undefined,'real source/content mutation revokes prepared display aliases');

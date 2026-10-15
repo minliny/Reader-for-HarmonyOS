@@ -52,7 +52,10 @@ async function fixture(error,mutation,contentKind='manga',confirmation='confirme
  const publish=owner.applyOwnedDirectoryEntries.bind(owner);
  owner.applyOwnedDirectoryEntries=entries=>{const next=entries[0].downloadState;
   if(next!==owner.detailToc[0].downloadState)states.push([0,next]);publish(entries);};
- owner.downloadDirectoryChapter(0);await until(()=>calls.length===1);
+ // This regression owns the retained Host materialization feedback and its
+ // actual Index binding. Shipping chapter buttons now submit to the persistent
+ // SharedDownloadCoordinator, whose acceptance/navigation has its own probe.
+ void offline.downloadChapter(0,owner.offlineBinding(runtime,session));await until(()=>calls.length===1);
  assert.equal(calls[0].current(),true);assert.deepEqual(states,contentKind==='manga'?[]:[[0,'queued']]);
  if(mutation==='book')owner.remoteReadingSession={...session,identity:{sourceId:'s',bookId:'other'}};
  if(mutation==='source')owner.remoteReadingSession={...session,identity:{sourceId:'other',bookId:'b'}};
@@ -107,4 +110,4 @@ for(const [error,expected] of [
 }
 const ok=await fixture(undefined);assert.deepEqual(ok.messages,['全部 1 章下载完成']);assert.equal(ok.owner.detailToc[0].downloadState,'completed');assert.deepEqual(ok.owner.detailToc[0].bookmarks,['kept']);
 const gone=await fixture(dns,'ui-gone');assert.deepEqual(gone.messages,[]);assert.deepEqual(gone.states,[]);assert.equal(gone.owner.detailToc[0].downloadState,'completed');
-console.log('PASS actual Index→ReadingOfflineHost chapter download + production safe classifiers/Recovery/Toast: current DNS visible; source/book/closed/generation stale silent; cancellation silent; fixed storage/timeout/unknown copy excludes secrets; canonical availability/bookmarks and successor-operation fencing preserved; unavailable UI cannot reject download settlement');
+console.log('PASS retained ReadingOfflineHost chapter materialization→actual Index binding + production safe classifiers/Recovery/Toast: current DNS visible; source/book/closed/generation stale silent; cancellation silent; fixed storage/timeout/unknown copy excludes secrets; canonical availability/bookmarks and successor-operation fencing preserved; unavailable UI cannot reject download settlement');

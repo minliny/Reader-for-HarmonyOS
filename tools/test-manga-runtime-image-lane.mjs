@@ -14,7 +14,7 @@ const manifest = {chapter:{sourceId:'s',bookId:'b',chapterId:'chapter'},sourceRu
 const file = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
 const methods = ['loadReadingImage', 'loadReadingImageOwned', 'prefetchReadingImage',
   'prefetchReadingImageOwned', 'runMangaImageWork', 'drainMangaImageWork', 'mangaStorageChapter', 'prepareReadingImageBytes',
-  'assertReadingImageCurrent', 'admitReadingImage', 'releaseReadingImage', 'captureReadingContentValidity',
+  'assertReadingImageCurrent', 'admitReadingImage', 'releaseReadingImage', 'captureReadingContentValidity', 'captureMangaImageContentValidity',
   'markOfflineImageChapterComplete', 'isOfflineImageChapterComplete'];
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return {promise,resolve,reject}; };
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -95,6 +95,17 @@ function fixture() {
   gate.resolve();await f.owner.mangaImageTail;
   assert.equal(f.cached.has('b1'),true,'ordinary read progress keeps the displayed content owner');
 }
+// Catalog/detail/shelf metadata cannot revoke already admitted immutable manga
+// originals, even while the metadata request is still in flight.
+for (const method of ['book.detail','book.toc','bookshelf.add']) {
+  const f=fixture(), gate=deferred();f.stores.set('b1',gate);await f.load('b1');
+  const params={sourceId:'s',bookId:'b1'};
+  assert.equal(f.preparations.beginRequest(method,params),true);
+  gate.resolve();await f.owner.mangaImageTail;
+  assert.equal(f.cached.has('b1'),true,`${method} keeps the image owner while metadata is pending`);
+  assert.deepEqual(f.failures,[]);
+  f.preparations.finishRequest(method,params);
+}
 for (const [method,params] of [
   ['source.update',{sourceId:'s'}],
   ['chapter.content',{sourceId:'s',bookId:'b1',forceRefresh:true}],
@@ -155,6 +166,37 @@ console.log('PASS displayed manga originals survive viewport retirement and ordi
   const successor=f.load('b4');await tick();assert.equal(f.events.filter(x=>x[0]==='read').length,1);
   gate.resolve();await Promise.all([cancelled,cleared,successor]);await f.owner.mangaImageTail;
   assert.deepEqual(f.events.filter(x=>x[0]==='read').map(x=>x[1]),['b1','b4']);assert.equal(f.owner.mangaImagePending,0);
+}
+// The storage barrier is a wait, never new ownership. Capture the caller's
+// identity and cache/content generations before yielding to a cleanup.
+for (const operation of ['load','prefetch']) for (const mutation of ['clear','restore','source']) {
+  const f=fixture(), barrier=deferred();
+  f.owner.downloadStorageGateway={waitForActiveMutation:()=>barrier.promise};
+  const pending=assert.rejects(operation==='load'?f.load('b2'):f.prefetch('b2'),/cancelled/);
+  if(mutation==='clear')f.generations.set('b2',1);
+  if(mutation==='restore')f.storage.epoch++;
+  if(mutation==='source') {
+    f.preparations.beginRequest('source.update',{sourceId:'s'});
+    f.preparations.finishRequest('source.update',{sourceId:'s'});
+  }
+  await tick();assert.deepEqual(f.events,[],'blocked old work performs no cache/native/network I/O');
+  barrier.resolve();await pending;
+  assert.deepEqual(f.events,[],`${operation}/${mutation} never inherits a successor generation`);
+  f.owner.downloadStorageGateway=undefined;
+  await f.load('b2');await f.owner.mangaImageTail;
+  assert.equal(f.events.filter(event=>event[0]==='prepare').length,1,'a newly issued owner can recover');
+}
+for (const manga of [true,false]) {
+  const f=fixture(), barrier=deferred();
+  f.owner.downloadStorageGateway={waitForActiveMutation:()=>barrier.promise};
+  const identity={sourceId:'s',bookId:'b2',chapterIndex:0,contentVersion:'v',imageUrl:'image',baseUrl:'chapter',
+    ...(manga?{resourceRef:'page',mangaDecodeRevision:manifest.decodeRevision}:{})};
+  const pending=f.owner.prefetchReadingImage(identity,()=>true,'rules',true);
+  identity.bookId='mutated';identity.imageUrl='other';identity.resourceRef='other-page';
+  await tick();assert.deepEqual(f.events,[]);
+  barrier.resolve();await pending;await f.owner.mangaImageTail;
+  assert.deepEqual(f.events.filter(event=>event[0]==='read').map(event=>event[1]),['b2'],
+    'both manga and ordinary image identities are copied before the first await');
 }
 // A queued caller cannot mutate the identity after generation capture and make
 // the job read a different book under the original book's validity guard.

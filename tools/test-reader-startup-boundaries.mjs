@@ -5,12 +5,13 @@ const tick=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 function fixture(capabilities=[]){
  const clock=[],events=[],requests=[],native=deferred(),cleanup=deferred();let createError=false, opens=0;
- let migrationStarted=false, migrationResult=Promise.resolve(false);
+ let migrationStarted=false, migrationResult=Promise.resolve(false), downloadMigration=Promise.resolve(), sourceTask=Promise.resolve();
+ const background=[];
  let inspector, metadataCalls=0, cacheClosed=false;
  const runtime={assetBridge:()=>({}),setCapabilityRouter(){},close(){events.push('native.close');},
   async request(method,params){events.push(method);requests.push({method,params:structuredClone(params)});return{data:{capabilities,buildIdentity:{},recovered:0}};}};
  const Owner=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),
- ['start','startAfterPredecessor','requestDirect','startRuntime','scheduleImportFinalizeCleanup','supportsCoreCapability','close','detachMangaReadingProbe'], {ReadingBodyImageHost:{instance:{setMangaMetadataInspector:callback=>{inspector=callback;}}},
+ ['start','startAfterPredecessor','requestDirect','startRuntime','scheduleImportFinalizeCleanup','supportsCoreCapability','close','closeDownloadsAndRuntime','detachMangaReadingProbe'], {ReadingBodyImageHost:{instance:{setMangaMetadataInspector:callback=>{inspector=callback;}}},
   MangaImageMetadataHost:{instance:{inspect:async(bytes,digest,request,current)=>{metadataCalls++;assert.equal(current(),true);await request({inputSha256:digest});return{status:'absent',orientation:null,sha256:digest,bytes:bytes.length};}}},ReaderStartupTrace,LOG_DOMAIN:0,hilog:{info(){},error(){},warn(){}},errorMessageOf:e=>e.message,
   DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,
   setTimeout:fn=>{clock.push(fn);return clock.length;},createReaderCoreRuntimeAsync:async(_config,current)=>{
@@ -25,8 +26,13 @@ function fixture(capabilities=[]){
    async markLegacySnapshotMigrated(){events.push('migration-marker-write');}},
   requireCoreBuildIdentity:value=>value,requireSourceSwitchRecoveryCount:value=>value,
   async recoverPendingLocalImportFinalizes(){events.push('cleanup');await cleanup.promise;},
-  async installBundledBookSourceCollection(){return{collectionRecords:0,uniqueSourceIds:0,processed:0,installedOrUpgraded:0,failed:0,interrupted:false};}});
- return{owner,runtime,native,cleanup,events,requests,clock,fail(){createError=true;},recover(){createError=false;},opens:()=>opens,
+  getDownloadStorageGateway:()=>({restoreLegacyProtection:()=>{assert.equal(owner.state,'ready');background.push('download-migration');return downloadMigration;},
+    maintainAutomaticStorage:async()=>{assert.equal(owner.state,'ready');background.push('storage-maintenance');}}),
+  getDownloadCoordinator:()=>({restore:async()=>{background.push('download-restore');}}),
+  async installBundledBookSourceCollection(){assert.equal(this.state,'ready');assert.equal(this.runtime,runtime);background.push('source-start');
+    await sourceTask;return{collectionRecords:0,uniqueSourceIds:0,processed:0,installedOrUpgraded:0,failed:0,interrupted:false};}});
+ return{owner,runtime,native,cleanup,events,requests,clock,background,
+  downloadMigration:value=>{downloadMigration=value;},sourceTask:value=>{sourceTask=value;},fail(){createError=true;},recover(){createError=false;},opens:()=>opens,
   inspector:()=>inspector,metadataCalls:()=>metadataCalls,cacheClosed:()=>cacheClosed,
   migrationStarted:()=>migrationStarted, migration(value){migrationResult=value;}};
 }
@@ -110,3 +116,17 @@ console.log('search entry concurrent startup failure, shared retry, recovery bar
  assert.equal(f.cacheClosed(),true);
 }
 console.log('PASS production metadata lifecycle: startup injects inspector, callback uses owned Core request, public close detaches and closes image cache');
+
+{
+ const f=fixture(), downloads=deferred(), sources=deferred();
+ f.downloadMigration(downloads.promise);f.sourceTask(sources.promise);f.native.resolve();
+ await f.owner.startRuntime();
+ assert.equal(f.owner.state,'ready');assert.equal(f.owner.runtime,f.runtime);
+ assert.deepEqual(f.background,['download-migration','source-start']);
+ let sourceFinished=false;f.owner.sourceSupplyTask.then(()=>{sourceFinished=true;});await tick();
+ assert.equal(sourceFinished,false,'the real pending source task does not hold startup readiness');
+ await f.owner.requestDirect('source.list');assert.ok(f.events.includes('source.list'),'usable reader requests dispatch while both background jobs remain pending');
+ sources.resolve();await f.owner.sourceSupplyTask;assert.equal(sourceFinished,true);
+ downloads.resolve();await tick();assert.deepEqual(f.background.slice(-2),['download-restore','storage-maintenance']);
+}
+console.log('PASS actual post-ready source/download background tasks do not gate usable runtime or first-page reads');

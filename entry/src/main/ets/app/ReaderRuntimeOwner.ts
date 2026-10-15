@@ -852,15 +852,18 @@ export class ReaderRuntimeOwner {
     mangaDecodeRevision?: string,
     mangaDisplaySessionId?: number,
   ): Promise<ReadingBodyImagePayload> {
-    await this.downloadStorageGateway?.waitForActiveMutation();
     this.assertReadingImageCurrent(isCurrent);
     if (resourceRef === undefined && imageUrl.trim().toLowerCase().startsWith('data:image/')) {
+      await this.downloadStorageGateway?.waitForActiveMutation();
+      this.assertReadingImageCurrent(isCurrent);
       const embedded = await (this.mangaOfflineProbe?.readingSamplingEnabled() === true ?
         this.observeMangaReadingImageWork(sourceId, bookId, false, () => ReadingBodyImageHost.instance.loadDataUri(imageUrl, isCurrent)) :
         ReadingBodyImageHost.instance.loadDataUri(imageUrl, isCurrent));
       return this.admitReadingImage(embedded, isCurrent);
     }
     if (sourceId === 'local' && (imageUrl.startsWith('reader-local-epub://') || imageUrl.startsWith('reader-local-mobi://'))) {
+      await this.downloadStorageGateway?.waitForActiveMutation();
+      this.assertReadingImageCurrent(isCurrent);
       const localImage = await (this.mangaOfflineProbe?.readingSamplingEnabled() === true ?
         this.observeMangaReadingImageWork(sourceId, bookId, false, () => this.localEpubResourceHost.load(imageUrl, isCurrent)) :
         this.localEpubResourceHost.load(imageUrl, isCurrent));
@@ -882,6 +885,19 @@ export class ReaderRuntimeOwner {
       identity.baseUrl = baseUrl;
       identity.chapterId = baseUrl;
     }
+    const cacheCurrent = this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId, isCurrent);
+    // Once displayed, an original belongs to its exact content/storage owner,
+    // rather than the temporary viewport that requested it. Capture before
+    // queueing so rule changes, book clear, restore and teardown still revoke
+    // its pending write; ordinary scrolling must not discard fetched bytes.
+    const persistCurrent = resourceRef === undefined ? cacheCurrent :
+      this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId,
+        this.captureMangaImageContentValidity(identity.sourceId, identity.bookId));
+    // Capture both owners before the storage wait so clear/restore cannot
+    // authorize an already queued request under a successor generation.
+    await this.downloadStorageGateway?.waitForActiveMutation();
+    this.assertReadingImageCurrent(cacheCurrent);
+    this.assertReadingImageCurrent(persistCurrent);
     if (mangaDisplaySessionId !== undefined && resourceRef !== undefined && baseUrl !== undefined &&
       expectedSourceVersion !== undefined && mangaDecodeRevision !== undefined) {
       const prepared = this.tryAcquireMangaPreparedImage(mangaDisplaySessionId,
@@ -890,14 +906,6 @@ export class ReaderRuntimeOwner {
         isCurrent ?? ((): boolean => true));
       if (prepared !== undefined) return prepared;
     }
-    const cacheCurrent = this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId, isCurrent);
-    // Once displayed, an original belongs to its exact content/storage owner,
-    // rather than the temporary viewport that requested it. Capture before
-    // queueing so rule changes, book clear, restore and teardown still revoke
-    // its pending write; ordinary scrolling must not discard fetched bytes.
-    const persistCurrent = resourceRef === undefined ? cacheCurrent :
-      this.readingImageDiskCache.captureValidity(identity.sourceId, identity.bookId,
-        this.captureReadingContentValidity(identity.sourceId, identity.bookId));
     if (resourceRef !== undefined || mangaPosition !== undefined) {
       if (this.mangaOfflineProbe?.readingSamplingEnabled() === true) return this.runMangaImageWork(cacheCurrent,
         (work: MangaImageWork): Promise<ReadingBodyImagePayload> => this.observeMangaReadingImageWork(sourceId, bookId, resourceRef !== undefined,
@@ -978,12 +986,16 @@ export class ReaderRuntimeOwner {
     allowNetwork: boolean = true,
     priority: MangaImagePriority = 'download',
   ): Promise<void> {
-    await this.downloadStorageGateway?.waitForActiveMutation();
     this.assertReadingImageCurrent(isCurrent);
-    const ownedIdentity: ReadingImageCacheIdentity = identity.resourceRef === undefined ? identity :
+    const ownedIdentity: ReadingImageCacheIdentity = identity.resourceRef === undefined ? { ...identity } :
       { ...identity, chapterId: identity.chapterId ?? identity.baseUrl,
         priority: priority === 'foreground' ? 'foreground' : 'background' };
-    const cacheCurrent = this.readingImageDiskCache.captureValidity(ownedIdentity.sourceId, ownedIdentity.bookId, isCurrent);
+    const contentCurrent = ownedIdentity.resourceRef === undefined ? undefined :
+      this.captureMangaImageContentValidity(ownedIdentity.sourceId, ownedIdentity.bookId);
+    const cacheCurrent = this.readingImageDiskCache.captureValidity(ownedIdentity.sourceId, ownedIdentity.bookId,
+      (): boolean => isCurrent?.() !== false && contentCurrent?.() !== false);
+    await this.downloadStorageGateway?.waitForActiveMutation();
+    this.assertReadingImageCurrent(cacheCurrent);
     if (ownedIdentity.resourceRef !== undefined) {
       // Capture the cache generation before waiting: a queued request cannot
       // become current again after a book clear or owner teardown.
@@ -1047,7 +1059,7 @@ export class ReaderRuntimeOwner {
       .some(value => typeof value !== 'string' || value.trim().length === 0) ||
       (scope.decodeRevision !== 'identity-v1' && scope.decodeRevision !== 'bytes-v1') || typeof scope.preview !== 'boolean')
       throw new Error('MANGA_RESOURCE_IDENTITY_INVALID');
-    const contentCurrent = this.captureReadingContentValidity(scope.sourceId, scope.bookId);
+    const contentCurrent = this.captureMangaImageContentValidity(scope.sourceId, scope.bookId);
     const storageCurrent = this.readingImageDiskCache.captureValidity(scope.sourceId, scope.bookId, contentCurrent);
     const current = (): boolean => storageCurrent() && isCurrent();
     this.assertReadingImageCurrent(current);

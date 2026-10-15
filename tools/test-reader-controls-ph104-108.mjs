@@ -249,10 +249,14 @@ if (!baseline) await check('PH105: real Gateway/Host feedback preserves verified
     const { idx, render, p, click } = makeIndex(f, { remote: true });
     idx.detailToc = [{ index: 0, title: 'Chapter', navigable: true, downloadState: model.state }];
     idx.getUIContext = () => ({ getPromptAction: () => ({ showToast: ({ message }) => messages.push(message) }) });
-    idx.downloadDirectoryBook();
-    assert.ok(messages[0]?.includes('开始下载'), 'immediate accepted feedback precedes filesystem/RPC admission');
+    // Keep exercising durable legacy-operation recovery through its actual
+    // Host and Index binding. Directory buttons now admit persistent shared
+    // jobs, with acceptance/navigation tested separately.
+    void f.offline.downloadBook(idx.offlineBinding(f.runtime,idx.remoteReadingSession));
     await until(() => model.queued === 1);
     assert.equal(f.offline.busy(), true);
+    assert.equal(idx.offlineOperationActive,true,'the actual binding publishes pending operation state before the materialization ACK');
+    assert.equal(messages.length,0,'a retained Host operation never invents completion or a shared-job acceptance receipt');
     if (mode === 'stale') idx.remoteReadingSession = undefined;
     if (mode === 'failure') pending.reject(Error(privateFailure));
     else pending.resolve();
@@ -279,8 +283,8 @@ if (!baseline) await check('PH105: real Gateway/Host feedback preserves verified
       assert.equal(idx.directoryRecovery().offline.canRetry,true);
       const action=p.walk(leaf).find(actor=>actor instanceof p.deps.ReaderRecoveryAction&&actor.label==='核对离线结果');
       assert.ok(action);assert.equal(action.generation,generation);assert.equal(action.actionEnabled,true);
-      assert.equal(messages.length,2,'the actual Index shows one safe unknown-ACK feedback after its immediate acceptance');
-      assert.match(messages[1],/结果尚未确认/);assert.doesNotMatch(messages.join('\n'),/PRIVATE_TEST|fixture\.invalid|Cookie=|offline unavailable/);
+      assert.equal(messages.length,1,'the actual retained Index binding shows one safe unknown-ACK feedback');
+      assert.match(messages[0],/结果尚未确认/);assert.doesNotMatch(messages.join('\n'),/PRIVATE_TEST|fixture\.invalid|Cookie=|offline unavailable/);
       assert.equal(idx.detailToc[0].downloadState,'cached');assert.equal(model.bytes,64,'unknown queue ACK preserves the previously cached body');
       const reads=f.calls.filter(call=>call.method==='cache.book.status').length;
       const oldNative=[...action.nodes.values()].find(node=>typeof node.onClick==='function').onClick;
@@ -296,7 +300,7 @@ if (!baseline) await check('PH105: real Gateway/Host feedback preserves verified
       f.install({...f.runtime});oldNative();await ownerSettled(f);assert.equal(f.calls.length,before,'replacement Runtime cannot lend authority to the old actor');
     }
     if (mode === 'stale') {
-      assert.equal(messages.length, 1, 'retired UI gets no delayed toast');
+      assert.equal(messages.length, 0, 'retired UI gets no delayed toast');
       assert.equal(f.offline.snapshot().projection.receipt.confirmation, 'confirmed', 'accepted queue ACK settles in the original domain owner');
       assert.equal(f.calls.filter(call => call.method === 'cache.chapter.materialization.report').length, 1, 'granted lease is terminally reported after UI retirement');
     }

@@ -123,8 +123,20 @@ function retainedContext(candidate = listSource) {
   assert.deepEqual(built.owner.observers, actors, 'context revision preserves the actual native Text actor');
 }
 retainedContext();
-const capturedContext = listSource.replace("    const revision = this.mangaPresentationRevision;\n    if (revision < 0 || this.dataSource.currentView()?.viewId !== this.view.viewId) return '';", '');
-assert.notEqual(capturedContext, listSource); assert.throws(() => retainedContext(capturedContext), /observes current group and ancestor facts/);
+// Mutate the actual current helper rather than an obsolete guard spelling.
+// The old LazyForEach item + plain resident parent map have no published
+// revision dependency, reproducing the stale retained native label.
+const contextStart = listSource.indexOf('  private mangaQuickContextTitle(');
+const contextEnd = listSource.indexOf('\n  @Builder\n  private mangaQuickContextRow(', contextStart);
+assert.ok(contextStart >= 0 && contextEnd > contextStart, 'negative control locates the actual current context producer');
+const capturedContext = listSource.slice(0, contextStart) + `  private mangaQuickContextTitle(item: ReaderDirectoryNavigationItem): string {
+    if (item.node === undefined) return '';
+    const parent = this.dataSource.loadedItemById(item.node.parentId ?? '')?.node;
+    return parent ? \`\${parent.title} / \${item.node.title}\` : item.node.title;
+  }
+` + listSource.slice(contextEnd);
+assert.notEqual(capturedContext, listSource);
+assert.throws(() => retainedContext(capturedContext), /observes current group and ancestor facts/, 'captured rows cannot masquerade as reactive native context');
 await openingMatrix();
 for (const [name, surface, list, reason] of [
   ['nearby-count regression', surfaceSource, listSource.replace('totalCount(): number { return this.view?.visibleTotal ?? 0; }', 'totalCount(): number { return Math.min(12, this.view?.visibleTotal ?? 0); }'), /full Core count|far Quick browsing/],

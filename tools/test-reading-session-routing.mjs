@@ -11,7 +11,7 @@ const sessionGateway = read('entry/src/main/ets/features/reading/ReadingSessionF
 const localGateway = read('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 const remoteGateway = read('entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 
-assert.match(index, /private onSearchResultSelected\(book: SearchBook, variants: SearchBook\[\] = \[\]\): void \{/,
+assert.match(index, /private onSearchResultSelected\(book: SearchBook, variants: SearchBook\[\] = \[\], displayCoverUrl\?: string\): void \{/,
   'a live remote search result enters the remote open transaction with same-book variants ordered behind it');
 assert.match(entry, /\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent: current \}\)/,
   'remote detail and TOC must retain the route-generation cancellation guard');

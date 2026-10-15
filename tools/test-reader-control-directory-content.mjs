@@ -135,8 +135,9 @@ assert.match(content, /private onEntriesChanged\(\): void \{[\s\S]*?this\.pendin
   'entries changes are queued without copying a large TOC during the render callback');
 assert.match(content, /private flushDeferredMutations\(\): void \{[\s\S]*?this\.admittedEntries = snapshotReaderDirectoryData\(queuedEntries as LocalReadingTocEntry\[\]\);/,
   'an independent business snapshot is admitted only after the motion endpoint');
-assert.match(content, /const sourceEntries = this\.admittedEntries;/,
-  'projection must consume the admitted snapshot, not the transient hidden empty sentinel');
+assert.match(content, /const sourceEntries = this\.mangaSearch \? mangaDirectoryContextEntries\(this\.admittedEntries, mangaDirectoryPresentation\(this\.admittedEntries\)\) : this\.admittedEntries;/,
+  'only manga enriches the admitted immutable snapshot; text stays raw and hidden empty sentinel is never used');
+assert.doesNotMatch(content, /const sourceEntries =[^;]*this\.entries(?:\s|[,;)])/,'projection cannot regain the transient parent entries sentinel');
 assert.doesNotMatch(content, /projectionMountPrimary|this\.projectionMountPrimary/,
   'the directory List remains one persistent native actor');
 assert.match(content, /@Prop @Watch\('onListSessionKeyChanged'\) listSessionKey: string = '';/,

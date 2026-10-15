@@ -108,7 +108,9 @@ async function runIndex(f) {
  const messages=[],failures=[];p.remoteReadingSession=f.session;
  p.getUIContext=()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})});
  const originalFailure=p.offlineBinding.bind(p);p.offlineBinding=(...args)=>{const b=originalFailure(...args),failed=b.failed;b.failed=e=>{failures.push(e);failed?.(e);};return b;};
- p.downloadDirectoryBook();
+ // Retained Host recovery/completion uses the actual Index feedback binding;
+ // current directory buttons use the separate persistent download owner.
+ void p.getReadingOfflineHost(f.owner).downloadBook(p.offlineBinding(f.owner,f.session));
  const deadline=performance.now()+10000;
  while((p.offlineOperation===undefined||p.getReadingOfflineHost(f.owner).busy())&&performance.now()<deadline)await new Promise(resolve=>setTimeout(resolve,2));
  assert.ok(p.offlineOperation,'actual owner emitted its operation');assert.equal(p.getReadingOfflineHost(f.owner).busy(),false);assert.equal(p.offlineOperationActive,false);
@@ -228,7 +230,7 @@ try {
     host.dependencies.gateway=transport;
     const {idx:p}=actualDirectoryIndex(actual,{remote:true});
     p.getUIContext=()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})});
-    p.downloadDirectoryBook();
+    void host.downloadBook(p.offlineBinding(actual.runtime,p.remoteReadingSession));
     for(let i=0;i<100;i++){await new Promise(resolve=>setImmediate(resolve));if(p.offlineOperation!==undefined&&!host.busy())break;}
     assert.ok(p.offlineOperation,'actual Host published the captured operation');
     assert.equal(host.busy(),false,'controlled progress transport completed');

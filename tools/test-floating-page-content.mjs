@@ -6,7 +6,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerInteractiveSafeBottom, readerInteractiveSafeTop } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerFloatingBarBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
-import { mangaGridProbeDependencies, emptyMangaGridState } from './lib/manga-directory-grid-probe.mjs';
+import { mangaGridProbeDependencies, mangaGridBuilderMembers, emptyMangaGridState } from './lib/manga-directory-grid-probe.mjs';
 import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
@@ -229,7 +229,7 @@ assert.equal(directory.standardHeaderHeight, 268, 'transient zero layout cannot 
 function nativeDirectoryFixture(key, values = {}) {
   const empty = emptyMangaGridState();
   const owner = fixture(key, key === 'flat' ? ['build', 'rowBuilder', 'emptyBuilder', 'emptyContent', 'probeGeometry'] :
-    ['build', 'mangaContentStartOffset', 'mangaContentEndOffset', 'mangaGridLayoutOptions', 'mangaGridNarrow', 'mangaLoadedRuns', 'mangaFontScale', 'mangaContentWidth', 'mangaEmptyState', 'mangaColor'], {
+    ['build', ...mangaGridBuilderMembers, 'mangaColor'], {
     ...empty, mangaPresentationRevision: 0, entries: [], dataSource: { ...empty.dataSource, totalCount: () => 0 }, rowHeight: 40, itemSizes: {},
     contentStartInset: values.mangaDisplay ? 0 : 273, contentEndInset: values.mangaDisplay ? 0 : 39, listPaddingX: 10, listPaddingRight: -1,
     listPaddingY: 0, listPaddingTop: -1, listPaddingBottom: -1,

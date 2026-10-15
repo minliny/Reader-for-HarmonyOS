@@ -12,6 +12,10 @@ import { DirectoryRuleDraft } from './lib/reader-reading-field-probe.mjs';
 import {nativeDefaultHistoricalMethod,proveNativeDefaultLayout} from './lib/native-default-layout-successor.mjs';
 import {createDefaultReaderWindowMetrics,readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeBottom} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {snapshotReaderDirectoryData,sameReaderDirectoryData} from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
+import {ReaderDirectoryNavigationGateway, readerDirectoryScopeKey, openReaderDirectoryNavigation,
+ readerDirectoryNoteMissingNavigation, readerDirectoryToggleCollapsed} from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
+import {readerDirectoryObserveScrollIntent, readerDirectoryViewportAnchor, readerDirectorySignalScrollIntent} from '../entry/src/main/ets/features/reading/ReaderDirectoryViewport.ts';
+import {ReaderDirectoryTrace} from '../entry/src/main/ets/features/reading/ReaderDirectoryTrace.ts';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/design/native-default-control-contracts.json',import.meta.url)));
 const producers=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json',import.meta.url)));
@@ -126,8 +130,16 @@ for(const row of contracts.values()){
  ]){const bad=source.replace(before,after);assert.notEqual(bad,source);assert.throws(()=>proveNativeDefaultLayout(bad),/actual native family|actual shared header|one actual retained|same original/);}
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
  const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=390;metrics.windowRect.height=844;metrics.systemInsets.bottom=34;
+ const navigationRequests=[];
+ const runtime={supportsCoreCapability:()=>true,request:async(command,params)=>{
+  navigationRequests.push({command,params});
+  return {data:{status:'unavailable',reason:'no_navigation'}};
+ }};
  Object.assign(sdk.deps,{...fontFamilies,ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeBottom,
-  TOK_CONTENT_MAX_W_TABLET:720,ReaderRuntimeOwner:{current:()=>({supportsCoreCapability:()=>true})},
+  TOK_CONTENT_MAX_W_TABLET:720,ReaderRuntimeOwner:{current:()=>runtime},
+  ReaderDirectoryNavigationGateway,readerDirectoryScopeKey,openReaderDirectoryNavigation,
+  readerDirectoryNoteMissingNavigation,readerDirectoryToggleCollapsed,ReaderDirectoryTrace,
+  readerDirectoryObserveScrollIntent,readerDirectoryViewportAnchor,
   EMPTY_READING_DIRECTORY_RECOVERY:{bookmarks:{visible:false},offline:{visible:false}},Edge:{Top:'top',Bottom:'bottom'}});
  class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});this.children=new Map();this.nodes=new Map();}}
  for(const[name,file]of Object.entries({ReaderDirectoryToolbar:'reading/ReaderDirectoryToolbar.ets',ReaderDirectoryRules:'reading/ReaderDirectoryRules.ets',ReaderDirectoryRecoverySurface:'reading/ReaderDirectoryRecoverySurface.ets',ReaderDirectoryNavigationList:'reading/ReaderDirectoryNavigationList.ets'})){
@@ -163,7 +175,15 @@ for(const row of contracts.values()){
  assert.equal(list.contentStartOffset,162,'real public header measurement reaches the retained native List');
  assert.equal(nodes().filter(n=>n.type==='List').length,count,'header measurement preserves the original physical List actor');
  const navigation=sdk.walk(page).find(owner=>owner!==page&&owner.fallbackBuilder&&owner.chapterEntries);assert.ok(navigation);
+ await Promise.resolve();await Promise.resolve();await Promise.resolve();sdk.properties.flush();
+ assert.equal(navigationRequests.length,1,'the actual mounted navigation lifecycle admits one scoped request');
+ assert.equal(navigationRequests[0].command,'reading.directory.view.open.v2');
+ assert.equal(navigationRequests[0].params.sourceId,'local');assert.equal(navigationRequests[0].params.bookId,'native-layout-book');
+ assert.equal(navigation.settledFlat,true,'a missing tree retains the already mounted readable flat List');
  navigation.onSelectTarget(17,0);assert.deepEqual(selected,[17]);page.bookId='successor-book';navigation.onSelectTarget(17,0);assert.deepEqual(selected,[17],'retained old directory actor cannot target a successor book');
+ navigation.aboutToDisappear();const generation=navigation.generation;
+ readerDirectorySignalScrollIntent(readerDirectoryScopeKey('local','native-layout-book'));
+ assert.equal(navigation.generation,generation,'the real scroll-intent subscription is released on disappearance');
  function sdkRoot(){return process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';}
 }
 // Execute the real directory Builder→shared native level callback as well as

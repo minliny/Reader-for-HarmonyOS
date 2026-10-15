@@ -32,7 +32,13 @@ assert.match(page, /admit\(book: SearchBook, inBookshelf: boolean\): void \{\s*t
   'each same-book variant keeps its own full SearchBook row');
 assert.match(page, /Text\(this\.group\.book\.sourceName\.length > 0 \? this\.group\.book\.sourceName : this\.group\.book\.sourceId\)/,
   'every result card displays its source name');
-assert.match(page, /\.onClick\(\(\): void => this\.onSelectResult\(this\.group\.book, this\.group\.variants\)\)/,
+assert.match(page, /\.onClick\(\(\): void => this\.onSelectResult\(this\.group\.book, this\.group\.variants, this\.group\.coverUrl\)\)/,
   'the clicked variant identity flows to detail admission');
 
 console.log('search publication identity contract: PASS');
+
+// The cover is a separate display argument, never a replacement identity or
+// merged source object. Full retained-object SDK coverage owns the click path.
+assert.match(page, /onSelectResult: \(book: SearchBook, variants: SearchBook\[\], displayCoverUrl\?: string\)/);
+assert.doesNotMatch(page, /onSelectResult\(\{[^\n]*(?:coverUrl|sourceId|bookId)/,
+  'display fallback cannot construct a different canonical clicked variant');

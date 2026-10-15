@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertSourceLoginDefault } from './source-login-default-policy.mjs';
@@ -108,9 +109,40 @@ assert.match(owner, new RegExp(`const BUNDLED_RAW_FILE_SHA256 = '${expectedDiges
   'runtime must pin the exact bundled document bytes');
 assert.match(owner, /fileDigest !== BUNDLED_RAW_FILE_SHA256/,
   'runtime must verify the bundled document before importing');
-assert.match(owner,
-  /this\.runtime = runtime;[\s\S]{0,300}this\.state = 'ready';[\s\S]{0,500}installBundledBookSourceCollection/,
-  'large collection seeding must start only after Reader becomes usable');
+// Check semantic statement order instead of a character-distance window:
+// adding another non-awaited post-ready owner must not invalidate this proof.
+const require = createRequire(import.meta.url);
+const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const ts = require(`${sdk}/node_modules/typescript`);
+function sourceStartsAfterReady(text) {
+  const ast = ts.createSourceFile('ReaderRuntimeOwner.ts', text, ts.ScriptTarget.Latest, true);
+  assert.equal(ast.parseDiagnostics.length, 0);
+  const type = ast.statements.find(node => node.name?.text === 'ReaderRuntimeOwner');
+  const start = type.members.find(node => node.name?.getText(ast) === 'startRuntime');
+  const assignments = [];
+  const sourceCalls = [], waits = [];
+  const visit = node => {
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken)
+      assignments.push({ target: node.left.getText(ast), value: node.right.getText(ast), position: node.pos });
+    if (ts.isCallExpression(node) && node.expression.getText(ast) === 'this.installBundledBookSourceCollection')
+      sourceCalls.push(node);
+    if (ts.isAwaitExpression(node) && /installBundledBookSourceCollection|sourceSupplyTask/.test(node.expression.getText(ast))) waits.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(start.body);
+  const runtime = assignments.find(node => node.target === 'this.runtime' && node.value === 'runtime');
+  const ready = assignments.find(node => node.target === 'this.state' && node.value === "'ready'");
+  assert.ok(runtime && ready && sourceCalls.length === 1);
+  assert.ok(runtime.position < ready.position && ready.position < sourceCalls[0].pos,
+    'bundled-source seeding follows the exact runtime and ready publication');
+  assert.equal(waits.length, 0, 'source seeding must never become an awaited first-page prerequisite');
+}
+sourceStartsAfterReady(owner);
+assert.throws(() => sourceStartsAfterReady(owner.replace("      this.state = 'ready';", '')),
+  /false|ready/, 'a runtime without ready publication is rejected');
+assert.throws(() => sourceStartsAfterReady(owner.replace('this.sourceSupplyTask = this.installBundledBookSourceCollection(runtime)',
+  'this.sourceSupplyTask = await this.installBundledBookSourceCollection(runtime)')),
+  /awaited first-page prerequisite/, 'an accidentally awaited source task is rejected');
 assert.match(owner, /failed without blocking Reader/,
   'collection failure must be isolated from application startup');
 assert.match(owner, /new Map<string, JsonObject>\(\)[\s\S]*admittedBySourceId\.set/,

@@ -12,7 +12,7 @@ const source=readFileSync(new URL('entry/src/main/ets/app/ReaderRuntimeOwner.ts'
 const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??
   '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const methods=new Set(['install','current','isCurrent','waitForPredecessorClose','start','startAfterPredecessor','close','closeRuntime']);
+const methods=new Set(['install','current','isCurrent','waitForPredecessorClose','start','startAfterPredecessor','close','closeDownloadsAndRuntime','closeRuntime']);
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<12;i++)await new Promise(done=>setImmediate(done));};
 function loadRuntime(productionSource=source) {
@@ -49,9 +49,12 @@ function readyNative(owner,events,flush) {
     close(){events.push('native.close:first');}};
   owner.host.setResponseAssetBridge=()=>{};
 }
-async function threeGenerations(productionSource=source) {
+async function threeGenerations(productionSource=source,ownedWork='source') {
   const{Runtime,events}=loadRuntime(productionSource),gate=deferred(),first=Runtime.install(context('first'));
-  readyNative(first,events);first.sourceSupplyTask=gate.promise;
+  readyNative(first,events);
+  if(ownedWork==='source')first.sourceSupplyTask=gate.promise;
+  if(ownedWork==='download')first.downloadCoordinator={close:()=>gate.promise};
+  if(ownedWork==='storage')first.downloadStorageGateway={waitForActiveMutation:()=>gate.promise};
   const closingFirst=first.close();const firstObserved=closingFirst.catch(()=>{});
   const second=Runtime.install(context('second'));
   // In particular, no second.start(): this is the omission in the old chain.
@@ -69,7 +72,7 @@ async function threeGenerations(productionSource=source) {
     assert.equal(Runtime.current(),third,'late first/second close cannot clear the third identity');
   }finally{gate.resolve();await Promise.all([firstObserved,secondObserved,waited.catch(()=>{}),started]);}
 }
-await threeGenerations();
+for(const ownedWork of ['source','download','storage'])await threeGenerations(source,ownedWork);
 {
   const{Runtime,events}=loadRuntime(),gate=deferred(),first=Runtime.install(context('first'));
   readyNative(first,events);first.sourceSupplyTask=gate.promise;const one=first.close();
@@ -82,9 +85,16 @@ await threeGenerations();
     'closing while predecessor is outstanding never admits native startup after the barrier');
   assert.throws(()=>Runtime.current(),/must be installed/);
 }
-async function rejectedPredecessor(productionSource=source) {
+async function rejectedPredecessor(productionSource=source,failureKind='native') {
   const{Runtime,events}=loadRuntime(productionSource),gate=deferred(),failure=Error('real predecessor Core flush rejected');
-  const first=Runtime.install(context('first'));readyNative(first,events,async()=>{throw failure;});first.sourceSupplyTask=gate.promise;
+  const first=Runtime.install(context('first'));
+  readyNative(first,events,failureKind==='native'?async()=>{throw failure;}:undefined);
+  if(failureKind==='native')first.sourceSupplyTask=gate.promise;
+  else {
+    const failed=gate.promise.then(()=>{throw failure;});
+    if(failureKind==='download')first.downloadCoordinator={close:()=>failed};
+    else first.downloadStorageGateway={waitForActiveMutation:()=>failed};
+  }
   const close=first.close(),closed=assert.rejects(close,error=>error===failure);
   const successor=Runtime.install(context('successor')),wait=successor.waitForPredecessorClose(),start=successor.start();
   const waited=assert.rejects(wait,error=>error===failure,'public close barrier must preserve the actual rejection'),
@@ -96,7 +106,7 @@ async function rejectedPredecessor(productionSource=source) {
   assert.equal(events.some(value=>value.startsWith('native.open:')),false,'close rejection never silently admits successor IO');
   await assert.rejects(successor.close(),error=>error===failure);assert.equal(successor.state,'closed');
 }
-await rejectedPredecessor();
+for(const failureKind of ['native','download','storage'])await rejectedPredecessor(source,failureKind);
 {
   const{Runtime}=loadRuntime(),gate=deferred(),first=Runtime.install(context('first'));first.sourceSupplyTask=gate.promise;
   const close=first.close(),next=Runtime.install(context('next')),pending=next.waitForPredecessorClose();
@@ -113,4 +123,4 @@ assert.ok(waitStart>0&&waitEnd>waitStart);
 const waitBody=source.slice(waitStart,waitEnd);assert.match(waitBody,/await this\.predecessorClose;/);
 const swallowed=source.slice(0,waitStart)+waitBody.replace('await this.predecessorClose;','try { await this.predecessorClose; } catch (_) {}')+source.slice(waitEnd);
 await assert.rejects(rejectedPredecessor(swallowed),/Missing expected rejection/,'swallowed actual barrier rejection is a startup negative control');
-console.log('PASS real Runtime constructor/fields/install/start/close: unstarted second owner preserves three-generation predecessor chain, late close identity, close-before-admission, raw rejection through public/start/close, native finally, omission/swallowed-rejection negative controls; platform IO instrumented, no HAP/target claim.');
+console.log('PASS real Runtime constructor/fields/install/start/close: unstarted second owner preserves source/download/storage three-generation predecessor chain, late close identity, close-before-admission, raw rejection through public/start/close, native finally, omission/swallowed-rejection negative controls; platform IO instrumented, no HAP/target claim.');
