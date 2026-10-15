@@ -52,6 +52,37 @@ export type NativeReaderCoreModule = {
 
 export type ReaderCoreLastError = { code: number; message: string };
 
+/** Content-free native terminal observation, never a result or wire copy. */
+export type ReaderCoreTerminalMetadata = {
+  requestId: number;
+  method: string;
+  type: "result" | "error";
+  wireUtf16Units: number;
+};
+
+// Only literal protocol names may enter public diagnostic metadata. Unknown
+// extension methods must not expose caller-controlled strings.
+const TERMINAL_DIAGNOSTIC_METHODS = new Set<string>([
+  "core.info", "runtime.ping", "runtime.hostSmoke", "runtime.status",
+  "runtime.storage.restore", "runtime.storage.flush", "runtime.storage.export", "runtime.storage.apply",
+  "source.list", "source.import", "source.supply", "source.update", "source.delete",
+  "book.search", "book.detail", "book.toc", "chapter.content",
+  "bookshelf.list", "bookshelf.get", "bookshelf.add", "bookshelf.book.update",
+  "local_book.toc", "local_book.content.metrics", "local_book.chapter.content",
+  "local_book.navigation.backfill.v1", "reading.preparation", "reading.entry.prepare",
+  "reading.entry.snapshot", "reading.document.window", "reading.catalog.page",
+  "reading.directory.view.open.v1", "reading.directory.view.page.v1", "reading.directory.view.target.resolve.v1",
+  "reading.directory.view.open.v2", "reading.directory.view.page.v2", "reading.directory.target.resolve.v2",
+  "reading.directory.rules.get.v2", "reading.directory.rules.prepare.v2",
+  "reading.directory.rules.preview.v2", "reading.directory.rules.apply.v2",
+  "reading.progress.get", "reading.progress.update", "reader.location.resolve",
+  "cache.book.status", "cache.book.prefetch", "read-record.accumulate", "read-record.accumulate-receipt",
+  "tts.slice", "tts.chapter.plan", "tts.queue.status", "tts.queue.play", "tts.queue.pause",
+  "tts.queue.resume", "tts.queue.stop", "tts.queue.next", "tts.queue.prev", "tts.queue.seek",
+  "tts.queue.skip", "tts.queue.set-rate", "tts.queue.report-status", "tts.queue.report-callback",
+  "tts.config.get", "tts.config.put",
+]);
+
 // Fixed, non-content-bearing admission diagnostics from capacity.rs/runtime.rs.
 // Do not forward arbitrary native error text: it can contain command data.
 const SAFE_ADMISSION_REASONS = new Set<string>([
@@ -274,6 +305,8 @@ export class ReaderCoreRuntime {
   readonly deliveryMode: "explicitAck" | "legacyCallback";
   private readonly consumedDeliveries = new WeakSet<object>();
   private readonly acceptedRequestIds = new Set<number>();
+  private readonly diagnosticRequestMethods = new Map<number, string>();
+  private readonly terminalMetadata: ReaderCoreTerminalMetadata[] = [];
   // Both indexes own only unread events. Ordered sets let either reader remove
   // a payload from both indexes immediately, without scans or retained tombstones.
   private readonly pendingEvents = new Set<QueuedReaderCoreEvent>();
@@ -358,6 +391,11 @@ export class ReaderCoreRuntime {
     return this.pendingEventCountValue + this.native.pendingEventCount(this.runtime);
   }
 
+  /** Fresh bounded values only; callers cannot mutate or retain Core payloads. */
+  get recentTerminalMetadata(): ReaderCoreTerminalMetadata[] {
+    return this.terminalMetadata.map((item) => ({ ...item }));
+  }
+
   close(): void {
     if (this.closed) {
       return;
@@ -383,6 +421,8 @@ export class ReaderCoreRuntime {
     this.activeHostRequests.clear();
     this.abandonedRequestIds.clear();
     this.acceptedRequestIds.clear();
+    this.diagnosticRequestMethods.clear();
+    this.terminalMetadata.length = 0;
     this.native.releaseRuntime(this.runtime);
   }
 
@@ -450,6 +490,13 @@ export class ReaderCoreRuntime {
       throw error;
     }
     if (this.deliveryMode === "explicitAck") this.acceptedRequestIds.add(requestId);
+    this.diagnosticRequestMethods.set(requestId, TERMINAL_DIAGNOSTIC_METHODS.has(method) ? method : "unknown");
+    if (this.diagnosticRequestMethods.size > 256) {
+      for (const oldest of this.diagnosticRequestMethods.keys()) {
+        this.diagnosticRequestMethods.delete(oldest);
+        break;
+      }
+    }
     return requestId;
   }
 
@@ -785,6 +832,13 @@ export class ReaderCoreRuntime {
       // Closing settles waiters and releases the runtime-owned quota.
       if (this.deliveryMode === "explicitAck") this.close();
       throw error;
+    }
+    if (event.type === "result" || event.type === "error") {
+      this.terminalMetadata.push({ requestId: event.requestId,
+        method: this.diagnosticRequestMethods.get(event.requestId) ?? "unknown",
+        type: event.type, wireUtf16Units: raw.length });
+      this.diagnosticRequestMethods.delete(event.requestId);
+      if (this.terminalMetadata.length > 16) this.terminalMetadata.shift();
     }
     return this.discardAbandonedEvent(event) ? null : event;
   }
