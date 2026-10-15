@@ -88,8 +88,19 @@ assert.match(initialChapter, /bookmarkContext, layoutReady, unreadCandidates\.sl
 assert.doesNotMatch(initialChapter, /loadContentMetrics/,
   'whole-book metrics must not remain on the first-page critical path');
 assert.match(reading, /private lastCommittedProgress: ReadingCommit \| undefined/);
-assert.match(reading, /this\.lastCommittedProgress\.chapterOffset === page\.startScalar[\s\S]*?return;/,
-  'exit must skip an identical durable visible-page commit');
+const commitVisiblePage = method(reading, 'private async commitVisiblePage(', 'private async commitContinuousProgress(');
+assert.match(commitVisiblePage,
+  /const sameCommittedPosition = committed\?\.sourceId === this\.sourceId && committed\.bookId === this\.bookId &&\s*committed\.chapterIndex === chapter\.chapterIndex && committed\.chapterOffset === page\.startScalar;/,
+  'duplicate detection must match the complete durable visible-page identity');
+assert.match(commitVisiblePage,
+  /const renewRetainedReading = sameCommittedPosition && this\.retainedReadingRecencyVisible &&\s*this\.retainedReadingRecencyReceipt === committed;/,
+  'only an actually visible retained presentation may renew the exact durable receipt');
+assert.match(commitVisiblePage, /if \(sameCommittedPosition && !renewRetainedReading\) return;/,
+  'ordinary duplicate visible-page commits must still be skipped');
+assert.match(commitVisiblePage, /renewRetainedReading && committed !== undefined \? committed\.chapterProgress/,
+  'a retained recency renewal must preserve the committed chapter progress');
+assert.match(commitVisiblePage, /if \(renewRetainedReading && committed !== undefined\) \{[\s\S]*?anchor\.deviceId = await this\.readingRecordGateway\.currentDeviceId\(\);/,
+  'the admitted retained renewal records the current reading device');
 assert.match(reading,
   /configureRestoredAnchor\([\s\S]*?this\.lastCommittedProgress = undefined;[\s\S]*?this\.chapterLayoutMap = chapterMap;/,
   'a reloaded chapter body must earn a fresh durable commit before exit deduplication');

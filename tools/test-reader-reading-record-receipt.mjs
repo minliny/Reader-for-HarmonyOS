@@ -53,6 +53,28 @@ function fixture(GatewayClass = Gateway) {
   };
 }
 {
+  const f=fixture();
+  assert.deepEqual(await Promise.all([f.gateway.currentDeviceId(), f.gateway.currentDeviceId()]),
+    ['harmony-device', 'harmony-device'], 'progress renewal reuses the record owner\'s existing persistent device identity');
+  assert.equal(f.events.filter(([kind,key])=>kind==='get'&&key==='device-id').length,1,
+    'concurrent consumers share the same device-ID load');
+  assert.equal(f.events.some(([kind])=>kind==='native'||kind==='put'),false,
+    'reading the existing identity does not create a progress/record mutation or a second UUID');
+  const intent=f.gateway.createIntent('same-device',100,10);
+  await f.gateway.accumulate(intent);
+  assert.equal(f.writes[0].deviceId,'harmony-device');
+  assert.equal(intent.deviceId,'harmony-device','record and progress callers retain the same device owner');
+}
+{
+  const f=fixture();
+  await f.gateway.currentDeviceId();
+  const current=f.remount();
+  assert.throws(()=>f.gateway.currentDeviceId(), ReadingRecordRecoveryError,
+    'a retired record owner cannot lend its cached device identity to a new progress visit');
+  assert.equal(await current.currentDeviceId(),'harmony-device','the current owner reuses the same persisted identity');
+  assert.equal(f.writes.length,0);
+}
+{
   const start=gatewaySource.indexOf('      const head = await this.readHead();'),
     end=gatewaySource.indexOf('      const watermark = head?.sequence ?? 0;',start);
   assert.ok(start>0&&end>start);

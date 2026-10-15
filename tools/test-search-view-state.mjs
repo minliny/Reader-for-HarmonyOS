@@ -115,8 +115,8 @@ console.log('search stable rows, enrichment and navigation state: PASS');
 
 // PH25: execute the real page grouping method over progressively arriving sources.
 const Page = productionMotionMethods(process.env.READER_SEARCH_RELEVANCE_SOURCE ?? new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url),
-  ['searchHeaderHeight', 'submitSearch', 'scopeSourceIds', 'scopeEntries', 'selectContentType', 'selectGroup', 'filteredEmptyMessage', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
-  { ...authorMetadata, ...mediaIdentity, SEARCH_LOCAL_SCOPE: '本地', SEARCH_ONLINE_SCOPE: '在线', SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
+  ['searchHeaderHeight', 'searchFontScale', 'searchFilterHeight', 'searchFilterLabelWidth', 'searchBarHeight', 'submitSearch', 'scopeSourceIds', 'scopeEntries', 'selectContentType', 'selectGroup', 'filteredEmptyMessage', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
+  { ...authorMetadata, ...mediaIdentity, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) }, SEARCH_LOCAL_SCOPE: '本地', SEARCH_ONLINE_SCOPE: '在线', SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
     SearchLayoutFrame: class { constructor(action) { this.action = action; } onIdle() { this.action(); } },
     ScrollAlign: { START: 0 }, Edge: { Top: 'top' } });
 const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },

@@ -172,6 +172,8 @@ export struct ReaderSearchField {
         .fontWeight(TYPE_SEARCH_BOOK_INPUT.fontWeight)
         .fontSize(TYPE_SEARCH_BOOK_INPUT.fontSizeFp)
         .lineHeight(TYPE_SEARCH_BOOK_INPUT.lineHeightFp as number)
+        .minFontScale(Math.min(1, this.bookFontScale()))
+        .maxFontScale(Math.max(1, this.bookFontScale()))
         .maxLines(1)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .nativeInputBackground()
@@ -300,7 +302,7 @@ export struct ReaderSearchField {
   private fieldHeight(): number {
     if (this.variant === 'mangaDirectory') return MANGA_DIRECTORY_VISUAL.searchHeight + this.mangaTextHeightGrowth();
     if (this.variant === 'bookPage') {
-      return this.isTablet ? 40 : 36;
+      return (this.isTablet ? 40 : 36) + (TYPE_SEARCH_BOOK_INPUT.lineHeightFp as number) * Math.max(0, this.bookFontScale() - 1);
     }
     if (this.variant === 'sourceManagement') {
       return 44;
@@ -434,6 +436,11 @@ export struct ReaderSearchField {
     // Reading this published revision makes font-scale changes repaint the
     // input's vp frame along with its native fp line box. CSS padding stays vp.
     return MANGA_DIRECTORY_VISUAL.searchLineHeight * Math.max(0, this.mangaFontScale() - 1);
+  }
+
+  private bookFontScale(): number {
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    return Number.isFinite(scale) && scale > 0 ? scale : 1;
   }
 
   private mangaFontScale(): number {

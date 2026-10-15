@@ -106,7 +106,9 @@ export class ReadingSessionProgressOwner {
 
   persistPresented(title: string | undefined, anchor: LocalReadingAnchor, layout: LocalReadingLayout,
     access: ReadingSessionProgressAccess, admitted: () => boolean = (): boolean => true): Promise<LocalReadingProgress> {
-    if (this.serialBoundaries > 0) return Promise.reject(new Error('READING_PRESENTED_PROGRESS_TRANSACTION_PENDING'));
+    if (this.serialBoundaries > 0) return Promise.reject(anchor.retainedProgressReceipt !== undefined ?
+      new BookRequestNotDispatchedError('READING_RETAINED_RECENCY_NOT_DISPATCHED') :
+      new Error('READING_PRESENTED_PROGRESS_TRANSACTION_PENDING'));
     if (!admitted()) return Promise.reject(new Error('READING_PRESENTED_PROGRESS_SUPERSEDED'));
     const valid = this.runtime.captureReadingContentValidity?.(this.sourceId, this.bookId) ?? ((): boolean => true);
     const intent = new PresentedProgressIntent(++this.sequence, title, anchor, layout, valid, access, admitted);
@@ -175,6 +177,14 @@ export class ReadingSessionProgressOwner {
           confirmed = await this.execute(intent, retry);
         } catch (error) {
           intent.state = 'failed';
+          // This is optional same-position recency, not an unsaved new page.
+          // Only a provably unsent intent may be released without an ACK.
+          if (!intent.writeDispatched && intent.anchor.retainedProgressReceipt !== undefined) {
+            intent.reject(new BookRequestNotDispatchedError('READING_RETAINED_RECENCY_NOT_DISPATCHED'));
+            if (this.latest === intent) this.latest = undefined;
+            this.active = undefined;
+            continue;
+          }
           intent.reject(error as Error);
           // A new displayed target may have arrived during the submitted write.
           // Read its predecessor's facts once before allowing that target out.
@@ -216,7 +226,20 @@ export class ReadingSessionProgressOwner {
     // UI/selection admission applies only before the first dispatch. A later
     // retirement never discards or cancels an already-dispatched/unknown write.
     if (!intent.writeDispatched && !intent.admitted()) throw new Error('READING_PRESENTED_PROGRESS_SUPERSEDED');
+    // A retained page renews only its original receipt. Using a newly read CAS
+    // revision alone would authorize rewinding a position advanced elsewhere
+    // before this visit reached the serial lane. This guard is Host-only and
+    // is bypassed after dispatch so an unknown ACK can still be reconciled.
+    const retained = intent.anchor.retainedProgressReceipt;
+    if (!intent.writeDispatched && retained !== undefined && (!retained.progressRevision ||
+      current.progressRevision !== retained.progressRevision || current.kind !== 'restored' ||
+      !this.matchesTarget(current.progress, intent.anchor) ||
+      current.progress.chapterProgress !== intent.anchor.chapterProgress ||
+      current.progress.updatedAt !== retained.updatedAt || current.progress.locationRevision !== retained.locationRevision)) {
+      throw new Error('READING_RETAINED_PROGRESS_CHANGED');
+    }
     const hasCas = this.runtime.supportsCoreCapability?.('reading.progress.compareAndSet.v1') === true;
+    if (retained !== undefined && !hasCas) throw new Error('READING_RETAINED_PROGRESS_CAS_REQUIRED');
     if (hasCas && (current.progressRevision === undefined || current.progressRevision.length === 0)) {
       throw new Error('READING_PRESENTED_PROGRESS_REVISION_MISSING');
     }

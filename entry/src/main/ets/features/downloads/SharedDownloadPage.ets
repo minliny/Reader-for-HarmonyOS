@@ -39,6 +39,15 @@ export interface SharedDownloadViewState extends SharedDownloadFilters {
   listScroll?: number;
   detailKey?: string;
 }
+interface SharedDownloadScrollAnchor {
+  detailKey: string;
+  offset: number;
+  managing: boolean;
+  identity: string;
+  presentation: number;
+  fonts: number;
+  windowRevision: number;
+}
 class SharedDownloadIdleFrame extends FrameCallback {
   private action: () => void;
   constructor(action: () => void) { super(); this.action = action; }
@@ -70,12 +79,12 @@ export struct SharedDownloadPage {
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
 
-  @State @Watch('publishViewState') private query: string = '';
-  @State @Watch('publishViewState') private bookType: string = 'all';
-  @State @Watch('publishViewState') private stateFilter: string = 'all';
-  @State @Watch('publishViewState') private sourceFilter: string = 'all';
-  @State @Watch('publishViewState') private sortField: string = 'recent';
-  @State @Watch('publishViewState') private sortDirection: string = 'desc';
+  @State @Watch('onListFilterChanged') private query: string = '';
+  @State @Watch('onListFilterChanged') private bookType: string = 'all';
+  @State @Watch('onListFilterChanged') private stateFilter: string = 'all';
+  @State @Watch('onListFilterChanged') private sourceFilter: string = 'all';
+  @State @Watch('onListFilterChanged') private sortField: string = 'recent';
+  @State @Watch('onListFilterChanged') private sortDirection: string = 'desc';
   @State @Watch('publishViewState') private detailKey: string = '';
   @State private managing: boolean = false;
   @State private selectedBookKeys: string[] = [];
@@ -107,6 +116,10 @@ export struct SharedDownloadPage {
   private listScroller: Scroller = new Scroller();
   private chapterScroller: Scroller = new Scroller();
   private listOffset: number = 0;
+  private chapterOffset: number = 0;
+  private managingScrollRestore: SharedDownloadScrollAnchor | undefined;
+  private managingScrollAnchor: SharedDownloadScrollAnchor | undefined;
+  private managingDockMeasured: boolean = false;
   private mountedIdentity: string = '';
   private mounted: boolean = false;
   private fontPreparationGeneration: number = 0;
@@ -147,6 +160,7 @@ export struct SharedDownloadPage {
     this.presentationGeneration += 1;
     this.overlayChromeRequestGeneration += 1;
     this.mounted = false;
+    this.cancelManagingScroll();
     this.overlayChromeClaimed = false;
     if (restoreChrome) ReaderWindowCoordinator.requestAppChrome();
     this.onTemporaryBackBridge(undefined, this.mountedIdentity);
@@ -223,7 +237,7 @@ export struct SharedDownloadPage {
         }.width(DOWNLOAD_VISUAL.headerIconWidth).constraintSize({ minHeight: DOWNLOAD_VISUAL.headerIconHeight }).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
           .responseRegion({ x: (DOWNLOAD_VISUAL.headerIconWidth - DOWNLOAD_VISUAL.touchTarget) / 2, y: 0, width: DOWNLOAD_VISUAL.touchTarget, height: DOWNLOAD_VISUAL.touchTarget })
           .enabled(this.books.length > 0).opacity(this.books.length > 0 ? 1 : DOWNLOAD_VISUAL.disabledOpacity).onClick((): void => {
-            this.managing = !this.managing; this.selectedBookKeys = []; this.selectedChapterIndices = [];
+            this.setManaging(!this.managing);
           });
       }.width(DOWNLOAD_VISUAL.headerSlotWidth);
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.headerHeight }).padding(DOWNLOAD_VISUAL.headerPadding)
@@ -287,6 +301,7 @@ export struct SharedDownloadPage {
       }, (book: DownloadBookView): string => book.key);
       if (this.mainChromeOverflow()) { ListItem() { this.compactDock(); } }
     }.width('100%').height('100%').scrollBar(BarState.Auto).onScrollStop((): void => this.publishViewState())
+      .onTouch((event: TouchEvent): void => this.onListTouch(event))
       .padding({ top: this.mainChromeOverflow() ? 0 : this.contentTop(),
         bottom: this.mainChromeOverflow() ? 0 : this.contentBottom(DOWNLOAD_VISUAL.contentBottom) });
   }
@@ -349,6 +364,7 @@ export struct SharedDownloadPage {
           DOWNLOAD_VISUAL.searchLineHeight, DOWNLOAD_VISUAL.searchPaddingY * 2))
         .enterKeyType(EnterKeyType.Search).accessibilityText('搜索书架书籍')
         .onChange((value: string): void => {
+          this.cancelManagingScroll();
           this.query = value; this.selectedBookKeys = []; this.listScroller.scrollTo({ xOffset: 0, yOffset: 0 });
         });
       if (this.query.length > 0) {
@@ -563,6 +579,8 @@ export struct SharedDownloadPage {
       }, (chapter: DownloadChapterView): string => chapter.key);
       if (this.mainChromeOverflow()) { ListItem() { this.compactDock(); } }
     }.width('100%').height('100%').scrollBar(BarState.Auto)
+      .onScrollStop((): void => { this.captureChapterOffset(); this.publishViewState(); })
+      .onTouch((event: TouchEvent): void => this.onListTouch(event))
       .padding({ top: this.mainChromeOverflow() ? 0 : this.contentTop(),
         bottom: this.mainChromeOverflow() ? 0 : this.contentBottom(DOWNLOAD_VISUAL.contentBottom) });
   }
@@ -716,7 +734,7 @@ export struct SharedDownloadPage {
       }.width('100%');
       Row({ space: DOWNLOAD_VISUAL.actionGap }) {
         if (this.detail() !== undefined && !this.managing) {
-          this.actionButton((): string => '选择章节', true, (): boolean => true, (): void => { this.managing = true; });
+          this.actionButton((): string => '选择章节', true, (): boolean => true, (): void => { this.enterManaging(); });
           this.actionButton((): string => '定位当前', false, (): boolean => this.currentChapter() !== undefined, (): void => this.locateCurrent());
         } else if (this.detail() !== undefined) {
           this.actionButton((): string => '下载所选', true, (): boolean => this.selectedChapterIndices.length > 0, (): void => {
@@ -1227,6 +1245,7 @@ export struct SharedDownloadPage {
   private onPresentationIdentityChanged(): void {
     if (!this.mounted || this.presentationIdentity === this.mountedIdentity) return;
     this.presentationGeneration += 1;
+    this.cancelManagingScroll();
     this.overlayChromeRequestGeneration += 1;
     if (this.overlayChromeClaimed) ReaderWindowCoordinator.requestAppChrome();
     this.overlayChromeClaimed = false;
@@ -1348,7 +1367,8 @@ export struct SharedDownloadPage {
     if (book === undefined) return;
     if (this.managing) { this.toggleBook(book.key, !this.selectedBookKeys.includes(book.key)); return; }
     this.captureListOffset();
-    this.detailKey = book.key; this.selectedChapterIndices = []; this.onOpenBook(book);
+    this.cancelManagingScroll();
+    this.detailKey = book.key; this.chapterOffset = 0; this.selectedChapterIndices = []; this.onOpenBook(book);
   }
   private back(): void {
     if (!this.consumeBack()) {
@@ -1359,8 +1379,9 @@ export struct SharedDownloadPage {
   private consumeBack(): boolean {
     if (this.confirmation.length > 0) { this.confirmation = ''; return true; }
     if (this.sheet.length > 0) { this.sheet = ''; return true; }
-    if (this.managing) { this.managing = false; this.selectedBookKeys = []; this.selectedChapterIndices = []; return true; }
+    if (this.managing) { this.setManaging(false); return true; }
     if (this.detailKey.length > 0) {
+      this.cancelManagingScroll();
       this.detailKey = ''; this.selectedChapterIndices = [];
       this.restoreListOffset(); return true;
     }
@@ -1370,6 +1391,83 @@ export struct SharedDownloadPage {
   private toggleBook(key: string, selected: boolean): void {
     this.selectedBookKeys = selected ? this.selectedBookKeys.concat([key]).filter((value: string, index: number, all: string[]): boolean => all.indexOf(value) === index)
       : this.selectedBookKeys.filter((value: string): boolean => value !== key);
+  }
+  private enterManaging(): void { this.setManaging(true); }
+
+  private setManaging(managing: boolean): void {
+    if (this.managing === managing || !this.presentationIsCurrent() || !this.fontsReady) return;
+    const retained = this.managingScrollAnchor;
+    const offset = retained !== undefined && this.managingScrollIsCurrent(retained) ? retained.offset :
+      this.detailKey.length > 0 ? this.captureChapterOffset() : this.captureListOffset();
+    this.cancelManagingScroll();
+    this.managing = managing;
+    this.selectedBookKeys = [];
+    this.selectedChapterIndices = [];
+    // An unbound controller has no proven position. Do not invent a zero
+    // anchor and scroll a newly attached List to it later.
+    if (offset === undefined) return;
+    const anchor: SharedDownloadScrollAnchor = { detailKey: this.detailKey, offset, managing,
+      identity: this.mountedIdentity, presentation: this.presentationGeneration,
+      fonts: this.fontPreparationGeneration, windowRevision: this.readerWindowMetricsRevision };
+    this.managingScrollAnchor = anchor;
+    this.managingScrollRestore = anchor;
+    this.managingDockMeasured = false;
+    this.restoreManagingScroll();
+  }
+
+  private managingScrollIsCurrent(anchor: SharedDownloadScrollAnchor): boolean {
+    return this.presentationIsCurrent(anchor.presentation) && this.fontsReady &&
+      this.mountedIdentity === anchor.identity && this.fontPreparationGeneration === anchor.fonts &&
+      this.readerWindowMetricsRevision === anchor.windowRevision && this.managing === anchor.managing &&
+      this.detailKey === anchor.detailKey && (anchor.detailKey.length === 0 || this.detail() !== undefined);
+  }
+
+  private restoreManagingScroll(): void {
+    const pending = this.managingScrollRestore;
+    if (pending === undefined) return;
+    if (!this.managingScrollIsCurrent(pending)) { this.cancelManagingScroll(); return; }
+    this.getUIContext().postFrameCallback(new SharedDownloadIdleFrame((): void => {
+      if (this.managingScrollRestore !== pending) return;
+      if (!this.managingScrollIsCurrent(pending)) { this.cancelManagingScroll(); return; }
+      try {
+        const scroller = pending.detailKey.length > 0 ? this.chapterScroller : this.listScroller;
+        scroller.scrollTo({ xOffset: 0, yOffset: pending.offset });
+      } catch (_error) {
+        this.cancelManagingScroll();
+        return;
+      }
+      this.managingScrollRestore = undefined;
+      if (this.managingDockMeasured) this.managingScrollAnchor = undefined;
+    }));
+  }
+
+  private cancelManagingScroll(): void {
+    this.managingScrollRestore = undefined;
+    this.managingScrollAnchor = undefined;
+  }
+
+  private onListTouch(event: TouchEvent): void {
+    if (event.type === TouchType.Down) this.cancelManagingScroll();
+  }
+
+  private onListFilterChanged(): void {
+    // Keyboard edits and overlay selections do not necessarily touch the
+    // List. Their new content owns the viewport just like a direct gesture.
+    this.cancelManagingScroll();
+    this.publishViewState();
+  }
+
+  private captureChapterOffset(): number | undefined {
+    try {
+      const offset = this.chapterScroller.currentOffset();
+      if (offset !== undefined && Number.isFinite(offset.yOffset)) {
+        this.chapterOffset = offset.yOffset;
+        return offset.yOffset;
+      }
+    } catch (_error) {
+      // The controller can detach while this page changes its content branch.
+    }
+    return undefined;
   }
   private toggleChapter(index: number, selected: boolean): void {
     this.selectedChapterIndices = selected ? this.mergeIndices(this.selectedChapterIndices, [index])
@@ -1398,6 +1496,7 @@ export struct SharedDownloadPage {
   }
   private locateCurrent(): void {
     const chapter = this.currentChapter(); const book = this.detail(); if (chapter === undefined || book === undefined) return;
+    this.cancelManagingScroll();
     this.chapterScroller.scrollToIndex(2 + Number(this.mainChromeOverflow()) + book.chapters.findIndex((item: DownloadChapterView): boolean => item.key === chapter.key), true, ScrollAlign.CENTER);
   }
   private allSelected(): boolean {
@@ -1518,16 +1617,20 @@ export struct SharedDownloadPage {
       sort: this.sortField as 'recent' | 'title' | 'progress' | 'size', direction: this.sortDirection as 'asc' | 'desc',
       listScroll: this.listOffset, detailKey: this.detailKey });
   }
-  private captureListOffset(): void {
+  private captureListOffset(): number | undefined {
     // @Watch runs synchronously before the main List is reattached when
     // returning from chapters. The platform may have no current offset then;
     // retain the last proven position instead of dereferencing an empty result.
     try {
       const offset = this.listScroller.currentOffset();
-      if (offset !== undefined && Number.isFinite(offset.yOffset)) this.listOffset = offset.yOffset;
+      if (offset !== undefined && Number.isFinite(offset.yOffset)) {
+        this.listOffset = offset.yOffset;
+        return offset.yOffset;
+      }
     } catch (_error) {
       // A retired/unbound native controller cannot replace a saved position.
     }
+    return undefined;
   }
   private restoreListOffset(): void {
     if (!this.mounted || !this.fontsReady) return;
@@ -1682,7 +1785,18 @@ export struct SharedDownloadPage {
     const values = new Map(this.bookContentHeights); values.set(key, height); this.bookContentHeights = values;
   }
   private recordDockHeight(height: number): void {
-    if (Number.isFinite(height) && height > 0 && Math.abs(height - this.dockMeasuredHeight) > 0.5) this.dockMeasuredHeight = height;
+    if (!Number.isFinite(height) || height <= 0) return;
+    if (Math.abs(height - this.dockMeasuredHeight) > 0.5) this.dockMeasuredHeight = height;
+    const anchor = this.managingScrollAnchor;
+    if (anchor === undefined) return;
+    if (!this.managingScrollIsCurrent(anchor)) { this.cancelManagingScroll(); return; }
+    // The dock may report its final size after the first frame restored the
+    // List. Repeat once with the same proven offset, then retire the anchor.
+    this.managingDockMeasured = true;
+    if (this.managingScrollRestore === undefined) {
+      this.managingScrollRestore = anchor;
+      this.restoreManagingScroll();
+    }
   }
   private recordSheetTitleHeight(height: number): void {
     if (Number.isFinite(height) && height > 0 && Math.abs(height - this.sheetTitleMeasuredHeight) > 0.5) this.sheetTitleMeasuredHeight = height;

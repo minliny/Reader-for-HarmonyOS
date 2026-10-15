@@ -91,6 +91,8 @@ function novelSdkFixture(f,theme,extendIntoCutout,text=novelSource){
  const names=['isReaderIdentityCurrent','windowChromeActive','windowChromeOverlayActive',
   'windowControlsPresented','readerSettingsSnapshot','latestControlVisualSession','sessionLaunch',
   'controlsPresentedForWindow','onWindowChromeActiveChanged','applyWindowChrome',
+  'retainedReadingRecencyReceipt','retainedReadingRecencyVisible','admitRetainedReadingRecency',
+  'isVisiblePageCurrent','isMountedToken','isSelectionCurrent',
   'applyWindowPolicyForChromeOwner','applyReaderWindowPolicy','windowPolicyFor'];
  const {owner,output}=createReaderBuilderProbe(text,names,{
   ...properties.sdk,...controlSession,createDefaultReaderSettingsSnapshot,readerControlHostVisible,

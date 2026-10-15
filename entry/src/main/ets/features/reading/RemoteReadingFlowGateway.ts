@@ -136,6 +136,7 @@ export type RemoteReadingProgressState =
   | { kind: 'restored'; progress: RemoteReadingProgress; progressRevision?: string };
 
 export type RemoteReadingProgressUpdate = {
+  deviceId?: string;
   directoryTargetProof?: JsonObject;
   expectedProgressRevision?: string;
   expectedBodyVersion?: string;
@@ -147,6 +148,7 @@ export type RemoteReadingProgressUpdate = {
 };
 
 export type RemoteReadingAnchor = {
+  deviceId?: string;
   directoryTargetProof?: JsonObject;
   bodyVersion?: string;
   processingVersion?: string;
@@ -872,7 +874,8 @@ export class RemoteReadingFlowGateway {
     return {
       kind: 'restored',
       ...(progressRevision === undefined ? {} : { progressRevision }),
-      progress: this.decodeProgress(result.data['progress'], identity, 'reading.progress.get'),
+      progress: { ...this.decodeProgress(result.data['progress'], identity, 'reading.progress.get'),
+        ...(progressRevision === undefined ? {} : { progressRevision }) },
     };
   }
 
@@ -1013,6 +1016,10 @@ export class RemoteReadingFlowGateway {
       chapterOffset: update.chapterOffset,
       chapterProgress: update.chapterProgress,
     };
+    if (update.deviceId !== undefined) {
+      assertRemoteReadingNonBlankString(update.deviceId, 'deviceId');
+      params['deviceId'] = update.deviceId;
+    }
     if (update.directoryTargetProof !== undefined) params['directoryTargetProof'] = update.directoryTargetProof;
     appendExpectedPositionVersions(params, update.expectedBodyVersion ?? resolution?.anchor.bodyVersion,
       update.expectedProcessingVersion ?? resolution?.anchor.processingVersion);

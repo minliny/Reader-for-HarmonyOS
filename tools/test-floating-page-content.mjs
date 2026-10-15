@@ -125,8 +125,9 @@ for (const isTablet of [false, true]) {
   assert.ok(header, 'compound search/filter/statistics mount the actual common fixed-header host');
   assert.equal(header.hitTestBehavior, 'HitTestMode.Transparent');
   assert.match(header.backgroundColor, /^#FF/, 'the entire compound header masks scrolling rows');
-  const stats = nodes(owner).find(n => n.type === 'Row' && n.onAreaChange);
-  assert.ok(stats, 'statistics remain in the actual compound header content');
+  const stats = nodes(owner).find(n => n.type === 'Flex' && n.onAreaChange);
+  assert.ok(stats, 'wrapping statistics remain in the actual compound header content');
+  assert.equal(stats.create.wrap, 'FlexWrap.Wrap', 'large-font statistics reflow inside the same public header');
   assert.equal(stats.position, undefined, 'statistics flow with filters inside the shared measured header');
   assert.equal(stats.zIndex, undefined, 'statistics do not create a private overlay layer');
   stats.onAreaChange({}, { height: 52 });
@@ -362,7 +363,8 @@ assert.equal(nativeTree.params.contentStartInset, 114, 'retained navigation Surf
 // header clearance. The actual restore method must not force that row to y=0.
 const frames = [], moves = [];
 const Restore = productionMotionMethods(new URL('features/search/SearchPage.ets', root),
-  ['scheduleScrollRestore', 'searchHeaderHeight', 'selectGroup'], {
+  ['scheduleScrollRestore', 'searchHeaderHeight', 'searchFontScale', 'searchFilterHeight', 'searchFilterLabelWidth', 'searchBarHeight', 'selectGroup'], {
+    ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) },
     SearchLayoutFrame: class { constructor(action) { this.action = action; } }, ScrollAlign: { START: 0 }, Edge: { Top: 'top' },
   });
 const restoring = Object.assign(new Restore(), { pageMounted: true, listMounted: true, restoreCancelled: false,

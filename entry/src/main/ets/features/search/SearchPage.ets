@@ -1,7 +1,7 @@
 import { ReaderIconButton } from '../common/ReaderIconButton';
 import { ReaderButton } from '../common/ReaderButton';
 import type { SearchOperationFacts } from './SearchPresentation';
-import { TYPE_APP_BODY, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_HEADING, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_HISTORY_STATUS, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_STATE_DESCRIPTION, TYPE_SEARCH_STATE_TITLE, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
+import { TYPE_APP_BODY, TYPE_APP_FILTER_OPTION, TYPE_APP_INHERITED_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_APP_SECONDARY_ACTION, TYPE_SEARCH_BOOK_INPUT, TYPE_SEARCH_FIELD_ACTION, TYPE_SEARCH_FIELD_ACTION_WIDE, TYPE_SEARCH_HISTORY_HEADING, TYPE_SEARCH_HISTORY_KEYWORD, TYPE_SEARCH_HISTORY_STATUS, TYPE_SEARCH_PROGRESS_META, TYPE_SEARCH_RESULT_COUNT, TYPE_SEARCH_RETRY_ACTION, TYPE_SEARCH_SCOPE_LABEL, TYPE_SEARCH_SCOPE_SELECTED, TYPE_SEARCH_STATE_DESCRIPTION, TYPE_SEARCH_STATE_TITLE, TYPE_SEARCH_SUGGESTION_BODY, TYPE_SEARCH_SUGGESTION_HEADING } from '../common/ReaderTypography';
 import { bookAuthorLabel, bookTitleAuthorKey } from '../common/BookAuthorMetadata';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { SearchResultProjection } from './SearchResultProjection';
@@ -453,7 +453,7 @@ export struct SearchPage {
           this.groupScopeRow();
           this.contentTypeRow();
         }
-      }.width('100%').height(this.searchHeaderHeight());
+      }.width('100%').constraintSize({ minHeight: this.searchHeaderHeight() });
       if (this.presentation.kind === 'results') { this.resultStats(); }
     }.width('100%');
   }
@@ -483,17 +483,36 @@ export struct SearchPage {
     // stats bar and result list both use this value as their absolute start;
     // omitting the second row lets them cover the content-type chips.
     const filterRows = groups ? (this.groupNames().length > 0 ? 2 : 1) : 0;
-    return (this.isTablet ? 56 : 52) + filterRows * 41.5;
+    return this.searchBarHeight() + filterRows * this.searchFilterHeight();
   }
 
   private searchHeaderLayoutKey(): string {
-    return `${this.searchHeaderHeight()}:${this.presentation.kind === 'results' ? 'stats' : 'plain'}`;
+    return `${this.readerWindowMetricsRevision}:${this.isTablet}:${this.searchFontScale()}:${this.searchHeaderHeight()}:${this.presentation.kind === 'results' ? 'stats' : 'plain'}`;
   }
 
   private searchContentStartInset(): number {
     if (this.fixedHeaderHeight > 0 && this.fixedHeaderLayoutKey === this.searchHeaderLayoutKey())
       return this.fixedHeaderHeight;
-    return readerPageContentStartInset(this.searchHeaderHeight(), this.presentation.kind === 'results' ? this.resultStatsHeight : 0);
+    return readerPageContentStartInset(this.searchHeaderHeight(), this.presentation.kind === 'results' ?
+      Math.max(this.resultStatsHeight, 12 + (TYPE_SEARCH_PROGRESS_META.lineHeightFp as number) * this.searchFontScale()) : 0);
+  }
+
+  private searchFontScale(): number {
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    return Number.isFinite(scale) && scale > 0 ? scale : 1;
+  }
+
+  private searchFilterHeight(): number {
+    return Math.max(41.5, 23 * Math.max(1, this.searchFontScale()) + 18);
+  }
+
+  private searchFilterLabelWidth(): number {
+    return 51 * Math.max(1, this.searchFontScale());
+  }
+
+  private searchBarHeight(): number {
+    return (this.isTablet ? 56 : 52) + (TYPE_SEARCH_BOOK_INPUT.lineHeightFp as number) *
+      Math.max(0, this.searchFontScale() - 1);
   }
 
   private searchBottomInset(minimum: number = 20): number {
@@ -673,7 +692,6 @@ export struct SearchPage {
         });
       }
       .layoutWeight(1)
-      .height(this.isTablet ? 40 : 36)
       .alignItems(VerticalAlign.Center);
 
       // The search action doubles as the ACQ-02 stop control: while a sweep
@@ -686,7 +704,7 @@ export struct SearchPage {
         onAction: (): void => { if (this.isSweeping()) this.onStop(); else this.submitSearch(); } });
     }
     .width(this.contentFrame().width)
-    .height(this.isTablet ? 56 : 52)
+    .constraintSize({ minHeight: this.searchBarHeight() })
     .padding({ left: this.isTablet ? 20 : TOK_SPACE_MD, right: this.isTablet ? 20 : TOK_SPACE_MD, top: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
     .hitTestBehavior(HitTestMode.Transparent);
@@ -770,7 +788,7 @@ export struct SearchPage {
             actionEnabled: this.presentation.historyStatus !== 'loading', onAction: (): void => this.onClearHistory() });
         }
         .width('100%')
-        .height(26)
+        .constraintSize({ minHeight: 26 })
         .alignItems(VerticalAlign.Center);
 
         // All retained history is visible inside the existing page Scroll.
@@ -812,7 +830,7 @@ export struct SearchPage {
     if (this.groupNames().length > 0) {
       Row({ space: TOK_SPACE_XS }) {
         Text('来源')
-          .width(51)
+          .width(this.searchFilterLabelWidth())
           .fontFamily('ReaderNotoSansSC')
           .fontSize(11)
           .lineHeight(17)
@@ -830,11 +848,11 @@ export struct SearchPage {
         .layoutWeight(1)
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off)
-        .height(41.5)
+        .height(this.searchFilterHeight())
         .align(Alignment.Start);
       }
       .width('100%')
-      .height(41.5)
+      .height(this.searchFilterHeight())
       .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 })
       .alignItems(VerticalAlign.Center);
     }
@@ -851,7 +869,7 @@ export struct SearchPage {
   private contentTypeRow() {
     Row({ space: TOK_SPACE_XS }) {
       Text('内容类型')
-        .width(51)
+        .width(this.searchFilterLabelWidth())
         .fontFamily('ReaderNotoSansSC')
         .fontSize(11)
         .lineHeight(17)
@@ -868,11 +886,11 @@ export struct SearchPage {
       .layoutWeight(1)
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
-      .height(41.5)
+      .height(this.searchFilterHeight())
       .align(Alignment.Start);
     }
     .width('100%')
-    .height(41.5)
+    .height(this.searchFilterHeight())
     .padding({ left: this.isTablet ? 20 : 16, right: this.isTablet ? 20 : 16 })
     .alignItems(VerticalAlign.Center);
   }
@@ -946,7 +964,7 @@ export struct SearchPage {
 
   @Builder
   private resultStats() {
-    Row() {
+    Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center }) {
       Text('找到 ')
         .fontFamily(TYPE_SEARCH_PROGRESS_META.fontFamily)
         .fontWeight(TYPE_SEARCH_PROGRESS_META.fontWeight)
@@ -1015,7 +1033,6 @@ export struct SearchPage {
     }
     .width(this.contentFrame().width)
     .padding({ left: this.isTablet ? 20 : 18, right: this.isTablet ? 20 : 18, top: 6, bottom: 6 })
-    .alignItems(VerticalAlign.Center)
     .hitTestBehavior(HitTestMode.Transparent)
     .onAreaChange((_old: Area, next: Area): void => {
       const height = readerPageAreaLength(next.height);
@@ -1497,6 +1514,7 @@ export struct SearchPage {
 @Component
 struct SearchResultCard {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   // The data source keeps the same @Observed instance for the same book key.
   // ObjectLink delivers metadata changes without replacing the lazy child.
@@ -1508,6 +1526,14 @@ struct SearchResultCard {
   private displayIntro(): string {
     return bookIntroText(this.group.book.intro);
   }
+
+  private searchFontScale(): number {
+    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
+    return Number.isFinite(scale) && scale > 0 ? Math.max(1, scale) : 1;
+  }
+
+  private resultTagWidth(): number { return 30 * this.searchFontScale(); }
+  private resultTagHeight(): number { return 16 + 14 * (this.searchFontScale() - 1); }
 
   private coverWidth(): number {
     return this.isTablet ? 96 : 88;
@@ -1571,15 +1597,15 @@ struct SearchResultCard {
           Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
             space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(2) } }) {
             Text('漫画').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
-              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme)).width(30).height(16)
+              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
               .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).borderRadius(5);
             if (this.group.book.sourceId === 'local') {
               Text('本地').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(30).height(16)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
                 .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
             } else {
               Text('在线').fontFamily('ReaderNotoSansSC').fontWeight(FontWeight.Medium).fontSize(9).lineHeight(14)
-                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(30).height(16)
+                .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width(this.resultTagWidth()).height(this.resultTagHeight())
                 .textAlign(TextAlign.Center).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme)).borderRadius(5);
             }
           }.width('100%');
@@ -1647,7 +1673,8 @@ struct SearchResultCard {
               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
               .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-              .borderRadius(4).maxLines(1);
+              .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
           Text(this.group.book.sourceName.length > 0 ? this.group.book.sourceName : this.group.book.sourceId)
             .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
@@ -1667,7 +1694,8 @@ struct SearchResultCard {
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
             .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-            .borderRadius(4).maxLines(1);
+            .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis });
           if (this.group.inBookshelf) {
             Text('已在书架')
               .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily)
@@ -1677,7 +1705,8 @@ struct SearchResultCard {
               .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
               .padding({ left: 6, right: 6, top: 2, bottom: 2 })
               .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-              .borderRadius(4).maxLines(1);
+              .borderRadius(4).constraintSize({ maxWidth: '100%' }).maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
         }
         .width('100%')
@@ -1705,8 +1734,8 @@ struct SearchResultCard {
       .fontSize(9)
       .lineHeight(14)
       .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .width(30)
-      .height(16)
+      .width(this.resultTagWidth())
+      .height(this.resultTagHeight())
       .textAlign(TextAlign.Center)
       .backgroundColor(primary ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
       .borderRadius(4);

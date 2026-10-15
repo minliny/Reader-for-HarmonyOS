@@ -14,6 +14,8 @@ const read = file => readFileSync(file, 'utf8'), root = 'entry/src/main/ets/feat
 const before = read('tools/fixtures/icon-button-family/ReaderIconButton.before.ets');
 const golden = JSON.parse(read('tools/fixtures/icon-button-family/original-consumers.json'));
 const approved = JSON.parse(read('tools/fixtures/icon-button-family/approved-bookshelf-manga-20261005.json'));
+const searchScale = JSON.parse(read('tools/fixtures/design/search-system-font-scale-successor-20261015.json'));
+assert.equal(createHash('sha256').update(read(searchScale.iconConsumer.originalWitness)).digest('hex'), searchScale.iconConsumer.originalWitnessSHA256, 'search font-scale successor retains immutable icon consumer witness');
 // Preserve every historical witness. Only the explicitly approved bookshelf
 // header has a new finite layout witness; other originals keep their old tuples.
 for (const row of golden.methods) assert.equal(createHash('sha256').update(row.source).digest('hex'), row.sha256);
@@ -74,6 +76,13 @@ function noIconGeometry(source) {
     source = source.replace('this.onSearchRequested(presentedGeneration)', 'this.onSearchRequested()');
     source = source.slice(source.indexOf('{') + 1, source.lastIndexOf('}'));
   }
+  // One authorized outer-frame succession. Nested input/stop control changes
+  // are independently bound by exact current method SHA and the real SDK test;
+  // all icon expressions, callbacks and other physical AST remain compared.
+  if (source.includes('private searchBar()') && source.includes(searchScale.iconConsumer.currentOuterFrame)) {
+    assert.equal(source.split(searchScale.iconConsumer.currentOuterFrame).length - 1, 1);
+    source = source.replace(searchScale.iconConsumer.currentOuterFrame, searchScale.iconConsumer.originalOuterFrame);
+  }
   source = source.replace(/\.accessibilityText\('更多'\)/g, '');
   source = '@Component struct OriginalBuilderWitness {\n' + source + '\n}';
   const { tree, inputs } = iconInputs(source);
@@ -87,6 +96,11 @@ for (const frozen of consumerMethods) {
   assert.equal(createHash('sha256').update(frozen.source).digest('hex'), frozen.sha256);
   const source = read(root + frozen.file), tree = parse(source), owner = tree.statements.find(ts.isStructDeclaration);
   const current = owner.members.find(n => ts.isMethodDeclaration(n) && n.name.text === frozen.name).getText(tree);
+  if (frozen.file === 'search/SearchPage.ets') {
+    assert.equal(frozen.sha256, searchScale.iconConsumer.originalRowSHA256);
+    assert.equal(createHash('sha256').update(current).digest('hex'), searchScale.iconConsumer.currentSearchBarSHA256,
+      'only the exact reviewed font-aware search-bar method succeeds the original witness');
+  }
   assert.equal(noIconGeometry(current), noIconGeometry(frozen.source), 'all original Builder layout/state/callbacks unchanged: ' + frozen.file);
   verifyConsumer(source, frozen.file);
   for (const property of ['boxSize', 'iconSize', 'radius']) {

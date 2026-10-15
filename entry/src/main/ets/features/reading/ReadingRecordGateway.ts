@@ -26,6 +26,9 @@ export class ReadingRecordGateway {
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) { this.runtimeOwner = runtimeOwner; }
 
+  /** Recency renewal uses the same durable device identity as reading time. */
+  currentDeviceId(): Promise<string> { this.assertCurrent(); return this.deviceId(); }
+
   createIntent(bookName: string, elapsedMillis: number, readAt: number): ReadingRecordIntent {
     const normalized = bookName.trim();
     if (normalized.length === 0 || normalized.length > 4096 || !Number.isSafeInteger(elapsedMillis) || elapsedMillis <= 0 ||

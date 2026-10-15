@@ -100,6 +100,7 @@ export type LocalReadingContentMetrics = {
  * gateway inventing a second position model.
  */
 export type LocalReadingProgress = {
+  progressRevision?: string;
   bodyVersion?: string;
   processingVersion?: string;
   bookId: string;
@@ -118,6 +119,7 @@ export type LocalReadingProgressState =
       presentationPending?: boolean };
 
 export type LocalReadingProgressUpdate = {
+  deviceId?: string;
   directoryTargetProof?: JsonObject;
   expectedProgressRevision?: string;
   expectedBodyVersion?: string;
@@ -138,8 +140,13 @@ export type LocalReadingLayout = {
   pageCount?: number;
 };
 
+export type LocalReadingRetainedProgressReceipt = { progressRevision?: string; updatedAt: number; locationRevision?: string; };
+
 /** One Unicode-scalar anchor emitted by the local pagination/measurement layer. */
 export type LocalReadingAnchor = {
+  deviceId?: string;
+  /** Host-only admission: renewing a retained visit cannot move a newer receipt. */
+  retainedProgressReceipt?: LocalReadingRetainedProgressReceipt;
   directoryTargetProof?: JsonObject;
   bodyVersion?: string;
   processingVersion?: string;
@@ -696,7 +703,8 @@ export class LocalReadingFlowGateway {
     return {
       kind: 'restored',
       ...(progressRevision === undefined ? {} : { progressRevision }),
-      progress: this.decodeProgress(rawProgress, bookId, 'reading.progress.get'),
+      progress: { ...this.decodeProgress(rawProgress, bookId, 'reading.progress.get'),
+        ...(progressRevision === undefined ? {} : { progressRevision }) },
     };
   }
 
@@ -819,6 +827,10 @@ export class LocalReadingFlowGateway {
       chapterOffset: update.chapterOffset,
       chapterProgress: update.chapterProgress,
     };
+    if (update.deviceId !== undefined) {
+      this.assertNonBlankString(update.deviceId, 'deviceId');
+      params['deviceId'] = update.deviceId;
+    }
     if (update.directoryTargetProof !== undefined) params['directoryTargetProof'] = update.directoryTargetProof;
     appendExpectedPositionVersions(params, update.expectedBodyVersion ?? resolution?.anchor.bodyVersion,
       update.expectedProcessingVersion ?? resolution?.anchor.processingVersion);
@@ -895,6 +907,7 @@ export class LocalReadingFlowGateway {
     const processingVersion = this.optionalString(progress, 'processingVersion', command);
     appendExpectedPositionVersions({}, bodyVersion, processingVersion);
     const locationRevision = this.optionalString(progress, 'locationRevision', command);
+    const progressRevision = this.optionalString(progress, 'progressRevision', command);
     return {
       bookId: expectedBookId,
       chapterIndex: this.requireChapterIndex(progress, 'chapterIndex', command),
@@ -902,6 +915,7 @@ export class LocalReadingFlowGateway {
       chapterProgress: this.requireProgress(progress, 'chapterProgress', command),
       updatedAt: this.requireNonNegativeInteger(progress, 'updatedAt', command),
       ...(locationRevision === undefined ? {} : { locationRevision }),
+      ...(progressRevision === undefined ? {} : { progressRevision }),
       ...(bodyVersion === undefined ? {} : { bodyVersion }),
       ...(processingVersion === undefined ? {} : { processingVersion }),
     };

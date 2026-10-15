@@ -113,7 +113,9 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // select pre-migration Builders; do not reconstruct inset math in fixtures.
   const chromeMembers = new Set(['searchContentStartInset', 'fixedHeaderHeight', 'selectionHeaderHeight',
     'standardHeaderHeight', 'pageHeaderHeight', 'pageFooterHeight', 'headerHeight', 'fixedHeaderLayoutKey', 'searchHeaderLayoutKey',
-    'catalogHeaderHeight','catalogHeaderTop']);
+    'catalogHeaderHeight','catalogHeaderTop',
+    'searchFontScale','searchFilterHeight','searchFilterLabelWidth','searchBarHeight','bookFontScale',
+    'resultTagWidth','resultTagHeight']);
   let addedChrome;
   do {
     addedChrome = false;

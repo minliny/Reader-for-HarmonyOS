@@ -17,7 +17,7 @@ assert.match(reference, /input::placeholder \{ color:var\(--faint\)/);
 const names = ['build', 'nativeInputBackground', 'nativeFieldBackground', 'fixedLineHeightField', 'mangaLineHeightField', 'autoLineHeightField', 'passiveField',
   'submit', 'textStyle', 'searchIcon', 'fieldHeight', 'inputHeight', 'iconSize', 'iconGap', 'horizontalPadding',
   'fieldBackgroundColor', 'fieldBorderWidth', 'fieldBorderColor', 'cornerRadius', 'inputColor', 'caretColor',
-  'placeholderColor', 'resolvedAccessibilityLabel', 'mangaTextHeightGrowth', 'mangaFontScale', 'readerWindowMetricsRevision',
+  'placeholderColor', 'resolvedAccessibilityLabel', 'mangaTextHeightGrowth', 'mangaFontScale', 'bookFontScale', 'readerWindowMetricsRevision',
   'appThemeScheme', 'variant', 'mode', 'text', 'placeholder', 'accessibilityLabel', 'isTablet', 'clearable',
   'submitEnabled', 'onTextChange', 'onSubmit'];
 const palettes = {
@@ -109,7 +109,7 @@ for (const [label, candidate] of [
   assert.throws(() => check(candidate), assert.AssertionError, `reject ${label}`);
 }
 for (const [variant, height, inputHeight, lineHeight] of [
-  ['bookPage', 36, 36, 21], ['sourceManagement', 44, 42, undefined],
+  ['sourceManagement', 44, 42, undefined],
   ['readerDirectory', 32, 24, undefined], ['readerQuick', 24, 22, undefined],
 ]) {
   const f = fixture(source, 'day', 2, false, variant);
@@ -118,5 +118,25 @@ for (const [variant, height, inputHeight, lineHeight] of [
   assert.equal(f.input().lineHeight, lineHeight, `${variant} retains its independent audited typography`);
   assert.equal(f.input().focusBox, undefined, `${variant} retains its existing native focus presentation`);
 }
+// The independently approved book search variant now follows system type too.
+// Its fp tuple is unchanged; only the vp input/frame clears the larger line.
+function checkBookField(candidate = source) {
+  for (const [scale, height] of [[1, 36], [2, 57]]) {
+    const f = fixture(candidate, 'day', scale, false, 'bookPage');
+    assert.equal(f.outer().height, height, 'book search frame follows its approved system-font geometry');
+    assert.equal(f.input().height, height);
+    assert.equal(f.input().fontSize, 14); assert.equal(f.input().lineHeight, 21);
+    assert.equal(f.input().backgroundColor, 'Color.Transparent');
+    assert.equal(f.input().focusBox, undefined, 'book search retains its independent native focus presentation');
+    assert.equal(f.input().minFontScale, 1); assert.equal(f.input().maxFontScale, scale);
+  }
+}
+checkBookField();
+const fixedBookField = source.replace(
+  'return (this.isTablet ? 40 : 36) + (TYPE_SEARCH_BOOK_INPUT.lineHeightFp as number) * Math.max(0, this.bookFontScale() - 1);',
+  'return this.isTablet ? 40 : 36;');
+assert.notEqual(fixedBookField, source, 'book search fixed-height negative control mutates the actual production branch');
+assert.throws(() => checkBookField(fixedBookField), assert.AssertionError,
+  'book search cannot regress to a fixed frame under two-times system type');
 assert.equal(readerTypographyRoles.TYPE_SEARCH_MANGA_DIRECTORY_INPUT.lineHeightFp, 20);
-console.log('PASS actual SDK manga search: demo 13/20 balanced line box, exact day/night geometry and palette, actual input and Radix clear actor current-theme focus boxes, retained font-scale/theme updates, change/clear/submit; eight old-rule negative controls rejected; other search variants retained. Native keyboard/pixels require target evidence.');
+console.log('PASS actual SDK manga search: demo 13/20 balanced line box, exact day/night geometry and palette, actual input and Radix clear actor current-theme focus boxes, retained font-scale/theme updates, change/clear/submit; eight manga negative controls and book fixed-height control rejected; book 1/2x geometry and all other search variants retained. Native keyboard/pixels require target evidence.');

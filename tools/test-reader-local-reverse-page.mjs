@@ -368,7 +368,8 @@ let activeHandoff;
 const runtime = { optionalReadingEntryMemoryEnabled: () => true,
   readingEntryPreparations: () => ({ captureValidity: () => () => true, setPaused() {} }) };
 const HandoffOwner = productionMotionMethods(source, [...methods, 'retainConfirmedEntryPresentation',
-  'restoreRetainedReadingPresentation', 'captureMaterializedChapterContext', 'restoreMaterializedChapterContext',
+  'restoreRetainedReadingPresentation', 'admitRetainedReadingRecency', 'isVisiblePageCurrent', 'isSelectionCurrent', 'isMountedToken',
+  'captureMaterializedChapterContext', 'restoreMaterializedChapterContext',
   'copyParagraphRanges', 'currentPaginationKey', 'samePaginationKey', 'schedulePageTurnPreparation'], {
   ...ownerDependencies, ReaderMaterializedChapterContext, ReaderRetainedPresentation, estimateRetainedRemoteSessionBytes,
   ReaderRuntimeOwner: { current: () => runtime }, ReaderWindowCoordinator: { metrics: () => ({ densityPixels: 3 }) },
@@ -380,6 +381,8 @@ function handoffReader(paragraphs, residentStart, total, direction) {
   o.previousChapterMeasurement = undefined;
   Object.assign(o, {
     sourceId: 's', bookId: 'b', materializedContentVersion: 'body', chapterSelectionToken: 4,
+    mounted: true, appForeground: true, windowChromeActive: true,
+    retainedReadingRecencyReceipt: undefined, retainedReadingRecencyVisible: false,
     hasMeasuredViewport: () => true, readerSettingsLoaded: true,
     paginationLayoutSignature: () => 'layout', requireChapter() { return this.chapter; },
     requireChapterLayoutMap() { return this.chapterLayoutMap; }, retainCurrentChapterWindow() {},
@@ -389,7 +392,9 @@ function handoffReader(paragraphs, residentStart, total, direction) {
     isSelectionActive(life, selection) { return life === 1 && selection === this.chapterSelectionToken; },
     admitTocEntries(entries) { this.tocEntries = entries; }, readingTocEntries() { return this.tocEntries; },
     chapterWindow: { configure() {}, setCurrent() {} },
-    publishMeasuredFirstPage(page) { this.visiblePage = page; this.visibleFragments = page.fragments; },
+    publishMeasuredFirstPage(page, _chapter, selection) {
+      this.visiblePage = page; this.visibleFragments = page.fragments; this.visiblePageSelectionToken = selection;
+    },
     admitCommittedProgress(progress) { this.lastCommittedProgress = progress; this.progressAdmissions = (this.progressAdmissions ?? 0) + 1; },
     configureReaderScreenAwakeLease() {}, applyReaderSystemEventPolicy() {}, beginReadingRecordClock() {},
     onDirectoryProjectionChanged() {}, notifyControlSelectionReadingReady() {},
@@ -453,6 +458,8 @@ for (const residentStart of [0, 100]) for (const direction of ['next', 'previous
   };
   assert.equal(consumer.restoreRetainedReadingPresentation(1), true);
   assert.equal(consumer.visiblePage, page, 'body is already submitted before background preparation runs');
+  assert.equal(consumer.retainedReadingRecencyVisible, true, 'the restored foreground body admits the exact visible reading receipt');
+  assert.equal(consumer.retainedReadingRecencyReceipt, producer.lastCommittedProgress);
   assert.equal(prepared, 0);
   scheduled.shift()();
   assert.equal(prepared, 2);
@@ -465,6 +472,7 @@ for (const residentStart of [0, 100]) for (const direction of ['next', 'previous
   assert.equal(consumer.lastCommittedProgress, producer.lastCommittedProgress);
   assert.equal(consumer.progressAdmissions, 1, 'speculative neighbours do not change committed progress');
   assert.equal(consumer.visiblePage, page, 'speculative neighbours cannot replace the visible page');
+  assert.equal(consumer.retainedReadingRecencyReceipt, producer.lastCommittedProgress, 'speculative neighbours cannot replace the retained reading receipt');
 }
 // Completing the canonical chapter drops the run. Its last real page must
 // still retain an exact request receipt rather than falling back to guessing.
@@ -473,7 +481,7 @@ for (const residentStart of [0, 100]) for (const direction of ['next', 'previous
   const page = forwardPage(o, 0);
   assert.equal(o.paginationDraft, undefined);
   assert.deepEqual(page.paginationObservation, { requestScalar: 0, startScalar: 0, endScalarExclusive: 2 });
-  o.visiblePage = page; o.lastCommittedProgress = { chapterIndex: 2, chapterOffset: 0, chapterProgress: 0 };
+  o.visiblePage = page; o.lastCommittedProgress = { sourceId: 's', bookId: 'b', chapterIndex: 2, chapterOffset: 0, chapterProgress: 0 };
   activeHandoff = new ReadingEntryHandoff(); o.retainConfirmedEntryPresentation();
   const snapshot = activeHandoff.current('s', 'b');
   assert.deepEqual(snapshot.context.paginationDraft.pageStartScalars(), [0]);

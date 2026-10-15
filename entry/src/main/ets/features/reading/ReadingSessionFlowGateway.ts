@@ -2,7 +2,7 @@ import { readingChapterLayoutMap, prepareReadingChapterLayoutMap } from './Readi
 import type { ReadingParagraphBoundaryMode } from './ReadingParagraphProjection';
 import { readingSessionDocuments } from './ReadingSessionDocuments';
 import { extendReadingParagraphWindow, readReadingDocumentWindow, type ReadingDocumentWindow, type ReadingParagraphWindowDirection } from './ReadingDocumentWindow';
-import type { BookRequestPriority } from '../../app/BookRequestScheduler';
+import { BookRequestNotDispatchedError, type BookRequestPriority } from '../../app/BookRequestScheduler';
 import { readReadingCatalog, readReadingEntrySnapshot, qualifyReadingEntryWindow, type ReadingEntrySnapshot } from './ReadingEntrySnapshot';
 import { appendReadingSelectionContext, captureRemotePositionContext, encodeRemotePositionContext, decodeRemotePositionMigration, decodeRemotePositionScope, type RemoteReadingPositionScope, type RemoteReadingPositionContext } from './RemoteReadingPositionMigration';
 import { diagnosticCodeOf } from '../../app/LogPrivacy';
@@ -550,6 +550,7 @@ export class ReadingSessionFlowGateway {
         chapterProgress: state.progress.chapterProgress,
         updatedAt: state.progress.updatedAt,
         locationRevision: state.progress.locationRevision,
+        ...(state.progressRevision === undefined ? {} : { progressRevision: state.progressRevision }),
         ...(state.progress.bodyVersion === undefined ? {} : { bodyVersion: state.progress.bodyVersion, processingVersion: state.progress.processingVersion }),
       },
     };
@@ -849,6 +850,7 @@ export class ReadingSessionFlowGateway {
       chapterProgress: stored.chapterProgress,
       updatedAt: stored.updatedAt,
       locationRevision: stored.locationRevision,
+      ...(stored.progressRevision === undefined ? {} : { progressRevision: stored.progressRevision }),
       ...(stored.bodyVersion === undefined ? {} : { bodyVersion: stored.bodyVersion, processingVersion: stored.processingVersion }),
     };
   }
@@ -870,6 +872,7 @@ export class ReadingSessionFlowGateway {
     this.assertBook(bookId);
     if (this.pendingSourceSwitchResolver !== undefined) await this.ensureSourceSwitchAdmission(isCurrent);
     const update: LocalReadingProgressUpdate = {
+      deviceId: anchor.deviceId,
       chapterIndex: anchor.chapterIndex,
       chapterOffset: anchor.chapterOffset,
       chapterProgress: anchor.chapterProgress,
@@ -898,6 +901,7 @@ export class ReadingSessionFlowGateway {
       chapterProgress: stored.chapterProgress,
       updatedAt: stored.updatedAt,
       locationRevision: stored.locationRevision,
+      ...(stored.progressRevision === undefined ? {} : { progressRevision: stored.progressRevision }),
       ...(stored.bodyVersion === undefined ? {} : { bodyVersion: stored.bodyVersion, processingVersion: stored.processingVersion }),
     };
   }
@@ -1002,8 +1006,11 @@ export class ReadingSessionFlowGateway {
     anchor: LocalReadingAnchor, layout: LocalReadingLayout,
     isAdmitted?: () => boolean): Promise<LocalReadingProgress> {
     this.assertBook(bookId);
-    if (this.sourceSwitchTransactionId !== undefined || this.pendingSourceSwitchResolver !== undefined)
+    if (this.sourceSwitchTransactionId !== undefined || this.pendingSourceSwitchResolver !== undefined) {
+      if (anchor.retainedProgressReceipt !== undefined)
+        throw new BookRequestNotDispatchedError('READING_RETAINED_RECENCY_NOT_DISPATCHED');
       throw new Error('READING_PRESENTED_PROGRESS_TRANSACTION_PENDING');
+    }
     return this.progressOwner.persistPresented(chapterTitle, anchor, layout, this.progressAccess(), isAdmitted);
   }
 
@@ -1088,6 +1095,7 @@ export class ReadingSessionFlowGateway {
         isCurrent: () => boolean, expectedProgressRevision?: string): Promise<LocalReadingProgress> => {
         const update: LocalReadingProgressUpdate = { chapterIndex: anchor.chapterIndex,
           chapterOffset: anchor.chapterOffset, chapterProgress: anchor.chapterProgress,
+          deviceId: anchor.deviceId,
           expectedProgressRevision,
           directoryTargetProof: anchor.directoryTargetProof, expectedBodyVersion: anchor.bodyVersion, expectedProcessingVersion: anchor.processingVersion };
         const resolution = { chapterTitle: title, anchor, layout };

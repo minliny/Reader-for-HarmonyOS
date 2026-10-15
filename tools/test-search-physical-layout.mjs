@@ -10,7 +10,7 @@ const source = readFileSync(new URL('../entry/src/main/ets/features/search/Searc
 const tokenSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTokens.ets', import.meta.url), 'utf8');
 assert.match(source, /this\.groupScopeRow\(\);\s*this\.contentTypeRow\(\);/, 'results render source and content-type filter rows together');
 assert.match(source, /const filterRows = groups \? \(this\.groupNames\(\)\.length > 0 \? 2 : 1\) : 0;/, 'header reserves both filter rows when source scopes exist');
-assert.match(source, /return \(this\.isTablet \? 56 : 52\) \+ filterRows \* 41\.5;/, 'header height includes every rendered filter row');
+assert.match(source, /return this\.searchBarHeight\(\) \+ filterRows \* this\.searchFilterHeight\(\);/, 'header height includes each font-aware rendered filter row');
 assert.match(source, /add\(SEARCH_ONLINE_SCOPE, source\.sourceId\);/, 'remote sources stay in one online scope');
 assert.match(source, /add\(SEARCH_LOCAL_SCOPE, 'local'\);/, 'local scope remains visible even when no local result has arrived');
 assert.doesNotMatch(source, /const name = source\.group\?\./, 'provider groups are retained for later but are not rendered as search scopes');

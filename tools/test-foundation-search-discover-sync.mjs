@@ -139,7 +139,7 @@ function checkSearchArea(candidate=readFileSync(new URL('../'+files.search.path,
   assert.equal(history.children.get(keyword.id),keyword,'history width measurement retains its actual shared chip actor');
   assert.equal(keyword.availableWidth,190);
   const results=seedTailOwner(new Component(undefined,{}),{kind:'results'});results.resultStats();results.resultsContent();
-  const stats=controls.orderedNodes(results).find(node=>node.type==='Row'&&typeof node.onAreaChange==='function');assert.ok(stats);
+  const stats=controls.orderedNodes(results).find(node=>node.type==='Flex'&&typeof node.onAreaChange==='function');assert.ok(stats);
   const list=controls.orderedNodes(results).find(node=>node.type==='List'),scroller=results.resultScroller;assert.ok(list);
   stats.onAreaChange({}, {height:unit?'65vp':65});
   assert.equal(results.resultStatsHeight,65,'actual search statistics Area receipt updates measured fixed-header clearance');

@@ -1,5 +1,6 @@
 import { ReaderReadingRecordHost } from './ReaderReadingRecordHost';
 import { ReadingRecordRecoveryError } from './ReaderReadingRecordState';
+import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../app/BookRequestScheduler';
 import { ReaderReadingImageResources, sameReaderReadingImageResource } from './ReaderReadingImageResources';
 import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from './ReaderProgressProducerHost';
 import { TYPE_READER_READING_FAILURE_TITLE, TYPE_READER_READING_FAILURE_DETAIL } from '../common/ReaderTypography';
@@ -47,6 +48,7 @@ import { readerMotionNowMs } from '../common/ReaderMotionClock';
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../common/ProductMotionTiming';
 import {
   type LocalReadingAnchor,
+  type LocalReadingRetainedProgressReceipt,
   type LocalReadingBookmark,
   type LocalReadingContentMetrics,
   type LocalReadingLayout,
@@ -388,6 +390,7 @@ export class ReadingCommit {
   sourceSwitchTransactionId: string | undefined;
   bodyVersion: string | undefined;
   processingVersion: string | undefined;
+  progressRevision: string | undefined;
 
   constructor(
     sourceId: string,
@@ -400,6 +403,7 @@ export class ReadingCommit {
     sourceSwitchTransactionId: string | undefined = undefined,
     bodyVersion: string | undefined = undefined,
     processingVersion: string | undefined = undefined,
+    progressRevision: string | undefined = undefined,
   ) {
     this.sourceId = sourceId;
     this.bookId = bookId;
@@ -411,6 +415,7 @@ export class ReadingCommit {
     this.sourceSwitchTransactionId = sourceSwitchTransactionId;
     this.bodyVersion = bodyVersion;
     this.processingVersion = processingVersion;
+    this.progressRevision = progressRevision;
   }
 }
 
@@ -756,6 +761,8 @@ class PreviousChapterMeasurement {
 }
 
 class CoreReadingAnchor implements LocalReadingAnchor {
+  deviceId?: string;
+  retainedProgressReceipt?: LocalReadingRetainedProgressReceipt;
   directoryTargetProof?: JsonObject;
   chapterIndex: number;
   chapterOffset: number;
@@ -1516,6 +1523,11 @@ export struct ReadingExperience {
    */
   private controlDirectoryDataRetained: boolean = false;
   private lastCommittedProgress: ReadingCommit | undefined = undefined;
+  /** A retained receipt supplies the page, but only this actual foreground
+   * visit can admit one same-position renewal through the existing writer. */
+  private retainedReadingRecencyReceipt: ReadingCommit | undefined = undefined;
+  private retainedReadingRecencyVisible: boolean = false;
+  private retainedReadingRecencySkipped: boolean = false;
   /** Exact durable TTS receipt; a later page or manual commit replaces ownership. */
   private lastTtsCommittedProgress: ReadingCommit | undefined = undefined;
   private lastTtsCommittedChapter: ReadingSessionChapter | undefined = undefined;
@@ -1603,6 +1615,9 @@ export struct ReadingExperience {
     this.contentMetrics = undefined;
     this.contentMetricsLoading = false;
     this.lastCommittedProgress = undefined;
+    this.retainedReadingRecencyReceipt = undefined;
+    this.retainedReadingRecencyVisible = false;
+    this.retainedReadingRecencySkipped = false;
     this.pendingControlSelection = undefined;
     this.pendingControlSelectionOrigin = undefined;
     this.pendingControlSelectionCandidate = undefined;
@@ -1811,6 +1826,8 @@ export struct ReadingExperience {
     this.traceInitialReadingPhase?.('input-ready', lifecycleToken);
     this.admitCommittedProgress(snapshot.progress);
     if (!isCurrent()) return true;
+    this.retainedReadingRecencyReceipt = this.lastCommittedProgress;
+    this.admitRetainedReadingRecency();
     ReaderRuntimeOwner.current().readingEntryPreparations().setPaused(true);
     this.configureReaderScreenAwakeLease(this.readerSettingsSnapshot);
     this.applyReaderSystemEventPolicy(this.readerSettingsSnapshot);
@@ -1823,14 +1840,29 @@ export struct ReadingExperience {
     this.schedulePageTurnPreparation();
     this.notifyControlSelectionReadingReady(snapshot.context.chapter.chapterIndex,
       snapshot.context.chapter.chapterTitle, snapshot.page, selectionToken, lifecycleToken);
+    if (isCurrent()) this.admitRetainedReadingRecency();
     return true;
+  }
+
+  private admitRetainedReadingRecency(): void {
+    const receipt = this.retainedReadingRecencyReceipt;
+    const page = this.visiblePage;
+    const chapter = this.chapter;
+    if (receipt === undefined || this.retainedReadingRecencyVisible || !this.mounted ||
+      !this.appForeground || !this.windowChromeActive || this.exitRequested ||
+      this.isReaderIdentityCurrent?.() === false || receipt !== this.lastCommittedProgress ||
+      page === undefined || chapter === undefined || receipt.sourceId !== this.sourceId ||
+      receipt.bookId !== this.bookId || receipt.chapterIndex !== chapter.chapterIndex ||
+      receipt.chapterOffset !== page.startScalar ||
+      !this.isVisiblePageCurrent(page, chapter, this.visiblePageSelectionToken, this.lifecycleToken)) return;
+    this.retainedReadingRecencyVisible = true;
   }
 
   private retainConfirmedEntryPresentation(): void {
     const owner = ReaderRuntimeOwner.current();
     const handoff = readingEntryHandoff(owner);
     handoff.clear();
-    if (!owner.optionalReadingEntryMemoryEnabled() || this.resumeOnlyChapterIndex !== undefined) return;
+    if (!owner.optionalReadingEntryMemoryEnabled() || this.resumeOnlyChapterIndex !== undefined || this.retainedReadingRecencySkipped) return;
     const page = this.visiblePage;
     const chapter = this.chapter;
     const progress = this.lastCommittedProgress;
@@ -1941,6 +1973,8 @@ export struct ReadingExperience {
   }
 
   aboutToDisappear(): void {
+    this.retainedReadingRecencyReceipt = undefined;
+    this.retainedReadingRecencyVisible = false;
     this.cancelSourceSwitchCompletion();
     this.progressProducers.retireContinuous();
     this.nativeAlertOwner.retire();
@@ -6631,22 +6665,41 @@ export struct ReadingExperience {
     if (!this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken)) {
       return;
     }
-    if (this.lastCommittedProgress?.sourceId === this.sourceId &&
-      this.lastCommittedProgress.bookId === this.bookId &&
-      this.lastCommittedProgress.chapterIndex === chapter.chapterIndex &&
-      this.lastCommittedProgress.chapterOffset === page.startScalar) {
-      return;
-    }
+    const committed = this.lastCommittedProgress;
+    const sameCommittedPosition = committed?.sourceId === this.sourceId && committed.bookId === this.bookId &&
+      committed.chapterIndex === chapter.chapterIndex && committed.chapterOffset === page.startScalar;
+    const renewRetainedReading = sameCommittedPosition && this.retainedReadingRecencyVisible &&
+      this.retainedReadingRecencyReceipt === committed;
+    if (sameCommittedPosition && !renewRetainedReading) return;
     this.commitInFlight = true;
+    let progressRequested = false;
     try {
       const scalarCount = this.requireChapterLayoutMap().scalarCount();
-      const current = (): boolean => this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken);
-      const intent = this.progressProducerIntent(chapter,
-        new CoreReadingAnchor(chapter.chapterIndex, page.startScalar, scalarCount === 0 ? 0 : page.startScalar / scalarCount,
-          chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof), this.coreLayout(),
+      const current = (): boolean => this.isVisiblePageCurrent(page, chapter, selectionToken, lifecycleToken) &&
+        (!renewRetainedReading || (this.appForeground && this.windowChromeActive && this.isReaderIdentityCurrent?.() !== false &&
+          this.retainedReadingRecencyReceipt === committed && this.lastCommittedProgress === committed));
+      const anchor = new CoreReadingAnchor(chapter.chapterIndex, page.startScalar,
+        renewRetainedReading && committed !== undefined ? committed.chapterProgress : scalarCount === 0 ? 0 : page.startScalar / scalarCount,
+        chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof);
+      if (renewRetainedReading && committed !== undefined) {
+        anchor.retainedProgressReceipt = { progressRevision: committed.progressRevision,
+          updatedAt: committed.updatedAt, locationRevision: committed.locationRevision };
+        anchor.deviceId = await this.readingRecordGateway.currentDeviceId();
+      }
+      const intent = this.progressProducerIntent(chapter, anchor, this.coreLayout(),
         current, current, (stored: LocalReadingProgress): void => this.admitCommittedProgress(stored));
+      progressRequested = true;
       await this.progressProducers.commitVisible(intent);
     } catch (error) {
+      if (renewRetainedReading && (!progressRequested || (error instanceof ReaderCoreNotDispatchedError &&
+        error.message === 'READING_RETAINED_RECENCY_NOT_DISPATCHED'))) {
+        if (this.retainedReadingRecencyReceipt === committed) {
+          this.retainedReadingRecencyReceipt = undefined;
+          this.retainedReadingRecencyVisible = false;
+          this.retainedReadingRecencySkipped = true;
+        }
+        return;
+      }
       // The visible static reading page remains valid. Persistence failures are
       // logged rather than replaced by an unapproved visual state.
       hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience progress commit failed: ${this.errorMessage(error as Error)}`);
@@ -6729,8 +6782,13 @@ export struct ReadingExperience {
       stored.sourceSwitchTransactionId,
       stored.bodyVersion,
       stored.processingVersion,
+      stored.progressRevision,
     );
     this.lastCommittedProgress = commit;
+    // An acknowledged page/manual/TTS write already renewed this visit.
+    this.retainedReadingRecencyReceipt = undefined;
+    this.retainedReadingRecencyVisible = false;
+    this.retainedReadingRecencySkipped = false;
     try {
       this.onReadingCommitted(commit);
     } catch (error) {
@@ -8770,6 +8828,7 @@ export struct ReadingExperience {
     }
     this.screenAwakeLease?.setForeground(true);
     this.resumeTtsPageFollow?.();
+    this.admitRetainedReadingRecency();
     if (this.phase === 'ready') {
       this.beginReadingRecordClock(this.lifecycleToken);
     }
@@ -8798,6 +8857,7 @@ export struct ReadingExperience {
   }
 
   private onWindowChromeActiveChanged(): void {
+    this.admitRetainedReadingRecency();
     this.onControlInputBoundaryChanged();
     this.applyWindowChrome();
     this.applyWindowPolicyForChromeOwner();

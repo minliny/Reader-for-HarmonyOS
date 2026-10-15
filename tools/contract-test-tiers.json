@@ -624,6 +624,7 @@
     "test-search-publication-boundary.mjs",
     "test-search-settings-physical-feedback.mjs",
     "test-search-shelf-identity.mjs",
+    "test-search-system-font-scale.mjs",
     "test-search-trial-reading-return.mjs",
     "test-search-view-state.mjs",
     "test-secondary-floating-bars.mjs",

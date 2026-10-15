@@ -65,12 +65,12 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
     assert.deepEqual(sharedProducerShape(source,actual.file),actual.shape,'exact finite choice modifier owns roles and native AUTO omissions');delegated++;continue;
   }
   if(node.kind==='Text'&&file==='common/ReaderButton.ets'&&node.method==='build'&&node.text==='this.label'&&
-    ['newReaderButtonLabelModifier(this.specId,this.primary,this.scheme)','newReaderButtonTextModifier(this.specId,this.primary,this.actionEnabled,this.layout,this.scheme,this.isBusy,this.availableWidth)'].includes(normalise(node.attributes.attributeModifier))||
+    ['newReaderButtonLabelModifier(this.specId,this.primary,this.scheme,this.searchFontScale())','newReaderButtonTextModifier(this.specId,this.primary,this.actionEnabled,this.layout,this.scheme,this.isBusy,this.availableWidth,this.searchFontScale())'].includes(normalise(node.attributes.attributeModifier))||
     ['TextInput','TextArea'].includes(node.kind)&&file==='common/ReaderFormField.ets'&&node.method==='build'&&['{text:this.text,placeholder:this.placeholder}','{text:this.text}','{text:this.text,placeholder:this.placeholder,controller:this.inputController}'].includes(normalise(node.text))&&
     normalise(node.attributes.attributeModifier)===(node.kind==='TextArea'?'newReaderFormAreaModifier(this.specId,this.scheme,this.fieldAccessibilityLabel)':'newReaderFormFieldModifier(this.specId,this.scheme,this.fieldAccessibilityLabel)')){
     const actual=producers.producers.find(p=>p.component===(node.kind==='Text'?'ReaderButton':'ReaderFormField'));assert.ok(actual);
     assert.deepEqual(sharedProducerShape(source,actual.file),actual.shape,'actual finite foundation modifier preserves public roles/AUTO');
-    assert.ok(node.attributes[['TextInput','TextArea'].includes(node.kind)?'onChange':'onClick']||node.kind==='Text'&&normalise(node.attributes.attributeModifier)==='newReaderButtonLabelModifier(this.specId,this.primary,this.scheme)', 'real event host or finite stacked label');
+    assert.ok(node.attributes[['TextInput','TextArea'].includes(node.kind)?'onChange':'onClick']||node.kind==='Text'&&normalise(node.attributes.attributeModifier)==='newReaderButtonLabelModifier(this.specId,this.primary,this.scheme,this.searchFontScale())', 'real event host or finite stacked label');
     delegated++;continue;
   }
   const contract=contracts.get(JSON.stringify([rel,nativeDefaultHistoricalMethod(source,rel,node),node.kind,normalise(node.text)]));

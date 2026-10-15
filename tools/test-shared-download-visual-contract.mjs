@@ -104,7 +104,8 @@ const tree = ts.createSourceFile('SharedDownloadPage.ets', source, ts.ScriptTarg
 const page = tree.statements.find(node => node.name?.getText(tree) === 'SharedDownloadPage');
 assert.ok(page, 'the actual production component is the probe input');
 const methods = [...page.members.filter(node => ts.isMethodDeclaration(node)).map(node => node.name.getText(tree)),
-  'readerWindowMetricsRevision', 'books', 'storageSummary', 'loading', 'appThemeScheme', 'sheet', 'confirmation', 'presentationIdentity', 'detailKey'];
+  'readerWindowMetricsRevision', 'books', 'storageSummary', 'loading', 'appThemeScheme', 'sheet', 'confirmation', 'presentationIdentity', 'detailKey',
+  'query', 'bookType', 'stateFilter', 'sourceFilter', 'sortField', 'sortDirection'];
 const frameSource = tree.statements.find(node => node.name?.getText(tree) === 'SharedDownloadIdleFrame');
 assert.ok(frameSource, 'the production idle-frame adapter is retained');
 const frameBody = ts.transpileModule(frameSource.getText(tree), {
@@ -162,6 +163,7 @@ const probeDependencies = {
     requestAppChrome: () => chromeRequests.push({ owner: 'app' }) },
   ButtonType: enumValue('ButtonType'), ImageFit: enumValue('ImageFit'), InputType: enumValue('InputType'),
   WordBreak: enumValue('WordBreak'), ScrollAlign: enumValue('ScrollAlign'), ControlSize: enumValue('ControlSize'),
+  TouchType: enumValue('TouchType'),
   uiContext: { getHostContext: () => ({ config: { fontSizeScale: platformFontScale } }),
     postFrameCallback: frame => scheduledFrames.push(frame), getMeasureUtils: () => ({ measureText }),
     px2vp: value => { convertedWidths.push(value); return value / 3; } },
@@ -897,6 +899,118 @@ for (const currentOffset of [() => undefined, () => ({ yOffset: Number.NaN }), (
 }
 const finitePosition = owner('day', { listOffset: 73, listScroller: { currentOffset: () => ({ yOffset: 126 }) } });
 finitePosition.publishViewState(); assert.equal(finitePosition.listOffset, 126);
+
+// Execute the real component methods and native List touch closures. Layout
+// itself is a platform boundary: model only its offset/area/frame receipts.
+function modeOwner(detail = false, changes = {}, Component = probe.Component) {
+  const positions = [];
+  const scroller = { currentOffset: () => ({ yOffset: 143 }), scrollTo: value => positions.push(value) };
+  return { positions, page: owner('day', { fontsReady: true, detailKey: detail ? book.key : '',
+    listScroller: scroller, chapterScroller: scroller, chapterOffset: 0, ...changes }, Component) };
+}
+for (const detail of [false, true]) {
+  for (const measuredBeforeFrame of [false, true]) {
+    const { page: selection, positions } = modeOwner(detail);
+    if (detail) {
+      selection.selectionDock();
+      records(selection).filter(node => node.type === 'Button').at(0).onClick();
+    } else {
+      selection.topBar();
+      records(selection).filter(node => node.type === 'Button').at(-1).onClick();
+    }
+    assert.equal(selection.managing, true);
+    const first = scheduledFrames.at(-1);
+    if (measuredBeforeFrame) selection.recordDockHeight(112);
+    first.onIdle();
+    if (!measuredBeforeFrame) { selection.recordDockHeight(112); scheduledFrames.at(-1).onIdle(); }
+    assert.deepEqual(positions, Array.from({ length: measuredBeforeFrame ? 1 : 2 }, () => ({ xOffset: 0, yOffset: 143 })),
+      'management entry preserves the pre-layout viewport across either dock/frame order');
+    assert.equal(selection.managingScrollAnchor, undefined);
+    const frameCount = scheduledFrames.length;
+    selection.recordDockHeight(140);
+    assert.equal(scheduledFrames.length, frameCount, 'completed mode restoration cannot be resurrected by later layout');
+    selection.setManaging(false);
+    assert.equal(selection.managing, false);
+    selection.recordDockHeight(63); scheduledFrames.at(-1).onIdle();
+    assert.deepEqual(positions.at(-1), { xOffset: 0, yOffset: 143 }, 'leaving management preserves the same viewport too');
+    selection.aboutToDisappear();
+  }
+}
+for (const detail of [false, true]) for (const touchBeforeFrame of [false, true]) {
+  const { page: selection, positions } = modeOwner(detail);
+  selection.enterManaging(); const first = scheduledFrames.at(-1);
+  if (!touchBeforeFrame) first.onIdle();
+  if (detail) selection.chapterPage(selection.bookGetter(book)); else selection.bookPage();
+  const list = find(selection, node => node.type === 'List', 'native List observes a new touch');
+  list.onTouch({ type: 'TouchType.Down' });
+  first.onIdle();
+  const frameCount = scheduledFrames.length; selection.recordDockHeight(112);
+  assert.equal(scheduledFrames.length, frameCount, 'new user input cancels both pending layout restores');
+  assert.equal(positions.length, touchBeforeFrame ? 0 : 1);
+  selection.aboutToDisappear();
+}
+for (const detail of [false, true]) {
+  let nativeOffset = 143;
+  const positions = [];
+  const scroller = { currentOffset: () => ({ yOffset: nativeOffset }), scrollTo: value => positions.push(value) };
+  const { page: selection } = modeOwner(detail, { listScroller: scroller, chapterScroller: scroller });
+  const start = scheduledFrames.length;
+  selection.enterManaging();
+  nativeOffset = 0; // Native layout can temporarily clamp before post-frame.
+  selection.setManaging(false); selection.enterManaging();
+  selection.recordDockHeight(112);
+  for (const frame of scheduledFrames.slice(start)) frame.onIdle();
+  assert.deepEqual(positions, [{ xOffset: 0, yOffset: 143 }],
+    'rapid mode toggles reuse the live transition anchor instead of a transient clamp');
+  selection.aboutToDisappear();
+}
+for (const [field, value] of [['query', 'new query'], ['bookType', 'manga'], ['stateFilter', 'downloaded'],
+  ['sourceFilter', 'source-two'], ['sortField', 'size'], ['sortDirection', 'asc']]) {
+  const { page: selection, positions } = modeOwner();
+  selection.enterManaging(); const first = scheduledFrames.at(-1);
+  selection[field] = value; propertyRuntime.flush();
+  first.onIdle(); selection.recordDockHeight(112);
+  assert.deepEqual(positions, [], `${field} changes cancel obsolete mode restoration without a List touch`);
+  selection.aboutToDisappear();
+}
+const keyboardMode = modeOwner();
+keyboardMode.page.enterManaging(); const keyboardFrame = scheduledFrames.at(-1);
+keyboardMode.page.searchField();
+find(keyboardMode.page, node => node.type === 'TextInput', 'real keyboard input actor').onChange('new query');
+keyboardFrame.onIdle(); keyboardMode.page.recordDockHeight(112);
+assert.deepEqual(keyboardMode.positions, [{ xOffset: 0, yOffset: 0 }],
+  'a keyboard query resets results once and cannot be overwritten by an old mode anchor');
+keyboardMode.page.aboutToDisappear();
+for (const mutate of [
+  page => { page.mounted = false; },
+  page => { page.fontsReady = false; },
+  page => { page.fontPreparationGeneration++; },
+  page => { page.presentationGeneration++; },
+  page => { page.presentationIdentity = 'replacement'; },
+  page => { page.readerWindowMetricsRevision++; },
+  page => { page.detailKey = another.key; },
+  page => { page.books = []; },
+]) {
+  const { page: selection, positions } = modeOwner(true);
+  selection.enterManaging(); const first = scheduledFrames.at(-1);
+  mutate(selection); first.onIdle(); selection.recordDockHeight(112);
+  assert.deepEqual(positions, [], 'retired/font/window/book identities cannot restore an obsolete viewport');
+  assert.equal(selection.managingScrollAnchor, undefined);
+}
+for (const currentOffset of [() => undefined, () => ({ yOffset: NaN }), () => { throw Error('unbound'); }]) {
+  const { page: selection, positions } = modeOwner(true, { chapterScroller: { currentOffset, scrollTo: () => assert.fail('unproven offset') } });
+  const frameCount = scheduledFrames.length; selection.enterManaging();
+  assert.equal(selection.managing, true, 'unbound Scroller must not disable the management action');
+  assert.equal(scheduledFrames.length, frameCount, 'unbound Scroller must not manufacture a zero anchor');
+  assert.deepEqual(positions, []);
+}
+const removedAnchorSource = source.replace('this.managingScrollRestore = anchor;', 'this.managingScrollRestore = undefined;');
+assert.notEqual(removedAnchorSource, source);
+const removedAnchorProbe = createReaderBuilderProbe(removedAnchorSource, methods, probeDependencies, probeHooks);
+const negativeMode = modeOwner(false, {}, removedAnchorProbe.Component);
+negativeMode.page.enterManaging();
+assert.throws(() => assert.ok(negativeMode.page.managingScrollRestore), assert.AssertionError,
+  'the old missing management restoration fails the same production expectation');
 const unsafeScrollerSource = source.replace('this.captureListOffset();\n    this.onViewStateChanged',
   'this.listOffset = this.listScroller.currentOffset().yOffset;\n    this.onViewStateChanged');
 assert.notEqual(unsafeScrollerSource, source);

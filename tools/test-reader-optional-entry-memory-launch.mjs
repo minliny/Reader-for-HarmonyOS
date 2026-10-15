@@ -207,7 +207,8 @@ for(const disabled of [true,false]) {
   const readerEntryPresentation=new Function('ReaderRuntimeOwner','readingEntryHandoff',
     stripTypeScriptTypes(entryFunction.getText(readingTree)).replace(/^export /,'')+'; return readerEntryPresentation;')
     (Runtime,dependencies.readingEntryHandoff);
-  const Reader=productionMotionMethods(readingFile,['restoreRetainedReadingPresentation','retainConfirmedEntryPresentation','samePaginationKey'],dependencies);
+  const Reader=productionMotionMethods(readingFile,['restoreRetainedReadingPresentation','retainConfirmedEntryPresentation','samePaginationKey',
+    'admitRetainedReadingRecency','isVisiblePageCurrent','isSelectionCurrent','isMountedToken'],dependencies);
   if(disabled) {
     originalPublish('local','book',{old:true},1,()=>true);
     events.length=0;
@@ -229,7 +230,7 @@ for(const disabled of [true,false]) {
       paragraphRanges:[{startScalar:0,endScalar:7}]};
     const gateway=new ReadingSessionFlowGateway('local','book',{kind:'local'},runtime);
     const producer=Object.assign(new Reader(),{sourceId:'local',bookId:'book',phase:'ready',chapter,visiblePage:page,
-      lastCommittedProgress:{bookId:'book',chapterIndex:4,chapterOffset:2,chapterProgress:2/7},sessionGateway:gateway,
+      lastCommittedProgress:{sourceId:'local',bookId:'book',chapterIndex:4,chapterOffset:2,chapterProgress:2/7},sessionGateway:gateway,
       hasMeasuredViewport:()=>true,readerSettingsSnapshot:settings,appearanceSnapshot:appearance,
       paragraphRanges:materialized.paragraphRanges,tocEntries:[{index:4,title:'正文'}],
       captureMaterializedChapterContext:()=>materialized,paginationLayoutSignature:()=> 'layout',currentPaginationKey:()=>key});
@@ -239,17 +240,35 @@ for(const disabled of [true,false]) {
     assert.equal(snapshot.page,page);assert.equal(snapshot.context.chapter.content,'实际可读的正文');
     let providers=0,presentations=0;
     const reader=Object.assign(new Reader(),{sourceId:'local',bookId:'book',phase:'loading',readerSettingsLoaded:true,
+      mounted:true,lifecycleToken:1,appForeground:true,windowChromeActive:true,
+      retainedReadingRecencyReceipt:undefined,retainedReadingRecencyVisible:false,
       chapterSelectionToken:1,readerSettingsSnapshot:settings,appearanceSnapshot:appearance,
       entryPresentationProvider(){providers++;return snapshot;},hasMeasuredViewport:()=>true,paginationLayoutSignature:()=> 'layout',
       isSelectionActive:(life,selection)=>life===1&&selection===1,
       admitTocEntries(items){this.tocEntries=items;},readingTocEntries(){return this.tocEntries;},
       chapterWindow:{configure(){},setCurrent(){}},restoreMaterializedChapterContext(value){this.chapter=value.chapter;},
-      rebuildChapterImageIndexes(){},publishMeasuredFirstPage(value){this.visiblePage=value;this.visibleFragments=value.fragments;presentations++;},
-      admitCommittedProgress(){},configureReaderScreenAwakeLease(){},applyReaderSystemEventPolicy(){},beginReadingRecordClock(){},
+      rebuildChapterImageIndexes(){},publishMeasuredFirstPage(value,_chapter,selection){this.visiblePage=value;this.visibleFragments=value.fragments;this.visiblePageSelectionToken=selection;presentations++;},
+      admitCommittedProgress(progress){this.lastCommittedProgress=progress;},configureReaderScreenAwakeLease(){},applyReaderSystemEventPolicy(){},beginReadingRecordClock(){},
       onDirectoryProjectionChanged(){},schedulePageTurnPreparation(){},notifyControlSelectionReadingReady(){}});
     assert.equal(reader.restoreRetainedReadingPresentation(1),true);
     assert.equal(providers,1);assert.equal(presentations,1);assert.equal(reader.phase,'ready');
     assert.equal(reader.visibleFragments[0].text,'可读的正文','ordinary launch still restores the actual retained body');
+    assert.equal(reader.retainedReadingRecencyVisible,true,'only the actual restored foreground page admits retained reading');
+    assert.equal(reader.retainedReadingRecencyReceipt,snapshot.progress);
+    reader.retainedReadingRecencyVisible=false;reader.appForeground=false;
+    reader.admitRetainedReadingRecency();assert.equal(reader.retainedReadingRecencyVisible,false,'background presentation does not count as reading');
+    reader.appForeground=true;reader.windowChromeActive=false;
+    reader.admitRetainedReadingRecency();assert.equal(reader.retainedReadingRecencyVisible,false,'an inactive reader window does not count as reading');
+    reader.windowChromeActive=true;reader.chapterSelectionToken++;
+    reader.admitRetainedReadingRecency();assert.equal(reader.retainedReadingRecencyVisible,false,'a stale chapter selection cannot admit retained reading');
+    reader.chapterSelectionToken--;reader.lastCommittedProgress={...snapshot.progress};
+    reader.admitRetainedReadingRecency();assert.equal(reader.retainedReadingRecencyVisible,false,'a replaced durable receipt cannot admit the old retained reading');
+    reader.lastCommittedProgress=snapshot.progress;reader.admitRetainedReadingRecency();
+    assert.equal(reader.retainedReadingRecencyVisible,true);
+    assert.equal(providers,1);assert.equal(presentations,1,'recency guards do not query, publish or reload a second body');
+    producer.retainedReadingRecencySkipped=true;
+    producer.retainConfirmedEntryPresentation();
+    assert.equal(retained.current('local','book'),undefined,'a skipped optional renewal cannot re-publish its old RAM receipt for another visit');
   }
 }
 console.log('PASS optional entry-memory diagnostic: strict cold Want, no RAM snapshots, independent durable current/neighbour and legacy image repair, pause/close fences, RAM-only release, guarded retained pages and unchanged ordinary preparation');
