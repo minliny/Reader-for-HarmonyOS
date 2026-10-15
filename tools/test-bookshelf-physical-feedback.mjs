@@ -47,6 +47,10 @@ const check = (name, action) => {
   try { action(); results.push({ name, passed: true }); }
   catch (error) { results.push({ name, passed: false, message: error.message }); }
 };
+const checkAsync = async (name, action) => {
+  try { await action(); results.push({ name, passed: true }); }
+  catch (error) { results.push({ name, passed: false, message: error.message }); }
+};
 const texts = owner => [...owner.nodes.values()].filter(node => node.type === 'Text');
 // Native FontWeight enums and public roles both denote physical numeric weights.
 const physicalWeight = weight => ({ 'FontWeight.Regular': 400, 'FontWeight.Medium': 500, 'FontWeight.Bold': 700 })[weight] ?? weight;
@@ -275,19 +279,64 @@ function checkNaturalHero(candidate = detailSource) {
 check('detail cover and two-line title use the approved natural hero instead of a fixed five-line block',()=>{
   checkNaturalHero();
   if (!baseline) {
-    const wrongCover = detailSource.replace('Image(this.book.coverUrl as string).width(84)',
-      'Image(this.book.coverUrl as string).width(104)');
+    const wrongCover = detailSource.replace('Image(this.displayCoverUrl() as string).width(84)',
+      'Image(this.displayCoverUrl() as string).width(104)');
     assert.notEqual(wrongCover, detailSource, 'negative control changes the actual novel hero source');
     assert.throws(() => checkNaturalHero(wrongCover), assert.AssertionError,
       'a real SDK hero width regression cannot pass through the shared probe');
   }
 });
-check('missing synopsis is explained without contaminating metadata and expansion preserves content',()=>{
-  const {owner}=detailProbe(['summary','displayIntro'],{bookIntroText},{allowEmptyBranchAdmission:true});
-  Object.assign(owner,{appThemeScheme:'day',book:Object.freeze({intro:''}),introExpanded:false});owner.summary();
-  assert.ok(texts(owner).some(n=>n.create==='暂无简介'));assert.equal(owner.displayIntro(),'');assert.equal(owner.book.intro,'');
-  owner.book={intro:'真实简介'};owner.replay();const intro=texts(owner).find(n=>n.create==='真实简介');assert.equal(intro.maxLines,3);
-  const expand=texts(owner).find(n=>n.create==='展开');expand.onClick();owner.replay();assert.equal(owner.introExpanded,true);assert.equal(intro.maxLines,10000);assert.equal(owner.book.intro,'真实简介');
+await checkAsync('missing synopsis is explained without contaminating metadata and expansion preserves content', async () => {
+  const receipt = { full: 48, folded: 48 }, measures = [];
+  // Exact platform-result seam: MeasureUtils owns wrapping. This test does
+  // not estimate glyph widths or assume every non-empty intro overflows.
+  const uiContext = { px2vp: value => value / 3, fp2px: value => value * 3,
+    getMeasureUtils: () => ({ measureTextSize(options) {
+      measures.push({ ...options });
+      return { width: 500, height: options.maxLines === 3 ? receipt.folded : receipt.full };
+    } }) };
+  const probe = detailProbe(['summary','displayIntro'], { bookIntroText, uiContext }, { allowEmptyBranchAdmission: true });
+  const { owner } = probe;
+  Object.assign(owner, { appThemeScheme: 'day', book: Object.freeze({ sourceId: 'source', bookId: 'intro-book', intro: '' }), introExpanded: false,
+    viewportWidth: 390, readerWindowMetricsRevision: 1 });
+  owner.summary();
+  assert.ok(texts(owner).some(node => node.create === '暂无简介'));
+  assert.equal(owner.displayIntro(), ''); assert.equal(owner.book.intro, '');
+  if (baseline) {
+    // Keep the archived pre-repair contract isolated from the new measurement.
+    owner.book = { intro: '真实简介' }; owner.replay();
+    const intro = texts(owner).find(node => node.create === '真实简介'); assert.equal(intro.maxLines, 3);
+    const expand = texts(owner).find(node => node.create === '展开'); expand.onClick(); owner.replay();
+    assert.equal(owner.introExpanded, true); assert.equal(intro.maxLines, 10000); assert.equal(owner.book.intro, '真实简介');
+    return;
+  }
+  Object.assign(owner, { mounted: true, book: { sourceId: 'source', bookId: 'intro-book', intro: '真实短简介' } });
+  // Unmeasured content stays readable. An unavailable measurement must never
+  // manufacture a fold action or silently clip to three lines.
+  owner.replay();
+  assert.equal(texts(owner).find(node => node.create === '真实短简介').maxLines, 10000);
+  assert.ok(!texts(owner).some(node => node.create === '展开'));
+  owner.measureIntro(); await new Promise(done => setImmediate(done)); probe.properties.flush(); owner.replay();
+  assert.equal(owner.introMeasured, true); assert.equal(owner.introOverflow, false);
+  assert.equal(texts(owner).find(node => node.create === '真实短简介').maxLines, 3);
+  assert.ok(!texts(owner).some(node => node.create === '展开'), 'short measured content does not expose an inert expansion action');
+  assert.equal(measures.length, 2);
+  const [full, folded] = measures;
+  assert.deepEqual([full.fontFamily, full.fontSize, full.lineHeight, full.fontWeight, full.constraintWidth],
+    ['ReaderNotoSansSC', '13fp', '24fp', 400, '350vp']);
+  assert.equal(full.maxLines, 10000); assert.deepEqual({ ...full, maxLines: 3 }, folded);
+  const longIntro = '真实完整长简介\n'.repeat(16);
+  receipt.full = 240; receipt.folded = 72;
+  owner.book = { ...owner.book, intro: longIntro }; owner.onBookChanged();
+  await new Promise(done => setImmediate(done)); probe.properties.flush(); owner.replay();
+  assert.equal(owner.introMeasured, true); assert.equal(owner.introOverflow, true);
+  const intro = texts(owner).find(node => node.create === owner.displayIntro());
+  assert.equal(intro.fontFamily, 'ReaderNotoSansSC'); assert.equal(intro.fontSize, 13); assert.equal(intro.lineHeight, 24);
+  assert.equal(intro.maxLines, 3);
+  const expand = texts(owner).find(node => node.create === '展开'); assert.ok(expand);
+  expand.onClick(); owner.replay();
+  assert.equal(owner.introExpanded, true); assert.equal(intro.maxLines, 10000);
+  assert.equal(owner.book.intro, longIntro, 'folding never changes canonical metadata');
 });
 for(const [message,reason,expected] of [['','','暂无章节信息'],['正在读取本地目录…','','正在读取本地目录…'],['','目录读取失败，请重试','目录读取失败，请重试']]) {
   check(`empty chapters expose status: ${expected}`,()=>{
