@@ -146,6 +146,7 @@ export class ReaderRuntimeOwner {
   private sourceSupplyTask: Promise<void> = Promise.resolve();
   private importFinalizeTask: Promise<void> = Promise.resolve();
   private state: RuntimeState = 'new';
+  private reservationQuarantineDiagnosticLogged: boolean = false;
   private coreCapabilities: Set<string> = new Set<string>();
   private downloadCoordinator: SharedDownloadCoordinator | undefined;
   private downloadStorageGateway: SharedDownloadStorageGateway | undefined;
@@ -791,6 +792,16 @@ export class ReaderRuntimeOwner {
       const admissionFailure = coreAdmissionFailureSummary(error, method);
       if (admissionFailure !== undefined)
         hilog.warn(LOG_DOMAIN, 'Reader', 'Core command not admitted: %{public}s', admissionFailure);
+      if (!this.reservationQuarantineDiagnosticLogged && admissionFailure?.endsWith(
+        ' code=BUSY reason=runtime result reservation contract failed; drain and recreate') === true) {
+        this.reservationQuarantineDiagnosticLogged = true;
+        try {
+          // SDK owns this bounded, literal-method-only metadata. Never log
+          // params, returned data, native wire strings or retry a possible write.
+          hilog.warn(LOG_DOMAIN, 'Reader', 'Core reservation quarantine terminals: %{public}s',
+            JSON.stringify(this.runtime?.recentTerminalMetadata ?? []));
+        } catch (_) { /* Diagnostics must preserve the original admission error. */ }
+      }
       const responseFailure = httpResponseFailureSummary(error);
       if (responseFailure !== undefined)
         // This helper admits only stage, hostname and status; URL paths,

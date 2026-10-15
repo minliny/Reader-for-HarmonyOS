@@ -67,11 +67,23 @@ for (const code of ['BUSY', 'RESOURCE_EXHAUSTED']) {
       const summary = `method=source.list code=${code} reason=${reason}`;
       assert.equal(coreAdmissionFailureSummary({ message: error.message, code }, 'source.list'), summary);
       assert.equal(coreAdmissionFailureSummary(error, 'source.list\nprivate-secret'), `method=unknown code=${code} reason=${reason}`);
-      assert.deepEqual(logs, [[0, 'Reader', 'Core command not admitted: %{public}s', summary]]);
+      const quarantine = code === 'BUSY' && reason === 'runtime result reservation contract failed; drain and recreate';
+      const expectedLogs = [[0, 'Reader', 'Core command not admitted: %{public}s', summary]];
+      if (quarantine) expectedLogs.push([0, 'Reader', 'Core reservation quarantine terminals: %{public}s',
+        JSON.stringify(runtime.recentTerminalMetadata ?? [])]);
+      assert.deepEqual(logs, expectedLogs);
       assert.ok(!JSON.stringify(logs).includes('private-secret'));
       assert.deepEqual(calls, [['send', 'source.list'], 'lastError'], 'one rejection, no retry, polling, cancellation or ACK');
       assert.equal(finishes, 1, 'diagnostic repair still settles preparation ownership');
       assert.equal(owner.state, 'ready', 'diagnostics must not recreate or replace the Runtime');
+      if (quarantine) {
+        await assert.rejects(owner.requestDirect('source.list', {}), value => value === error);
+        assert.equal(logs.filter(row => row[2] === 'Core reservation quarantine terminals: %{public}s').length, 1,
+          'repeated quarantine must log the bounded terminal snapshot only once');
+        assert.equal(finishes, 2);
+        assert.deepEqual(calls, [['send', 'source.list'], 'lastError', ['send', 'source.list']],
+          'diagnostics preserve each original rejection without extra native work or replay');
+      }
     } finally { runtime.close(); }
     assert.equal(calls.filter(call => call === 'release').length, 1);
   }
