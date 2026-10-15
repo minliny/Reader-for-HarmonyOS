@@ -14,6 +14,8 @@ Core 的唯一隔离入口为 `Capacity::begin_delivery`：终端实际 JSON+64 
 - 已存本地目录解析错误：Serde错误可能回显整份缓存，形成大错误终端。改为固定分类、行列诊断，保留书籍错误及数据。合成错误由96261B降为240B，后续请求正常。现场缓存损坏未获证明。
 - TTS 绕开 remote 通用预留：纯读结果按实际编码预留，队列写在状态变化前预留snapshot上界，不复制正文plan。用户语料某章原89256B正常成功终端会隔离，修复后同大小正常。用户确认未朗读，因此这同样不是本次现场已确认根因。
 
+后续只读复查还复现了通用纯读错误未预留的缺口：将临时测试库派生 header 的 `positionScope.chapterIndex` 替换为80000字节错误类型后，直接 `reading.document.window` 返回80169B错误并隔离，ACK后仍拒绝后续读取。普通 `reading.entry.snapshot` 对同一坏派生header会重建并正常返回，因此不能据此认定现场跳章根因。修复范围限定纯读错误的实际容量预留；写命令可能已有副作用的错误不替换为Busy。
+
 真实用户TXT经现代导入、SQLite冷开、完整目录/指标/缓存状态、精确第95章及邻章、窗口/完整正文、存储锚点、邻页预热和读取保存位置，均未触发隔离。不能以这些通过结果冒充真机复现闭环。
 
 ## 有限诊断与后续验证
@@ -21,5 +23,7 @@ Core 的唯一隔离入口为 `Capacity::begin_delivery`：终端实际 JSON+64 
 SDK只保留最近16个终态的 requestId、固定白名单方法或unknown、result/error和原始UTF-16长度；在abandoned过滤前记录。方法索引最多256项，终态与close释放，不保留参数、正文、结果对象或wire原文。Host仅在精确隔离错误时输出一次副本，原错误原样抛出，不自动重建或重放。
 
 本地新回归验证真实Runtime显式ACK、预算拒绝前状态不变、队列控制/回调去重、元数据边界和原SDK生命周期。后续HAP、保数据安装、同书打开/翻页/目录跳转与用户验收分别记账；未取得新包现场证据前，最初触发方法保持OPEN。
+
+用户补充目录点选、章节滑条与跨章翻页都会失败。首轮完整HAP门禁在 `test-architecture-shared-producers.mjs` 超过110秒时限，已记录失败并停止该轮，未发布或安装HAP。必须重新通过全部门禁，不复用首轮PASS或放宽时限。
 
 实施在 `.reader-isolated/runtime-reservation-repair-20261015`，Host基线 `c982cf24`、Core基线 `41e62155`，排除主目录同期进行中的工具链/阅读WIP。原始现场证据保存在主Host忽略目录 `.reader-local/device-current-error-20261015/`，最终产物与回执另附不可变manifest。
