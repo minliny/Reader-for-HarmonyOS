@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import fs from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as pipeline from '../scripts/hap-pipeline.mjs';
@@ -35,31 +37,26 @@ try {
   pipeline.copySourceSandbox(source, sandbox);
   assert.equal(pipeline.sourceSnapshot(sandbox).fingerprint, valid.fingerprint);
   assert.equal(readFileSync(join(sandbox, 'entry/src/External.ets'), 'utf8'), 'export const value = 3;\n');
-  assert.equal(existsSync(join(sandbox, 'entry/oh_modules')), false, 'real rsync excludes nested installed dependencies');
+  assert.equal(existsSync(join(sandbox, 'entry/oh_modules')), false, 'real sandbox copy excludes nested installed dependencies');
   writeFileSync(linked, 'export const value = 4;\n');
   assert.notEqual(pipeline.sourceSnapshot(source).fingerprint, valid.fingerprint, 'regular input changes must affect the fingerprint');
   writeFileSync(linked, 'export const value = 3;\n');
   rmSync(join(source, 'entry/oh_modules'), { recursive: true });
 
-  // Change real input after the production snapshot, then invoke real rsync.
-  // PATH injection is confined to this fixture; production has no test hook.
-  const realRsync = execFileSync('/bin/sh', ['-c', 'command -v rsync'], { encoding: 'utf8' }).trim();
-  const wrapperDirectory = join(root, 'wrapper'); mkdirSync(wrapperDirectory);
-  const wrapper = join(wrapperDirectory, 'rsync');
-  writeFileSync(wrapper, '#!/bin/sh\nprintf "export const value = 5;\\n" > "$READER_TEST_COPY_INPUT"\nexec "$READER_TEST_REAL_RSYNC" "$@"\n');
-  chmodSync(wrapper, 0o755);
-  const originalEnvironment = { PATH: process.env.PATH, READER_TEST_COPY_INPUT: process.env.READER_TEST_COPY_INPUT,
-    READER_TEST_REAL_RSYNC: process.env.READER_TEST_REAL_RSYNC };
-  const racingSandbox = join(root, 'racing-sandbox');
+  // Intercept the host filesystem boundary, then run Node's real copier.
+  // Updating the built-in live export covers the production before/after fence
+  // without requiring a POSIX shell, rsync, or a production test hook.
+  const copy = fs.cpSync, racingSandbox = join(root, 'racing-sandbox');
   try {
-    process.env.PATH = `${wrapperDirectory}:${process.env.PATH}`;
-    process.env.READER_TEST_COPY_INPUT = linked; process.env.READER_TEST_REAL_RSYNC = realRsync;
+    fs.cpSync = (...args) => {
+      if (args[0] === source) writeFileSync(linked, 'export const value = 5;\n');
+      return copy(...args);
+    };
+    syncBuiltinESMExports();
     assert.throws(() => pipeline.copySourceSandbox(source, racingSandbox), /source inputs during sandbox copy changed/);
-    assert.equal(readFileSync(join(racingSandbox, 'entry/src/External.ets'), 'utf8'), 'export const value = 5;\n', 'the wrapper must execute real rsync');
+    assert.equal(readFileSync(join(racingSandbox, 'entry/src/External.ets'), 'utf8'), 'export const value = 5;\n', 'the boundary wrapper executes the real copier');
   } finally {
-    for (const [key, value] of Object.entries(originalEnvironment)) {
-      if (value === undefined) delete process.env[key]; else process.env[key] = value;
-    }
+    fs.cpSync = copy; syncBuiltinESMExports();
     writeFileSync(linked, 'export const value = 3;\n');
   }
   const restoredSandbox = join(root, 'restored-sandbox'); pipeline.copySourceSandbox(source, restoredSandbox);
@@ -67,18 +64,18 @@ try {
 
   const protectedOutside = join(root, 'protected-outside'); mkdirSync(protectedOutside);
   const sentinel = join(protectedOutside, 'preserve'); writeFileSync(sentinel, 'original outside bytes');
-  const destinationLink = join(root, 'destination-link'); symlinkSync(protectedOutside, destinationLink);
+  const destinationLink = join(root, 'destination-link'); symlinkSync(protectedOutside, destinationLink, 'dir');
   assert.throws(() => pipeline.copySourceSandbox(source, destinationLink), /sandbox destination.*symbolic links/);
   assert.equal(readFileSync(sentinel, 'utf8'), 'original outside bytes');
-  assert.equal(existsSync(join(protectedOutside, 'entry')), false, 'rsync must not write through a destination link');
-  const destinationParent = join(root, 'destination-parent'); symlinkSync(protectedOutside, destinationParent);
+  assert.equal(existsSync(join(protectedOutside, 'entry')), false, 'copy must not write through a destination link');
+  const destinationParent = join(root, 'destination-parent'); symlinkSync(protectedOutside, destinationParent, 'dir');
   assert.throws(() => pipeline.copySourceSandbox(source, join(destinationParent, 'deep/new-sandbox')),
     /sandbox destination.*symbolic links/);
   assert.equal(readFileSync(sentinel, 'utf8'), 'original outside bytes');
   assert.equal(existsSync(join(protectedOutside, 'deep')), false, 'a distant destination link must fail before creating directories');
 
   const originalEntry = join(root, 'original-entry');
-  renameSync(join(source, 'entry'), originalEntry); symlinkSync(originalEntry, join(source, 'entry'));
+  renameSync(join(source, 'entry'), originalEntry); symlinkSync(originalEntry, join(source, 'entry'), 'dir');
   assert.throws(() => pipeline.sourceSnapshot(source), /Host build inputs.*symbolic links/,
     'a parent directory link must fail even with the same target contents');
   assert.throws(() => pipeline.copySourceSandbox(source, join(root, 'parent-sandbox')), /Host build inputs.*symbolic links/);
@@ -97,7 +94,7 @@ try {
   commit(controller);
   const regularController = pipeline.controllerSnapshot(controller);
   const movedTools = join(root, 'moved-tools'); renameSync(join(controller, 'tools'), movedTools);
-  symlinkSync(movedTools, join(controller, 'tools'));
+  symlinkSync(movedTools, join(controller, 'tools'), 'dir');
   assert.throws(() => pipeline.controllerSnapshot(controller), /Host controller inputs.*symbolic links/);
   rmSync(join(controller, 'tools')); renameSync(movedTools, join(controller, 'tools'));
   assert.equal(pipeline.controllerSnapshot(controller).fingerprint, regularController.fingerprint);
@@ -110,7 +107,7 @@ try {
   writeFileSync(join(workspace, '.agents/skills/reader-harmonyos-hap-pipeline/SKILL.md'), 'controlled skill\n'); commit(workspace);
   const regularContract = pipeline.workspaceContractSnapshot(workspace);
   const movedAgents = join(root, 'moved-agents'); renameSync(join(workspace, '.agents'), movedAgents);
-  symlinkSync(movedAgents, join(workspace, '.agents'));
+  symlinkSync(movedAgents, join(workspace, '.agents'), 'dir');
   assert.throws(() => pipeline.workspaceContractSnapshot(workspace), /Workspace contract inputs.*symbolic links/);
   rmSync(join(workspace, '.agents')); renameSync(movedAgents, join(workspace, '.agents'));
   assert.equal(pipeline.workspaceContractSnapshot(workspace).fingerprint, regularContract.fingerprint);
@@ -118,7 +115,7 @@ try {
   assert.notEqual(pipeline.workspaceContractSnapshot(workspace).fingerprint, regularContract.fingerprint);
 
   // Never open a FIFO: type admission must reject it before content hashing.
-  for (const [method, relativePath, label] of [
+  if (process.platform !== 'win32') for (const [method, relativePath, label] of [
     ['sourceSnapshot', 'entry/src/nested/Input.ets', 'Host build inputs'],
     ['controllerSnapshot', 'tools/nested/gate.mjs', 'Host controller inputs'],
     ['workspaceContractSnapshot', '.agents/skills/reader-harmonyos-hap-pipeline/nested/SKILL.md', 'Workspace contract inputs'],
@@ -137,5 +134,6 @@ try {
     assert.equal(ordinary.files.some(file => file.path === relativePath && file.type === 'file'), true,
       'ordinary nested files/directories must still be accepted');
   }
-  console.log('PASS HAP source/controller/workspace inputs: links and FIFO rejected before reads/copy, real sandbox copy and regular input drift');
+  if (process.platform === 'win32') console.log('SKIP POSIX FIFO cases: Windows does not provide filesystem FIFOs; link/copy/input-drift cases still execute.');
+  console.log('PASS HAP source/controller/workspace inputs: links rejected before reads/copy, real sandbox copy and regular input drift');
 } finally { rmSync(root, { recursive: true, force: true }); }

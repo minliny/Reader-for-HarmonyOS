@@ -2,9 +2,14 @@ const { readFileSync, lstatSync, realpathSync } = require('node:fs');
 const { resolve } = require('node:path');
 const { createHash } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
+const { assertPrivateFilePermissions } = require('../scripts/lib/private-file.cjs');
 
 function isPackageTask(name) {
   return /(?:^|[:@])(?:assemble|package|sign)(?:hap|app|hsp|har)$/i.test(name);
+}
+
+function isBuildResourceTask(name) {
+  return isPackageTask(name) || /(?:^|[:@])(?:compileNative|ConfigureCmake|BuildNativeWithCmake|BuildNativeWithNinja|cleanNative|clean)$/i.test(name);
 }
 
 // An accidental IDE Run must fail before deployment can uninstall the app.
@@ -16,7 +21,8 @@ function assertCanonicalHapInvocation(tasks, cwd = process.cwd(), env = process.
     if (!env.READER_HAP_PIPELINE_ROOT || realpathSync(cwd) !== realpathSync(env.READER_HAP_PIPELINE_ROOT)) stop();
     const markerPath = resolve(cwd, '.reader-pipeline-session.json');
     const stat = lstatSync(markerPath);
-    if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o077) !== 0) stop();
+    if (!stat.isFile() || stat.isSymbolicLink()) stop();
+    assertPrivateFilePermissions(markerPath);
     const marker = JSON.parse(readFileSync(markerPath, 'utf8'));
     const digest = createHash('sha256').update(readFileSync(resolve(cwd, 'build-profile.json5'))).digest('hex');
     if (!marker.token || marker.token !== env.READER_HAP_PIPELINE_TOKEN || marker.profileSha256 !== digest) stop();
@@ -49,5 +55,15 @@ function verifyIdeOutput(ide, cwd = process.cwd()) {
   console.log(`Reader DevEco signed HAP verified: ${artifact.sha256}`);
 }
 
-module.exports = { assertCanonicalHapInvocation, isPackageTask, configureIdeSigning,
+module.exports = { assertCanonicalHapInvocation, isPackageTask, isBuildResourceTask, configureIdeSigning,
   assertReaderHapInvocation, verifyIdeOutput };
+
+let buildLease, buildLeaseReady;
+async function beginIdeBuild(ide) {
+  if (!ide || buildLease) return;
+  if (!buildLeaseReady) buildLeaseReady = import('../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs').then(({ acquireBuildLease }) => { buildLease = acquireBuildLease(); });
+  try { await buildLeaseReady; } catch (error) { buildLeaseReady = undefined; throw error; }
+}
+function finishIdeBuild() { const lease = buildLease; buildLease = undefined; buildLeaseReady = undefined; lease?.release(); }
+module.exports.beginIdeBuild = beginIdeBuild;
+module.exports.finishIdeBuild = finishIdeBuild;

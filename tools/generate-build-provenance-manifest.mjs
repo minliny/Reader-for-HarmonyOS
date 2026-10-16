@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { resolveHostTool } from './lib/tool-environment.mjs';
 
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -182,11 +183,11 @@ function treeRecord(root) {
 
 function archiveEntryRecord(hap, entryPath) {
   assertRegularFile(hap);
-  const names = execFileSync('unzip', ['-Z1', hap], { encoding: 'utf8' }).trim().split('\n');
+  const names = execFileSync(resolveHostTool('unzip'), ['-Z1', hap], { encoding: 'utf8' }).trim().split('\n');
   if (!names.includes(entryPath)) {
     throw new Error(`HAP does not contain ${entryPath}`);
   }
-  const bytes = execFileSync('unzip', ['-p', hap, entryPath], {
+  const bytes = execFileSync(resolveHostTool('unzip'), ['-p', hap, entryPath], {
     encoding: null,
     maxBuffer: 128 * 1024 * 1024,
   });

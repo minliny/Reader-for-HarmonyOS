@@ -1,7 +1,7 @@
 import { appTasks, OhosPluginId, OhosAppContext } from '@ohos/hvigor-ohos-plugin';
 import { hvigor } from '@ohos/hvigor';
 
-const { configureIdeSigning, assertReaderHapInvocation, verifyIdeOutput } = require('./hvigor/reader-hap-guard.cjs');
+const { configureIdeSigning, assertReaderHapInvocation, verifyIdeOutput, beginIdeBuild, finishIdeBuild, isBuildResourceTask } = require('./hvigor/reader-hap-guard.cjs');
 
 type IdeSigningSession = {
   pipeline: {
@@ -55,22 +55,29 @@ hvigor.taskGraphResolved(async () => {
   await ensureIdeSigning();
   const tasks = hvigor.getCommandEntryTask() || [];
   assertReaderHapInvocation(tasks, ideSigning);
-  if (ideSigning && tasks.some((name: string) => /(?:assemble|package|sign)Hap$/i.test(name))) {
-    ideSigning.pipeline.preflightIdeNative();
+  if (ideSigning && tasks.some((name: string) => isBuildResourceTask(name))) {
+    await beginIdeBuild(ideSigning);
+    try { ideSigning.pipeline.preflightIdeNative(); }
+    catch (error) { finishIdeBuild(); throw error; }
   }
 });
 
 // Incremental SignHap can be UP-TO-DATE, which skips task.afterRun. Always
 // verify the actual signed output after a successful package invocation.
 hvigor.buildFinished((result) => {
+  try {
   if (!result.getError() && (hvigor.getCommandEntryTask() || []).some(
     (name: string) => /(?:assemble|package|sign)Hap$/i.test(name))) verifyIdeOutput(ideSigning);
+  } finally { finishIdeBuild(); }
 });
 
 hvigor.nodesEvaluated(() => {
   for (const node of hvigor.getAllNodes()) {
     for (const task of node.getAllTasks()) {
-      task.beforeRun(() => assertReaderHapInvocation([task.getName()], ideSigning));
+      task.beforeRun(async () => {
+        assertReaderHapInvocation([task.getName()], ideSigning);
+        if (ideSigning && isBuildResourceTask(task.getName())) await beginIdeBuild(ideSigning);
+      });
       if (/(?:^|@)(?:SignHap|assembleHap)$/i.test(task.getName())) {
         task.afterRun(() => verifyIdeOutput(ideSigning));
       }

@@ -20,13 +20,18 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { portableSpawnSync, resolveHarmonyTool } from './lib/harmony-toolchain.mjs';
+import { assertPrivateFilePermissions } from './lib/private-file.cjs';
 import { performance } from 'node:perf_hooks';
 import { readSigningAuthority, assertSigningMaterialAuthority, assertSigningCertificateAuthority } from '../tools/reader-signing-authority.mjs';
 import { assertBuildTools } from '../tools/reader-build-tools.mjs';
-import { contentSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
+import { contentSnapshot, coreBuildSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
+import { acquireBuildWorkspace } from '../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs';
+import { assertWorkspaceLayout } from '../../Reader-Core-Native/scripts/lib/development-environment.mjs';
+import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate, verifyPublishedCoreGate, targetReadiness } from './lib/hap-delivery-evidence.mjs';
+import { hapStageReceipt } from './lib/hap-stage-receipt.mjs';
 import { contractTests, contractSelection, MAX_CONTRACT_TIMEOUT_MS } from '../tools/run-contract-tests.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -35,16 +40,9 @@ const WORKSPACE_ROOT = resolve(REPO_ROOT, '..');
 const CORE_ROOT = resolve(WORKSPACE_ROOT, 'Reader-Core-Native');
 const DEFAULT_ARTIFACT_ROOT = resolve(REPO_ROOT, '.reader-artifacts/hap');
 const DEFAULT_RETAIN_RUNS = 10;
-const ARTIFACT_LOCK = join(process.platform === 'darwin' ? '/private/tmp' : tmpdir(), 'reader-harmony-hap-build.lock');
+const LOCK_ROOT = resolve(process.env.READER_LOCK_DIR || tmpdir());
+const ARTIFACT_LOCK = join(LOCK_ROOT, 'reader-harmony-hap-build.lock');
 const DEFAULT_SIGNING_PROFILE = resolve(REPO_ROOT, '.reader-local/signing/build-profile.json5');
-const DEFAULT_HVIGORW = '/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw';
-const DEFAULT_OHPM = '/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin/ohpm';
-const DEFAULT_ETS_LOADER = '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const DEFAULT_HDC = '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc';
-const DEFAULT_SIGN_TOOL =
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/lib/hap-sign-tool.jar';
-const DEFAULT_STRIP_TOOL =
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/native/llvm/bin/llvm-objcopy';
 const HDC_LEASE_SCRIPT = resolve(REPO_ROOT, 'tools/reader-hdc-lease.mjs');
 const HDC_SERVER = process.env.READER_HDC_SERVER_KEY ?? '::ffff:127.0.0.1:8710';
 const BUNDLE_NAME = 'io.reader.minliny';
@@ -71,6 +69,8 @@ const BUILD_INPUTS = [
 ];
 const HARMONY_GATE_INPUTS = [
   'scripts/check-local.sh',
+  'scripts/check-local.mjs',
+  'scripts/lib',
   'scripts/hap-pipeline.mjs',
   'tools',
 ];
@@ -79,6 +79,8 @@ const WORKSPACE_CONTRACT_INPUTS = [
   'Reader-Core-Native/governance/workspace',
   'Reader-Core-Native/scripts/sync-workspace.mjs',
   'Reader-Core-Native/scripts/validate-workspace.py',
+  'Reader-Core-Native/scripts/lib',
+  'Reader-Core-Native/scripts/check-local.mjs',
   'README.md',
   'ARCHITECTURE.md',
   'HAP_BUILD_SYSTEM.md',
@@ -107,16 +109,26 @@ function fileRecord(path, publicPath = basename(path)) {
   };
 }
 
+let activeBuildAttempt;
+
 export function run(binary, args, options = {}) {
-  const result = spawnSync(binary, args, {
+  const started = performance.now();
+  // Only commands whose diagnostics were already public/inherited are logged.
+  // ZIP bytes and signer/CMS inspection may contain private material.
+  const stage = options.stdio === 'inherit' ? activeBuildAttempt?.begin(binary, args) : undefined;
+  const result = portableSpawnSync(binary, args, {
     cwd: options.cwd ?? REPO_ROOT,
     encoding: options.encoding !== undefined ? options.encoding : 'utf8',
     maxBuffer: options.maxBuffer ?? 256 * 1024 * 1024,
-    stdio: options.stdio ?? 'pipe',
+    stdio: activeBuildAttempt && options.stdio === 'inherit' ? 'pipe' : options.stdio ?? 'pipe',
     env: options.env ?? process.env,
     timeout: options.timeoutMs,
     killSignal: 'SIGKILL',
   });
+  if (stage) {
+    activeBuildAttempt.end(stage, result, Math.ceil(performance.now() - started));
+    if (options.stdio === 'inherit') process.stdout.write(activeBuildAttempt.redact(`${result.stdout ?? ''}${result.stderr ?? ''}`));
+  }
   if (result.error !== undefined) throw result.error;
   if (result.status !== 0 && !options.allowFailure) {
     const stderr = typeof result.stderr === 'string' ? result.stderr.trim() : '';
@@ -268,7 +280,7 @@ export function planHapRetention(root, keepRuns = DEFAULT_RETAIN_RUNS, reserve =
 /** Lock immutable runs, rather than an unrelated workspace's entire build. */
 export function withHapRunLock(directory, action) {
   const canonical = realpathSync(directory);
-  const lock = join(process.platform === 'darwin' ? '/private/tmp' : tmpdir(),
+  const lock = join(LOCK_ROOT,
     `reader-harmony-hap-run-${sha256Bytes(canonical)}.lock`);
   acquireLock(lock, { pid: process.pid, directory: canonical,
     startedAt: new Date().toISOString(), protocol: 'hap-run-lock-v1' }, false);
@@ -327,7 +339,7 @@ function gitRecord(repo) {
 
 function regularInputSnapshot(repo, inputs, label) {
   repo = resolve(repo);
-  // rsync -a preserves links. Reject them before hashing/copying so a clean
+  // Reject links before hashing/copying so a clean
   // tracked link cannot leave the real build input outside this snapshot.
   // contentSnapshot omits special nodes; inspect their types before any reads
   // so FIFOs, sockets and devices cannot be copied as unbound build inputs.
@@ -368,10 +380,16 @@ export function workspaceContractSnapshot(workspace = WORKSPACE_ROOT) {
   return regularInputSnapshot(workspace, WORKSPACE_CONTRACT_INPUTS, 'Workspace contract inputs');
 }
 
+export function contractToolchainLoaders(env = process.env) {
+  const defaults = { ...env }; delete defaults.READER_ETS_LOADER_ROOT;
+  return [...new Set([resolveHarmonyTool('etsLoader', { cwd: REPO_ROOT, env: defaults }),
+    resolveHarmonyTool('etsLoader', { cwd: REPO_ROOT, env })].map(path => realpathSync(resolve(path))))];
+}
+
 export function contractToolchainSnapshot(loaderInputs) {
   // Some probes use the installed SDK directly; others honour a loader override.
   // Bind both implementations rather than claiming the default SDK ran them all.
-  const loaders = [...new Set((loaderInputs ?? [DEFAULT_ETS_LOADER, process.env.READER_ETS_LOADER_ROOT]).filter(Boolean).map(path => realpathSync(resolve(path))))];
+  const loaders = [...new Set((loaderInputs ?? contractToolchainLoaders()).filter(Boolean).map(path => realpathSync(resolve(path))))];
   const inputs = [realpathSync(process.execPath)];
   for (const loader of loaders) {
     for (const name of ['main.js', 'package.json', 'lib', 'declarations', 'node_modules/typescript']) {
@@ -387,7 +405,15 @@ export function contractToolchainSnapshot(loaderInputs) {
       if (existsSync(path)) inputs.push(path);
     }
   }
-  return regularInputSnapshot('/', [...new Set(inputs)].map(path => path.slice(1)), 'Contract toolchain inputs');
+  // SDKs and Node can be on different Windows volumes. Snapshot each volume
+  // independently rather than treating '/' and path.slice(1) as universal.
+  const files = [...new Set(inputs)].flatMap(path => {
+    const root = parse(path).root;
+    return regularInputSnapshot(root, [relative(root, path)], 'Contract toolchain inputs').files
+      .map(file => ({ ...file, path: resolve(root, file.path) }));
+  }).sort((a, b) => a.path.localeCompare(b.path));
+  return { schemaVersion: 1, inputs: [...new Set(inputs)], fileCount: files.length,
+    fingerprint: sha256Bytes(files.map(file => `${JSON.stringify(file)}\n`).join('')), files };
 }
 
 export function assertResolvedCorePackage(sandboxRepo) {
@@ -442,7 +468,7 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir()) {
   if (!within || within === '..' || within.startsWith(`..${sep}`) || isAbsolute(within)) {
     fail('sandbox destination must be inside its temporary root');
   }
-  // Validate before rsync --delete can write through a destination link. The
+  // Validate before copying can write through a destination link. The
   // caller owns sandboxRoot (fresh mkdtemp in builds); tmpdir's platform alias
   // is a trusted boundary rather than an arbitrary destination parent.
   for (let path = destination; path !== sandboxRoot; path = dirname(path)) {
@@ -467,10 +493,28 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir()) {
     'oh_modules',
     'evidence',
   ];
-  const args = ['-a', '--delete'];
-  for (const excluded of excludes) args.push(`--exclude=${excluded}`);
-  args.push(`${source}/`, `${destination}/`);
-  run('rsync', args);
+  // Node's filesystem API preserves the same filtered sandbox without a
+  // platform-specific rsync executable. Preserve excluded local outputs while
+  // removing stale included entries, matching the former --delete contract.
+  const excluded = path => {
+    const local = relative(source, path).split(sep).join('/');
+    return excludes.some(entry => entry.includes('/') ? local === entry || local.startsWith(`${entry}/`)
+      : local.split('/').includes(entry));
+  };
+  const prune = (origin, target) => {
+    if (excluded(origin)) return;
+    const targetStat = lstatSync(target);
+    const originStat = lstatSync(origin, { throwIfNoEntry: false });
+    if (targetStat.isDirectory() && !targetStat.isSymbolicLink()) {
+      for (const name of readdirSync(target)) prune(resolve(origin, name), resolve(target, name));
+      if (!originStat?.isDirectory() && readdirSync(target).length === 0) rmSync(target, { recursive: true });
+    } else if (!originStat || originStat.isDirectory() || targetStat.isSymbolicLink()) {
+      rmSync(target, { force: true });
+    }
+  };
+  for (const name of readdirSync(destination)) prune(resolve(source, name), resolve(destination, name));
+  cpSync(source, destination, { recursive: true, force: true, preserveTimestamps: true, verbatimSymlinks: true,
+    filter: path => !excluded(path) });
   assertSnapshotUnchanged(before, sourceSnapshot(source), 'source inputs during sandbox copy');
   assertSnapshotUnchanged(before, sourceSnapshot(destination), 'copied sandbox inputs');
 }
@@ -509,7 +553,7 @@ function verifiedProfileIdentity(profilePath) {
   } else {
     // The HAP verifier has already authenticated the embedded Profile. Decode
     // its CMS content without logging the certificate or other material.
-    const result = run('/usr/bin/openssl', ['cms', '-verify', '-noverify', '-inform', 'DER', '-in', profilePath],
+    const result = run(resolveHarmonyTool('openssl'), ['cms', '-verify', '-noverify', '-inform', 'DER', '-in', profilePath],
       { allowFailure: true });
     if (result.status !== 0) fail('verified Profile identity could not be decoded');
     decoded = result.stdout;
@@ -522,9 +566,8 @@ function verifiedProfileIdentity(profilePath) {
 }
 
 function verifySignature(hapPath) {
-  const java = process.env.JAVA || '/usr/bin/java';
-  const signTool = process.env.HAP_SIGN_TOOL || DEFAULT_SIGN_TOOL;
-  if (!existsSync(java) || !existsSync(signTool)) fail('HarmonyOS HAP signing verifier is unavailable');
+  const java = resolveHarmonyTool('java');
+  const signTool = resolveHarmonyTool('signTool');
   const verifyRoot = mkdtempSync(join(tmpdir(), 'reader-hap-signature-'));
   try {
     const result = run(java, [
@@ -551,30 +594,34 @@ function verifySignature(hapPath) {
 }
 
 function archiveNames(hapPath) {
-  return capture('unzip', ['-Z1', hapPath]).split('\n').filter(Boolean);
+  return capture(resolveHarmonyTool('unzip'), ['-Z1', hapPath]).split(/\r?\n/).filter(Boolean);
 }
 
 function archiveEntryRecord(hapPath, entryPath) {
-  const result = run('unzip', ['-p', hapPath, entryPath], { encoding: null });
+  const result = run(resolveHarmonyTool('unzip'), ['-p', hapPath, entryPath], { encoding: null });
   const bytes = result.stdout;
   if (!Buffer.isBuffer(bytes)) fail(`unable to read ${entryPath} from ${hapPath}`);
   return { path: entryPath, bytes: bytes.length, sha256: sha256Bytes(bytes) };
 }
 
-function inspectHap(hapPath, kind, publicPath = basename(hapPath)) {
-  const nativeEntries = archiveNames(hapPath).filter((name) => name.startsWith('libs/')).sort();
+function inspectHap(hapPath, kind, publicPath = basename(hapPath), requiredResources) {
+  const names = archiveNames(hapPath);
+  const nativeEntries = names.filter((name) => name.startsWith('libs/')).sort();
   if (JSON.stringify(nativeEntries) !== JSON.stringify(EXPECTED_NATIVE_ENTRIES)) {
     fail(`unexpected native archive layout in ${hapPath}: ${JSON.stringify(nativeEntries)}`);
   }
   const signature = verifySignature(hapPath);
   if (kind === 'signed' && signature.status !== 'signed') fail(`${hapPath} is not signed`);
   if (kind === 'unsigned' && signature.status !== 'unsigned') fail(`${hapPath} is not unsigned`);
+  if (requiredResources) verifyRequiredHapResources(requiredResources, names,
+    entry => run(resolveHarmonyTool('unzip'), ['-p', hapPath, entry], { encoding: null }).stdout);
   return {
     kind,
     ...fileRecord(hapPath, publicPath),
     signature,
     nativeEntries,
     embeddedCoreNapi: archiveEntryRecord(hapPath, 'libs/arm64-v8a/libreader_core_napi.so'),
+    ...(requiredResources ? { requiredResources } : {}),
   };
 }
 
@@ -597,6 +644,7 @@ function processExists(pid) {
 }
 
 function acquireLock(lockDir, owner, reclaimStale = true) {
+  mkdirSync(dirname(lockDir), { recursive: true });
   try {
     mkdirSync(lockDir);
   } catch (error) {
@@ -627,13 +675,9 @@ function requireCleanAcceptance(buildClass, harmonyGit, coreGit, signingMode) {
 }
 
 function validateLocalSigningProfile(path) {
-  const stat = statSync(path);
-  if (!stat.isFile()) fail(`local signing profile is not a file: ${path}`);
-  if ((stat.mode & 0o077) !== 0) {
-    fail(`local signing profile permissions must exclude group/other access: ${path}`);
-  }
+  assertPrivateFilePermissions(path);
   const relativePath = relative(REPO_ROOT, path);
-  if (relativePath !== '..' && !relativePath.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`)) {
+  if (relativePath !== '..' && !relativePath.startsWith(`..${sep}`) && !isAbsolute(relativePath)) {
     const tracked = run('git', ['-C', REPO_ROOT, 'ls-files', '--error-unmatch', '--', relativePath], {
       allowFailure: true,
     });
@@ -644,7 +688,7 @@ function validateLocalSigningProfile(path) {
 function parseBuildProfile(path) {
   // Use the JSON5 parser bundled with the official build tools, including
   // DevEco's comments/trailing commas; never echo parser excerpts of secrets.
-  const plugin = process.env.READER_HVIGOR_PLUGIN_PACKAGE || '/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/package.json';
+  const plugin = resolveHarmonyTool('hvigorPlugin', { cwd: REPO_ROOT });
   try { return createRequire(plugin)('json5').parse(readFileSync(path, 'utf8')); }
   catch { fail('signing build profile could not be parsed; no secret content was logged'); }
 }
@@ -700,7 +744,7 @@ export function assertIdeSigningUnchanged(session) {
 
 export function verifyIdeSignedHap(path, session) {
   assertIdeSigningUnchanged(session);
-  const artifact = inspectHap(path, 'signed');
+  const artifact = inspectHap(path, 'signed', basename(path), requiredHapResources(REPO_ROOT));
   if (artifact.signature.status !== 'signed' || artifact.signature.verified !== true) {
     fail('DevEco build did not produce a verified signed HAP.');
   }
@@ -801,15 +845,21 @@ function findBuiltHaps(outputDir, signingMode) {
   return names;
 }
 
-function requireAcceptanceInputs() {
-  const base = resolve(CORE_ROOT, 'target/harmony-napi/arm64-v8a');
-  const inputs = {
+export function nativeInputPaths(coreRoot = CORE_ROOT, env = process.env) {
+  // Cargo resolves relative target directories from the Core producer's cwd,
+  // not from the Harmony checkout or the pipeline invocation directory.
+  const base = resolve(coreRoot, env.CARGO_TARGET_DIR || 'target', 'harmony-napi/arm64-v8a');
+  return {
     identity: resolve(base, 'core-build-identity.json'),
     inputSnapshot: resolve(base, 'core-input-snapshot.json'),
     packageManifest: resolve(base, 'harmony-package-manifest.sha256'),
     buildEvidence: resolve(base, 'harmony-napi-build-evidence.txt'),
     nativeSo: resolve(base, 'package/libs/arm64-v8a/libreader_core_napi.so'),
   };
+}
+
+export function requireAcceptanceInputs(coreRoot = CORE_ROOT, env = process.env) {
+  const inputs = nativeInputPaths(coreRoot, env);
   for (const [label, path] of Object.entries(inputs)) {
     if (!existsSync(path)) fail(`acceptance input missing (${label}): ${path}`);
   }
@@ -829,6 +879,7 @@ function nativeProvenanceArguments() {
 }
 
 export function preflightIdeNative() {
+  assertWorkspaceLayout(WORKSPACE_ROOT);
   const directory = mkdtempSync(join(tmpdir(), 'reader-ide-native-'));
   try {
     run(process.execPath, [resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs'),
@@ -896,8 +947,7 @@ function syncNative() {
 
 function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCommand, buildClass) {
   const generator = resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs');
-  const stripTool = process.env.NATIVE_STRIP_TOOL || DEFAULT_STRIP_TOOL;
-  if (!existsSync(stripTool)) fail(`native strip tool is missing: ${stripTool}`);
+  const stripTool = resolveHarmonyTool('objcopy');
   const output = resolve(runDir, `${buildClass}-${basename(signedHap, '.hap')}-provenance.json`);
   run(process.execPath, [
     generator,
@@ -914,7 +964,7 @@ function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCom
 }
 
 export function buildContractScope(options, root = REPO_ROOT) {
-  const allowed = ['--class', '--signing', '--live-sources', '--keep-runs', '--artifact-root', '--contracts-scope'];
+  const allowed = ['--class', '--signing', '--live-sources', '--keep-runs', '--artifact-root', '--contracts-scope', '--core-gate-receipt'];
   for (const key of options.keys()) if (!allowed.includes(key)) fail(`unknown build argument: ${key}`, 2);
   const buildClass = option(options, '--class', 'iteration');
   if (!['iteration', 'acceptance'].includes(buildClass)) fail('--class must be iteration or acceptance', 2);
@@ -933,6 +983,18 @@ export function remainingContractBudget(started, reserveMs = 0) {
 }
 
 function build(options) {
+  buildContractScope(options); // Invalid CLI arguments are not build attempts.
+  activeBuildAttempt = hapStageReceipt(resolve(REPO_ROOT, '.reader-artifacts/hap-attempts'), {});
+  try {
+    activeBuildAttempt.bindInputs({ harmony: gitRecord(REPO_ROOT), core: gitRecord(CORE_ROOT), coreBuildInputs: coreBuildSnapshot(CORE_ROOT), source: sourceSnapshot(), controller: controllerSnapshot() });
+    buildImpl(options); activeBuildAttempt.finish();
+  }
+  catch (error) { activeBuildAttempt.finish(error); error.message = activeBuildAttempt.redact(error.message); throw error; }
+  finally { activeBuildAttempt = undefined; }
+}
+
+function buildImpl(options) {
+  assertWorkspaceLayout(WORKSPACE_ROOT);
   const contractsScope = buildContractScope(options);
   const buildClass = option(options, '--class', 'iteration');
   if (!['iteration', 'acceptance'].includes(buildClass)) fail('--class must be iteration or acceptance', 2);
@@ -952,6 +1014,7 @@ function build(options) {
     validateLocalSigningProfile(localProfile);
     signingProfile = composeSigningProfile(parseBuildProfile(resolve(REPO_ROOT, 'build-profile.json5')),
       parseBuildProfile(localProfile));
+    for (const config of signingProfile.app?.signingConfigs ?? []) activeBuildAttempt?.protect(config.material);
     assertSigningMaterialAuthority(signingProfile, verifiedProfileIdentity);
     signingBefore = { configuration: fileRecord(localProfile, 'local-signing-config'),
       material: signingMaterialSnapshot(signingProfile) };
@@ -960,15 +1023,12 @@ function build(options) {
   const harmonyGit = gitRecord(REPO_ROOT);
   const coreGit = gitRecord(CORE_ROOT);
   requireCleanAcceptance(buildClass, harmonyGit, coreGit, signingMode);
+  const coreGateFile = option(options, '--core-gate-receipt', process.env.READER_CORE_GATE_RECEIPT);
+  if (buildClass === 'acceptance') currentCoreGate(coreGateFile, CORE_ROOT);
+  const requiredResources = requiredHapResources(REPO_ROOT);
 
-  const lockDir = ARTIFACT_LOCK;
-  acquireLock(lockDir, {
-    pid: process.pid,
-    repo: REPO_ROOT,
-    startedAt: new Date().toISOString(),
-  });
-
-  const sandboxRoot = mkdtempSync(join(tmpdir(), 'reader-hap-build-'));
+  const buildLease = acquireBuildWorkspace({ create: () => mkdtempSync(join(tmpdir(), 'reader-hap-build-')), remove: path => rmSync(path, { recursive: true, force: true }) });
+  const sandboxRoot = buildLease.path;
   let unpublishedRunDir = null;
   let contractGateState = null;
   try {
@@ -1006,7 +1066,7 @@ function build(options) {
     const contractEnvironment = { ...process.env, READER_CONTRACT_RESULTS_FILE: contractsResultPath,
       READER_CONTRACT_TEST_TIMEOUT_MS: String(MAX_CONTRACT_TIMEOUT_MS) };
     if (contractsScope === undefined) {
-      run(resolve(REPO_ROOT, 'scripts/check-local.sh'), [], { cwd: REPO_ROOT, stdio: 'inherit', env: contractEnvironment });
+      run(process.execPath, [resolve(REPO_ROOT, 'scripts/check-local.mjs')], { cwd: REPO_ROOT, stdio: 'inherit', env: contractEnvironment });
     } else {
       run(process.execPath, ['tools/generate-theme-registry.mjs', '--check'], { cwd: REPO_ROOT, stdio: 'inherit',
         timeoutMs: remainingContractBudget(contractGateState.started) });
@@ -1060,8 +1120,7 @@ function build(options) {
     // Fresh worktrees have no generated oh_modules. Resolve the declared local
     // Core package inside this sandbox rather than inheriting a developer's
     // links (which may point into another checkout or contain stale SDK bytes).
-    const ohpm = process.env.OHPM || DEFAULT_OHPM;
-    if (!existsSync(ohpm)) fail(`OHPM is missing: ${ohpm}`);
+    const ohpm = resolveHarmonyTool('ohpm', { cwd: REPO_ROOT });
     run(ohpm, ['install', '--no-link', '--cache', resolve(sandboxRoot, 'ohpm-cache')], {
       cwd: resolve(sandboxRepo, 'entry'),
       stdio: 'inherit',
@@ -1069,8 +1128,7 @@ function build(options) {
     assertSnapshotUnchanged(sandboxBefore, sourceSnapshot(sandboxRepo), 'dependency manifests and source inputs');
     assertResolvedCorePackage(sandboxRepo);
 
-    const hvigorw = process.env.HVIGORW || DEFAULT_HVIGORW;
-    if (!existsSync(hvigorw)) fail(`Hvigor is missing: ${hvigorw}`);
+    const hvigorw = resolveHarmonyTool('hvigorw', { cwd: REPO_ROOT });
     const buildArgs = [
       'assembleHap', '--mode', 'module',
       '-p', 'product=default', '-p', 'module=entry@default', '-p', 'buildMode=debug',
@@ -1088,9 +1146,9 @@ function build(options) {
     const packageManager = assertBuildTools(sharedHvigorTools);
     const isolatedHvigorTools = resolve(hvigorUserHome, 'wrapper/tools');
     mkdirSync(isolatedHvigorTools, { recursive: true });
-    run('rsync', ['-a', `${sharedHvigorTools}/`, `${isolatedHvigorTools}/`]);
+    cpSync(sharedHvigorTools, isolatedHvigorTools, { recursive: true, preserveTimestamps: true, verbatimSymlinks: true });
     const buildEnvironment = {
-      ...process.env,
+      ...buildLease.env,
       HVIGOR_USER_HOME: hvigorUserHome,
       npm_config_cache: resolve(sandboxRoot, 'npm-cache'),
       READER_HAP_PIPELINE_ROOT: sandboxRepo,
@@ -1155,6 +1213,7 @@ function build(options) {
       path,
       basename(path).endsWith('-signed.hap') ? 'signed' : 'unsigned',
       basename(path),
+      requiredResources,
     ));
     if (buildClass === 'acceptance' && !artifacts.some((artifact) => artifact.kind === 'signed')) {
       fail('acceptance build did not produce a signed artifact');
@@ -1193,6 +1252,7 @@ function build(options) {
     );
     const manifest = {
       schemaVersion: 2,
+      deliveryEvidenceVersion: 1,
       name: 'reader-harmonyos-hap-run',
       nativeProvenance,
       runId,
@@ -1217,6 +1277,8 @@ function build(options) {
         vendoredCoreNapi: vendoredNapi,
       },
       gates: {
+        coreDevelopment: buildClass === 'acceptance' ? publishCoreGate(coreGateFile, runDir, CORE_ROOT) : { status: 'NOT_RUN' },
+        requiredResourceBytes: 'PASS',
         harmonyContracts: contractsScope === undefined ? 'PASS' : 'PARTIAL',
         contracts,
         contractToolchainInputs: snapshotDescriptor(contractToolchainBefore, 'contract-toolchain-snapshot.json'),
@@ -1276,11 +1338,9 @@ function build(options) {
   } finally {
     if (contractGateState !== null) console.log(JSON.stringify({ stage: 'harmonyContracts', event: 'end',
       scope: contractGateState.scope, status: 'FAIL', milliseconds: Math.ceil(performance.now() - contractGateState.started) }));
-    if (unpublishedRunDir !== null) {
-      rmSync(unpublishedRunDir, { recursive: true, force: true });
-    }
-    rmSync(sandboxRoot, { recursive: true, force: true });
-    rmSync(lockDir, { recursive: true, force: true });
+    try {
+      if (unpublishedRunDir !== null) rmSync(unpublishedRunDir, { recursive: true, force: true });
+    } finally { buildLease.release(); }
   }
 }
 
@@ -1470,6 +1530,17 @@ function verifyManifest(path) {
     );
   }
   verifyContractEvidence(loaded.directory, loaded.manifest);
+  const controllerFile = resolve(loaded.directory, 'controller-snapshot.json');
+  const deliveryController = existsSync(controllerFile) && JSON.parse(readFileSync(controllerFile, 'utf8')).files.some(
+    file => file.path === 'scripts/lib/hap-delivery-evidence.mjs');
+  if (deliveryController && loaded.manifest.deliveryEvidenceVersion !== 1) fail('Current controller requires delivery evidence version 1');
+  if (loaded.manifest.deliveryEvidenceVersion === 1) {
+    if (loaded.manifest.gates.requiredResourceBytes !== 'PASS') fail('Required resource evidence is missing');
+    if (loaded.manifest.buildClass === 'acceptance') {
+      const coreReceipt = verifyPublishedCoreGate(loaded.directory, loaded.manifest.gates.coreDevelopment);
+      if (coreReceipt.inputs.gitCommit !== loaded.manifest.source.core.commit) fail('Core gate and acceptance source commit differ');
+    }
+  }
   const seenKinds = new Set();
   const verified = [];
   for (const artifact of loaded.manifest.artifacts) {
@@ -1481,7 +1552,8 @@ function verifyManifest(path) {
     seenKinds.add(artifact.kind);
     const artifactPath = resolve(loaded.directory, artifact.path);
     if (!existsSync(artifactPath)) fail(`manifest artifact is missing: ${artifactPath}`);
-    const current = inspectHap(artifactPath, artifact.kind, artifact.path);
+    if (loaded.manifest.deliveryEvidenceVersion === 1 && !artifact.requiredResources?.length) fail('Required HAP resource inventory is missing');
+    const current = inspectHap(artifactPath, artifact.kind, artifact.path, artifact.requiredResources);
     if (current.sha256 !== artifact.sha256 || current.bytes !== artifact.bytes ||
         current.embeddedCoreNapi.sha256 !== artifact.embeddedCoreNapi.sha256) {
       fail(`manifest artifact identity mismatch: ${artifactPath}`);
@@ -1559,9 +1631,7 @@ export function deploymentRoute({ targetKind, installed, artifact }) {
 }
 
 function hdcBinary() {
-  const path = process.env.HDC || DEFAULT_HDC;
-  if (!existsSync(path)) fail(`HDC is missing: ${path}`);
-  return path;
+  return resolveHarmonyTool('hdc', { cwd: REPO_ROOT });
 }
 
 function targetReference(target) {
@@ -1601,6 +1671,9 @@ function resolveDeployment(options) {
   const artifactPath = resolve(verified.directory, artifact.path);
   const hdc = hdcBinary();
   assertTargetConnected(hdc, target);
+  const readiness = targetReadiness({ targetKind, vmLog: option(options, '--vm-log'),
+    query: command => capture(process.execPath, [HDC_LEASE_SCRIPT, '--target', target, '--hdc', hdc,
+      '--server-key', HDC_SERVER, '--', '-s', HDC_SERVER, '-t', target, 'shell', command], { timeoutMs: 10_000, maxBuffer: 1024 * 1024 }) });
   const installed = installedMetadata(hdc, target);
   const route = deploymentRoute({ targetKind, installed, artifact });
   return {
@@ -1613,6 +1686,7 @@ function resolveDeployment(options) {
     targetRef: targetReference(target),
     installed,
     route,
+    readiness,
   };
 }
 
@@ -1630,6 +1704,7 @@ function inspectDeployment(options) {
     },
     installed: resolved.installed,
     route: resolved.route,
+    readiness: resolved.readiness,
   }, null, 2));
   if (!resolved.route.allowed) process.exitCode = 3;
 }
@@ -1638,7 +1713,7 @@ function installDeployment(options) {
   const target = requiredOption(options, '--target');
   const targetKind = requiredOption(options, '--target-kind');
   const targetRef = targetReference(target);
-  const lockDir = join(process.platform === 'darwin' ? '/private/tmp' : tmpdir(), `reader-harmony-target-${targetRef}.lock`);
+  const lockDir = join(LOCK_ROOT, `reader-harmony-target-${targetRef}.lock`);
   acquireLock(lockDir, {
     pid: process.pid,
     targetKind,
@@ -1693,6 +1768,7 @@ function installDeployment(options) {
         signature: resolved.artifact.signature,
       },
       dataPolicy: 'preserve',
+      readiness: resolved.readiness,
       install: 'PASS',
       launch,
       preInstall: resolved.installed,
@@ -1718,12 +1794,12 @@ function installDeployment(options) {
 
 function usage() {
   console.error(`Usage:
-  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--contracts-scope manga-image-cache] [--signing auto|local|unsigned] [--live-sources] [--keep-runs 10]
+  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--contracts-scope manga-image-cache] [--signing auto|local|unsigned] [--live-sources] [--keep-runs 10] [--core-gate-receipt <receipt.json>]
   node scripts/hap-pipeline.mjs prune [--artifact-root <directory>] [--keep-runs 10] [--apply]
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
   node scripts/hap-pipeline.mjs sync-native [sync-core alias]
   node scripts/hap-pipeline.mjs verify --manifest <manifest.json>
-  node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical
+  node scripts/hap-pipeline.mjs inspect --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--vm-log <current-emulator.log>]
   node scripts/hap-pipeline.mjs install --manifest <manifest.json> --artifact signed|unsigned --target <exact> --target-kind vm|physical [--no-launch]`);
 }
 
