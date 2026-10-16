@@ -29,7 +29,7 @@ jobs:
       - name: Evidence boundary
         run: echo 'Repository-only tests. Full SDK, cross-repository compatibility, Native, HAP and signing are verified on FnOS for the exact candidate SHAs.' >> "$GITHUB_STEP_SUMMARY"
   host-source-gate:
-    name: host-source-gate
+    name: contract-gate
     if: always()
     needs: source-check
     runs-on: ubuntu-24.04
