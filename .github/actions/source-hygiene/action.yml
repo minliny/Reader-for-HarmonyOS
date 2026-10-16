@@ -1,3 +1,4 @@
+# Generated from Reader-Core-Native/governance/source-hygiene/action.yml; run tools/source-hygiene/sync_source_hygiene.py --write.
 name: Reader source hygiene
 description: Check current tracked source, not private archives or complete Git history.
 inputs:
