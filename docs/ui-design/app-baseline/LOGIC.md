@@ -44,7 +44,7 @@ flowchart LR
   N12 -->|漫画详情按返回，核实更多入口的真实返回目标| N7
   N13["reader-controls/home"]:::observed
   N7 -->|最近漫画书架→小说第二行打开原位置→点击正文显示小说控制| N13
-  N14["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N14["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -72,7 +72,7 @@ flowchart LR
   N5 -->|关闭书籍操作→书架顶部更多菜单| N4
   N6["settings-bookshelf/default"]:::observed
   N4 -->|书架顶部更多→书架设置| N6
-  N7["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N7["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -102,7 +102,7 @@ flowchart LR
   N7 -->|独立目录返回详情→返回搜索→返回书架→小说操作→编辑分组，仅查看不选择| N4
   N8["multiselect/default"]:::observed
   N4 -->|关闭书籍操作→书架更多→批量管理零选| N8
-  N9["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N9["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   N10["已确认调整方向：书架书籍操作参照先前漫画demo的样式方向；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
@@ -133,7 +133,7 @@ flowchart LR
   N4 -->|书架批量管理→仅临时选中小说，不移除| N5
   N7["book-removal/default"]:::observed
   N5 -->|批量管理已临时选一本→只打开移除确认，不确认删除| N7
-  N8["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N8["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -181,7 +181,7 @@ flowchart LR
   N3["源码后续：选择或新建分组 / 取消返回书架"]:::pending
   N2 -.->|待正常入口实景| N1
   N1 -.->|后续条件与返回待逐项取证| N3
-  N4["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N4["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -207,7 +207,7 @@ flowchart LR
   N5 -->|取消移除确认→取消批量选择→书架更多→本地导入，只看不选文件| N4
   N6["bookshelf/list-collapsed"]:::observed
   N4 -->|取消本地导入→收起书架筛选，只切换临时展示| N6
-  N7["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N7["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -239,7 +239,7 @@ flowchart LR
   N5 -->|已有真实搜索结果→停止本次搜索，查看静止列表| N6
   N8["detail/online"]:::observed
   N6 -->|实际搜索结果→小说斗破苍穹书籍详情，只打开不加书| N8
-  N9["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N9["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -276,7 +276,7 @@ flowchart LR
   N10 -->|漫画详情换源→关闭，核实返回原漫画详情| N5
   N11["bookshelf/list-comic-latest"]:::observed
   N5 -->|漫画详情按返回，核实更多入口的真实返回目标| N11
-  N12["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N12["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -309,7 +309,7 @@ flowchart LR
   N8 -->|漫画详情→完整目录独立页| N5
   N9["download-management/book-loading"]:::observed
   N5 -->|漫画独立目录→右上更多，只查看菜单不执行下载或清理| N9
-  N10["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N10["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -338,7 +338,7 @@ flowchart LR
   N6 -->|漫画独立目录→右上更多，只查看菜单不执行下载或清理| N4
   N7["source-switch/comic-detail-empty"]:::observed
   N5 -->|关闭漫画目录更多→返回漫画详情→换源（只打开不选择来源）| N7
-  N8["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N8["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -364,7 +364,7 @@ flowchart LR
   N4["reader/body：小说正文稳定画面，阅读控制不可见"]:::observed
   N5["reader-controls/home"]:::observed
   N4 -->|小说正文 → 中心点击 → 控制首页| N5
-  N6["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N6["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -396,7 +396,7 @@ flowchart LR
   N7 -->|最近漫画书架→小说第二行打开原位置→点击正文显示小说控制| N4
   N8["reader-replace/quick-preview"]:::observed
   N4 -->|小说控制→替换快捷面板→预览效果（已保存0条，只查看）| N8
-  N9["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N9["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -433,7 +433,7 @@ flowchart LR
   N9 -->|小说控制→替换快捷面板→预览效果（已保存0条，只查看）| N8
   N11["reader-tts/full"]:::observed
   N8 -->|取消替换快捷预览→朗读→展开完整面板→滚动到底，仅查看最低播放选项| N11
-  N12["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N12["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -463,7 +463,7 @@ flowchart LR
   N4 -->|小说快捷目录→拖动控制栏把手展开完整目录| N5
   N7["reader-bookmarks/full-loading"]:::observed
   N5 -->|完整小说目录→书签标签| N7
-  N8["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N8["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -491,7 +491,7 @@ flowchart LR
   N4 -->|完整书签控制栏→收起到快捷书签| N5
   N7["reader-search/quick-empty"]:::observed
   N5 -->|快捷书签→点击已选目录返回阅读控制首页→内容搜索| N7
-  N8["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N8["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -525,7 +525,7 @@ flowchart LR
   N6 -->|完整内容搜索“萧炎”→隐藏输入法→提交搜索| N7
   N9["reader-autopage/quick-idle"]:::observed
   N7 -->|完整内容搜索→收起→快捷返回→首页自动翻页| N9
-  N10["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N10["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -555,7 +555,7 @@ flowchart LR
   N4 -->|自动翻页快捷栏→展开完整控制页（保持未开始）| N5
   N7["reader-appearance/quick"]:::observed
   N5 -->|自动翻页完整页→收起→小说界面快捷控制栏| N7
-  N8["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N8["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -585,7 +585,7 @@ flowchart LR
   N4 -->|小说界面快捷栏→展开完整界面设置| N5
   N7["reader-settings/quick"]:::observed
   N5 -->|完整界面设置→收起→阅读设置快捷栏| N7
-  N8["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N8["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -615,7 +615,7 @@ flowchart LR
   N4 -->|阅读设置快捷栏→展开完整阅读设置| N5
   N7["reader-tts/quick"]:::observed
   N5 -->|阅读设置完整页→收起→朗读快捷栏（未启动朗读）| N7
-  N8["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N8["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -649,7 +649,7 @@ flowchart LR
   N6 -->|朗读音色窗口点击外部关闭→完整页收起→已选朗读返回首页→小说更多| N8
   N9["reader-replace/quick-preview"]:::observed
   N9 -->|取消替换快捷预览→朗读→展开完整面板→滚动到底，仅查看最低播放选项| N5
-  N10["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N10["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -679,7 +679,7 @@ flowchart LR
   N5 -->|朗读音色窗口点击外部关闭→完整页收起→已选朗读返回首页→小说更多| N4
   N6["bookshelf/list-filter"]:::observed
   N4 -->|小说更多点外部关闭→顶部返回书架| N6
-  N7["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N7["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   N8["已确认调整方向：小说更多菜单参照漫画更多菜单的样式方向；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
@@ -713,7 +713,7 @@ flowchart LR
   N9["manga-more/sheet"]:::observed
   N7 -->|漫画控制栏→右上更多底部面板| N9
   N4 -->|轻点正文显示控制| N5
-  N10["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N10["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -741,7 +741,7 @@ flowchart LR
   N5 -->|关闭本书下载→漫画阅读控制目录底部面板| N4
   N6["manga-mode/sheet"]:::observed
   N4 -->|关闭漫画目录→阅读方式底部面板，不修改模式| N6
-  N7["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N7["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -769,7 +769,7 @@ flowchart LR
   N5 -->|关闭漫画目录→阅读方式底部面板，不修改模式| N4
   N6["manga-settings/sheet"]:::observed
   N4 -->|关闭阅读方式→漫画阅读设置底部面板，不修改开关| N6
-  N7["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N7["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -797,7 +797,7 @@ flowchart LR
   N5 -->|关闭阅读方式→漫画阅读设置底部面板，不修改开关| N4
   N6["manga-more/sheet"]:::observed
   N4 -->|关闭漫画设置→重开更多，确认可见漫画详情入口位置| N6
-  N7["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N7["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -829,7 +829,7 @@ flowchart LR
   N7 -->|关闭漫画设置→重开更多，确认可见漫画详情入口位置| N4
   N8["detail/manga"]:::observed
   N4 -->|漫画更多→漫画详情，打开已有漫画不加入或移除| N8
-  N9["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N9["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -858,7 +858,7 @@ flowchart LR
   N6 -->|漫画更多→下载管理，只查看当前既有任务，不开始或取消任务| N4
   N7["manga-directory/sheet"]:::observed
   N5 -->|关闭本书下载→漫画阅读控制目录底部面板| N7
-  N8["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N8["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -881,7 +881,7 @@ flowchart LR
   N3["源码后续：下一章 / 返回；结束画面待观察"]:::pending
   N2 -.->|待正常入口实景| N1
   N1 -.->|后续条件与返回待逐项取证| N3
-  N4["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N4["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -908,7 +908,7 @@ flowchart LR
   N6 -->|关闭漫画目录更多→返回漫画详情→换源（只打开不选择来源）| N5
   N7["detail/manga"]:::observed
   N5 -->|漫画详情换源→关闭，核实返回原漫画详情| N7
-  N8["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N8["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -936,7 +936,7 @@ flowchart LR
   N5 -->|书架设置返回→底部设置tab| N4
   N6["settings-general/default"]:::observed
   N4 -->|设置主页→通用设置| N6
-  N7["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N7["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -966,7 +966,7 @@ flowchart LR
   N4 -->|通用设置→恢复默认确认窗口（只查看，不确认）| N5
   N7["source-management/default"]:::observed
   N5 -->|恢复默认窗口取消→通用设置返回→书源管理| N7
-  N8["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N8["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -994,7 +994,7 @@ flowchart LR
   N5 -->|书架顶部更多→书架设置| N4
   N6["settings/home"]:::observed
   N4 -->|书架设置返回→底部设置tab| N6
-  N7["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N7["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -1022,7 +1022,7 @@ flowchart LR
   N5 -->|恢复默认窗口取消→通用设置返回→书源管理| N4
   N6["source-import/default"]:::observed
   N4 -->|书源管理搜索栏旁加号→导入入口| N6
-  N7["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N7["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -1050,7 +1050,7 @@ flowchart LR
   N5 -->|书源管理搜索栏旁加号→导入入口| N4
   N6["source-tools/default"]:::observed
   N4 -->|导入书源关闭→书源管理顶部更多| N6
-  N7["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N7["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -1080,7 +1080,7 @@ flowchart LR
   N4 -->|书源工具→电线看书（优）编辑（只查看，不保存）| N5
   N7["search/keyboard"]:::observed
   N5 -->|取消书源编辑→返回书源→返回设置→书架→搜索空入口| N7
-  N8["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N8["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
   classDef confirmed fill:#eef1f8,stroke:#65759a,color:#334264
@@ -1105,7 +1105,7 @@ flowchart LR
   N4["reader-controls/home（具体视觉/动作待确认）"]:::pending
   N3 -.->|demo提案：关闭适配提案| N4
   N5["此图为调整提案关系，不是当前应用可达路线"]:::confirmed
-  N6["已确认调整方向：系统控件替换为统一自定义组件，供效果检验和iOS/Android开发；具体视觉未确认"]:::confirmed
+  N6["当前类别边界：按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet；具体视觉未确认"]:::confirmed
   N7["已确认调整方向：小说更多菜单参照漫画更多菜单的样式方向；具体视觉未确认"]:::confirmed
   classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d
   classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4
@@ -1125,7 +1125,7 @@ flowchart LR
 - 内容搜索键盘捕获只准入应用避让几何，操作系统键盘/状态栏/导航条不纳入应用画布。
 - 书源工具046顶端、047编辑状态、048/049下部编辑与调试为同一外层Scroll；内部书源List限高420。JSON编辑不是独立页面，保存/调试结果尚未观察。
 - 043/046布局树仍前一页、066/074主布局树已经是后续态；按PNG实际画面准入，不由树替代像素。
-- 系统确认映射自定义Dialog时保留实测正文与动作；无实测内容不得生成提交成功、取消中等额外页面。
+- 恢复确认保留 native Alert、书籍移除保留 custom Dialog、动作使用 bottom Sheet；保留实测正文与动作，不把旧截图升级为当前产物验收。无实测内容不得生成提交成功、取消中等额外页面。
 
 ## 未采集与未确认清单
 

@@ -5,7 +5,7 @@
   "nativeCaptureOwner": "root",
   "previousDesignAuthority": "INVALIDATED_AND_ARCHIVED",
   "visualRule": "只有当前应用正常入口产生的截图、布局与操作记录可作为业务外观基准。源码核对行为条件，不单独生成可见页面。",
-  "systemControlRule": "系统控件替换为统一自定义组件；保持实测业务结构、正文、动作、返回和状态保留语义。系统文件选择器和键盘不冒充应用自绘页面。",
+  "systemControlRule": "按消息类别复用组件及有限变体：恢复确认保留 native Alert，书籍移除使用 custom Dialog，动作用 bottom Sheet；不要求全部系统窗口自绘。保持实测业务结构、正文、动作、返回和状态保留语义。系统文件选择器和键盘不冒充应用自绘页面。",
   "sourceProfile": {
     "path": "entry/src/main/ets/app/ReaderProductScope.ts",
     "configuredProfile": "l0",

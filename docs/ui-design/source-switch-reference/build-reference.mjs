@@ -9,8 +9,6 @@ import { calculateReferenceProfile } from './reference-profile.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const host = path.resolve(here, '../../..');
 const workspace = path.dirname(host);
-const workspaceParent = path.dirname(workspace);
-const project = path.basename(workspaceParent) === '.reader-isolated' ? path.dirname(workspaceParent) : workspace;
 const original = path.join(here, 'approved-source');
 const archived = JSON.parse(await fs.readFile(path.join(original, 'archive-manifest.json'), 'utf8'));
 if (archived.schemaVersion !== 1 || archived.id !== 'novel-source-switch-approved-source-20261007') {
@@ -90,7 +88,8 @@ flow = replaceExactly(flow, 'model = createSourceFlow({onChange:render,reduceMot
 flow = replaceExactly(flow, '\ninitialize();measure();\n',
   '\nbindReferenceProfile(visual,()=>{cancelAnimations();readerSource="";if(snapshot)render(snapshot);applyReferenceProfile(visual);measure();});initialize();setReferenceViewport(visual);measure();\n');
 
-const esbuildModule = path.join(project, 'evidence/opensource-completion/renderer-pilot/node_modules/esbuild/lib/main.js');
+const dependencyRoot = path.resolve(here, '..');
+const esbuildModule = path.join(dependencyRoot, 'node_modules/esbuild/lib/main.js');
 const esbuild = await import(pathToFileURL(esbuildModule).href);
 if (esbuild.version !== '0.28.2') throw new Error('REFERENCE_BUNDLER_VERSION_MISMATCH');
 const modelName = path.join(original, 'source-flow-model.mjs');
@@ -232,7 +231,9 @@ const manifest = {
     historicalImageScope: definition.provenance.referenceImageScope },
   dependencyPolicy: 'Portable inside a Reader workspace: exact local approved-source archive, generated URL-only stylesheet adapters, shared Host fonts/media and paired UI visual definition. No adjacent worktree required; historical catalogue and its direct local dependencies are included.',
   dependencies, derivedOriginalSourceSha256: Object.fromEntries([...originalInputs].sort(([a], [b]) => a.localeCompare(b))), fontEvidence,
-  bundler: { name: 'esbuild', version: esbuild.version, packageRoot: 'Reader project root', package: path.relative(project, esbuildModule).split(path.sep).join('/') },
+  bundler: { name: 'esbuild', version: esbuild.version, packageRoot: '..', package: '../node_modules/esbuild/lib/main.js',
+    packageManifestSha256: sha(await fs.readFile(path.join(dependencyRoot, 'package.json'))),
+    lockfileSha256: sha(await fs.readFile(path.join(dependencyRoot, 'package-lock.json'))) },
   adapters: ['shared animation durations/easing/reader fade', 'width/height/font scale/safe-area profiles', 'short/large-font book scroll and extreme-window flow chrome', 'chapter-start caption and completion copy', 'URL-only portable stylesheet and historical catalogue adapters'],
   originalModelPreserved: 'Fictional successful-source admission, stop/restart/late-response generation guards and 900/900/600ms transaction fixtures remain demo-only.',
   verification: { generatorCheckedSeparately: true, executedProfileChecks: 10, baseGeometryFromSelectedCss: true,

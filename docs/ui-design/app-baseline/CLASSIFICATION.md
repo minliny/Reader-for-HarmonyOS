@@ -12,7 +12,7 @@
 
 三设计类别与证据成熟度分别记账。源码存在但尚未抓到原生画面的条目使用 classificationStatus:pending、candidateCategory:existing-app、category:null；它们是待取证的现有能力候选，不能反向推定未实现，也不能归为未确认demo提案。
 
-分类按属性范围判断：同一组件的真实结构/内容/业务值可为existing-app，替代方向为confirmed-demo-unimplemented，而自绘的新颜色、尺寸或动效为unconfirmed-demo。组件总类不会把其全部属性自动升级；系统替代的implementationInInstalledApp:OPEN只表示逐控件实现情况未全部核实。
+分类按属性范围判断：同一组件的真实结构/内容/业务值可为existing-app，替代方向为confirmed-demo-unimplemented，而自绘的新颜色、尺寸或动效为unconfirmed-demo。组件总类不会把其全部属性自动升级；implementationInInstalledApp:OPEN只表示逐控件实现情况未全部核实；按消息类别保留有限变体，不要求全部系统窗口自绘。
 
 模块维度计数：existing-app 34 个（64 个去重原生态）；确认方向提案 1 个独立模块、3 条确认方向；未确认独立模块 0 个；现有能力候选待取证 2 个。未确认具体属性另列下表，不因未确认独立模块为0而清零。
 
@@ -20,7 +20,7 @@
 
 | 调整 | 用户确认原文 | 未获确认的具体内容 | 当前安装应用实现 / 范围 |
 | --- | --- | --- | --- |
-| 系统控件替换为统一自定义组件，供效果检验和iOS/Android开发 | 系统控件不保留，这个 demo 的目录是检验实际效果和用于 iOS/Android UI 开发 | 每个控件的颜色、尺寸、字体、间距、圆角、动画、未观察业务结果 | OPEN；跨平台demo的系统控件替代要求；当前应用每个控件是否已有自定义实现逐项核验，OPEN不表示全部未实现 |
+| 按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet | 历史 demo 范围原文：系统控件不保留，这个 demo 的目录是检验实际效果和用于 iOS/Android UI 开发 | 每个控件的颜色、尺寸、字体、间距、圆角、动画、未观察业务结果 | OPEN；当前类别边界；历史 demo 系统控件替代指令不推广为全部生产窗口自绘；原生视觉验收仍 OPEN |
 | 书架书籍操作参照先前漫画demo的样式方向 | 不，我是说你之前的的漫画 demo 里书架操作的样式 | 整张旧稿、旧代理拟定尺寸、颜色值、横屏方案、最终视觉效果 | NOT_NATIVE_OBSERVED |
 | 小说更多菜单参照漫画更多菜单的样式方向 | 按漫画的更多菜单，重绘小说的更多菜单 | 小说3项菜单的适配尺寸与间距、适配后的颜色、圆角和动效、适配稿具体交互与最终视觉效果 | NOT_NATIVE_OBSERVED |
 
@@ -28,7 +28,7 @@
 
 方向范围例外：[reader-control-redo-058-book-removal-confirm](/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/evidence/2026-10-06-native-ui-redo/captures/reader-control-redo-058-book-removal-confirm.png)；当前BookRemovalDialog已为CustomDialogController(customStyle:true)和ReaderDialogSurface，不是系统AlertDialog；保留existing-app实景及HTML对照OPEN。
 
-系统控件自定义是实现方向确认；共享组件当前每个颜色、尺寸、间距和动画仍须逐属性找实景或用户确认依据。
+当前统一按消息类别和有限变体维护：恢复确认保留 native Alert，书籍移除保留 custom Dialog，动作使用 bottom Sheet。历史截图及其日期只证明当时所见；共享组件颜色、尺寸、间距和动画仍须逐属性找实景或用户确认依据。
 
 ## 模块索引
 

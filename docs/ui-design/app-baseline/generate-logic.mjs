@@ -3,13 +3,17 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readNativeCaptureRegistry, hostRoot, confirmedDirections } from '../../../evidence/2026-10-06-native-ui-redo/registry.mjs';
+import { loadPrivateRegistry } from './private-inputs.mjs';
+const { registry, hostRoot, confirmedDirections: historicalDirections } = await loadPrivateRegistry();
+const confirmedDirections = historicalDirections.map(direction => direction.id === 'custom-system-controls' ? {
+  ...direction, direction: '按消息类别复用组件和有限变体；恢复确认 native Alert、书籍移除 custom Dialog、动作 bottom Sheet',
+  implementationScope: '当前类别边界；历史 demo 系统控件替代指令不推广为全部生产窗口自绘；原生视觉验收仍 OPEN',
+} : direction);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const read = name => JSON.parse(readFileSync(path.join(here, name), 'utf8'));
 const specs = { library: read('library-spec.json'), reading: read('reading-spec.json'), settings: read('settings-spec.json') };
 if(existsSync(path.join(here,'reading-preferences-spec.json')))specs['reading-preferences']=read('reading-preferences-spec.json');
-const registry = readNativeCaptureRegistry();
 const captures = registry.captures;
 const admitted = captures.filter(capture => capture.baselineAdmission);
 const fence = String.fromCharCode(96).repeat(3);
@@ -142,7 +146,7 @@ function diagram(module) {
     lines.push('  ' + from + ' -->|' + quote(edge.action) + '| ' + to);
   }
   for (const direction of confirmedDirections.filter(direction => (direction.modules.includes(module.id) || direction.modules.includes('*')) && !direction.excludedNativeComponents?.some(component=>component.screen===module.id))) {
-    node('confirmed-' + direction.id, '已确认调整方向：' + direction.direction + '；具体视觉未确认', 'confirmed');
+    node('confirmed-' + direction.id, (direction.id === 'custom-system-controls' ? '当前类别边界：' : '已确认调整方向：') + direction.direction + '；具体视觉未确认', 'confirmed');
   }
   lines.push('  classDef observed fill:#eaf3ee,stroke:#42695a,color:#20362d');
   lines.push('  classDef pending fill:#f7f4ec,stroke:#9d9587,color:#554f43,stroke-dasharray:5 4');
@@ -204,14 +208,14 @@ const classification = [
   '| confirmed-demo-unimplemented | 用户具体指令确认的调整方向 | 不继承未经确认的颜色、尺寸、字体、动效或整张旧稿 |',
   '| unconfirmed-demo | 新demo提案中没有具体用户确认的设计细节 | 保留为未确认提案，不进入跨平台开发基准 |', '',
   '三设计类别与证据成熟度分别记账。源码存在但尚未抓到原生画面的条目使用 classificationStatus:pending、candidateCategory:existing-app、category:null；它们是待取证的现有能力候选，不能反向推定未实现，也不能归为未确认demo提案。', '',
-  '分类按属性范围判断：同一组件的真实结构/内容/业务值可为existing-app，替代方向为confirmed-demo-unimplemented，而自绘的新颜色、尺寸或动效为unconfirmed-demo。组件总类不会把其全部属性自动升级；系统替代的implementationInInstalledApp:OPEN只表示逐控件实现情况未全部核实。', '',
+  '分类按属性范围判断：同一组件的真实结构/内容/业务值可为existing-app，替代方向为confirmed-demo-unimplemented，而自绘的新颜色、尺寸或动效为unconfirmed-demo。组件总类不会把其全部属性自动升级；implementationInInstalledApp:OPEN只表示逐控件实现情况未全部核实；按消息类别保留有限变体，不要求全部系统窗口自绘。', '',
   '模块维度计数：existing-app '+[...modules.values()].filter(module=>moduleCaptures(module.id).length).length+' 个（'+registry.observedStateCount+' 个去重原生态）；确认方向提案 '+[...modules.values()].filter(module=>!moduleCaptures(module.id).length&&module.classification==='confirmed-demo-unimplemented').length+' 个独立模块、'+confirmedDirections.length+' 条确认方向；未确认独立模块 '+[...modules.values()].filter(module=>!moduleCaptures(module.id).length&&module.classification==='unconfirmed-demo').length+' 个；现有能力候选待取证 '+[...modules.values()].filter(module=>!moduleCaptures(module.id).length&&!['confirmed-demo-unimplemented','unconfirmed-demo'].includes(module.classification)).length+' 个。未确认具体属性另列下表，不因未确认独立模块为0而清零。', '',
   '## 已确认调整方向', '',
   '| 调整 | 用户确认原文 | 未获确认的具体内容 | 当前安装应用实现 / 范围 |', '| --- | --- | --- | --- |',
-  ...confirmedDirections.map(direction => '| ' + cell(direction.direction) + ' | ' + cell(direction.confirmation.quote) + ' | ' + cell(direction.excludedConfirmation.join('、')) + ' | ' + cell(direction.implementationInInstalledApp+(direction.implementationScope?'；'+direction.implementationScope:'')) + ' |'),
+  ...confirmedDirections.map(direction => '| ' + cell(direction.direction) + ' | ' + cell((direction.id === 'custom-system-controls' ? '历史 demo 范围原文：' : '') + direction.confirmation.quote) + ' | ' + cell(direction.excludedConfirmation.join('、')) + ' | ' + cell(direction.implementationInInstalledApp+(direction.implementationScope?'；'+direction.implementationScope:'')) + ' |'),
   '', ...confirmedDirections.filter(direction=>direction.referenceEvidence).map(direction=>'参照实景：'+direction.referenceEvidence.captureIds.map(id=>link(id,registry.byId[id].png)).join('、')+'；'+cell(direction.referenceEvidence.scope)+'。'),
   '', ...confirmedDirections.flatMap(direction=>(direction.excludedNativeComponents||[]).map(component=>'方向范围例外：'+link(component.captureId,registry.byId[component.captureId].png)+'；'+cell(component.basis)+'。')),
-  '', '系统控件自定义是实现方向确认；共享组件当前每个颜色、尺寸、间距和动画仍须逐属性找实景或用户确认依据。', '',
+  '', '当前统一按消息类别和有限变体维护：恢复确认保留 native Alert，书籍移除保留 custom Dialog，动作使用 bottom Sheet。历史截图及其日期只证明当时所见；共享组件颜色、尺寸、间距和动画仍须逐属性找实景或用户确认依据。', '',
   '## 模块索引', '',
   '| 模块 | 当前归属 | 已观察状态 | 规范来源 |', '| --- | --- | --- | --- |',
   ...[...modules.values()].map(module => '| ' + cell(module.label + ' (' + module.id + ')') + ' | ' + moduleStatus(module.id) + ' | ' + cell(capturedStates(module.id).join('；') || '未捕获') + ' | ' + specLink(module.specDomain || module.domain) + ' |'),
@@ -230,7 +234,12 @@ const classification = [
   '- 持续书签载入中的最终结果；当前不能认定空列表、完成或原生缺陷。',
   '- 尚未采集或审看的模块、控件与业务操作结果；详见每个模块的取证缺口。', '',
 ];
-writeFileSync(path.join(here, 'CLASSIFICATION.md'), classification.join('\n') + '\n');
+const emit = (name, content) => {
+  const file = path.join(here, name);
+  if (process.argv.includes('--check')) { if (readFileSync(file, 'utf8') !== content) throw new Error('BASELINE_DOC_STALE ' + name); }
+  else writeFileSync(file, content);
+};
+emit('CLASSIFICATION.md', classification.join('\n') + '\n');
 
 const logic = [
   '# Reader 模块逻辑与路线', '',
@@ -271,7 +280,7 @@ logic.push('## 跨模块边界', '',
   '- 内容搜索键盘捕获只准入应用避让几何，操作系统键盘/状态栏/导航条不纳入应用画布。',
   '- 书源工具046顶端、047编辑状态、048/049下部编辑与调试为同一外层Scroll；内部书源List限高420。JSON编辑不是独立页面，保存/调试结果尚未观察。',
   '- 043/046布局树仍前一页、066/074主布局树已经是后续态；按PNG实际画面准入，不由树替代像素。',
-  '- 系统确认映射自定义Dialog时保留实测正文与动作；无实测内容不得生成提交成功、取消中等额外页面。', '',
+  '- 恢复确认保留 native Alert、书籍移除保留 custom Dialog、动作使用 bottom Sheet；保留实测正文与动作，不把旧截图升级为当前产物验收。无实测内容不得生成提交成功、取消中等额外页面。', '',
   '## 未采集与未确认清单', '',
   ...[...modules.values()].filter(module => !moduleCaptures(module.id).length).map(module => '- ' + module.label + ' (' + module.id + ')：' +
     (['confirmed-demo-unimplemented','unconfirmed-demo'].includes(module.classification) ? '调整提案的具体视觉、交互与原生实现待验收。' : '正常入口和后续可见状态待取证。')),
@@ -279,7 +288,7 @@ logic.push('## 跨模块边界', '',
   ...((specs.settings.productGatedSourceSurfaces || []).map(item => '- 源码产品门控：' + item.name + '；当前安装构建入口仍需实际确认。')),
   '', '如模块规范的缺口说明落后于新捕获，须更新规范后重新运行生成器；新PNG未经审看保持UNREVIEWED，不自动关闭缺口。',
 );
-writeFileSync(path.join(here, 'LOGIC.md'), logic.join('\n') + '\n');
+emit('LOGIC.md', logic.join('\n') + '\n');
 console.log(JSON.stringify({ modules: modules.size, captures: registry.captureCount, observedStates: registry.observedStateCount,
   observedOperationChains: observed.length, manifestBinding: 'OPEN', visualAcceptance: 'OPEN',
   outputs: ['CLASSIFICATION.md', 'LOGIC.md'] }));

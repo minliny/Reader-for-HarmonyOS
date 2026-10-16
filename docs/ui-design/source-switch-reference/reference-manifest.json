@@ -139,8 +139,8 @@
       "crossWorktree": false
     },
     "build-reference.mjs": {
-      "sha256": "c5aec58d8ff62de8ec5260b723b0677f3fb963fdd2e5425dff8a84a2652a7af1",
-      "bytes": 22963,
+      "sha256": "94c8b563d0bafa17eea54e9e239a89fa8041ad8daa78c979656712bef2bf6913",
+      "bytes": 22952,
       "crossWorktree": false
     },
     "reference-profile.mjs": {
@@ -321,8 +321,10 @@
   "bundler": {
     "name": "esbuild",
     "version": "0.28.2",
-    "packageRoot": "Reader project root",
-    "package": "evidence/opensource-completion/renderer-pilot/node_modules/esbuild/lib/main.js"
+    "packageRoot": "..",
+    "package": "../node_modules/esbuild/lib/main.js",
+    "packageManifestSha256": "e347029ae11c581838525c2cb92e1641fc88602117351a0e3196439499e0a57b",
+    "lockfileSha256": "7d877c4393f2bb1d2a3774c03c8f93949eaceead60d420f764e5358b5f4823d2"
   },
   "adapters": [
     "shared animation durations/easing/reader fade",
