@@ -140,6 +140,16 @@ export class BookAcquisitionCoordinator {
     return (): void => { this.listeners.delete(listener); };
   }
 
+  /** A runtime progress owner has qualified its original background receipt.
+   * Notify the existing shelf subscriber without changing acquisition epochs
+   * or issuing another Core request for every foreground page turn. */
+  backgroundReadingProgressConfirmed(sourceId: string, bookId: string): void {
+    if (this.closed || sourceId.trim().length === 0 || bookId.trim().length === 0) return;
+    this.changedIdentities.set(acquisitionBookKey(sourceId, bookId), { sourceId, bookId });
+    this.changedShelf = true;
+    this.changed();
+  }
+
   /** Changes on both sides of a source mutation, including uncertain restore failures. */
   sourceRegistryRevision(): number { return this.registryRevision; }
 

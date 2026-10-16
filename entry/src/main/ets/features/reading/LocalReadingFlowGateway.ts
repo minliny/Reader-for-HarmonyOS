@@ -1,6 +1,7 @@
 import { decodeReaderDirectoryDisplayMetadata } from './ReaderDirectoryDisplayMetadata.ts';
 import type { BookmarkOperationIntentStore, ReadingOperationContext, ReadingOperationIntent, ReadingRecoveredOperation } from './ReadingOperationIntents';
 import type { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
+import type { BookRequestOptions } from '../../app/BookRequestScheduler';
 import { appendExpectedPositionVersions, decodeRemotePositionScope, encodeRemotePositionScope, type RemoteReadingPositionScope } from './RemoteReadingPositionMigration';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from './ReadingGatewayRuntime';
@@ -800,6 +801,7 @@ export class LocalReadingFlowGateway {
     update: LocalReadingProgressUpdate,
     isCurrent?: LocalReadingRequestGuard,
     resolution?: LocalReadingAtomicResolution,
+    dispatch?: BookRequestOptions,
   ): Promise<LocalReadingProgress> {
     this.assertNonBlankString(bookId, 'bookId');
     this.assertChapterIndex(update.chapterIndex, 'chapterIndex');
@@ -854,7 +856,7 @@ export class LocalReadingFlowGateway {
     const result = await this.runtimeOwner.request(
       'reading.progress.update',
       params,
-      this.requestOptions(isCurrent),
+      { ...this.requestOptions(isCurrent), ...dispatch, canDispatch: dispatch?.canDispatch ?? isCurrent },
     );
     if (result.data['stored'] !== true) {
       throw new Error('reading.progress.update did not confirm storage');

@@ -213,6 +213,7 @@ export class ReaderTtsSessionCoordinator {
   private operationTail: Promise<void> = Promise.resolve();
   /** Persist completed slices in order without putting storage on the next-speech path. */
   private progressCommitTail: Promise<void> = Promise.resolve();
+  private latestCompletedProgress: ReaderTtsProgressCommit | undefined = undefined;
   private state: ReaderTtsState = createReaderTtsState(false);
   private transport: HostTtsTransportState = createHostTtsTransportState();
   private coreSnapshot: ReaderTtsQueueSnapshot | undefined = undefined;
@@ -387,6 +388,13 @@ export class ReaderTtsSessionCoordinator {
     return { ...this.state };
   }
 
+  /** Only completed audio is eligible for exit progress, never a queued slice. */
+  captureCompletedProgress(): ReaderTtsProgressCommit | undefined {
+    const progress = this.latestCompletedProgress;
+    if (progress === undefined) return undefined;
+    return { chapter: { ...progress.chapter }, charEnd: progress.charEnd };
+  }
+
   getTransportState(): HostTtsTransportState {
     return { ...this.transport };
   }
@@ -534,6 +542,7 @@ export class ReaderTtsSessionCoordinator {
     const identity = this.sessionIdentity(input.contentVersion, chapterKey);
     const prior = this.active;
     const hostStopTask = prior === undefined ? undefined : this.stopHostTransportImmediately();
+    this.latestCompletedProgress = undefined;
     this.active = { identity, traceOperationId, input: { ...input, rate } };
     return this.enqueue(async (): Promise<void> => this.prepareNewSession(identity, prior, hostStopTask));
   }
@@ -790,6 +799,7 @@ export class ReaderTtsSessionCoordinator {
       ReaderStartupTrace.currentTts()?.markTts('tts.stop-intent', this.lastTraceOperationId);
     }
     this.voidLogged(this.stopAudition(), 'audition.stop');
+    if (reason !== 'lifecycle') this.latestCompletedProgress = undefined;
     const active = this.active;
     this.clearTimer();
     this.clearStartWatchdog();
@@ -1573,6 +1583,7 @@ export class ReaderTtsSessionCoordinator {
   }
 
   private queueProgressCommit(progress: ReaderTtsProgressCommit): void {
+    this.latestCompletedProgress = { chapter: { ...progress.chapter }, charEnd: progress.charEnd };
     const commit = this.progressCommitTail.then((): Promise<void> => this.progressCommit(progress));
     // LRE logs its storage failure and leaves the prior durable position in
     // place. Keep the queue usable for later slices even if another caller's

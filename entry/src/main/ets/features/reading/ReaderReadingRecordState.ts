@@ -20,3 +20,10 @@ export class ReadingRecordRecoveryError extends Error {
   readonly kind: 'pending' | 'blocked';
   constructor(kind: 'pending' | 'blocked', message: string) { super(message); this.kind = kind; }
 }
+
+/** Diagnostics distinguish memory handoff, durable staging and actual Core
+ * confirmation. None of these states requires a modal user decision. */
+export type ReadingRecordRecoveryState = {
+  pendingBooks: number; pendingMillis: number; memoryOnlyBooks: number;
+  durable: boolean; recovering: boolean; lastError: string; lastConfirmedReadAt: number;
+};

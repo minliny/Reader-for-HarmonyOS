@@ -48,17 +48,22 @@ assert.ok(gateway.calls.some(call => call.includes('callback:1:speaking:')));
 host.emit({ type: 'complete', requestId, completion: 'synthesis' });
 await coordinator.whenSettled();
 assert.equal(progress.length, 0, 'synthesis completion cannot advance');
+assert.equal(coordinator.captureCompletedProgress(), undefined, 'queued or synthesized text has not been heard');
 
 host.emit({ type: 'complete', requestId, completion: 'audio' });
 host.emit({ type: 'complete', requestId, completion: 'audio' });
 await coordinator.whenSettled();
 assert.deepEqual(progress, [13], 'duplicate completion must commit one canonical scalar end');
 assert.equal(coordinator.getState().status, 'completed');
+const capturedCompletion = coordinator.captureCompletedProgress();
+assert.equal(capturedCompletion.charEnd, 13); capturedCompletion.charEnd = 999;
+assert.equal(coordinator.captureCompletedProgress().charEnd, 13, 'exit snapshot cannot mutate the audio completion owner');
 assert.equal(gateway.calls.filter(call => call === 'next').length, 0);
 assert.equal(gateway.calls.filter(call => call.includes(':done:')).length, 2,
   'duplicate audio completion must reach Core correlation twice');
 
 await coordinator.start({ chapter, content: canonicalRemoteContent, contentVersion: 2, scalarPosition: 0 });
+assert.equal(coordinator.captureCompletedProgress(), undefined, 'a new TTS session invalidates the previous completed scalar');
 const staleRequestId = host.requests.at(-1).requestId;
 await coordinator.pause();
 host.emit({ type: 'start', requestId: staleRequestId });

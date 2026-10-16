@@ -1,19 +1,16 @@
-import { ReadingRecordIntent, ReadingRecordRecoveryError, type ReadingRecord } from './ReaderReadingRecordState';
+import { ReadingRecordIntent } from './ReaderReadingRecordState';
 
 export interface ReaderReadingRecordDriver {
   createIntent(bookName: string, elapsedMillis: number, readAt: number): ReadingRecordIntent;
-  accumulate(intent: ReadingRecordIntent): Promise<ReadingRecord>;
+  handoff(intent: ReadingRecordIntent): void;
 }
 
-/** Reading duration producer. A single accepted delta survives unknown ACKs;
- * additional elapsed time remains an unaccepted scalar, not a growing queue.
- * Neither retries nor UI retirement assign the accepted delta a new identity. */
+/** Component clock only. The application-owned driver accepts elapsed time
+ * synchronously and persists/reconciles it independently of UI lifetime. */
 export class ReaderReadingRecordHost {
   activeSinceMs: number = 0;
   pendingMillis: number = 0;
   private timer: number = -1;
-  private accepted: ReadingRecordIntent | undefined = undefined;
-  private inFlight: Promise<void> | undefined = undefined;
   private readonly driver: ReaderReadingRecordDriver;
   private readonly title: () => string;
   private readonly log: (error: Error) => void;
@@ -36,7 +33,7 @@ export class ReaderReadingRecordHost {
       this.timer = -1;
       if (!isCurrent() || this.activeSinceMs <= 0) return;
       this.capture(true);
-      void this.flush().catch((error: Error): void => this.diagnose(error));
+      this.handoff();
       this.begin(isCurrent);
     }, 30000);
   }
@@ -54,42 +51,22 @@ export class ReaderReadingRecordHost {
     if (this.timer >= 0) { this.cancel(this.timer); this.timer = -1; }
   }
 
-  /** Forced unmount does not start another write. Dispatched/accepted work and
-   * its persistent journal keep their identity; only the unaccepted clock clears. */
-  retire(): void { this.clearTimer(); this.activeSinceMs = 0; this.pendingMillis = 0; }
+  retire(): void { this.clearTimer(); this.capture(false); this.handoff(); }
 
-  flush(): Promise<void> {
-    if (this.inFlight !== undefined) return this.inFlight;
-    const work = this.flushAccepted();
-    const observed = work.finally((): void => { if (this.inFlight === observed) this.inFlight = undefined; });
-    this.inFlight = observed;
-    return observed;
-  }
-
-  private async flushAccepted(): Promise<void> {
-    if (this.accepted !== undefined) {
-      await this.driver.accumulate(this.accepted);
-      this.accepted = undefined;
-    }
+  /** Ownership transfer has no disk/native await. Clear the scalar only after
+   * the Runtime driver has accepted it; a synchronous validation failure keeps
+   * the original elapsed time and diagnostic rather than claiming success. */
+  handoff(): void {
     if (this.pendingMillis <= 0) return;
-    const elapsed = this.pendingMillis;
-    this.accepted = this.driver.createIntent(this.title(), elapsed, this.now());
-    this.pendingMillis = 0;
-    await this.driver.accumulate(this.accepted);
-    this.accepted = undefined;
+    try {
+      const intent = this.driver.createIntent(this.title(), this.pendingMillis, this.now());
+      this.driver.handoff(intent);
+      this.pendingMillis = 0;
+    } catch (error) { this.diagnose(error as Error); }
   }
 
-  /** Presentation deadline only: the actual durable tail is not cancelled or
-   * released, and a retry cannot start a competing journal behind a missing ACK. */
-  async flushForExit(): Promise<void> {
-    let deadline = -1;
-    const expiry = new Promise<void>((_resolve, reject): void => {
-      deadline = this.schedule((): void => reject(new ReadingRecordRecoveryError('pending',
-        '阅读时长核对尚未返回。可重试核对或继续阅读；当前时长保持待核对，不会重复累计。')), 15000);
-    });
-    try { await Promise.race([this.flush(), expiry]); }
-    finally { if (deadline >= 0) this.cancel(deadline); }
-  }
+  flush(): Promise<void> { this.handoff(); return Promise.resolve(); }
+  flushForExit(): Promise<void> { return this.flush(); }
 
   private diagnose(error: Error): void { try { this.log(error); } catch (_diagnosticError) {} }
 }

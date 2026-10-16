@@ -2,7 +2,7 @@ import preferences from '@ohos.data.preferences';
 import util from '@ohos.util';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import { ReadingRecordIntent, ReadingRecordRecoveryError, type ReadingRecord, type ReadingRecordReceipt } from './ReaderReadingRecordState';
+import { ReadingRecordIntent, ReadingRecordRecoveryError, type ReadingRecord, type ReadingRecordReceipt, type ReadingRecordRecoveryState } from './ReaderReadingRecordState';
 
 const READING_RECORD_PREFERENCES_NAME = 'reader_read_record_host_v1';
 const READING_RECORD_DEVICE_ID_KEY = 'device-id';
@@ -10,6 +10,9 @@ const READING_RECORD_DEVICE_ID_KEY = 'device-id';
 export type { ReadingRecord } from './ReaderReadingRecordState';
 
 const READING_RECORD_JOURNAL_KEY = 'delta-journal-v1';
+const READING_RECORD_OUTBOX_KEY = 'delta-outbox-v2';
+const READING_RECORD_OUTBOX_LIMIT = 128;
+type ReadingRecordOutbox = { version: number; active?: ReadingRecordIntent; tail: ReadingRecordIntent[]; };
 type ReadingRecordJournal = {
   phase: 'pending' | 'confirmed'; acceptanceId: string; deviceId: string; bookName: string;
   elapsedMillis: number; readAt: number; operationId: string; sequence: number; receipt?: ReadingRecordReceipt;
@@ -23,8 +26,229 @@ export class ReadingRecordGateway {
   private store: preferences.Preferences | undefined = undefined;
   private deviceIdTask: Promise<string> | undefined = undefined;
   private static writeTail: Promise<void> = Promise.resolve();
+  // Preferences snapshots serialize with each other, but never wait on a
+  // Native ACK. A slow old receipt cannot prevent newly elapsed time staging.
+  private static storeTail: Promise<void> = Promise.resolve();
+  private static retiredMemory: ReadingRecordIntent[] = [];
+  private outboxLane: Promise<void> = Promise.resolve();
+  private outboxLoaded: boolean = false;
+  private outboxActive: ReadingRecordIntent | undefined;
+  private outboxTail: ReadingRecordIntent[] = [];
+  private readonly inbox: Map<string, ReadingRecordIntent> = new Map<string, ReadingRecordIntent>();
+  private backgroundTask: Promise<void> | undefined;
+  private retryTimer: number = -1;
+  private retryDelay: number = 1000;
+  private stopped: boolean = false;
+  private dirty: boolean = false;
+  private lastError: string = '';
+  private lastConfirmedReadAt: number = 0;
 
   constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) { this.runtimeOwner = runtimeOwner; }
+
+  /** Called by the UI clock. Ownership moves now; persistence and exact Core
+   * acknowledgement happen in the Runtime lane after this UI turn returns. */
+  handoff(intent: ReadingRecordIntent): void {
+    this.checkUnassignedIntent(intent);
+    const existing = this.inbox.get(intent.bookName);
+    if (existing === undefined) this.inbox.set(intent.bookName, intent);
+    else this.inbox.set(intent.bookName, this.mergeElapsed(existing, intent));
+    this.dirty = true;
+    // Stage even while a previous Native request is still waiting for its ACK.
+    void this.stagePending().catch((error: Error): void => this.noteFailure(error));
+    void this.recover();
+  }
+
+  recoveryState(): ReadingRecordRecoveryState {
+    const pending = [...this.outboxTail, ...Array.from(this.inbox.values())];
+    if (this.outboxActive !== undefined) pending.push(this.outboxActive);
+    return { pendingBooks: new Set<string>(pending.map((intent) => intent.bookName)).size,
+      pendingMillis: pending.reduce((total, intent) => Math.min(Number.MAX_SAFE_INTEGER, total + intent.elapsedMillis), 0),
+      memoryOnlyBooks: this.inbox.size, durable: this.outboxLoaded && !this.dirty && this.inbox.size === 0,
+      recovering: this.backgroundTask !== undefined, lastError: this.lastError, lastConfirmedReadAt: this.lastConfirmedReadAt };
+  }
+
+  /** Startup/foreground wakeup. Failures stay queryable and are retried with
+   * bounded backoff; they never reject startup or require a dialog choice. */
+  recover(): Promise<void> {
+    if (this.stopped) return Promise.resolve();
+    if (this.backgroundTask !== undefined) return this.backgroundTask;
+    if (this.retryTimer >= 0) { clearTimeout(this.retryTimer); this.retryTimer = -1; }
+    const work = this.drainOutbox().then((): void => {
+      this.retryDelay = 1000;
+      if (this.inbox.size === 0) this.lastError = '';
+    }).catch((error: Error): void => this.noteFailure(error));
+    const observed = work.finally((): void => {
+      if (this.backgroundTask === observed) this.backgroundTask = undefined;
+      if (!this.stopped && (this.lastError.length > 0 || this.inbox.size > 0 || this.outboxActive !== undefined)) {
+        this.retryTimer = setTimeout((): void => { this.retryTimer = -1; void this.recover(); }, this.retryDelay);
+        this.retryDelay = Math.min(60000, this.retryDelay * 2);
+      }
+    });
+    this.backgroundTask = observed;
+    return observed;
+  }
+
+  /** Keep failed IO work across an in-process Runtime successor as well as on
+   * disk. No component retirement calls this; only Runtime teardown does. */
+  stopBackground(): void {
+    this.stopped = true;
+    if (this.retryTimer >= 0) clearTimeout(this.retryTimer);
+    this.retryTimer = -1;
+    const retained = [...this.outboxTail, ...Array.from(this.inbox.values())];
+    if (this.outboxActive !== undefined) retained.unshift(this.outboxActive);
+    for (const intent of retained) {
+      if (!ReadingRecordGateway.retiredMemory.some((item) => item.acceptanceId === intent.acceptanceId))
+        ReadingRecordGateway.retiredMemory.push(intent);
+    }
+  }
+
+  private noteFailure(error: Error): void {
+    this.lastError = error.message || String(error);
+    this.dirty = true;
+  }
+
+  private async drainOutbox(): Promise<void> {
+    await this.stagePending();
+    while (!this.stopped) {
+      const intent = this.outboxActive;
+      if (intent === undefined) {
+        // A v1 pending journal can predate this outbox and must also recover on
+        // cold startup even when no reading component has been opened.
+        const prior = ReadingRecordGateway.writeTail;
+        let release: () => void = (): void => {};
+        ReadingRecordGateway.writeTail = new Promise<void>((resolve): void => { release = resolve; });
+        await prior;
+        try {
+          this.assertCurrent();
+          const store = await this.ensureStore();
+          const journal = await this.readJournal(store);
+          if (journal !== undefined) await this.settleJournal(store, journal);
+        } finally { release(); }
+        return;
+      }
+      await this.accumulate(intent);
+      // Removing a confirmed head is itself durable before the next sequence
+      // may dispatch. If that ACK is lost, v1's exact receipt deduplicates it.
+      await this.mutateOutbox((): void => {
+        if (this.outboxActive?.acceptanceId === intent.acceptanceId) this.outboxActive = undefined;
+        this.lastConfirmedReadAt = Math.max(this.lastConfirmedReadAt, intent.readAt);
+        this.admitInbox();
+      });
+    }
+  }
+
+  private stagePending(): Promise<void> { return this.mutateOutbox((): void => this.admitInbox()); }
+
+  private mutateOutbox(mutation: () => void): Promise<void> {
+    const work = this.outboxLane.then(async (): Promise<void> => {
+      this.assertCurrent();
+      const store = await this.ensureStore();
+      if (!this.outboxLoaded) await this.loadOutbox(store);
+      this.assertCurrent();
+      mutation();
+      this.dirty = true;
+      const snapshot: ReadingRecordOutbox = { version: 2, active: this.outboxActive, tail: this.outboxTail };
+      const encoded = JSON.stringify(snapshot);
+      await this.serializedStore(async (): Promise<void> => {
+        this.assertCurrent();
+        await store.put(READING_RECORD_OUTBOX_KEY, encoded);
+        await store.flush();
+      });
+      this.dirty = false;
+    });
+    this.outboxLane = work.then((): void => {}, (): void => {});
+    return work;
+  }
+
+  private admitInbox(): void {
+    for (const [bookName, intent] of this.inbox) {
+      const tailIndex = this.outboxTail.findIndex((item) => item.bookName === bookName && item.sequence === undefined);
+      if (tailIndex >= 0) this.outboxTail[tailIndex] = this.mergeElapsed(this.outboxTail[tailIndex], intent);
+      else {
+        if (this.outboxTail.length + (this.outboxActive === undefined ? 0 : 1) >= READING_RECORD_OUTBOX_LIMIT) continue;
+        this.outboxTail.push(intent);
+      }
+      this.inbox.delete(bookName);
+    }
+    if (this.outboxActive === undefined) this.outboxActive = this.outboxTail.shift();
+    if (this.inbox.size > 0) this.lastError = '阅读时长持久队列容量已满；额外时长仍在应用内存中等待恢复。';
+  }
+
+  private async loadOutbox(store: preferences.Preferences): Promise<void> {
+    const raw = await store.get(READING_RECORD_OUTBOX_KEY, '') as string;
+    this.assertCurrent();
+    if (typeof raw !== 'string') throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存格式无效，原记录已保留。');
+    const restored: ReadingRecordIntent[] = [];
+    if (raw.length > 0) {
+      if (raw.length > 1048576) throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存超过容量，原记录已保留。');
+      const value = JSON.parse(raw) as ReadingRecordOutbox;
+      if (value.version !== 2 || !Array.isArray(value.tail) || value.tail.length + (value.active === undefined ? 0 : 1) > READING_RECORD_OUTBOX_LIMIT)
+        throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存格式无效，原记录已保留。');
+      if (value.active !== undefined) restored.push(this.decodeOutboxIntent(value.active));
+      for (const item of value.tail) restored.push(this.decodeOutboxIntent(item));
+      if (new Set<string>(restored.map((item) => item.acceptanceId)).size !== restored.length)
+        throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存标识重复，原记录已保留。');
+    }
+    const carried = ReadingRecordGateway.retiredMemory;
+    for (const intent of carried) {
+      const previous = restored.find((item) => item.acceptanceId === intent.acceptanceId);
+      if (previous === undefined) restored.push(intent);
+      else if (previous.bookName !== intent.bookName || previous.elapsedMillis !== intent.elapsedMillis || previous.readAt !== intent.readAt) {
+        // Only an undispatched tail is coalesced. A failed snapshot flush can
+        // leave its older prefix on disk; the retained in-process value is the
+        // larger complete prefix, not another delta to add a second time.
+        if (previous.bookName === intent.bookName && previous.sequence === undefined && intent.sequence === undefined &&
+          previous.elapsedMillis <= intent.elapsedMillis && previous.readAt <= intent.readAt)
+          restored[restored.indexOf(previous)] = intent;
+        else throw new ReadingRecordRecoveryError('blocked', '阅读时长内存与持久暂存内容冲突，原记录已保留。');
+      }
+      else if (intent.sequence !== undefined) {
+        const assigned = this.assignedJournal(intent);
+        this.checkIntent(assigned, previous);
+        previous.operationId = intent.operationId; previous.sequence = intent.sequence; previous.deviceId = intent.deviceId;
+      }
+    }
+    this.outboxActive = restored.shift();
+    this.outboxTail = restored;
+    // A successor can carry overflow that was explicitly memory-only. Keep the
+    // durable snapshot bounded and make the remaining work visible in status.
+    while (this.outboxTail.length + (this.outboxActive === undefined ? 0 : 1) > READING_RECORD_OUTBOX_LIMIT) {
+      const extra = this.outboxTail.pop()!;
+      const previous = this.inbox.get(extra.bookName);
+      this.inbox.set(extra.bookName, previous === undefined ? extra : this.mergeElapsed(previous, extra));
+    }
+    this.outboxLoaded = true;
+    ReadingRecordGateway.retiredMemory = [];
+  }
+
+  private checkUnassignedIntent(intent: ReadingRecordIntent): void {
+    if (typeof intent.acceptanceId !== 'string' || intent.acceptanceId.length === 0 || intent.acceptanceId.length > 256 ||
+      typeof intent.bookName !== 'string' || intent.bookName.trim().length === 0 || intent.bookName.length > 4096 ||
+      !Number.isSafeInteger(intent.elapsedMillis) || intent.elapsedMillis <= 0 || !Number.isSafeInteger(intent.readAt) || intent.readAt < 0 ||
+      intent.operationId !== undefined || intent.sequence !== undefined || intent.deviceId !== undefined)
+      throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存身份无效，未覆盖原记录。');
+  }
+
+  private decodeOutboxIntent(raw: ReadingRecordIntent): ReadingRecordIntent {
+    if (typeof raw !== 'object' || raw === null) throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存格式无效，原记录已保留。');
+    const value = new ReadingRecordIntent(raw.acceptanceId, raw.bookName, raw.elapsedMillis, raw.readAt);
+    this.checkUnassignedIntent(value);
+    value.operationId = raw.operationId; value.sequence = raw.sequence; value.deviceId = raw.deviceId;
+    if (value.operationId !== undefined || value.sequence !== undefined || value.deviceId !== undefined) this.assignedJournal(value);
+    return value;
+  }
+
+  private mergeElapsed(prior: ReadingRecordIntent, next: ReadingRecordIntent): ReadingRecordIntent {
+    const elapsed = prior.elapsedMillis + next.elapsedMillis;
+    if (!Number.isSafeInteger(elapsed)) throw new ReadingRecordRecoveryError('blocked', '阅读时长合并超过整数范围，原记录已保留。');
+    return new ReadingRecordIntent(prior.acceptanceId, prior.bookName, elapsed, Math.max(prior.readAt, next.readAt));
+  }
+
+  private serializedStore(operation: () => Promise<void>): Promise<void> {
+    const work = ReadingRecordGateway.storeTail.then(operation);
+    ReadingRecordGateway.storeTail = work.then((): void => {}, (): void => {});
+    return work;
+  }
 
   /** Recency renewal uses the same durable device identity as reading time. */
   currentDeviceId(): Promise<string> { this.assertCurrent(); return this.deviceId(); }
@@ -38,7 +262,7 @@ export class ReadingRecordGateway {
 
   async accumulate(intent: ReadingRecordIntent): Promise<ReadingRecord> {
     const prior = ReadingRecordGateway.writeTail;
-    let release: (() => void) | undefined = undefined;
+    let release: () => void = (): void => {};
     const tail = new Promise<void>((resolve: () => void): void => { release = resolve; });
     ReadingRecordGateway.writeTail = tail;
     await prior;
@@ -87,8 +311,8 @@ export class ReadingRecordGateway {
       return await this.settleJournal(store, journal);
     } catch (error) {
       if (error instanceof ReadingRecordRecoveryError) throw error;
-      throw new ReadingRecordRecoveryError('pending', '阅读时长尚未确认保存。请重试核对后退出，或继续阅读；当前时长不会作为新记录重复累计。');
-    } finally { release?.(); }
+      throw new ReadingRecordRecoveryError('pending', `阅读时长等待后台核对：${error instanceof Error ? error.message : String(error)}`);
+    } finally { release(); }
   }
 
   private async settleJournal(store: preferences.Preferences, journal: ReadingRecordJournal): Promise<ReadingRecord> {
@@ -138,7 +362,7 @@ export class ReadingRecordGateway {
   }
 
   private assertCurrent(): void {
-    if (!ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) throw new ReadingRecordRecoveryError('pending', '阅读时长服务已退役，核对未完成；请由当前服务继续核对。');
+    if (this.stopped || !ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) throw new ReadingRecordRecoveryError('pending', '阅读时长服务已退役，核对未完成；请由当前服务继续核对。');
   }
 
   private checkIntent(journal: ReadingRecordJournal, intent: ReadingRecordIntent): void {
@@ -189,8 +413,12 @@ export class ReadingRecordGateway {
 
   private async writeJournal(store: preferences.Preferences, journal: ReadingRecordJournal): Promise<void> {
     this.assertCurrent();
-    await store.put(READING_RECORD_JOURNAL_KEY, JSON.stringify(journal));
-    await store.flush();
+    const encoded = JSON.stringify(journal);
+    await this.serializedStore(async (): Promise<void> => {
+      this.assertCurrent();
+      await store.put(READING_RECORD_JOURNAL_KEY, encoded);
+      await store.flush();
+    });
   }
 
   private decodeReceipt(value: unknown): ReadingRecordReceipt {

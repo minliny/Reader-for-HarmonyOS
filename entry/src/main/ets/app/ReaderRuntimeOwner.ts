@@ -64,6 +64,10 @@ import type { ReaderWriteEvidence } from './ReaderWriteEvidence';
 import { SharedDownloadStorageGateway, type SettingsTextCleanupJournal, type SharedDownloadCleanupResult } from '../features/downloads/SharedDownloadStorageGateway';
 import type { ReadingTextStorageChapter } from './ReadingImageDiskCache';
 import type { DownloadStorageSummary } from '../features/downloads/SharedDownloadProjection';
+import { ReadingRecordGateway } from '../features/reading/ReadingRecordGateway';
+import { ReadingProgressJournal } from '../features/reading/ReadingProgressJournal';
+import { ReadingProgressIntentFile } from '../features/reading/ReadingProgressIntentFile';
+import { recoverReadingProgress } from '../features/reading/ReadingSessionFlowGateway';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
@@ -151,6 +155,31 @@ export class ReaderRuntimeOwner {
   private downloadStorageGateway: SharedDownloadStorageGateway | undefined;
   private downloadReadingProtection: { sourceId: string; bookId: string; chapterIndex?: number; } | undefined;
   private downloadProtectionRevision: number = 0;
+  private readingRecordGateway: ReadingRecordGateway | undefined;
+  private readingProgressJournal: ReadingProgressJournal | undefined;
+
+  /** One application-owned duration outbox, independent of reading routes. */
+  getReadingRecordGateway(): ReadingRecordGateway {
+    if (this.readingRecordGateway === undefined) this.readingRecordGateway = new ReadingRecordGateway(this);
+    return this.readingRecordGateway;
+  }
+
+  getReadingProgressJournal(): ReadingProgressJournal {
+    if (this.readingProgressJournal === undefined) this.readingProgressJournal = new ReadingProgressJournal(
+      new ReadingProgressIntentFile(this.getUIAbilityContext().filesDir, (): boolean => ReaderRuntimeOwner.isCurrent(this)));
+    return this.readingProgressJournal;
+  }
+
+  notifyBackgroundReadingProgressConfirmed(sourceId: string, bookId: string): void {
+    if (this.state !== 'ready' || !ReaderRuntimeOwner.isCurrent(this)) return;
+    this.bookCoordinator?.backgroundReadingProgressConfirmed(sourceId, bookId);
+  }
+
+  private recoverReadingProgressInBackground(): void {
+    void recoverReadingProgress(this).catch((error: Error): void => {
+      hilog.warn(LOG_DOMAIN, 'Reader', 'Reading progress recovery: %{private}s', error.message);
+    });
+  }
 
   supportsCoreCapability(capability: string): boolean { return this.coreCapabilities.has(capability); }
   private bookCoordinator: BookAcquisitionCoordinator | undefined = undefined;
@@ -625,6 +654,8 @@ export class ReaderRuntimeOwner {
     this.bookCoordinator?.visibilityChanged();
     this.wakeReadingPreparations();
     if (foreground && this.state === 'ready') {
+      void this.getReadingRecordGateway().recover();
+      this.recoverReadingProgressInBackground();
       void this.readingImageDiskCache.maintainMangaStorage('expiry').catch((error: Error): void => {
         hilog.warn(LOG_DOMAIN, 'Reader', 'Manga cache maintenance: %{private}s', error.message);
       });
@@ -1471,6 +1502,7 @@ export class ReaderRuntimeOwner {
   }
 
   async close(): Promise<void> {
+    this.readingRecordGateway?.stopBackground();
     this.mangaOfflineProbe?.release('runtime-close');
     this.preparationForeground = false;
     this.preparationNetwork?.close();
@@ -1676,6 +1708,8 @@ export class ReaderRuntimeOwner {
       }
       this.runtime = runtime;
       this.state = 'ready';
+      void this.getReadingRecordGateway().recover();
+      this.recoverReadingProgressInBackground();
       ReaderStartupTrace.current()?.mark('startup.runtime-published', 'ready');
       // Legacy completed queue rows carry ambiguous old intent. Persist their
       // protection before restoring new accepted ranges or automatic cleanup.

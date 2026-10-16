@@ -6,7 +6,7 @@ const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve
 function fixture(capabilities=[]){
  const clock=[],events=[],requests=[],native=deferred(),cleanup=deferred();let createError=false, opens=0;
  let migrationStarted=false, migrationResult=Promise.resolve(false), downloadMigration=Promise.resolve(), sourceTask=Promise.resolve();
- const background=[];
+ const background=[], recovery=[];
  let inspector, metadataCalls=0, cacheClosed=false;
  const runtime={assetBridge:()=>({}),setCapabilityRouter(){},close(){events.push('native.close');},
   async request(method,params){events.push(method);requests.push({method,params:structuredClone(params)});return{data:{capabilities,buildIdentity:{},recovered:0}};}};
@@ -20,6 +20,8 @@ function fixture(capabilities=[]){
   }});
  const owner=Object.assign(new Owner(),{state:'starting',coreCapabilities:new Set(),predecessorClose:Promise.resolve(),
   readingEntryPreparations:()=>({beginRequest:()=>false}),
+  getReadingRecordGateway:()=>({recover:()=>{assert.equal(owner.state,'ready');recovery.push('duration');return new Promise(()=>{});}}),
+  recoverReadingProgressInBackground:()=>{assert.equal(owner.state,'ready');recovery.push('progress');},
   preparationWakeTimer:-1,readingImageDiskCache:{close(){cacheClosed=true;}},async closeRuntime(){this.state='closed';},
   host:{getContext:()=>({filesDir:'/controlled'}),setResponseAssetBridge(){},createCapabilityRouter:()=>({}),
    needsLegacySnapshotMigration(){migrationStarted=true;return migrationResult;},
@@ -31,7 +33,7 @@ function fixture(capabilities=[]){
   getDownloadCoordinator:()=>({restore:async()=>{background.push('download-restore');}}),
   async installBundledBookSourceCollection(){assert.equal(this.state,'ready');assert.equal(this.runtime,runtime);background.push('source-start');
     await sourceTask;return{collectionRecords:0,uniqueSourceIds:0,processed:0,installedOrUpgraded:0,failed:0,interrupted:false};}});
- return{owner,runtime,native,cleanup,events,requests,clock,background,
+ return{owner,runtime,native,cleanup,events,requests,clock,background,recovery,
   downloadMigration:value=>{downloadMigration=value;},sourceTask:value=>{sourceTask=value;},fail(){createError=true;},recover(){createError=false;},opens:()=>opens,
   inspector:()=>inspector,metadataCalls:()=>metadataCalls,cacheClosed:()=>cacheClosed,
   migrationStarted:()=>migrationStarted, migration(value){migrationResult=value;}};
@@ -41,6 +43,7 @@ function fixture(capabilities=[]){
  assert.equal(f.migrationStarted(),true,'read-only Host marker I/O overlaps outstanding native open');
  f.native.resolve();await start;assert.equal(f.owner.state,'ready');assert.equal(f.owner.runtime,f.runtime);
  assert.ok(!f.events.includes('cleanup'),'confirmed import cleanup cannot gate ready');
+ assert.deepEqual(f.recovery,['duration','progress'],'post-ready record/progress recovery must never join the startup dependency chain');
  f.clock.shift()();await tick();assert.equal(f.events.at(-1),'cleanup');
  let settled=false;f.owner.importFinalizeTask.then(()=>{settled=true;});await tick();assert.equal(settled,false);
  f.cleanup.resolve();await f.owner.importFinalizeTask;assert.equal(settled,true);

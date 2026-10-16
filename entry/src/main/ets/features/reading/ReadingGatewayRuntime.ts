@@ -4,6 +4,7 @@ import type { BookAcquisitionCoordinator } from '../../app/BookAcquisitionCoordi
 import type { RemoteReadingSession } from './RemoteReadingFlowGateway';
 import type { SharedDownloadCoordinator } from '../downloads/SharedDownloadCoordinator';
 import type { image } from '@kit.ImageKit';
+import type { ReadingProgressJournal } from './ReadingProgressJournal';
 import type {
   JsonObject,
   ReaderCoreResultEvent,
@@ -54,6 +55,11 @@ export type ReadingGatewayImageChapterIdentity = {
 
 /** The only Core request surface feature gateways may consume. */
 export interface ReadingGatewayRuntime {
+  /** Runtime-owned finite progress checkpoints, independent of mounted pages. */
+  getReadingProgressJournal?(): ReadingProgressJournal;
+  getReadingRecordGateway?(): { currentDeviceId(): Promise<string> };
+  /** Qualified background ACK only; reuses the existing shelf change channel. */
+  notifyBackgroundReadingProgressConfirmed?(sourceId: string, bookId: string): void;
   /** Existing Ability context supplies only platform IO to finite mutation intents. */
   getUIAbilityContext?(): common.UIAbilityContext;
   /** Ephemeral debug observation; never part of the persisted reading contract. */

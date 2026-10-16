@@ -288,7 +288,7 @@ pass('snapshot failures preserve the original error and reconciliation; coordina
 }
 
 {
-  const events = [], maintenance = [], foregroundNotifications = [];
+  const events = [], maintenance = [], foregroundNotifications = [], recovery = [];
   let owner, networkCallback;
   // A foreground transition can leave the network allowance unchanged false.
   // The Host intentionally emits no callback in this fixture: the Owner must
@@ -307,6 +307,8 @@ pass('snapshot failures preserve the original error and reconciliation; coordina
     } },
   });
   owner = Object.assign(new Owner(), { state: 'ready', preparationForeground: false, preparationCatalogAllowed: false,
+    getReadingRecordGateway() { return { recover() { recovery.push('duration'); return new Promise(() => {}); } }; },
+    recoverReadingProgressInBackground() { recovery.push('progress'); },
     bookCoordinator: { visibilityChanged() { events.push('novel.visibility'); } },
     wakeReadingPreparations() { events.push('owner.wake'); },
     readingImageDiskCache: { async maintainMangaStorage(...args) { maintenance.push(args); } },
@@ -329,14 +331,17 @@ pass('snapshot failures preserve the original error and reconciliation; coordina
   assert.deepEqual(foregroundNotifications, [false]);
   assert.deepEqual(events.splice(0), ['novel.visibility', 'owner.wake']);
   assert.equal(owner.preparationCatalogAllowed, true); assert.equal(maintenance.length, 0);
+  assert.deepEqual(recovery, [], 'background context cannot start a foreground recovery');
   owner.setReadingPreparationContext(true, false);
   assert.deepEqual(events.splice(0), ['manga.wake', 'novel.visibility', 'owner.wake']);
   assert.deepEqual(foregroundNotifications, [false, true]);
   assert.equal(owner.isMangaPreparationForeground(), true); assert.equal(owner.allowOptionalMangaPreparation(), false);
   assert.equal(owner.preparationCatalogAllowed, false); assert.deepEqual(maintenance, [['expiry']]);
+  assert.deepEqual(recovery, ['duration', 'progress'], 'finite record/progress recovery is fired without awaiting its pending promise');
   owner.setReadingPreparationContext(true, true);
   assert.deepEqual(events.splice(0), ['novel.visibility', 'owner.wake'], 'unchanged visibility still reaches the existing novel coordinator');
   assert.deepEqual(foregroundNotifications, [false, true]);
+  assert.deepEqual(recovery, ['duration', 'progress', 'duration', 'progress']);
   owner.setReadingPreparationContext(false, false);
   assert.deepEqual(events.splice(0), ['manga.wake', 'novel.visibility', 'owner.wake']);
   assert.deepEqual(foregroundNotifications, [false, true, false]);
@@ -350,11 +355,12 @@ pass('snapshot failures preserve the original error and reconciliation; coordina
 
   for (const state of ['closing', 'closed']) {
     owner.state = state; owner.preparationForeground = true; owner.preparationCatalogAllowed = true;
-    const beforeForeground = foregroundNotifications.length, beforeMaintenance = maintenance.length;
+    const beforeForeground = foregroundNotifications.length, beforeMaintenance = maintenance.length, beforeRecovery = recovery.length;
     owner.setReadingPreparationContext(false, false);
     assert.equal(owner.preparationForeground, true); assert.equal(owner.preparationCatalogAllowed, true);
     assert.equal(owner.isMangaPreparationForeground(), false); assert.deepEqual(events, []);
     assert.equal(foregroundNotifications.length, beforeForeground); assert.equal(maintenance.length, beforeMaintenance);
+    assert.equal(recovery.length, beforeRecovery, 'retired Runtime cannot recover reading writes');
   }
   await tick();
   pass('closing and closed Owners reject foreground context updates without wake, visibility, network or maintenance side effects');
