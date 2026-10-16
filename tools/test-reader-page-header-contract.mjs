@@ -237,6 +237,15 @@ for (const [name, before, after] of [
   assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract, file => file === 'pages/Index.ets' ? changed : source(file)),
     /category\/common-host|actual registration|registered page\/window actor/, name + ': retaining a sibling common frame cannot hide this bare branch');
 }
+for (const [name, before, after] of [
+  ['quiet feedback cannot claim full screen', ".align(Alignment.Bottom).zIndex(12).hitTestBehavior(HitTestMode.Transparent)", ".height('100%').align(Alignment.Bottom).zIndex(12).hitTestBehavior(HitTestMode.Transparent)"],
+  ['quiet feedback cannot mask page input', ".align(Alignment.Bottom).zIndex(12).hitTestBehavior(HitTestMode.Transparent)", ".align(Alignment.Bottom).zIndex(12).hitTestBehavior(HitTestMode.Block)"],
+  ['quiet feedback cannot drop route admission', 'this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true', 'this.indexRecoveryNotice.visible'],
+]) {
+  const changed = indexSource.replace(before, after); assert.notEqual(changed, indexSource, name);
+  assert.throws(() => verifyReaderPageFrameworkCoverage(process.cwd(), coverageContract,
+    file => file === 'pages/Index.ets' ? changed : source(file)), /quiet feedback/, name);
+}
 const readWorkspace = file => readFileSync(file, 'utf8');
 const architectureBaseline = JSON.parse(readWorkspace('tools/architecture-consumer-baseline.json'));
 const fullFile = 'entry/src/main/ets/features/reading/ReaderFullDirectory.ets', fullSource = readWorkspace(fullFile);

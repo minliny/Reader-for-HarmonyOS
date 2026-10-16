@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {readFileSync} from 'node:fs';
@@ -8,7 +9,7 @@ import {projectOperationFacts} from '../entry/src/main/ets/app/ReaderOperationFa
 import {RssPresentationProjection} from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {actualReaderPageShell} from './lib/reader-page-shell-runtime-probe.mjs';
-const syntax=createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));syntax.builderParamObjectCollection.set('MainTabShell',new Set(['content']));
+const syntax=createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));syntax.builderParamObjectCollection.set('MainTabShell',new Set(['content']));
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const routes={main:'rss',management:'rssSubscriptionManagement',editor:'rssSubscriptionEditor',feed:'rssSourceFeed',entry:'rssEntryDetail'};
 const pages={main:'RssPage',management:'RssSubscriptionManagementPage',editor:'RssSubscriptionEditorPage',feed:'RssSourceFeedPage',entry:'RssEntryDetailPage'};
@@ -19,12 +20,27 @@ const methods=['getRssOrchestrator','retireRssPresentation','getRssEditorOrchest
  'rssSubscriptionManagementContent','rssSubscriptionManagementSurface','rssEditorContent','rssEditorSurface',
  'rssSourceFeedContent','rssSourceFeedSurface','rssEntryDetailContent','rssEntryDetailSurface','rssSourceBinding','rssEntryBinding',
  'applyRssSourceSnapshot','applyRssEntrySnapshot','failRssEntryOperation'];
+// Compilation is immutable; the cold Core, Runtime authority, orchestrators,
+// SDK instance/property cells and physical callbacks remain per-fixture. Both
+// original and guard-mutant Index sources get their own actual SDK emission.
+const authorities=new WeakMap(),orchestrators=new WeakMap(),editors=new WeakMap();let currentAuthority;
+const runtimePort={current:()=>currentAuthority.current(),isCurrent:owner=>authorities.get(owner)?.isCurrent(owner)===true};
+const rssPort={forRuntime(owner){const Type=orchestrators.get(owner);assert.ok(Type);return Type.forRuntime(owner);}};
+const editorPort={forRuntime(owner,...args){const Type=editors.get(owner);assert.ok(Type);return Type.forRuntime(owner,...args);}};
+const indexTypes=new Map(),pageTypes=new Map();
 function index(f,kind='management',instance=1,indexSource=read('pages/Index.ets')){
- const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
- for(const name of Object.values(pages))sdk.childSources[name]=read('features/rss/'+name+'.ets');
- const p=createReaderBuilderProbe(indexSource,methods,{...sdk.deps,ReaderRuntimeOwner:f.Runtime,RssOrchestrator:f.Orchestrator,
-  RssSubscriptionEditorOrchestrator:f.Editor,projectOperationFacts,RssPresentationProjection,
-  ...Object.fromEntries(Object.values(pages).map(n=>[n,Child])),isReaderProductSurfaceEnabled:()=>true,deviceInfo:{deviceType:'phone'},hilog:{error(){}}},sdk.hooks).owner;
+ authorities.set(f.runtime,f.Runtime);orchestrators.set(f.runtime,f.Orchestrator);editors.set(f.runtime,f.Editor);currentAuthority=f.Runtime;
+ let compiled=indexTypes.get(indexSource);
+ if(compiled===undefined){
+  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+  for(const name of Object.values(pages))sdk.childSources[name]=read('features/rss/'+name+'.ets');
+  compiled=createReaderBuilderProbe(indexSource,methods,{...sdk.deps,ReaderRuntimeOwner:runtimePort,RssOrchestrator:rssPort,
+   RssSubscriptionEditorOrchestrator:editorPort,projectOperationFacts,RssPresentationProjection,
+   ...Object.fromEntries(Object.values(pages).map(n=>[n,Child])),isReaderProductSurfaceEnabled:()=>true,deviceInfo:{deviceType:'phone'},hilog:{error(){}}},sdk.hooks);
+  indexTypes.set(indexSource,compiled);
+ }
+ const p=new compiled.Component(undefined,{});
+ assert.notEqual(p.nodes,compiled.owner.nodes,'each cold Index owns fresh native nodes');
  Object.assign(p,{route:routes[kind],mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,navigationGeneration:1,
   rssInstanceIdentity:instance,rssPresentationIdentity:'',rssEditorPresentationIdentity:'',rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},
   rssManagementRead:projectOperationFacts({phase:'idle'}),rssEditorSnapshot:f.emptyEditor,rssSourceRead:projectOperationFacts({phase:'idle'}),rssEntryRead:projectOperationFacts({phase:'idle'}),
@@ -38,17 +54,24 @@ function index(f,kind='management',instance=1,indexSource=read('pages/Index.ets'
  return{p,host,editor,params,open,settled:()=>settle(host)};
 }
 function page(f,x,kind){
- const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),source=read('features/rss/'+pages[kind]+'.ets'),shared=read('features/rss/RssOriginalRecoverySurface.ets');
- sdk.childSources.RssOriginalRecoverySurface=shared;
- const Surface=createReaderBuilderProbe(shared,boundedMembers(shared),sdk.deps,sdk.hooks).Component;sdk.deps.RssOriginalRecoverySurface=Surface;
- for(const n of ['ReaderButton','ReaderLabeledIconAction','ReaderToggle','ReaderFormField','PageBackBar','ReaderSearchField','StatusBadge'])sdk.childSources[n]=read('features/common/'+n+'.ets');
- sdk.childSources.MainTabShell=read('features/shell/MainTabShell.ets');
- const constants={};if(kind==='main'){
-  const declaration=source.match(/^const RSS_FLOATING_HEADER_HEIGHT = ([^;]+);/m);assert.ok(declaration,'actual RSS header fallback declaration');
-  constants.RSS_FLOATING_HEADER_HEIGHT=new Function('readerPageContentStartInset','TOK_SPACE_XS','return ('+declaration[1]+');')(actualReaderPageShell().readerPageContentStartInset,sdk.deps.TOK_SPACE_XS);
+ let compiled=pageTypes.get(kind);
+ if(compiled===undefined){
+  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),source=read('features/rss/'+pages[kind]+'.ets'),shared=read('features/rss/RssOriginalRecoverySurface.ets');
+  sdk.childSources.RssOriginalRecoverySurface=shared;
+  const Surface=createReaderBuilderProbe(shared,boundedMembers(shared),sdk.deps,sdk.hooks).Component;sdk.deps.RssOriginalRecoverySurface=Surface;
+  for(const n of ['ReaderButton','ReaderLabeledIconAction','ReaderToggle','ReaderFormField','PageBackBar','ReaderSearchField','StatusBadge'])sdk.childSources[n]=read('features/common/'+n+'.ets');
+  sdk.childSources.MainTabShell=read('features/shell/MainTabShell.ets');
+  const constants={};if(kind==='main'){
+   const declaration=source.match(/^const RSS_FLOATING_HEADER_HEIGHT = ([^;]+);/m);assert.ok(declaration,'actual RSS header fallback declaration');
+   constants.RSS_FLOATING_HEADER_HEIGHT=new Function('readerPageContentStartInset','TOK_SPACE_XS','return ('+declaration[1]+');')(actualReaderPageShell().readerPageContentStartInset,sdk.deps.TOK_SPACE_XS);
+  }
+  const template=sdk.consumer(source,boundedMembers(source),{...constants,projectOperationFacts,readerRecoveryView,EMPTY_RSS_EDITOR_SNAPSHOT:f.emptyEditor,
+   RSS_DETAIL_ACTION_AREA_HEIGHT:62,Scroller:class{},registerReaderFonts(){}},x.params());
+  compiled={sdk,Component:template.constructor,template};pageTypes.set(kind,compiled);
  }
- const child=sdk.consumer(source,boundedMembers(source),{...constants,projectOperationFacts,readerRecoveryView,EMPTY_RSS_EDITOR_SNAPSHOT:f.emptyEditor,
-  RSS_DETAIL_ACTION_AREA_HEIGHT:62,Scroller:class{},registerReaderFonts(){}},x.params());child.getUIContext=()=>({getFont:()=>({})});child.aboutToAppear();
+ const {sdk}=compiled,child=new compiled.Component(undefined,x.params());
+ assert.notEqual(child.nodes,compiled.template.nodes,'each Page owns fresh native nodes and physical callbacks');
+ child.getUIContext=()=>({getFont:()=>({})});child.aboutToAppear();
  const feedback=()=>child[kind==='main'?'readFeedback':kind==='editor'?'operationRecovery':'operationFeedback']();feedback();
  const action=label=>{const a=sdk.walk(child).filter(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label===label).at(-1);assert.ok(a,label);
   return{actor:a,click:sdk.nodes(a).find(n=>n.onClick).onClick};};
@@ -98,3 +121,5 @@ for(const mutated of [false,true]){
  if(!mutated){b.params().onToggle('s',false);await b.settled();assert.equal(f.writes().length,1,'current physical callback succeeds');}cases++;
 }
 console.log(`PASS RSS exact original Core/Atomic→Index→five decorated Pages→one shared recovery: ${cases} groups`);
+assert.equal(indexTypes.size,2,'original and guard-mutant Index are independently emitted once');
+assert.equal(pageTypes.size,5,'each original decorated Page is emitted once with fresh instances per journey');

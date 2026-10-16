@@ -5,6 +5,7 @@ import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import type { RssSubscriptionManagementItem } from './RssPresentationContract';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_SOURCE_MANAGEMENT_META, TYPE_SOURCE_MANAGEMENT_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { PageBackBar } from '../common/PageBackBar';
@@ -43,6 +44,7 @@ export struct RssSubscriptionManagementPage {
   @Prop isTablet: boolean;
   /** Optional route identity: expands the matching row without mutating it. */
   @Prop focusedSubscriptionId: string = '';
+  @Prop resultMessage: string = '';
   @Prop operation: RssManagementOperationProjection | undefined = undefined;
   @Prop readFacts: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
   @Prop presentationIdentity: string = '';
@@ -87,6 +89,8 @@ export struct RssSubscriptionManagementPage {
   @Builder
   private pageContent() {
     this.stats();
+    ReaderRecoveryNotice({ view: { message: this.resultMessage, visible: this.resultMessage.length > 0,
+      canRetry: false, generation: 0 } });
     this.operationFeedback();
     this.subscriptionList();
   }

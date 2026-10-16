@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
-import {fixture as sourceFixture,origin,target,session as defaultSession,settle as ownerSettled,deferred,gatewayExports,Runtime,read,ReaderCoreRequestError} from './lib/source-switch-owner-probe.mjs';
+import {fixture as sourceFixture,origin,target,session as defaultSession,settle as ownerSettled,deferred,gatewayExports,Runtime,read,ReaderCoreRequestError,Core} from './lib/source-switch-owner-probe.mjs';
 import {makeIndex} from './lib/source-switch-sdk-consumer.mjs';
+import {actualBookshelfOperationTypes,actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
+import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
+import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './lib/general-settings-owner-probe.mjs';
+import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 import {directoryIndexReadProbe} from './lib/directory-index-read-probe.mjs';
 const directoryReadProbe=await directoryIndexReadProbe();
 import {compileHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
@@ -15,18 +19,45 @@ const checks=[];
 const book=origin,candidate={sourceId:target.sourceId,bookUrl:target.bookId,bookName:book.title,sourceName:'New'};
 const session={...defaultSession,entries:[{index:17,title:'第十一章',url:'https://target/0',variables:[]}]};
 let canonicalShelf,localConstructions=0;
-function fixture(options={}){
- const f=sourceFixture({shared:true,open:false,targetSession:session,matchedChapterIndex:17,...options});
- const x=makeIndex(f),h=x.index,requests=f.runtime.request.bind(f.runtime);
- const reading=compileHost(undefined,{LocalReadingFlowGateway:class extends LocalReadingFlowGateway{constructor(...args){super(...args);localConstructions++;}async loadToc(){return{entries:[{index:0,title:'本地第一章',url:'/0'}]};}},
+// The emitted production classes do not depend on an individual case. Compile
+// them once, while keeping every Runtime, owner, property instance and fixture
+// callback fresh. Re-emitting the whole bounded UI graph for each of 27 method
+// journeys consumed the gate's wall-clock budget before assertions completed.
+const reading=compileHost(undefined,{LocalReadingFlowGateway:class extends LocalReadingFlowGateway{constructor(...args){super(...args);localConstructions++;}async loadToc(){return{entries:[{index:0,title:'本地第一章',url:'/0'}]};}},
   RemoteReadingFlowGateway:class extends RemoteReadingFlowGateway{async loadChapter(s,n){return{sourceId:s.identity.sourceId,bookId:s.identity.bookId,chapterIndex:n,chapterUrl:s.entries.find(e=>e.index===n)?.url,content:'正文',contentVersion:'v',images:[]};}},
   ReaderCoreGateway:class{async loadShelfBook(){return canonicalShelf;}},ReadingOfflineGateway:class{async loadDirectoryProjection(s){return s.entries;}}});
- setRuntime(f.runtime);h.readingEntryHost=new reading(f.runtime);
- const Methods=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),[
+const Methods=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),[
   'openLocalBookDetail','openRemoteBookDetail','onReadingFailure','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook',
   'openFullDirectory','loadDirectoryOperationProjections','readingDetailForRemoteSeed','returnFromDetail','returnToSearch','returnToBookshelf',
   'currentReaderPresentationIdentity','consumeSystemFileOpen'],{...gatewayExports,...evidence,ReaderRuntimeOwner:Runtime,LOCAL_SOURCE_ID:'local',DOMAIN:0,
   hilog:{info(){},warn(){},error(){}},errorMessageOf:e=>e.message,ReadingEntryHost:reading,EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'}});
+const constructors=new WeakMap(),sourceHostPort={forRuntime(runtime){
+ const Constructor=constructors.get(runtime);assert.ok(Constructor,'each case registers its own original source owner');
+ return Constructor.forRuntime(runtime);
+}};
+// Reuse the existing fixture's unchanged initializer, rather than duplicating
+// its book/settings/source callbacks or copying mutable native property cells.
+const indexFactorySource=makeIndex.toString(),initStart=indexFactorySource.indexOf(' Object.assign(index,'),
+ initEnd=indexFactorySource.indexOf(' const acquire=f.runtime.bookAcquisitions;');
+assert.ok(initStart>=0&&initEnd>initStart,'bounded Index fixture initializer is explicit');
+const initializeIndex=new Function('index','f','Runtime','origin','ReaderNativeAlertOwner','actualBookshelfOperationTypes',
+ 'actualBookshelfHostField','actualSourceManagementTypes','actualSourceManagementHostField','actualGeneralSettingsTypes',
+ 'actualGeneralSettingsHostField','Core','navigation','reading',indexFactorySource.slice(initStart,initEnd));
+let nativeTemplate,indexEmissions=0;
+function freshIndex(f){
+ constructors.set(f.runtime,f.Constructor);
+ if(nativeTemplate===undefined){indexEmissions++;nativeTemplate=makeIndex({...f,Constructor:sourceHostPort});return nativeTemplate;}
+ const index=new nativeTemplate.index.constructor(undefined,{sourceSwitchScopeId:0});
+ initializeIndex(index,f,Runtime,origin,ReaderNativeAlertOwner,actualBookshelfOperationTypes,actualBookshelfHostField,
+  actualSourceManagementTypes,actualSourceManagementHostField,actualGeneralSettingsTypes,actualGeneralSettingsHostField,Core,1,false);
+ assert.notEqual(index,nativeTemplate.index);assert.notEqual(index.nodes,nativeTemplate.index.nodes);
+ assert.notEqual(index.__sourceSwitchState,nativeTemplate.index.__sourceSwitchState,'native state cells are never shared');
+ return{p:nativeTemplate.p,index,leafDeps:nativeTemplate.leafDeps};
+}
+function fixture(options={}){
+ const f=sourceFixture({shared:true,open:false,targetSession:session,matchedChapterIndex:17,...options});
+ const x=freshIndex(f),h=x.index,requests=f.runtime.request.bind(f.runtime);
+ setRuntime(f.runtime);h.readingEntryHost=new reading(f.runtime);
  for(const [n,d] of Object.entries(Object.getOwnPropertyDescriptors(Methods.prototype)))if(n!=='constructor'&&typeof d.value==='function')h[n]=d.value;
  Object.assign(h,{route:'detail',readingOriginRoute:'detail',detailReturnRoute:'search',navigationGeneration:0,directoryPresentationGeneration:0,detailToc:[],readingEntryScopeId:-1,
   sourceSwitchVisible:false,sourceSwitchState:{kind:'discovering'},searchPublicationRevision:0,
@@ -149,7 +180,12 @@ for(const mode of ['toc-title','no-title','other-error','missing-index','stale']
  t.h.detailToc=mode==='toc-title'?[{index:11,title:'真实第十一章'}]:[];await t.open();t.h.onPickSource(t.candidate(),t.h.sourceSwitchScopeId);if(mode==='stale')t.h.navigationGeneration++;await settle();
  const commits=t.calls.filter(([m])=>m==='source.switch.commit');assert.equal(commits.length,mode==='toc-title'||mode==='no-title'?1:0);
  if(commits.length){assert.equal(commits[0][1].currentChapterIndex,11);assert.equal(commits[0][1].currentChapterTitle,mode==='toc-title'?'真实第十一章':'');}
- if(mode==='other-error'||mode==='missing-index')assert.equal(t.h.sourceSwitchFailureMessage,'precise position unavailable');
+ if(mode==='other-error'||mode==='missing-index'){
+  assert.equal(t.h.sourceSwitchFailureMessage,mode==='other-error'?'当前网络无法获取书籍，请检查网络连接后重试。':'换源暂时未完成，请重试或选择其他书源。');
+  assert.equal(t.host.lastFailure,failure,'original typed diagnostic remains with the actual source-switch owner');
+  assert.equal(t.host.lastFailure.message,'precise position unavailable');
+  assert.equal(t.h.sourceSwitchFailureMessage.includes(failure.message),false,'raw acquisition diagnostic never enters the public failure presentation');
+ }
 });
 await check('reader-identity-retained-across-appearance',async()=>{
  const Shell=productionMotionMethods(new URL('../entry/src/main/ets/features/shell/ReaderShell.ets',import.meta.url),['readingIdentityKey']);
@@ -166,3 +202,4 @@ await check('directory-honest-empty-error-copy',async()=>{
 console.log(JSON.stringify({checks,evidenceLayer:'actual SDK Index methods and whole original ReadingEntry/SourceSwitch owners; controlled gateway/OS seams, no device acceptance'}));
 
 assert.equal(checks.filter(c=>c.status==='FAIL').length,0,'original direct-entry recovery journeys must pass');
+assert.equal(indexEmissions,1,'production SDK graph is compiled once, not once per isolated journey');

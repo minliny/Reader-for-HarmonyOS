@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { readerPageRecoveryDependencies, readerPageRecoveryPorts } from './lib/reader-page-recovery-fixture.mjs';
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 class Frame { constructor(callback) { this.callback = callback; } }
 const Host = productionMotionMethods(file,
@@ -36,21 +37,24 @@ console.log('production target-revision and stale-generation release guards: PAS
 
 let deadline;
 const Recovery = productionMotionMethods(file, ['requestBookTurn2DFallback', 'completeBookTurn2DFallback',
-  'onBookTurnArkUIContentReady', 'armPageTurnSettlementDeadline'], {
+  'onBookTurnArkUIContentReady', 'armPageTurnSettlementDeadline', 'invalidatePageTurnRuntime'], {
+  ...readerPageRecoveryDependencies,
   setTimeout: callback => { deadline = callback; return 1; },
   PAGE_TURN_SETTLEMENT_DEADLINE_MS: 2000, hilog: { warn() {} },
 });
 function recovery(ready) {
   const calls = [];
-  const value = Object.assign(new Recovery(), { mounted: true, exitRequested: false, pageTurnSettlementActive: true,
+  const value = readerPageRecoveryPorts(Object.assign(new Recovery(), { mounted: true, exitRequested: false, pageTurnSettlementActive: true,
     pageTurnSettlementGeneration: 4, bookTurnSurfaceGeneration: 4, pageTurnRenderRevision: 9,
     bookTurnArkUIReadyRevision: ready ? 9 : 8, bookTurnSurfaceOpacity: 1, bookTurnAwaitingSlotCommit: true,
     pageTurnCommitSucceeded: true, pageTurnSettlingPrepared: undefined,
+    activeGateway:()=>({handoffPendingProgress(){calls.push('background');}}),
     bookTurnSession: { completedTerminalGeneration: () => 0, committedSlotsGeneration: () => 0,
       releaseTerminalFrame: () => calls.push('release'), clearSurface: () => calls.push('clear') },
     clearBookTurnCapturedIdentities() {}, cancelPageTurnSettlementDeadline() {},
     finishSuccessfulPageTurnPresentation() { calls.push('durable-2d'); this.pageTurnSettlementActive = false; },
-    finishPageTurnRollback() { calls.push('rollback'); }, getUIContext: () => ({ showAlertDialog: () => calls.push('retry-ui') }) });
+    finishPageTurnRollback() { calls.push('rollback'); }, getUIContext: () => ({ showAlertDialog: () => calls.push('retry-ui') }) }),
+    ()=>calls.push('input-resumed'));
   return { value, calls };
 }
 {
@@ -60,9 +64,18 @@ function recovery(ready) {
 }
 {
   const h = recovery(false); h.value.armPageTurnSettlementDeadline(4); deadline();
-  assert.deepEqual(h.calls, ['retry-ui']); assert.equal(h.value.bookTurnSurfaceOpacity, 1);
+  assert.deepEqual(h.calls, ['background','input-resumed']); assert.equal(h.value.bookTurnSurfaceOpacity, 0);
+  assert.equal(h.value.pageTurnSettlementActive,false);assert.equal(h.value.pageTurnInputOwned,false);
+  assert.equal(h.value.bookTurnRuntimeFailed,true);assert.equal(h.value.readerRecoveryView.visible,true);
   assert.equal(h.value.pageTurnRenderRevision, 10);
-  h.value.onBookTurnArkUIContentReady(9); assert.deepEqual(h.calls, ['retry-ui']);
-  h.value.onBookTurnArkUIContentReady(10); assert.deepEqual(h.calls, ['retry-ui', 'release', 'clear', 'durable-2d']);
+  h.value.onBookTurnArkUIContentReady(9); assert.deepEqual(h.calls, ['background','input-resumed']);
+  h.value.onBookTurnArkUIContentReady(10); assert.deepEqual(h.calls, ['background','input-resumed'],
+    'a late old readiness callback cannot revive a retired native settlement');
+  h.value.pageTurnSettlementGeneration=6;h.value.bookTurnSurfaceGeneration=6;
+  h.value.pageTurnSettlementActive=true;h.value.pageTurnInputOwned=true;h.value.pageTurnRenderRevision=11;
+  h.value.onBookTurnArkUIContentReady(10);
+  assert.equal(h.value.completeBookTurn2DFallback(4),false);
+  assert.equal(h.value.pageTurnInputOwned,true,'late old callbacks never release the new input owner');
+  assert.deepEqual(h.calls,['background','input-resumed']);
 }
 console.log('production dropped-native-ACK, unadmitted revision and stable 2D recovery: PASS');

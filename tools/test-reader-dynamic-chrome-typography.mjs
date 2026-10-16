@@ -9,13 +9,42 @@ import { readerControlLerp } from '../entry/src/main/ets/features/reading/Reader
 import { readerControlSettingsLabel } from '../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/design/reader-dynamic-chrome-typography-baseline.json', import.meta.url)));
+// The public failure copy changed, not its physical typography. Keep the
+// historical baseline and the hash-bound carrier registry byte immutable.
+const failureTextSuccessor = {
+  path: 'entry/src/main/ets/features/reading/LocalReadingExperience.ets',
+  method: 'readingFailureContent', kind: 'Text',
+  previousText: 'this.sourceSwitchFailureMessage.length > 0 ? this.sourceSwitchFailureMessage : this.failureCode',
+  currentText: 'this.sourceSwitchFailureMessage.length > 0 ? this.sourceSwitchFailureMessage : this.failureHint',
+};
+function failureContentCarrier(file, expected, source) {
+  if (file !== failureTextSuccessor.path || expected.method !== failureTextSuccessor.method ||
+    expected.kind !== failureTextSuccessor.kind || expected.text !== failureTextSuccessor.previousText) return undefined;
+  const consumers = auditTypographyConsumers(source, file).filter(node =>
+    node.method === failureTextSuccessor.method && node.kind === failureTextSuccessor.kind);
+  const matches = consumers.filter(node => node.text === failureTextSuccessor.currentText);
+  assert.equal(matches.length, 1, 'one exact current failure-copy carrier');
+  assert.equal(consumers.filter(node => node.text === failureTextSuccessor.previousText).length, 0,
+    'the diagnostic failure field is no longer a public Text carrier');
+  const actual = matches[0];
+  assert.deepEqual(Object.keys(actual.modifiers).sort(), Object.keys(expected.original).sort(),
+    'failure-copy successor preserves every physical attribute and AUTO omission');
+  for (const [property, value] of Object.entries(expected.changes)) {
+    assert.equal(actual.modifiers[property]?.expression, value, 'failure-copy successor keeps the exact font tuple');
+    assert.deepEqual(actual.modifiers[property]?.extra, expected.extra[property]);
+  }
+  return actual;
+}
 const sites = [];
+let failureTextSuccessorCount = 0;
 for (const file of fixture.files) {
   const source = readFileSync(new URL(`../${file.path}`, import.meta.url), 'utf8');
   if (process.argv.includes('--verify-migration-source')) restoreTypographyMigration(source, file);
   const imports = typographyRoleImports(source, file.path), used = new Set();
   for (const expected of file.nodes) {
-    const replacement = sharedTypographyReplacement(file.path, expected, source);
+    const failureReplacement = failureContentCarrier(file.path, expected, source);
+    if (failureReplacement) failureTextSuccessorCount++;
+    const replacement = failureReplacement ?? sharedTypographyReplacement(file.path, expected, source);
     const producerImports = replacement?.producerPath ? typographyRoleImports(readFileSync(new URL('../' + replacement.producerPath, import.meta.url), 'utf8'), replacement.producerPath) : imports;
     const actual = replacement ?? auditTypographyConsumers(source, file.path).find(node => !used.has(node) && node.method === typographyCarrierMethod(file.path, expected, source) && node.kind === expected.kind && node.text === expected.text &&
       Object.entries(expected.changes).every(([property,value]) => node.modifiers[property]?.expression === value));
@@ -33,6 +62,23 @@ for (const file of fixture.files) {
     sites.push({ ...expected, file: file.path, methodName: `site${sites.length}` });
   }
 }
+assert.equal(failureTextSuccessorCount, 1, 'only the exact historical failure-detail node has a content successor');
+const failureFile = fixture.files.find(file => file.path === failureTextSuccessor.path);
+const failureExpected = failureFile.nodes.find(node => node.method === failureTextSuccessor.method &&
+  node.kind === failureTextSuccessor.kind && node.text === failureTextSuccessor.previousText);
+const failureSource = readFileSync(new URL(`../${failureFile.path}`, import.meta.url), 'utf8');
+const failureCarrier = failureContentCarrier(failureFile.path, failureExpected, failureSource);
+assert.throws(() => failureContentCarrier(failureFile.path, failureExpected,
+  failureSource.replace(failureTextSuccessor.currentText, failureTextSuccessor.previousText)),
+/one exact current failure-copy carrier/, 'returning to the diagnostic field must fail');
+const failureSize = failureCarrier.modifiers.fontSize;
+assert.throws(() => failureContentCarrier(failureFile.path, failureExpected,
+  failureSource.slice(0, failureSize.start) + failureSize.expression + ' + 1' + failureSource.slice(failureSize.end)),
+/exact font tuple/, 'content succession cannot change the actual font size');
+const failureCall = `Text(${failureTextSuccessor.currentText})`;
+assert.throws(() => failureContentCarrier(failureFile.path, failureExpected,
+  failureSource.replace(failureCall, `${failureCall}.fontSize(${failureSize.expression});\n${failureCall}`)),
+/one exact current failure-copy carrier/, 'duplicate current carriers cannot satisfy a single historical occurrence');
 assert.equal(sites.length, 26); assert.equal(sites.filter(site => site.kind === 'Span').length, 9);
 const makeSource = original => `@Component struct DynamicTypographyProbe {\n${sites.map(site => `@Builder private ${site.methodName}(kind: string, selected: boolean, delta: number, choice: Choice, value: string, group: string, option: string, row: number) {\n${site.kind === 'Span' ? "Span('snippet')" : "Text('consumer')"}\n${typographyProperties.filter(property => Object.hasOwn(site.original, property)).map(property =>
   `.${property}(${(original ? site.original : site.changes)[property]}${site.extra[property].length ? ', '+site.extra[property].join(', ') : ''})`).join('\n')}\n}`).join('\n')}\nbuild() { Column() {} }\n}`;

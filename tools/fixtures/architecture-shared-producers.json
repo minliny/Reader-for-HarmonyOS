@@ -4928,6 +4928,18 @@
         },
         {
           "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#statusBanner",
+          "component": "ReaderButton",
+          "specId": "'source-management-retry'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
           "method": "features/source/SourceManagementPage.ets#SourceManagementPage#categoryFilter",
           "component": "ReaderButton",
           "specId": "'source-management-category'",
@@ -5115,7 +5127,9 @@
         "tools/test-source-foundation-specs.mjs",
         "tools/test-foundation-search-discover-sync.mjs",
         "tools/test-shared-action-role-focus-sdk.mjs",
-        "tools/test-search-system-font-scale.mjs"
+        "tools/test-search-system-font-scale.mjs",
+        "tools/test-source-index-presentation-consumers.mjs",
+        "tools/test-index-native-alert-consumers.mjs"
       ],
       "fontScaleSuccessorContract": "tools/fixtures/design/search-system-font-scale-successor-20261015.json"
     },
@@ -6643,7 +6657,7 @@
                 ]
               }
             ],
-            "implementation": "import { TYPE_APP_INHERITED_BODY } from './ReaderTypography';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderRecoveryAction } from './ReaderRecoveryAction';\nimport type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';\n@Component\nexport struct ReaderRecoveryNotice extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        view?: ReaderRecoveryView;\n        actionLabel?: string;\n        onReconcile?: (generation: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    view: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };\n    @Prop\n    actionLabel: string = '刷新列表';\n    onReconcile: (generation: number) => void = (_generation: number): void => { };\n    build() {\n        if (this.view.visible) {\n            .width<\n      >('100%');\n        }\n    }\n}\n"
+            "implementation": "import { TYPE_APP_INHERITED_BODY } from './ReaderTypography';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderRecoveryAction } from './ReaderRecoveryAction';\nimport type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';\n@Component\nexport struct ReaderRecoveryNotice extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        view?: ReaderRecoveryView;\n        actionLabel?: string;\n        onReconcile?: (generation: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    view: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };\n    @Prop\n    actionLabel: string = '刷新列表';\n    onReconcile: (generation: number) => void = (_generation: number): void => { };\n    build() {\n        if (this.view.visible) {\n            .width<\n      >('100%').hitTestBehavior<\n      >(HitTestMode.Transparent);\n        }\n    }\n}\n"
           },
           "consumers": [
             {
@@ -14653,7 +14667,7 @@
                 ]
               }
             ],
-            "implementation": "import { TYPE_APP_INHERITED_BODY } from './ReaderTypography';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderRecoveryAction } from './ReaderRecoveryAction';\nimport type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';\n@Component\nexport struct ReaderRecoveryNotice extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        view?: ReaderRecoveryView;\n        actionLabel?: string;\n        onReconcile?: (generation: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    view: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };\n    @Prop\n    actionLabel: string = '刷新列表';\n    onReconcile: (generation: number) => void = (_generation: number): void => { };\n    build() {\n        if (this.view.visible) {\n            .width<\n      >('100%');\n        }\n    }\n}\n"
+            "implementation": "import { TYPE_APP_INHERITED_BODY } from './ReaderTypography';\nimport { readerAppColor } from './ReaderThemeRegistry';\nimport { ReaderRecoveryAction } from './ReaderRecoveryAction';\nimport type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';\n@Component\nexport struct ReaderRecoveryNotice extends   {\n    constructor(?: {\n        private appThemeScheme?: string;\n        view?: ReaderRecoveryView;\n        actionLabel?: string;\n        onReconcile?: (generation: number) => void;\n    }, ?: ) { }\n    @StorageLink('readerAppScheme')\n    private appThemeScheme: string = 'day';\n    @Prop\n    view: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };\n    @Prop\n    actionLabel: string = '刷新列表';\n    onReconcile: (generation: number) => void = (_generation: number): void => { };\n    build() {\n        if (this.view.visible) {\n            .width<\n      >('100%').hitTestBehavior<\n      >(HitTestMode.Transparent);\n        }\n    }\n}\n"
           },
           "consumers": [
             {

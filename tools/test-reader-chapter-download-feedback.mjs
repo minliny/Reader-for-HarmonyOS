@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {createRequire,registerHooks} from 'node:module';
 import {readFileSync} from 'node:fs';
@@ -14,9 +15,9 @@ const {EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery}=await import(p
 const {runtimeOwnerIdentityProbe}=await import('./lib/reader-runtime-admission-probe.mjs');
 const sourceFile=process.env.READER_DOWNLOAD_FEEDBACK_INDEX??root+'/entry/src/main/ets/pages/Index.ets';
 const require=createRequire(import.meta.url);
-const sdk='/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const ts=require(sdk+'/node_modules/typescript');
-const tree=ts.createSourceFile('/tmp/DownloadFeedbackProbe.ets',readFileSync(sourceFile,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+const tree=ts.createSourceFile(virtualFilePath('DownloadFeedbackProbe.ets'),readFileSync(sourceFile,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
 assert.equal(tree.parseDiagnostics.length,0);
 const memberNames=new Set(tree.statements.find(n=>n.name?.getText(tree)==='Index').members.map(n=>n.name?.getText(tree)));
 const methods=['downloadDirectoryChapter','showChapterDownloadFailure','showOfflineDownloadFeedback','offlineDownloadFeedback',
@@ -111,3 +112,54 @@ for(const [error,expected] of [
 const ok=await fixture(undefined);assert.deepEqual(ok.messages,['全部 1 章下载完成']);assert.equal(ok.owner.detailToc[0].downloadState,'completed');assert.deepEqual(ok.owner.detailToc[0].bookmarks,['kept']);
 const gone=await fixture(dns,'ui-gone');assert.deepEqual(gone.messages,[]);assert.deepEqual(gone.states,[]);assert.equal(gone.owner.detailToc[0].downloadState,'completed');
 console.log('PASS retained ReadingOfflineHost chapter materialization→actual Index binding + production safe classifiers/Recovery/Toast: current DNS visible; source/book/closed/generation stale silent; cancellation silent; fixed storage/timeout/unknown copy excludes secrets; canonical availability/bookmarks and successor-operation fencing preserved; unavailable UI cannot reject download settlement');
+
+// The coordinator's actual typed error is a committed write/readback split.
+// Exercise both shipping Index consumers with that production class, including
+// late completion and repeated read failure; recovery must never replay writes.
+{
+ const {stripTypeScriptTypes}=await import('node:module');
+ const coordinatorSource=readFileSync(root+'/entry/src/main/ets/features/downloads/SharedDownloadCoordinator.ts','utf8');
+ const errorSource=coordinatorSource.slice(coordinatorSource.indexOf('export class SharedDownloadProjectionRefreshError'),coordinatorSource.indexOf('type DownloadOperationStage'));
+ const SharedDownloadProjectionRefreshError=new Function(stripTypeScriptTypes(errorSource.replace('export class','class'))+';return SharedDownloadProjectionRefreshError;')();
+ const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
+  ['markDownloadIntentPending','performMangaDownloadAction'],{SharedDownloadProjectionRefreshError,
+   SharedDownloadActionTarget:class {constructor(sourceId,bookId,chapterIndices){Object.assign(this,{sourceId,bookId,chapterIndices});}},
+   readingOfflineFailureHint,errorMessageOf,hilog:{warn(){}},DOMAIN:0});
+ for(const surface of ['downloads','manga'])for(const outcome of ['committed-read-failed','write-failed','stale']){
+  let reject;const task=new Promise((_,no)=>reject=no);let writes=0,reads=0,live=true;
+  const messages=[],notices=[],runtime={},session={contentKind:'manga',identity:{sourceId:'s',bookId:'b'}};
+  const binding={session,current:()=>live};
+  const host={runAction:async()=>{writes++;await task;},operateManga:async()=>{writes++;await task;},
+   reload:async current=>{if(current())reads++;},load:async binding=>{if(binding.current())reads++;if(reads===1)throw Error('private read error');}};
+  const index=Object.assign(new Index(),{route:'downloads',downloadBooks:[session.identity],mountedRuntimeOwner:runtime,
+   navigationGeneration:1,downloadPresentationIdentity:'d',downloadHost:host,remoteReadingSession:session,
+   mangaDownloadActionActiveKey:'',mangaDownloadActionGeneration:0,offlineBinding:()=>binding,getReadingOfflineHost:()=>host,
+   isCurrentDownloadPresentation:()=>live,showOfflineDownloadFeedback:message=>messages.push(message),
+   showIndexRecoveryNotice:(message,label,action,current)=>notices.push({message,label,action,current})});
+  const work=surface==='downloads'?index.markDownloadIntentPending({action:'pause',books:[session.identity]}):index.performMangaDownloadAction('pause');
+  await settle();assert.equal(writes,1);if(outcome==='stale')live=false;
+  reject(outcome==='write-failed'?Error('private write failure'):new SharedDownloadProjectionRefreshError('pause',Error('private read failure')));
+  await work;await settle();
+  if(outcome==='stale'){assert.equal(notices.length,0);assert.equal(messages.length,0);}
+  else if(outcome==='write-failed'){assert.equal(notices.length,0);assert.match(messages[0],/未完成/);}
+  else{
+   assert.equal(messages.length,0);assert.match(notices[0].message,/已保存/);assert.equal(notices[0].label,'刷新列表');
+   notices[0].action();await settle();assert.equal(reads,1);assert.equal(writes,1);
+   if(surface==='manga'){assert.equal(notices.length,2);assert.match(notices[1].message,/已保存/);notices[1].action();await settle();assert.equal(reads,2);}
+  }
+ }
+ console.log('PASS actual Index download/manga committed projection failure remains saved with read-only retry; generic write failures and retired responses remain distinct');
+}
+
+{
+ const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),['chooseCachedChapterRefresh'],{diagnosticCodeOf});
+ const notices=[];let live=true,refreshes=0;
+ const index=Object.assign(new Index(),{showIndexRecoveryNotice:(message,label,action,current)=>notices.push({message,label,action,current}),
+  refreshCachedChapterFromPrompt:async()=>{refreshes++;throw Error('SQLITE_PRIVATE /private/book token=PRIVATE');}});
+ const error=Error('https://private.invalid/?token=PRIVATE');
+ assert.equal(await index.chooseCachedChapterRefresh(error,()=>live),false);assert.equal(refreshes,0);
+ assert.doesNotMatch(notices[0].message,/private|PRIVATE|token|http/);notices[0].action();await settle();
+ assert.equal(refreshes,1);assert.equal(notices.length,2);assert.doesNotMatch(notices[1].message,/SQLITE|private|PRIVATE|token/);
+ live=false;assert.equal(await index.chooseCachedChapterRefresh(error,()=>live),false);assert.equal(notices.length,2);
+ console.log('PASS actual Index cached chapter refresh requires explicit scoped action and keeps raw first/second errors out of public notice');
+}

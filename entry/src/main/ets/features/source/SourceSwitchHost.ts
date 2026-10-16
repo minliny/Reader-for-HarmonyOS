@@ -1,4 +1,5 @@
-import { ReaderCoreRequestError } from '@reader/core-harmony';
+import { ReaderCoreRequestError, isReaderCoreTransactionPendingError } from '@reader/core-harmony';
+import { BookRequestNotDispatchedError } from '../../app/BookRequestScheduler';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReaderCoreGateway, type ShelfBook } from '../../app/ReaderCoreGateway';
 import { ReaderWriteEvidence } from '../../app/ReaderWriteEvidence';
@@ -86,6 +87,9 @@ export class SourceSwitchHost {
   private failedIdentity: RemoteReadingIdentity | undefined;
   private reconciliationGeneration: number = 0;
   private scopeGeneration: number = 0;
+  private lastFailure: unknown;
+  private readonly uncertainMangaWrites: Set<string> = new Set();
+  private previewPreparation: { generation: number; scopeId: number } | undefined;
   private pickQualification: { generation: number; scopeId: number } | undefined;
   private snapshot: SourceSwitchSnapshot = { scopeId: 0, visible: false, state: { kind: 'discovering' },
     failureMessage: '', rollbackInFlight: false };
@@ -102,6 +106,19 @@ export class SourceSwitchHost {
   mangaPreparationGateway(): SourceSwitchGateway {
     if (!ReaderRuntimeOwner.isCurrent(this.runtime)) throw new Error('MANGA_SESSION_CANCELLED');
     return this.gateway;
+  }
+
+  // This protocol has no original-operation query. Retain uncertainty in the
+  // Runtime owner; current shelf membership must never confirm or replay it.
+  retainUnconfirmedMangaWrite(identity: RemoteReadingIdentity): void {
+    this.uncertainMangaWrites.add(sourceSwitchCandidateKey(identity.sourceId, identity.bookId));
+  }
+  hasUnconfirmedMangaWrite(identity: RemoteReadingIdentity): boolean {
+    return this.uncertainMangaWrites.has(sourceSwitchCandidateKey(identity.sourceId, identity.bookId));
+  }
+
+  mangaWriteWasNotDispatched(error: unknown): boolean {
+    return error instanceof BookRequestNotDispatchedError || isReaderCoreTransactionPendingError(error);
   }
 
   async readMangaShelf(sourceId: string, bookId: string, isCurrent: () => boolean): Promise<ShelfBook | undefined> {
@@ -164,7 +181,7 @@ export class SourceSwitchHost {
     this.publish(); return true;
   }
 
-  open(context: SourceSwitchContext, lease: SourceSwitchLease): boolean {
+  open(context: SourceSwitchContext, lease: SourceSwitchLease, forceDiscovery: boolean = false): boolean {
     const unknown = this.snapshot.write?.confirmation === 'unknown' || this.snapshot.write?.intentPending === true;
     if (context.query.sourceId === 'local' || this.snapshot.visible || this.snapshot.state.kind === 'switching' ||
       this.snapshot.rollbackInFlight || (unknown && (this.context === undefined ||
@@ -176,7 +193,7 @@ export class SourceSwitchHost {
     this.snapshot = { ...this.snapshot, scopeId: ++this.scopeGeneration, visible: true,
       state: unknown ? this.snapshot.state : { kind: 'discovering' }, failureMessage: '' };
     this.publish();
-    void this.openJourney(unknown);
+    void this.openJourney(unknown, forceDiscovery);
     return true;
   }
 
@@ -212,15 +229,20 @@ export class SourceSwitchHost {
     return true;
   }
 
+  canCancelPreparation(scopeId: number): boolean {
+    const preparation = this.previewPreparation ?? this.pickQualification;
+    return this.currentScope(scopeId) && preparation?.generation === this.generation && preparation?.scopeId === scopeId;
+  }
+
   close(scopeId: number): boolean {
-    const qualifying = this.pickQualification?.generation === this.generation &&
-      this.pickQualification?.scopeId === scopeId;
+    const qualifying = this.canCancelPreparation(scopeId);
     const busy = this.snapshot.rollbackInFlight || this.snapshot.write?.confirmation === 'unknown' ||
       this.snapshot.write?.intentPending === true || (this.snapshot.state.kind === 'switching' && !qualifying);
     if (!this.snapshot.visible || !this.currentScope(scopeId) || busy ||
       (this.snapshot.state.kind === 'failure' && this.snapshot.state.transactionId !== undefined)) return false;
     this.generation += 1;
     this.pickQualification = undefined;
+    this.previewPreparation = undefined;
     this.stopDiscovery();
     this.snapshot = { ...this.snapshot, visible: false, state: { kind: 'discovering' } };
     this.publish();
@@ -233,10 +255,11 @@ export class SourceSwitchHost {
     this.generation += 1;
     this.reconciliationGeneration += 1;
     this.stopDiscovery();
-    // No acquisition or write has started in qualification. Release its UI
-    // lock immediately; the old response cannot own a successor scope.
-    if (this.pickQualification !== undefined) {
+    // Qualification and unshelved preview own only cancellable read consumers.
+    // Revoke their lease immediately; old IO cannot own a successor scope.
+    if (this.pickQualification !== undefined || this.previewPreparation !== undefined) {
       this.pickQualification = undefined;
+      this.previewPreparation = undefined;
       this.snapshot = { ...this.snapshot, state: { kind: 'discovering' } };
     }
     this.snapshot = { ...this.snapshot, visible: false };
@@ -297,7 +320,7 @@ export class SourceSwitchHost {
       context = { ...context, query }; this.context = context;
     } catch (error) {
       if (admitted()) {
-        this.snapshot = { ...this.snapshot, state: { kind: 'discoveryError', message: errorMessageOf(error) } };
+        this.snapshot = { ...this.snapshot, state: { kind: 'discoveryError', message: this.publicFailure(error) } };
         this.publish();
       }
       return;
@@ -308,6 +331,8 @@ export class SourceSwitchHost {
       }
     }
     if (!context.inBookshelf) {
+      const preparation = { generation, scopeId };
+      this.previewPreparation = preparation;
       try {
         const seed = this.seed(candidate);
         const session = await this.runtime.bookAcquisitions().acquireBook(seed, { isCurrent: admitted });
@@ -315,8 +340,13 @@ export class SourceSwitchHost {
         if (!this.sameIdentity(session.identity, seed)) throw new Error('换源返回了其他书籍的阅读会话');
         this.gateway.assertAcquiredBook(candidate, session, context.query);
         this.hide(); this.deliver({ kind: 'previewReady', seed, session, candidate });
-      } catch (error) { if (admitted()) this.acquisitionFailed(candidate, errorMessageOf(error)); }
-      finally { this.settleRetired(generation); }
+      } catch (error) { if (admitted()) this.acquisitionFailed(candidate, this.publicFailure(error)); }
+      finally {
+        if (this.previewPreparation === preparation) {
+          this.previewPreparation = undefined;
+          this.settleRetired(generation);
+        }
+      }
       return;
     }
     const evidence = new ReaderWriteEvidence();
@@ -341,7 +371,7 @@ export class SourceSwitchHost {
       });
       if (outcome === undefined) throw new Error('source switch did not produce an outcome');
       // Settle the accepted command independently of its retired UI lease.
-      this.recordWrite(generation, 'commit', evidence, outcome.status === 'failed' ? outcome.error : undefined,
+      this.recordWrite(generation, 'commit', evidence, outcome.status === 'failed' ? this.publicFailure(outcome.error) : undefined,
         outcome.transactionId);
       if (outcome.status === 'success') {
         this.snapshot = { ...this.snapshot, pending: { fromSourceId: identity.sourceId, fromBookId: identity.bookId,
@@ -358,23 +388,23 @@ export class SourceSwitchHost {
         await this.recoverIntent(false);
       } else if (admitted()) {
         this.snapshot = { ...this.snapshot, write: { ...this.snapshot.write!, intentPending: this.fixedIntent !== undefined },
-          state: { kind: 'failure', message: outcome.error, confirmation: evidence.confirmation(), reconcile: this.fixedIntent !== undefined,
+          state: { kind: 'failure', message: this.publicFailure(outcome.error), confirmation: evidence.confirmation(), reconcile: this.fixedIntent !== undefined,
           transactionId: outcome.transactionId } }; this.publish();
       }
     } catch (error) {
       if (evidence.confirmation() !== 'undispatched') {
-        this.recordWrite(generation, 'commit', evidence, errorMessageOf(error));
+        this.recordWrite(generation, 'commit', evidence, this.publicFailure(error));
         await this.recoverIntent(false);
       } else if (error instanceof SourceSwitchIntentRecoveryError) {
         this.snapshot = { ...this.snapshot, write: { generation, action: 'commit', confirmation: 'undispatched',
           observedPending: [], intentPending: true, message: error.message } };
         if (admitted()) { this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: error.message } }; this.publish(); }
       } else if (this.snapshot.write?.generation === generation && this.snapshot.write.confirmation === 'unknown') {
-        if (admitted()) { this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: errorMessageOf(error),
+        if (admitted()) { this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: this.publicFailure(error),
           confirmation: 'unknown', reconcile: true, transactionId: this.snapshot.write.transactionId } }; this.publish(); }
         if (this.snapshot.write.action === 'rollback') await this.reconcileRollback(false);
         else await this.reconcileUnknown(generation);
-      } else if (admitted()) this.acquisitionFailed(candidate, errorMessageOf(error));
+      } else if (admitted()) this.acquisitionFailed(candidate, this.publicFailure(error));
     } finally { this.settleRetired(generation); }
   }
 
@@ -394,7 +424,7 @@ export class SourceSwitchHost {
         ? record.transactionId === write.transactionId
         : record.fromSourceId === identity.sourceId && record.fromBookId === identity.bookId &&
           (candidate === undefined || (record.targetSourceId === candidate.sourceId && record.targetBookId === candidate.bookUrl)));
-    } catch (error) { if (!current()) return; message = errorMessageOf(error); }
+    } catch (error) { if (!current()) return; message = this.publicFailure(error); }
     if (!current()) return;
     this.snapshot = { ...this.snapshot, write: { ...write, observedPending: observed, message },
       state: { kind: 'failure', message: `换源结果尚未确认：${message}`, confirmation: 'unknown', reconcile: true,
@@ -466,13 +496,13 @@ export class SourceSwitchHost {
       if (!admitted()) return;
       this.hide(); this.deliver({ kind: 'rollbackReady', book: result.restoredBook });
     } catch (error) {
-      this.recordWrite(generation, 'rollback', evidence, errorMessageOf(error), transactionId);
+      this.recordWrite(generation, 'rollback', evidence, this.publicFailure(error), transactionId);
       if (admitted()) {
         const confirmation = evidence.confirmation();
         this.snapshot = { ...this.snapshot, visible: true, write: { ...this.snapshot.write!,
           intentPending: this.fixedIntent !== undefined || this.confirmedIntent !== undefined,
           readbackFailed: true },
-          state: { kind: 'failure', message: errorMessageOf(error), transactionId, confirmation, reconcile: true } }; this.publish();
+          state: { kind: 'failure', message: this.publicFailure(error), transactionId, confirmation, reconcile: true } }; this.publish();
       }
       if (evidence.confirmation() === 'unknown') await this.reconcileRollback(false);
     } finally {
@@ -500,7 +530,7 @@ export class SourceSwitchHost {
       this.recordWrite(generation, 'rollback', evidence, undefined, transaction.transactionId);
       restored = result.restoredBook;
     } catch (error) {
-      this.recordWrite(generation, 'rollback', evidence, errorMessageOf(error), transaction.transactionId);
+      this.recordWrite(generation, 'rollback', evidence, this.publicFailure(error), transaction.transactionId);
       if (!current() || !(error instanceof ReaderCoreRequestError) ||
         error.event.error.details?.['reason'] !== 'already_finalized' ||
         error.event.error.details?.['transactionId'] !== transaction.transactionId) throw error as Error;
@@ -647,7 +677,7 @@ export class SourceSwitchHost {
     } catch (error) {
       if (!current()) return;
       if (!identityReady) { this.stopDiscovery(); again = false; dirty.clear(); }
-      const message = errorMessageOf(error);
+      const message = this.publicFailure(error);
       const retained = identityReady ? (this.snapshot.state.kind === 'candidates' ? this.snapshot.state.candidates : previous) : [];
       this.snapshot = { ...this.snapshot, state: retained.length > 0
         ? { kind: 'candidates', candidates: retained, refreshing: false, refreshError: message }
@@ -661,7 +691,7 @@ export class SourceSwitchHost {
       message, transactionId, observedPending: [] } };
   }
 
-  private async openJourney(hasUnknown: boolean): Promise<void> {
+  private async openJourney(hasUnknown: boolean, forceDiscovery: boolean): Promise<void> {
     const generation = this.generation;
     try {
       this.fixedIntent = await this.intents.load();
@@ -669,13 +699,13 @@ export class SourceSwitchHost {
       if (this.fixedIntent !== undefined) { await this.recoverIntent(false); return; }
       if (hasUnknown && this.snapshot.write?.action === 'rollback') { await this.reconcileRollback(false); return; }
       if (hasUnknown) { await this.reconcileUnknown(); return; }
-      await this.discover(false);
+      await this.discover(forceDiscovery);
     } catch (error) {
       if (!this.admitted(generation)) return;
       const write = this.snapshot.write, confirmation = write?.confirmation ?? 'unknown';
       this.snapshot = { ...this.snapshot, write: { generation, action: write?.action ?? 'commit', confirmation,
-        transactionId: write?.transactionId, observedPending: [], intentPending: true, readbackFailed: true, message: errorMessageOf(error) },
-        state: { kind: 'failure', message: errorMessageOf(error), confirmation, reconcile: true } }; this.publish();
+        transactionId: write?.transactionId, observedPending: [], intentPending: true, readbackFailed: true, message: this.publicFailure(error) },
+        state: { kind: 'failure', message: this.publicFailure(error), confirmation, reconcile: true } }; this.publish();
     }
   }
 
@@ -702,7 +732,7 @@ export class SourceSwitchHost {
         if (!admitted()) return;
         const evidence = new ReaderWriteEvidence();
         const outcome = await this.gateway.commitSwitch(fixed.params, admitted, evidence);
-        this.recordWrite(generation, 'commit', evidence, outcome.status === 'failed' ? outcome.error : undefined,
+        this.recordWrite(generation, 'commit', evidence, outcome.status === 'failed' ? this.publicFailure(outcome.error) : undefined,
           outcome.transactionId);
         if (!admitted()) return;
         query = await this.gateway.queryTransaction(fixed.operationId, fixed.params, admitted);
@@ -739,8 +769,8 @@ export class SourceSwitchHost {
       this.snapshot = { ...this.snapshot, write: { generation, action: write?.action ?? 'commit',
         confirmation: write?.confirmation ?? 'unknown', transactionId: write?.transactionId,
         observedPending: write?.observedPending ?? [], intentPending: this.fixedIntent !== undefined || write?.intentPending === true,
-        readbackFailed: true, message: errorMessageOf(error) },
-        state: { kind: 'failure', message: errorMessageOf(error), confirmation: write?.confirmation ?? 'unknown', reconcile: true,
+        readbackFailed: true, message: this.publicFailure(error) },
+        state: { kind: 'failure', message: this.publicFailure(error), confirmation: write?.confirmation ?? 'unknown', reconcile: true,
           transactionId: write?.transactionId } }; this.publish();
     }
   }
@@ -809,7 +839,7 @@ export class SourceSwitchHost {
     } catch (error) {
       if (!current()) return;
       const confirmation = this.snapshot.write?.confirmation ?? 'unknown';
-      this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: errorMessageOf(error),
+      this.snapshot = { ...this.snapshot, state: { kind: 'failure', message: this.publicFailure(error),
         confirmation, reconcile: true, transactionId: write.transactionId },
         write: { ...this.snapshot.write!, readbackFailed: true,
           intentPending: this.fixedIntent !== undefined || this.confirmedIntent !== undefined } }; this.publish();
@@ -843,7 +873,7 @@ export class SourceSwitchHost {
     } catch (error) {
       if (!current() || this.snapshot.write?.transactionId !== transactionId) return;
       this.snapshot = { ...this.snapshot, write: { ...this.snapshot.write, confirmation: 'confirmed',
-        intentPending: true, readbackFailed: true, message: errorMessageOf(error) } };
+        intentPending: true, readbackFailed: true, message: this.publicFailure(error) } };
       this.publish();
     }
   }
@@ -890,6 +920,32 @@ export class SourceSwitchHost {
     this.stopDiscovery(); this.snapshot = { ...this.snapshot, visible: false, state: { kind: 'discovering' }, failureMessage: '' };
     this.publish();
   }
+  private publicFailure(error: unknown): string {
+    // Retain the original diagnostic inside this owner, never in a UI DTO.
+    this.lastFailure = error;
+    if (error instanceof SourceSwitchIntentRecoveryError) return error.message;
+    const message = errorMessageOf(error);
+    switch (message) {
+      case '候选书源已变更或不可用，请重新查找':
+      case '书籍身份已变更，请重新查找书源':
+      case '书源配置已变更，请重试':
+      case '书源返回的书名或作者与当前书籍不一致，已阻止换源':
+      case '换源返回了其他书籍的阅读会话':
+      case '漫画换源返回了其他书籍的阅读会话':
+      case '换源暂时未完成，请重试或选择其他书源。':
+        return message;
+    }
+    switch (remoteReadingFailureKindOf(error)) {
+      case 'SOURCE_AUTH_REQUIRED': return '书源需要登录或验证，请完成验证后重试。';
+      case 'SOURCE_PAYWALL': return '此章节需要书源授权，请检查购买或登录状态。';
+      case 'SOURCE_HTTP_FAILED': return '当前网络无法获取书籍，请检查网络连接后重试。';
+      case 'SOURCE_PARSE_FAILED': return '书源暂时无法解析本书，请重试或选择其他书源。';
+      case 'SOURCE_TOC_EMPTY': return '目标书源暂未获取到目录，请重试或选择其他书源。';
+      case 'SOURCE_CONTENT_EMPTY': return '目标书源暂未获取到正文，请重试或选择其他书源。';
+    }
+    return '换源暂时未完成，请重试或选择其他书源。';
+  }
+
   private acquisitionFailed(candidate: SourceSwitchCandidate, message: string): void {
     this.failedCandidate = candidate; this.failedIdentity = this.identity();
     this.stopDiscovery(); this.snapshot = { ...this.snapshot, visible: false, state: { kind: 'discovering' }, failureMessage: message };

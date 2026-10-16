@@ -1,3 +1,6 @@
+import { readingFailureHint } from '../../entry/src/main/ets/features/reading/ReadingFailurePresentation.ts';
+import { diagnosticCodeOf } from '../../entry/src/main/ets/app/LogPrivacy.ts';
+import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } from './manga-directory-adaptive-probe.mjs';
 import { ReadingRecordIntent, ReadingRecordRecoveryError } from '../../entry/src/main/ets/features/reading/ReaderReadingRecordState.ts';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../entry/src/main/ets/app/BookRequestScheduler.ts';
@@ -16,10 +19,22 @@ import { ReaderWriteEvidence } from '../../entry/src/main/ets/app/ReaderWriteEvi
 import { RssPresentationProjection } from '../../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { createRequire, stripTypeScriptTypes, registerHooks } from 'node:module';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { actualReaderPageShell } from './reader-page-shell-runtime-probe.mjs';
 import { runtimeOwnerIdentityProbe } from './reader-runtime-admission-probe.mjs';
+// Load the actual error classes and classifier together. Only this ArkTS
+// module's two extensionless bindings need adaptation for Node; remove the
+// resolver after import so unrelated probe imports retain their own contract.
+const contentAdmissionUrl = new URL('../../entry/src/main/ets/features/reading/RemoteContentAdmission.ts', import.meta.url).href;
+const contentAdmissionResolution = registerHooks({ resolve(specifier, context, next) {
+  if (context.parentURL === contentAdmissionUrl &&
+      ['./RemoteReadingContract', '../../app/ErrorMessage'].includes(specifier)) return next(`${specifier}.ts`, context);
+  return next(specifier, context);
+} });
+let remoteReadingFailureKindOf;
+try { ({ remoteReadingFailureKindOf } = await import(contentAdmissionUrl)); }
+finally { contentAdmissionResolution.deregister(); }
 // Execute the pure production Host unchanged; its ArkTS-relative imports do
 // not resolve in Node, so only import bindings are supplied by this probe.
 const recordHostSource = readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderReadingRecordHost.ts', import.meta.url), 'utf8');
@@ -60,10 +75,10 @@ import {bookshelfSourceDisplayName} from '../../entry/src/main/ets/features/book
 import {actualBookshelfOperationTypes} from './bookshelf-operation-owner-probe.mjs';
 import {actualSourceManagementTypes} from './source-management-owner-probe.mjs';
 import {actualGeneralSettingsTypes} from './general-settings-owner-probe.mjs';
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const paragraphModels = ts.createSourceFile('/tmp/ReaderMeasurementModelsProbe.ets',
+const paragraphModels = ts.createSourceFile(virtualFilePath('ReaderMeasurementModelsProbe.ets'),
   readFileSync(new URL('../../entry/src/main/ets/features/reading/ReadingMeasurementModels.ets', import.meta.url), 'utf8'),
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const paragraphRangeSource = paragraphModels.statements.find(node => node.name?.text === 'ParagraphRange').getText(paragraphModels);
@@ -74,7 +89,7 @@ const ParagraphRange = new Function(stripTypeScriptTypes(paragraphRangeSource).r
  * This does not simulate ArkUI layout, reactive delivery, or compositor pixels. */
 export function productionMotionMethods(file, names, dependencies = {}) {
   const fixtureRuntime = { captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {} };
-  dependencies = { ...mangaDirectoryAdaptiveDependencies, bookshelfSourceDisplayName, ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, prepareMangaSheetFonts: async () => true, readingChapterLayoutMap, prepareReadingChapterLayoutMap, prepareReadingParagraphUtf16Ranges, readingParagraphBoundaryMode, ParagraphRange, hasKnownReadingImageGeometry, errorMessageOf,
+  dependencies = { readingFailureHint, remoteReadingFailureKindOf, diagnosticCodeOf, ...mangaDirectoryAdaptiveDependencies, bookshelfSourceDisplayName, ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, prepareMangaSheetFonts: async () => true, readingChapterLayoutMap, prepareReadingChapterLayoutMap, prepareReadingParagraphUtf16Ranges, readingParagraphBoundaryMode, ParagraphRange, hasKnownReadingImageGeometry, errorMessageOf,
     // Execute the current complete page-shell policy through its finite import seam.
     ...actualReaderPageShell(),
     ...readerTypographyRoles, readerRuleMutationEffects, RssPresentationProjection, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource, ReaderReadingRecordHost, ReadingRecordRecoveryError,
@@ -96,7 +111,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   }
   if (dependencies.RulesMutationOwner === undefined) dependencies.RulesMutationOwner = actualRulesMutationOwner(dependencies);
   const source = readFileSync(file, 'utf8');
-  const tree = ts.createSourceFile('/tmp/ReaderMotionProbe.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  const tree = ts.createSourceFile(virtualFilePath('ReaderMotionProbe.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, `${file}: ETS parses`);
   const type = tree.statements.find(n => n.members && names.every(name => n.members.some(m => m.name?.getText(tree) === name)));
   assert.ok(type, `production methods: ${names.join(', ')}`);
@@ -117,7 +132,7 @@ export function productionMotionMethods(file, names, dependencies = {}) {
   let expanded;
   do {
     expanded = false;
-    for (const helper of [...mangaDirectoryAdaptiveMembers, 'searchContentStartInset', 'searchHeaderLayoutKey', 'directoryCurrentPagePosition', 'directoryCurrentIndex', 'directoryEntries', 'directoryFontScale', 'directoryToolHeight', 'directoryInitialWidth', 'directoryHeaderChrome', 'directoryQuickHeight', 'reopenChangedChapter', 'retryLabel', 'notifyPublishedRows', 'rowRenderKey', 'isPrimaryErrorRow', 'primaryErrorRowKey', 'rowHasError', 'requestedLast', 'performPanelAction', 'closePanel', 'invalidatePanelMotion', 'openPanel', 'dismissPanelKeyboard', 'preparePanelFonts', 'settlePanel', 'panelTravel', 'panelWidth', 'panelHeight', 'widePanel', 'clearMangaSourceSwitchSelection', 'waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'isMountedToken', 'isSelectionCurrent', 'admitRetainedReadingRecency', 'isVisiblePageCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'prepareChapterMeasurementProjection', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireSourceManagementPresentation', 'retireSettingsPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'retireBookshelfCatalogPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey', 'cancelSourceSwitchCompletion', 'finishSourceSwitchReveal', 'sourceSwitchCompletionKey', 'traceBoundary', 'tracePosition']) {    if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
+    for (const helper of [...mangaDirectoryAdaptiveMembers, 'searchContentStartInset', 'searchHeaderLayoutKey', 'directoryCurrentPagePosition', 'directoryCurrentIndex', 'directoryEntries', 'directoryFontScale', 'directoryToolHeight', 'directoryInitialWidth', 'directoryHeaderChrome', 'directoryQuickHeight', 'reopenChangedChapter', 'retryLabel', 'notifyPublishedRows', 'rowRenderKey', 'isPrimaryErrorRow', 'primaryErrorRowKey', 'rowHasError', 'requestedLast', 'performPanelAction', 'closePanel', 'invalidatePanelMotion', 'openPanel', 'dismissPanelKeyboard', 'preparePanelFonts', 'settlePanel', 'panelTravel', 'panelWidth', 'panelHeight', 'widePanel', 'clearMangaSourceSwitchSelection', 'waitForPredecessorClose', 'errorMessage', 'isCurrentDetailProjection', 'consumeTemporaryBackBridge', 'isCurrentRuntime', 'showReaderAlert', 'showIndexAlert', 'showSourceImportResult', 'refreshCachedChapterFromPrompt', 'showIndexRecoveryNotice', 'clearIndexRecoveryNotice', 'runIndexRecoveryAction', 'runSourceImportSearchAction', 'showReaderRecovery', 'readerRecoveryOwnerKey', 'settleReaderRecovery', 'setReaderPreferenceNotice', 'settleReaderPreferenceNotice', 'persistReaderSettingsSnapshot', 'reconcileReaderRecovery', 'handoffExitProgress', 'releasePageTurnRecoveryInput', 'isMountedToken', 'isSelectionCurrent', 'admitRetainedReadingRecency', 'isVisiblePageCurrent', 'preparePersistedShelfBooks', 'shelfFilter', 'notifyReadingPresentationReady', 'isUnknownCatalogEdge', 'requestCatalogForTurn', 'entryChapterPosition', 'hasPartialEntryWindow', 'resolvePageImagePixels', 'rebuildFragmentIndex', 'prepareRemoteCatalogNearEnd', 'isRemoteCatalogNearEnd', 'remoteReadableChapterPosition', 'updateRemoteReadableChapterOrder', 'admitEntryResume', 'prepareChapterMeasurementProjection', 'configureReadingChapterWindow', 'setCurrentReadingChapter', 'drainReadingWindowPrefetch', 'continuousProgressDependencies', 'progressProducerIntent', 'retireSourceSwitchPresentation', 'retireSourceManagementPresentation', 'retireSettingsPresentation', 'retireRssPresentation', 'retireRssEditorPresentation', 'retireBookshelfCatalogPresentation', 'isCurrentRssEditorPresentation', 'persistMeasuredCanonicalProgress', 'readingPrefetchLease', 'getReadingEntryHost', 'readingEntryLease', 'applyReadingEntrySnapshot', 'bindReadingEntryReader', 'retireReadingEntryPresentation', 'readingPreparationContext', 'sharedReadingPreparationSeeds', 'chooseCachedChapterRefresh', 'readerReplaceRuntimeCurrent', 'projectReaderReplaceWriteFacts', 'loadDirectoryOperationProjections', 'detailReadableAdmission', 'detailBookKey', 'cancelSourceSwitchCompletion', 'finishSourceSwitchReveal', 'sourceSwitchCompletionKey', 'traceBoundary', 'tracePosition']) {    if (!names.includes(helper) && type.members.some(m => m.name?.getText(tree) === helper) &&
       (capturedOwnerFields.includes(`this.${helper}(`) || type.members.some(m => names.includes(m.name?.getText(tree)) && m.getText(tree).includes(`this.${helper}(`)))) { names.push(helper); expanded = true; }
     }
   } while (expanded);
@@ -137,6 +152,14 @@ export function productionMotionMethods(file, names, dependencies = {}) {
     for (const decorator of ts.getAllDecorators(member)) text = text.replace(decorator.getText(tree), '');
     return text.trim();
   };
+  const indexFeedbackFields = type.name?.getText(tree) === 'Index' &&
+    names.some(name => ['showIndexRecoveryNotice', 'clearIndexRecoveryNotice', 'runSourceImportSearchAction'].includes(name))
+    ? ['indexRecoveryNotice', 'indexRecoveryActionLabel', 'indexRecoveryAction', 'indexRecoveryCurrent',
+      'indexRecoveryRevision', 'remoteCacheRefreshConsent', 'sourceImportSearchActionLabel',
+      'sourceImportSearchActionRevision', 'sourceImportSearchAction', 'rssOperationResultMessage']
+      .filter(name => !names.includes(name))
+      .map(name => ordinaryField(type.members.find(member => member.name?.getText(tree) === name))).join('\n')
+    : '';
   const pageChromeFields = type.name?.getText(tree) === 'SearchPage' && names.includes('searchContentStartInset')
     ? ['fixedHeaderHeight', 'fixedHeaderLayoutKey'].filter(name => !names.includes(name))
       .map(name => ordinaryField(type.members.find(member => member.name?.getText(tree) === name))).join('\n')
@@ -174,7 +197,7 @@ if (names.includes('traceBoundary')) capturedOwnerFields += '\n' + ordinaryField
     paragraphLayout = new ReaderParagraphLayoutOwner(); physicalPagination = new ReaderPhysicalPaginationOwner();
     progressProducers = new ReaderProgressProducerHost();
     nativeAlertOwner = new ReaderNativeAlertOwner();
-    nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${fields ?? ''} ${pageChromeFields} ${panelFields} ${completionFields} ${chromePorts} ${capturedOwnerFields} ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
+    nativeTextMeasurement = { clear() {} }; nativeParagraphResources = { close() {}, retain() {} }; ${fields ?? ''} ${pageChromeFields} ${indexFeedbackFields} ${panelFields} ${completionFields} ${chromePorts} ${capturedOwnerFields} ${methods} }`)}; return Probe;`)(...Object.values(dependencies));
   // Existing probes describe pre-refactor component fields. Route those fixture
   // assignments to the real production owners; no production struct accessors
   // or duplicated batching/index-admission algorithm is introduced.

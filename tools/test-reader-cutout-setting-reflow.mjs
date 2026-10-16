@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -12,7 +13,7 @@ const deferred = () => { let resolve, reject; const promise = new Promise((a,b) 
 const settle = async () => { for (let i=0;i<10;i++) await new Promise(resolve => setImmediate(resolve)); };
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const gatewaySource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderSettingsGateway.ts',import.meta.url),'utf8');
-const ts=createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/node_modules/typescript');
+const ts=createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/node_modules/typescript');
 const gatewayBody=gatewaySource.replace(/^import[\s\S]*?;\n/gm,'');
 const emitted=ts.transpileModule(gatewayBody,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});
 assert.deepEqual(emitted.diagnostics,[],'whole actual ReaderSettings Gateway compiled with SDK TypeScript');
@@ -20,7 +21,7 @@ const facts = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0,0,390,844),new 
   new ReaderInsetsVp(0,48),new ReaderInsetsVp(0,32),undefined,undefined,undefined,3,1,1,true,48);
 const Owner = productionMotionMethods(file, ['commitReaderWindowSettings', 'readingLayout', 'windowMetricsLayoutKey',
   'reflowAfterWindowGeometryChange', 'onWindowMetricsRevisionChanged','captureReaderSettingsAdmission',
-  'notifyReaderSettingsSavePending','retryPendingReaderSettings','isSessionActive'], {
+  'notifyReaderSettingsSavePending','retryPendingReaderSettings','retryReaderPreferenceNotice','isSessionActive'], {
   resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP,
   ReaderWindowCoordinator: { metrics: () => facts },
   measureReaderPageChromeText, readerPageChromeTopTextStyle,
@@ -66,17 +67,27 @@ for(const extended of [false,true])for(const controls of [false,true])for(const 
   const f=await fixture(extended,controls),oldTop=f.owner.readingLayout().contentTop,target=f.change(),gate=f.holdFlush();f.failFlush(failure);
   f.owner.commitReaderWindowSettings(target);await settle();
   assert.deepEqual(f.writes,[!extended]);assert.equal(f.measurements.length,1);
+  assert.equal(f.owner.readerSettingsRecovery.visible,true);assert.equal(f.owner.readerSettingsRecovery.canRetry,false,
+    'the real pending view cannot dispatch a second write before the original flush settles');
   assert.equal(f.measurements[0].top,oldTop,'cutout preference cannot create a second status-height information lane');assert.equal(f.measurements[0].anchor,173);
   gate.resolve();await settle();
   assert.deepEqual(f.owner.readerSettingsSnapshot,target,'native policy success is retained when Preferences confirmation is missing');
   assert.deepEqual(f.policies,[!extended]);assert.equal(f.measurements.length,1,'unknown durable result cannot reflow an old policy');
-  assert.equal(f.failures.length,1);assert.match(f.failures[0].message,/保存尚未确认/);assert.equal(f.gateway.writeFacts().pendingReconciliation,true);
+  assert.deepEqual(f.failures,[],'unknown persistence uses the retained settings notice, not the window-refusal Toast');
+  assert.equal(f.owner.readerSettingsRecovery.visible,true);assert.equal(f.owner.readerSettingsRecovery.canRetry,true);
+  assert.match(f.owner.readerSettingsRecovery.message,/保存尚未确认/);assert.equal(f.gateway.writeFacts().pendingReconciliation,true);
   assert.deepEqual(f.gateway.writeFacts().saved,f.initial);assert.equal(JSON.parse(f.cache.get('snapshot')).extendIntoCutout,!extended,'cached get alone cannot qualify durable save');
   assert.equal(JSON.parse(f.durable.get('snapshot')).extendIntoCutout,failure==='after'?!extended:extended);
   f.owner.onWindowMetricsRevisionChanged();assert.equal(f.measurements.length,1,'equal accepted geometry must not remeasure twice');
-  f.owner.retryPendingReaderSettings(f.owner.captureReaderSettingsAdmission(1,f.owner.readerSettingsMutationGeneration));await settle();
+  const retryGeneration=f.owner.readerSettingsRecovery.generation;
+  f.owner.retryReaderPreferenceNotice('settings',retryGeneration);
+  f.owner.retryReaderPreferenceNotice('settings',retryGeneration);await settle();
   assert.deepEqual(f.writes,[!extended,!extended],'finite retry writes the same current snapshot, never previous compensation');
   assert.equal(f.gateway.writeFacts().pendingReconciliation,false);assert.deepEqual(f.gateway.writeFacts().saved,target);
+  assert.equal(f.owner.readerSettingsRecovery.visible,false);assert.equal(f.owner.readerSettingsRecovery.canRetry,false,
+    'the original confirmed write facts settle the persistent notice');
+  f.owner.retryReaderPreferenceNotice('settings',retryGeneration);await settle();
+  assert.deepEqual(f.writes,[!extended,!extended],'a retired retry callback cannot replay the confirmed write');
   assert.equal(f.measurements.length,1);assert.equal(f.owner.visiblePage.startScalar,173);
 }
 for(const extended of [false,true])for(const controls of [false,true]){

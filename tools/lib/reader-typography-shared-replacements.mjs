@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -6,12 +7,24 @@ import { foundationTypographyCarrier } from './foundation-typography-carrier-pro
 import { boundedTypographyCarrier } from './bounded-typography-carrier-probe.mjs';
 import { typographyLayoutMethod } from './reader-typography-layout-successor.mjs';
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const registry = JSON.parse(readFileSync(new URL('../fixtures/design/typography-carrier-successors.json', import.meta.url), 'utf8'));
 assert.equal(registry.schemaVersion, 1);
 const successor = (file, expected) => registry.entries.find(entry => entry.origin.path === file && entry.origin.method === expected.method && entry.origin.kind === expected.kind && entry.origin.text === expected.text);
+function currentCarrierText(entry) {
+  if (entry.id !== 'local-import-body-3') return entry.target.text;
+  // The registry is a hash-bound historical relocation witness. Only this
+  // existing hint gained the current task-blocked branch; its complete native
+  // tuple and original witness remain unchanged.
+  const path = 'entry/src/main/ets/features/bookshelf/LocalImportDialog.ets';
+  const text = "this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。'";
+  assert.equal(entry.kind, 'sameFile');
+  assert.deepEqual(entry.origin, { path, method: 'fileSelectionPanel', kind: 'Text', text });
+  assert.deepEqual(entry.target, { path, method: 'fileSelectionBody', kind: 'Text', text });
+  return 'this.selectionBlockedMessage.length > 0 ? this.selectionBlockedMessage :\n            ' + text;
+}
 function methodOf(source, file, name) {
   name = typographyLayoutMethod(file, name, source);
   const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
@@ -36,8 +49,10 @@ export function typographyCarrierMethod(file, expected, pageSource) {
   if (entry?.kind === 'sameFile') {
     assert.equal(entry.target.path, file);
     for (const [origin, target] of entry.methodEdges ?? [[entry.origin.method, entry.target.method]]) callsMethod(pageSource, file, origin, target);
-    const carrier = auditTypographyConsumers(pageSource, file).find(node => node.method === entry.target.method && node.kind === entry.target.kind && node.text === entry.target.text);
-    assert.ok(carrier, `${entry.id}: exact authored successor carrier`);
+    const text = currentCarrierText(entry);
+    const carriers = auditTypographyConsumers(pageSource, file).filter(node => node.method === entry.target.method && node.kind === entry.target.kind && node.text === text);
+    assert.equal(carriers.length, 1, `${entry.id}: one exact authored successor carrier`);
+    const carrier = carriers[0];
     assert.deepEqual(Object.keys(carrier.modifiers).sort(), Object.keys(expected.original).sort(), `${entry.id}: all native tuple attributes/AUTO omissions`);
     for (const [property, value] of Object.entries(expected.changes)) {
       assert.equal(carrier.modifiers[property]?.expression, value, `${entry.id}: exact public successor tuple`);

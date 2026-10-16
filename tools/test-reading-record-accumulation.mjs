@@ -21,12 +21,12 @@ assert.match(gateway, /record\.readTime < receipt\.elapsedMillis \|\| record\.la
 assert.match(gateway, /receipt\.operationId !== journal\.operationId/);
 
 // Time starts only after a real measured page is committed. Foreground,
-// periodic and guarded-exit boundaries capture deltas; normal exit awaits the
-// serial Core tail before route ownership is returned.
+// periodic and exit boundaries capture deltas. Runtime-owned durable staging
+// and Core reconciliation never become a route dependency.
 assert.match(reader, /this\.phase = 'ready';\s*this\.beginReadingRecordClock\(lifecycleToken\);/);
 assert.match(host, /}, 30000\)/);
 assert.match(reader, /readingRecordHost: ReaderReadingRecordHost = new ReaderReadingRecordHost\(/);
-assert.match(host, /if \(this\.inFlight !== undefined\) return this\.inFlight/);
+assert.match(host, /this\.driver\.handoff\(intent\);\s*this\.pendingMillis = 0/);
 assert.doesNotMatch(host, /restored = .*elapsed/);
 assert.match(reader, /if \(!this\.appForeground\) \{[\s\S]*?this\.captureReadingRecordElapsed\(false\);\s*this\.clearReadingRecordTimer\(\);\s*void this\.flushReadingRecord\(\)\.catch/);
 const beginExit = reader.match(/private beginExit\(\): void \{[\s\S]*?\n  \}/)?.[0] ?? '';
@@ -37,7 +37,11 @@ assert.ok(exitCaptureSteps.every((offset, index) => offset >= 0 &&
   'guarded exit stops audition before capturing the final reading interval');
 assert.doesNotMatch(beginExit.slice(exitCaptureSteps[0], exitCaptureSteps[2]), /\b(?:await|return)\b|this\.finishExit\(/,
   'synchronous ownership updates may intervene; early return or asynchronous exit may not skip interval capture');
-assert.match(reader, /await this\.flushReadingRecordForExit\(\);[\s\S]*await this\.commitVisiblePage\(lifecycleToken\);/);
+const finishExit = reader.match(/private async finishExit\(lifecycleToken: number\): Promise<void> \{[\s\S]*?\n  \}/)?.[0] ?? '';
+assert.match(finishExit, /this\.readingRecordHost\.handoff\(\)/);
+assert.doesNotMatch(finishExit, /\bawait\b|showReaderAlert|showAlertDialog|flushReadingRecordForExit/);
+assert.match(reader, /ReaderRuntimeOwner\.current\(\)\.getReadingRecordGateway\(\)/);
+assert.match(gateway, /READING_RECORD_OUTBOX_LIMIT = 128/);
 assert.match(reader, /this\.exitDelivered = true;[\s\S]*?try \{[\s\S]*?this\.retainConfirmedEntryPresentation\(\);[\s\S]*?catch \(error\) \{[\s\S]*?\}\s*this\.onExit\(\);/);
 
 const disappear = reader.match(/aboutToDisappear\(\): void \{[\s\S]*?\n  \}/)?.[0] ?? '';

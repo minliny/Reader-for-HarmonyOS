@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "previousFixture": "tools/fixtures/design/native-default-control-contracts.json",
+  "previousFixtureSha256": "3ca6302cd2b01697e4c91c19148a9238fce75b865a9fb73ff00a8507f6895710",
+  "previousRowSha256": "30c4100afe6486acb337277e9d17fac5ee38638bddccf63fe100675b2f41ebc5",
+  "id": "NATIVE-DEFAULT-05",
+  "file": "features/reading/LocalReadingExperience.ets",
+  "method": "readingFailureContent",
+  "exclusiveGuard": "this.sourceSwitchFailureMessage.length > 0",
+  "branchInstances": [
+    {
+      "guard": "this.sourceSwitchFailureMessage.length > 0",
+      "branch": "then",
+      "onClick": "(): void => this.onRetryFailedSourceSwitch(scopeId)",
+      "forEachInput": "[this.sourceSwitchScopeId]",
+      "forEachKey": "(scopeId: number): string => `${scopeId}`",
+      "branchPath": [
+        {
+          "guard": "this.sourceSwitchFailureMessage.length > 0",
+          "branch": "then"
+        }
+      ]
+    },
+    {
+      "guard": "this.readerRecoveryView.visible && this.readerRecoveryView.canRetry",
+      "branch": "else",
+      "onClick": "(): void => this.retryReading()",
+      "branchPath": [
+        {
+          "guard": "this.readerRecoveryView.visible && this.readerRecoveryView.canRetry",
+          "branch": "else"
+        },
+        {
+          "guard": "this.sourceSwitchFailureMessage.length > 0",
+          "branch": "else"
+        }
+      ]
+    }
+  ],
+  "sdkProof": "tools/test-native-default-control-contracts.mjs",
+  "boundary": "The two native retry actors, exact source-switch scope, callback identities and native AUTO typography remain unchanged. Ordinary native retry is the fallback only when no shared inline recovery CTA is available; it cannot replace or duplicate that CTA."
+}

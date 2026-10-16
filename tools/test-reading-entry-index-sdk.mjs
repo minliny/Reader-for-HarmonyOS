@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import {makeIndex} from './lib/reading-entry-sdk-consumer.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
@@ -8,9 +9,9 @@ import {ProductionHost,compileHost,read,setRuntime,readingEvidence as evidence} 
 import * as geometry from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript');
-const parsed=(source)=>ts.createSourceFile('/tmp/EntryConsumer.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+const parsed=(source)=>ts.createSourceFile(virtualFilePath('EntryConsumer.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
 const properties=source=>parsed(source).statements.find(n=>n.members&&n.members.some(m=>m.name?.getText()==='build')).members.filter(m=>ts.isPropertyDeclaration(m)&&ts.getAllDecorators(m).length>0).map(m=>m.name.getText());
 const methods=['getReadingEntryHost','readingEntryLease','applyReadingEntrySnapshot','bindReadingEntryReader','retireReadingEntryPresentation',
  'readingPreparationContext','sharedReadingPreparationSeeds','preparePersistedShelfBooks','prepareVisibleReadingBooks','onSearchVisibilityChanged',
@@ -86,17 +87,22 @@ for(const mode of ['success','decline','leave','runtime-unavailable','rules-chan
  const f=fixture(),x=makeIndex(f);x.idx.openRemoteBookDetail(seed(),'Source',book(),true);
  x.idx.onRemoteSessionReady(session());const error=new (await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts')).RemoteChapterCacheRefreshError(session(),0,undefined,false);
  const gate=deferred();f.gates.set('chapter.content:'+f.key('s1','book'),gate);
- const work=x.idx.refreshCachedChapterFromPrompt(error,()=>!x.idx.shelfReceiptRetired);
- await until(()=>f.nativeAlert!==undefined);f.nativeAlert[mode==='decline'?'secondaryButton':'primaryButton'].action();await tick();
+ assert.equal(await x.idx.refreshCachedChapterFromPrompt(error,()=>!x.idx.shelfReceiptRetired),undefined);
+ assert.equal(f.nativeAlert,undefined,'cache proof failure no longer opens a native modal');
+ assert.equal(f.calls.some(c=>c.p?.forceRefresh),false,'background probe does not fetch replacement content');
+ const notice=x.idx.indexRecoveryNotice.generation;
+ if(mode!=='decline')x.idx.runIndexRecoveryAction(notice);
+ await tick();
  if(mode==='leave')x.idx.nextNavigationGeneration();
  if(mode==='runtime-unavailable'){f.runtime.closed=true;setRuntime(undefined);}
  if(mode==='rules-changed')f.coordinator.projectionRevision+=1;
- gate.resolve();const index=await work;
- if(mode==='success'){assert.equal(index,0);assert.equal(x.idx.remoteContentVerdict,'readable');assert.equal(x.idx.remoteReadingSession.preparedChapter.chapter.chapterIndex,0);}
- else {assert.equal(index,undefined);assert.equal(x.idx.remoteReadingSession?.preparedChapter,undefined);}
- if(mode==='decline')assert.equal(f.calls.some(c=>c.p.forceRefresh),false);
- f.close();checks.push('actual-native-cache-choice-owner-exact-revision-'+mode);
+ gate.resolve();await f.settle();await tick();
+ if(mode==='success'){assert.equal(x.idx.remoteContentVerdict,'readable');assert.equal(x.idx.remoteReadingSession.preparedChapter.chapter.chapterIndex,0);}
+ else assert.equal(x.idx.remoteReadingSession?.preparedChapter,undefined);
+ if(mode==='decline')assert.equal(f.calls.some(c=>c.p?.forceRefresh),false);
+ f.close();checks.push('actual-inline-cache-refresh-owner-exact-revision-'+mode);
 }
+
 {
  const f=fixture(),x=makeIndex(f,{route:'bookshelf'});x.idx.prepareVisibleReadingBooks([book()]);await f.settle();
  assert.ok(f.calls.some(c=>c.method==='context'));assert.equal(f.preparations.paused,false);

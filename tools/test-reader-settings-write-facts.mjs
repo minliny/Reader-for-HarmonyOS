@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync, mkdtempSync, writeFileSync, rmSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -6,8 +7,7 @@ import {join} from 'node:path';
 import * as state from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 
-const require=createRequire(import.meta.url),ts=require((process.env.READER_ETS_LOADER_ROOT??
- '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/node_modules/typescript');
+const require=createRequire(import.meta.url),ts=require((resolveEtsLoaderRoot())+'/node_modules/typescript');
 const dir=new URL('../entry/src/main/ets/features/reading/',import.meta.url),source=readFileSync(new URL('ReaderSettingsGateway.ts',dir),'utf8');
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<10;i++)await new Promise(done=>setImmediate(done));};
@@ -124,7 +124,9 @@ for(const kind of ['session','window','style','scroll']){
  else ui.host.changeReaderPageTurnStyle(kind==='scroll'?'scroll':'simulation');
  await settle();assert.deepEqual(ui.host.readerSettingsSnapshot,target,`${kind}: missing Preferences ACK keeps current accepted settings`);
  assert.equal(f.owner.writeFacts().pendingReconciliation,true);assert.deepEqual(JSON.parse(f.durable.get('snapshot')),target);
- assert.equal(ui.events.filter(e=>e[0]==='notice').length,1);assert.match(ui.events.find(e=>e[0]==='notice')[1],/尚未确认/);
+ assert.equal(ui.host.readerSettingsRecovery.visible,true);assert.equal(ui.host.readerSettingsRecovery.canRetry,true);
+ assert.match(ui.host.readerSettingsRecovery.message,/尚未确认/);
+ assert.equal(ui.events.filter(e=>e[0]==='notice').length,0,'unconfirmed saving remains visible rather than depending on a transient toast');
  if(kind==='window')assert.equal(ui.events.filter(e=>e[0]==='window').length,1,'native success is not undone by unrelated Preferences ACK');
  if(kind==='scroll')assert.equal(ui.events.filter(e=>e[0]==='paged').length,0,'unknown flush cannot force a second navigation mode');
  if(kind==='style')assert.equal(ui.host.bookTurnRuntimeFailed,false,'accepted actual capability re-entry is retained');
@@ -147,13 +149,15 @@ for(const prepared of [true,false]){
  if(prepared){ui.host.readerSettingsLoaded=true;ui.host.readerSettingsSnapshot=choice;}
  await ui.host.loadReaderSettingsSnapshot(1);await settle();assert.deepEqual(ui.host.readerSettingsSnapshot,choice);
  assert.equal(f.owner.writeFacts().pendingReconciliation,false,'both actual warm prepared and initial load schedule one finite retry');
+ assert.equal(ui.host.readerSettingsRecovery.visible,false,'actual successful flush settles the persistent notice');
  assert.equal(f.events.filter(e=>e[0]==='put').length,3);
 }
 const scratch=mkdtempSync(join(tmpdir(),'reader-settings-write-facts-'));
 try{
  const file=join(scratch,'LocalReadingExperience.ets'),lre=readFileSync(new URL('LocalReadingExperience.ets',dir),'utf8');
- const old=lre.replace('this.notifyReaderSettingsSavePending(error, current));',
-  '{ this.readerSettingsSnapshot = createDefaultReaderSettingsSnapshot(); this.notifyReaderSettingsSavePending(error, current); });');
+ const sessionStart=lre.indexOf('  private commitReaderSessionSettings('),sessionEnd=lre.indexOf('  private commitReaderWindowSettings(',sessionStart);
+ const old=lre.slice(0,sessionStart)+lre.slice(sessionStart,sessionEnd).replace('this.notifyReaderSettingsSavePending(error, current));',
+  '{ this.readerSettingsSnapshot = createDefaultReaderSettingsSnapshot(); this.notifyReaderSettingsSavePending(error, current); });')+lre.slice(sessionEnd);
  assert.notEqual(old,lre);writeFileSync(file,old);const f=fixture();await f.owner.update(initial);f.failFlush('after');const ui=reader(f,file);
  ui.host.commitReaderSessionSettings(choice);await settle();assert.deepEqual(ui.host.readerSettingsSnapshot,initial,
   'old actual LRE compensation is reproduced by the production negative control');

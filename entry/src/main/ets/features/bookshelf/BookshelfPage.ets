@@ -328,7 +328,7 @@ export struct BookshelfPage {
     return {
       height: this.bookActionSheetSpec().height,
       width: this.bookActionWidth(),
-      preferType: SheetType.CENTER,
+      preferType: SheetType.BOTTOM,
       dragBar: false,
       showClose: false,
       backgroundColor: readerAppColor(this.bookActionSheetSpec().hostBackgroundRole, this.appThemeScheme),

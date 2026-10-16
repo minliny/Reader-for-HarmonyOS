@@ -7,7 +7,7 @@ import {localImportResultLayout} from '../entry/src/main/ets/features/bookshelf/
 const source=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/LocalImportDialog.ets',import.meta.url),'utf8');
 const frameSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderBoundedSurface.ets',import.meta.url),'utf8');
 const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
-const props=o=>({state:o.state,batch:o.batch,reduceMotion:o.reduceMotion,failureMessage:o.failureMessage,recovery:o.recovery});
+const props=o=>({state:o.state,batch:o.batch,reduceMotion:o.reduceMotion,failureMessage:o.failureMessage,recovery:o.recovery,selectionEnabled:o.selectionEnabled,selectionBlockedMessage:o.selectionBlockedMessage});
 function mount(params={},options={},input=source,viewportHeight=0){
   const p=boundedSurfaceSdk(options),animations=[];let now=0;
   const o=p.consumer(input,boundedMembers(input),{...horizontal,...metricsApi,localImportResultLayout,
@@ -25,6 +25,11 @@ function mount(params={},options={},input=source,viewportHeight=0){
   const label=[...actions.nodes.values()].find(n=>n.create==='选择文件'),message=p.nodes(o).find(n=>n.create==='select failed');assert.ok(label&&message);
   o.updateStateVars({...props(o),state:'pickerOpening',failureMessage:'next selection error'});p.properties.flush();
   assert.equal(label.create,'正在选择…');assert.equal(chooseAction.enabled,false);chooseAction.onClick();assert.equal(choose,1,'retained direct click checks live admission');assert.equal(message.create,'next selection error');assert.ok(p.walk(o).includes(frame));
+  o.updateStateVars({...props(o),state:'fileSelection',selectionEnabled:false,selectionBlockedMessage:'上次导入仍在处理中'});p.properties.flush();
+  assert.equal(chooseAction.enabled,false);assert.equal(label.create,'请稍候');assert.equal(message.create,'上次导入仍在处理中');
+  chooseAction.onClick();assert.equal(choose,1);cancelAction.onClick();assert.equal(close,2,'closing the surface remains available');
+  const drop=p.nodes(o).find(n=>n.onClick&&n.border?.style==='BorderStyle.Dashed');assert.ok(drop);assert.equal(drop.enabled,false);drop.onClick();assert.equal(choose,1);
+  o.updateStateVars({...props(o),selectionEnabled:true,selectionBlockedMessage:''});p.properties.flush();chooseAction.onClick();assert.equal(choose,2);
   o.viewportWidth=320;p.properties.flush();assert.equal(native.width,280);
   o.aboutToDisappear();const reopened=mount();assert.equal(reopened.o.state,'fileSelection');assert.equal(reopened.o.mounted,true);
 }

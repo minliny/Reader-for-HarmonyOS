@@ -1,3 +1,4 @@
+import { BookRequestNotDispatchedError } from '../../app/BookRequestScheduler';
 import type { JsonObject } from '@reader/core-harmony';
 import type { ReadingGatewayRuntime } from '../reading/ReadingGatewayRuntime';
 import type { RemoteReadingSession, RemoteReadingTocEntry } from '../reading/RemoteReadingFlowGateway';
@@ -113,16 +114,16 @@ export class MangaSourceSwitchGateway {
   }
 
   async commit(proposal: MangaSwitchProposal, acceptApproximate: boolean, current: () => boolean): Promise<MangaProgressState> {
-    if (!current()) throw new Error('MANGA_SWITCH_CANCELLED');
-    if (!acceptApproximate) throw new Error('MANGA_SWITCH_SELECTION_REQUIRED');
-    if (proposal.targetPageOrdinal !== 0) throw new Error('MANGA_SWITCH_LANDING_INVALID');
+    if (!current()) throw new BookRequestNotDispatchedError('MANGA_SWITCH_CANCELLED');
+    if (!acceptApproximate) throw new BookRequestNotDispatchedError('MANGA_SWITCH_SELECTION_REQUIRED');
+    if (proposal.targetPageOrdinal !== 0) throw new BookRequestNotDispatchedError('MANGA_SWITCH_LANDING_INVALID');
     const result = await this.runtime.request('manga.sourceSwitch.commit', {
       fromSourceId: proposal.fromSourceId, fromBookId: proposal.fromBookId,
       expectedFrom: proposal.expectedFrom as unknown as JsonObject,
       expectedTarget: proposal.expectedTarget as unknown as JsonObject,
       firstImage: proposal.firstImage as unknown as JsonObject,
       targetPageOrdinal: proposal.targetPageOrdinal, acceptApproximate,
-    }, { shouldCancel: (): boolean => !current() });
+    }, { canDispatch: current, canContinue: current, shouldCancel: (): boolean => !current() });
     const data = result.data as unknown as MangaSwitchResult;
     const location = data.progress?.location;
     if (data.mapping !== 'approximate' || location?.kind !== 'manga' ||

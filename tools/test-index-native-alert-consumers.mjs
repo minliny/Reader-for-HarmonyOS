@@ -2,6 +2,7 @@ import {RealRssOrchestrator,replaceRssRuntime} from './lib/rss-operation-fixture
 import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import {bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
+import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 import {readFileSync} from 'node:fs';
 import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
@@ -21,7 +22,7 @@ const Entry=compileHost(undefined,{ReaderRuntimeOwner:authority,
 const EMPTY_READABLE_ADMISSION={generation:0,adding:false,cancelling:false,confirmation:'none'};
 const Index=productionMotionMethods(file,['showIndexAlert','showSourceImportResult','showSourceImportResultFromSearch',
  'requestSourceDelete','requestRssSubscriptionDelete','requestRssSourceImport','showRssOperationResult',
- 'requestClearDirectoryBookOffline','refreshCachedChapterFromPrompt','showReadingFailure','nextNavigationGeneration',
+ 'runIndexRecoveryAction','runSourceImportSearchAction','requestClearDirectoryBookOffline','refreshCachedChapterFromPrompt','showReadingFailure','nextNavigationGeneration',
  'aboutToDisappear','isCurrentRssHostPresentation','isCurrentRssPresentation','isCurrentRoute','confirmRssSubscriptionDelete','rssSubscriptions','importRssSources','bindReadingEntryReader','isCurrentSourceToolsPresentation'],{
  ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION,LOCAL_SOURCE_ID:'local',
  RssPresentationProjection,ReaderNativeAlertOwner,ReaderRuntimeOwner:{current:()=>{if(unavailable)throw Error('runtime unavailable');return currentOwner;}},isReaderProductSurfaceEnabled:()=>true,
@@ -68,8 +69,6 @@ const cases=[
   stale:[f=>f.p.rssPresentation.subscriptions=[],f=>f.p.rssPresentation.subscriptions=[{subscriptionId:'rss',title:'新源'}]]},
  {name:'rssImport',route:'rssSubscriptionManagement',show:f=>f.p.requestRssSourceImport(),button:'secondaryButton',value:'覆盖全部',effect:'rssReplace',
   stale:[f=>f.p.jsonImportVisible=true,f=>f.p.rssOrchestrator={}]},
- {name:'searchReturn',route:'source',show:f=>f.p.showSourceImportResultFromSearch('title','message'),button:'secondaryButton',value:'用新书源搜索「abc」',effect:'returnSearch',
-  stale:[f=>f.p.sourceManagementSearchKeyword='new',f=>f.p.sourceManagementReturnTarget='settings']},
  {name:'offlineClear',route:'directory',show:f=>f.p.requestClearDirectoryBookOffline(),button:'secondaryButton',value:'清除',effect:'clearOffline',
   stale:[f=>f.p.remoteReadingSession={identity:{sourceId:'s',bookId:'new'}},f=>f.p.remoteSessionGeneration++,f=>f.p.offlineOperationActive=true]},
 ];
@@ -86,28 +85,44 @@ for(const c of cases){
  const closed=fixture(c.route);c.show(closed);closed.shown().cancel();closed.shown()[c.button].action();assert.equal(closed.calls.length,0,`${c.name}: cancel settles and retires action`);
 }
 for(const [route,method]of[['source','showSourceImportResult'],['rssSubscriptionManagement','showRssOperationResult'],['reading','showReadingFailure']]){
- const f=fixture(route);f.p[method]('title','message');const shown=f.shown();assert.equal(shown.title,'title');assert.equal(shown.primaryButton.value,'知道了');assert.equal(shown.autoCancel,true);
- f.p.nextNavigationGeneration();shown.primaryButton.action();assert.deepEqual(f.calls,[]);
+ const f=fixture(route);f.p[method]('title','message');assert.equal(f.shown(),undefined,'automatic feedback never opens native Alert');
+ assert.match(route==='source'?f.p.sourceStatusMessage:route==='reading'?f.p.indexRecoveryNotice.message:f.p.rssOperationResultMessage,/title.*message/);
+ if(route==='reading')assert.equal(f.p.indexRecoveryNotice.canRetry,false);
  f.nativeFail();assert.doesNotThrow(()=>f.p[method]('confirmed','platform failure'));
 }
-{const f=fixture('source');f.p.sourceManagementSearchKeyword='';f.p.showSourceImportResultFromSearch('title','message');assert.equal(f.shown().secondaryButton,undefined);}
-{const f=fixture('rssSubscriptionManagement');f.nativeFail();f.p.importRssSources(false);assert.deepEqual(f.calls,['rss.confirmed-write'],'native result notice failure must not invoke import failure callback');}
-for(const exit of ['primary','secondary','cancel','retired','navigation','close','owner','session','current','native-error']){
+for(const mutate of [undefined,f=>f.p.navigationGeneration++,f=>f.p.route='settings',f=>currentOwner={},f=>f.p.shelfReceiptRetired=true,
+ f=>f.p.sourceManagementSearchKeyword='new',f=>f.p.sourceManagementReturnTarget='settings',f=>f.p.nextNavigationGeneration(),f=>f.p.aboutToDisappear()]){
+ const f=fixture('source');f.p.showSourceImportResultFromSearch('title','message');const revision=f.p.sourceImportSearchActionRevision;
+ assert.equal(f.shown(),undefined);assert.equal(f.p.sourceImportSearchActionLabel,'重新搜索');assert.equal(f.calls.length,0,'result never auto-searches');
+ if(mutate)mutate(f);f.p.runSourceImportSearchAction(revision);f.p.runSourceImportSearchAction(revision);
+ assert.equal(f.calls.filter(c=>c==='returnSearch').length,mutate?0:1,'inline action retains original keyword/owner and runs once');
+}
+{const f=fixture('source');f.p.sourceManagementSearchKeyword='';f.p.showSourceImportResultFromSearch('title','message');assert.equal(f.shown(),undefined);assert.equal(f.p.sourceImportSearchActionLabel,'');}
+{const f=fixture('source');f.p.showSourceImportResultFromSearch('first','message');const old=f.p.sourceImportSearchActionRevision;
+ f.p.showSourceImportResultFromSearch('second','message');f.p.runSourceImportSearchAction(old);assert.equal(f.calls.length,0,'replaced result action cannot borrow the successor');}
+{const f=fixture('rssSubscriptionManagement');f.nativeFail();f.p.importRssSources(false);assert.deepEqual(f.calls,['rss.confirmed-write'],'inline result does not invoke import failure callback');}
+for(const exit of ['click','none','navigation','close','owner','session','current','native-error']){
  const f=fixture('reading');let current=true;if(exit==='native-error')f.nativeFail();
- const work=f.p.refreshCachedChapterFromPrompt({message:'缓存核对',session:f.p.remoteReadingSession,chapterIndex:0,refreshPreserved:false},()=>current);
- if(exit==='primary')f.shown().primaryButton.action();
- if(exit==='secondary')f.shown().secondaryButton.action();
- if(exit==='cancel')f.shown().cancel();
- if(exit==='retired')f.p.nativeAlertOwner.retire();
+ const error={message:'缓存核对',session:f.p.remoteReadingSession,chapterIndex:0,refreshPreserved:false};
+ const result=await f.p.refreshCachedChapterFromPrompt(error,()=>current);
+ assert.equal(result,undefined,'background recovery ends without waiting for a dialog');assert.equal(f.shown(),undefined);
+ assert.equal(f.calls.filter(x=>x==='chapter.content').length,0,'no new body without explicit inline refresh');
+ assert.equal(f.p.indexRecoveryNotice.canRetry,true);assert.equal(f.p.indexRecoveryActionLabel,'刷新本章');
+ const revision=f.p.indexRecoveryNotice.generation;
  if(exit==='navigation')f.p.nextNavigationGeneration();
  if(exit==='close')f.p.aboutToDisappear();
- if(exit==='owner'){currentOwner={};f.shown().primaryButton.action();}
- if(exit==='session'){f.p.remoteReadingSession={identity:{sourceId:'new',bookId:'new'}};f.p.detailBook={sourceId:'new',bookId:'new',title:'new'};f.p.bindReadingEntryReader();f.shown().primaryButton.action();}
- if(exit==='current'){current=false;f.shown().primaryButton.action();}
- const result=await work;assert.equal(result,exit==='primary'?0:undefined,`${exit}: cache decision settles`);
- assert.equal(f.calls.filter(x=>x==='chapter.content').length,exit==='primary'?1:0,'no content dispatch without current primary decision');
- if(f.shown()){assert.equal(f.shown().autoCancel,false);assert.equal(f.shown().primaryButton.value,'刷新本章');assert.equal(f.shown().secondaryButton.value,'保留缓存');}
+ if(exit==='owner')currentOwner={};
+ if(exit==='session'){f.p.remoteReadingSession={identity:{sourceId:'new',bookId:'new'}};f.p.detailBook={sourceId:'new',bookId:'new',title:'new'};f.p.bindReadingEntryReader();}
+ if(exit==='current')current=false;
+ if(exit!=='none'){f.p.runIndexRecoveryAction(revision);f.p.runIndexRecoveryAction(revision);}
+ await new Promise(resolve=>setImmediate(resolve));
+ const accepted=exit==='click'||exit==='native-error';
+ assert.equal(f.calls.filter(x=>x==='chapter.content').length,accepted?1:0,'only exact current inline refresh may fetch once');
+ assert.equal(f.p.route,'reading','recovery feedback does not navigate');
+ if(accepted)assert.equal(f.p.remoteReadingSession.preparedChapter!==undefined,true,'explicit refresh publishes the current chapter in place');
 }
+{const f=fixture('reading');f.p.showReadingFailure('first','message');const stale=f.p.indexRecoveryNotice.generation;
+ let runs=0;f.p.showIndexRecoveryNotice('second','Retry',()=>runs++);f.p.runIndexRecoveryAction(stale);assert.equal(runs,0);}
 for(const timing of ['before-show','after-show','retired','confirmed-import']){
  const f=fixture(timing==='confirmed-import'?'rssSubscriptionManagement':'source');
  if(timing==='after-show'){const lease=f.p.showIndexAlert('notice',{title:'x',primaryButton:{value:'x',action:()=>f.calls.push('acted')}});unavailable=true;f.shown().primaryButton.action();assert.equal(await lease.decision,'retired');assert.deepEqual(f.calls,[]);}
@@ -115,5 +130,19 @@ for(const timing of ['before-show','after-show','retired','confirmed-import']){
  unavailable=false;
 }
 const raw=readFileSync(file,'utf8');assert.equal((raw.match(/\.showAlertDialog\(/g)??[]).length,1,'Index has one actual native host implementation');
-assert.equal((raw.match(/this\.showIndexAlert\(/g)??[]).length,9,'all nine current actual Index consumers use finite host');
-console.log('PASS Index all nine real SDK-parsed native Alert consumers: exact identity/lifecycle, once-only actions, replacement/cancel/close/late owner, cache Promise settlement and native failure independent from confirmed writes');
+assert.equal((raw.match(/this\.showIndexAlert\(/g)??[]).length,4,'only four explicit destructive/overwrite choices use native Alert');
+{
+ const f=fixture('reading'),sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+ const p=sdk.consumer(raw,['indexRecoveryNoticeContent','showIndexRecoveryNotice','runIndexRecoveryAction','clearIndexRecoveryNotice','isCurrentRuntime'],
+  {ReaderRuntimeOwner:{isCurrent:owner=>owner===f.owner}},{});
+ Object.assign(p,{route:'reading',navigationGeneration:1,shelfReceiptRetired:false,mountedRuntimeOwner:f.owner,detailShelfAdmissionMount:1,appThemeScheme:'day'});
+ let actions=0;p.showIndexRecoveryNotice('后台核对中','重试',()=>actions++);p.indexRecoveryNoticeContent();
+ const action=()=>sdk.nodes(p).findLast(n=>n.type==='Text'&&n.create==='重试'&&n.onClick).onClick;
+ const old=action(),frame=sdk.nodes(p).find(n=>n.type==='Column'&&n.align==='Alignment.Bottom');
+ assert.ok(frame);assert.equal(frame.height,undefined,'feedback frame never owns full screen height');assert.equal(frame.hitTestBehavior,'HitTestMode.Transparent');
+ const text=sdk.nodes(p).find(n=>n.type==='Text'&&n.create==='后台核对中');assert.equal(text.hitTestBehavior,'HitTestMode.None');
+ p.showIndexRecoveryNotice('下一项核对','重试',()=>actions++);sdk.properties.flush();p.replay();
+ old();assert.equal(actions,0,'old physical action cannot borrow successor recovery generation');
+ action()();action()();assert.equal(actions,1,'current real shared native action executes once');
+}
+console.log('PASS Index four explicit Alert confirmations plus five nonmodal feedback consumers: exact identity, once-only inline actions, unblocked cache probe, no silent content refresh/navigation and native failure independent from writes');

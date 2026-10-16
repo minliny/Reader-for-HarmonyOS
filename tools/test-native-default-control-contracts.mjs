@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {approvedTypographyContract} from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -6,7 +7,7 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { readFileSync,readdirSync } from 'node:fs';
 import { sharedProducerShape } from './lib/architecture-shared-producer-contract.mjs';
 import { auditNativeTextElements } from './lib/reader-typography-consumer-audit.mjs';
-import { verifyNativeDefaultBranches } from './lib/native-default-control-probe.mjs';
+import { verifyNativeDefaultBranches, nativeDefaultRecoveryBranchContract } from './lib/native-default-control-probe.mjs';
 import { boundedSurfaceSdk,boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { DirectoryRuleDraft } from './lib/reader-reading-field-probe.mjs';
 import {nativeDefaultHistoricalMethod,proveNativeDefaultLayout} from './lib/native-default-layout-successor.mjs';
@@ -84,7 +85,7 @@ for(const file of readdirSync(featureRoot,{recursive:true}).filter(file=>file.en
 }
 // Historical origins remain registered. Only these three exact repeated
 // shelf drafts now use a real shared producer with native typography AUTO.
-const req=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const req=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=req(sdk+'/node_modules/typescript'),options=req(sdk+'/lib/ets_checker.js').compilerOptions;
 for(const row of contracts.values()){
  if(row.sharedReplacement&&row.id==='NATIVE-DEFAULT-09'){
@@ -109,11 +110,15 @@ for(const row of contracts.values()){
  }
  assert.equal(row.count,row.branchInstances?.length??1,`${row.id}: native owner/consumer still present; intentional replacement requires a new actual implementation proof`);
  if(row.branchInstances){
+  const branchContract=nativeDefaultRecoveryBranchContract(row);
   const source=readFileSync(new URL('../entry/src/main/ets/'+row.file,import.meta.url),'utf8');
-  assert.equal(verifyNativeDefaultBranches(source,row.file,row),row.branchInstances.length);
-  assert.throws(()=>verifyNativeDefaultBranches(source.replace("Button('重试').onClick((): void => this.retryReading());","Button('重试').onClick((): void => this.retryReading()); Button('重试').onClick((): void => this.retryReading());"),row.file,row),/copied native default actors/);
-  assert.throws(()=>verifyNativeDefaultBranches(source.replace('this.onRetryFailedSourceSwitch(scopeId)','this.onRetryFailedSourceSwitch(this.sourceSwitchScopeId)'),row.file,row),/exact actual branch callback/);
-  assert.throws(()=>verifyNativeDefaultBranches(source.replace('if (this.sourceSwitchFailureMessage.length > 0) {\n          ForEach','if (true) {\n          ForEach'),row.file,row),/exact finite branch guard/);
+  assert.equal(verifyNativeDefaultBranches(source,row.file,branchContract),row.branchInstances.length);
+  assert.throws(()=>verifyNativeDefaultBranches(source.replace("Button('重试').onClick((): void => this.retryReading());","Button('重试').onClick((): void => this.retryReading()); Button('重试').onClick((): void => this.retryReading());"),row.file,branchContract),/copied native default actors/);
+  assert.throws(()=>verifyNativeDefaultBranches(source.replace('this.onRetryFailedSourceSwitch(scopeId)','this.onRetryFailedSourceSwitch(this.sourceSwitchScopeId)'),row.file,branchContract),/exact actual branch callback/);
+  assert.throws(()=>verifyNativeDefaultBranches(source.replace('if (this.sourceSwitchFailureMessage.length > 0) {\n          ForEach','if (true) {\n          ForEach'),row.file,branchContract),/exact finite branch guard/);
+  const unguardedFallback=source.replace('if (this.readerRecoveryView.visible && this.readerRecoveryView.canRetry)', 'if (false)');
+  assert.notEqual(unguardedFallback,source);
+  assert.throws(()=>verifyNativeDefaultBranches(unguardedFallback,row.file,branchContract),/exact finite branch guard|exact finite branch path/, 'native fallback cannot replace the explicit inline recovery CTA');
  }
 }
 // The one relocated native family is still mounted by the shipping directory
@@ -184,7 +189,7 @@ for(const row of contracts.values()){
  navigation.aboutToDisappear();const generation=navigation.generation;
  readerDirectorySignalScrollIntent(readerDirectoryScopeKey('local','native-layout-book'));
  assert.equal(navigation.generation,generation,'the real scroll-intent subscription is released on disappearance');
- function sdkRoot(){return process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';}
+ function sdkRoot(){return resolveEtsLoaderRoot();}
 }
 // Execute the real directory Builder→shared native level callback as well as
 // its exact AST mapping. Neither the opening guard nor canEdit is a test stub.

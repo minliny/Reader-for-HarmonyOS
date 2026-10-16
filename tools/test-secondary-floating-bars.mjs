@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {switchSpecs} from './lib/reader-switch-control-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -9,7 +10,7 @@ import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from './
 import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 let metrics;
 const cases = [
@@ -34,13 +35,15 @@ for (const [file, bottom] of cases) {
   if (file.endsWith('RssSubscriptionEditorPage.ets')) methods.push('saveAction');
   if (isDetail) methods.push('bottomActions');
   const controls=foundationControls(),headerSource=readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets',import.meta.url),'utf8'),toggleSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderToggle.ets',import.meta.url),'utf8');
-  const hooks={...controls.hooks,childSources:{...controls.hooks.childSources,PageBackBar:headerSource,ReaderToggle:toggleSource}},platform={...controls.dependencies,...switchSpecs(),AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH'},readerInteractiveSafeLeft,readerInteractiveSafeRight,ReaderWindowCoordinator:{metrics:()=>metrics}};
+  const recoverySources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice'].map(name=>[name,readFileSync(new URL(`../entry/src/main/ets/features/common/${name}.ets`,import.meta.url),'utf8')]));
+  const hooks={...controls.hooks,childSources:{...controls.hooks.childSources,PageBackBar:headerSource,ReaderToggle:toggleSource,...recoverySources}},platform={...controls.dependencies,...switchSpecs(),AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH',BUTTON:'AccessibilityRoleType.BUTTON'},readerInteractiveSafeLeft,readerInteractiveSafeRight,ReaderWindowCoordinator:{metrics:()=>metrics}};
   const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
   const headerTree=ts.createSourceFile('PageBackBar.ets',headerSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options),headerDecl=headerTree.statements.find(n=>ts.isStructDeclaration(n));
   const slots=new Set(headerDecl.members.filter(n=>ts.isPropertyDeclaration(n)&&ts.getAllDecorators(n).some(d=>d.expression.getText(headerTree)==='BuilderParam')).map(n=>n.name.text));assert.deepEqual([...slots],['trailing']);syntax.builderParamObjectCollection.set('PageBackBar',slots);
   const Header=createReaderBuilderProbe(headerSource,boundedMembers(headerSource),platform,hooks).Component,Toggle=createReaderBuilderProbe(toggleSource,boundedMembers(toggleSource),platform,hooks).Component;
+  const recoveryDependencies={};for(const [name,definition]of Object.entries(recoverySources))recoveryDependencies[name]=createReaderBuilderProbe(definition,boundedMembers(definition),{...platform,...recoveryDependencies},hooks).Component;
   const { Component } = createReaderBuilderProbe(source, methods, {
-    ...platform,PageBackBar: Header, ReaderToggle: Toggle, ReaderWindowCoordinator: { metrics: () => metrics },
+    ...platform,...recoveryDependencies,PageBackBar: Header, ReaderToggle: Toggle, ReaderWindowCoordinator: { metrics: () => metrics },
     READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset, RSS_DETAIL_ACTION_AREA_HEIGHT: 62,
     TOK_SPACE_XS: 8, TOK_SPACE_SM: 12, TOK_SPACE_MD: 16, TOK_SPACE_LG: 24,
   },hooks);
@@ -49,7 +52,8 @@ for (const [file, bottom] of cases) {
       metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, height), undefined,
         new ReaderInsetsVp(left > 19 ? left : 0, 0, right > 19 ? right : 0, safeBottom));
       const frame = { width: width - left - right, left, right };
-      const owner = new Component(); const calls = [];
+      const owner = new Component(undefined, {}); const calls = [];
+      if(file.endsWith('RssSubscriptionManagementPage.ets'))assert.equal(owner.resultMessage,'','the real omitted @Prop retains its production empty feedback default');
       for (const name of builders) if (!methods.includes(name)) owner[name] = () => {};
       Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, contentFrame: () => frame,
         snapshot: { statusMessage: '状态', busy: false, canSave:true, mode: 'create', enabled: false, enabledCookieJar: false,

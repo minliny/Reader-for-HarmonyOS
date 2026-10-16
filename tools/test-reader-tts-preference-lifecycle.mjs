@@ -68,6 +68,7 @@ const mutations = [
 ];
 function readerFixture(file = lreFile) {
   const events = [], writes = [], nativeGate = deferred(), writeGate = deferred();
+  let pendingPreferences = false;
   const coordinator = { setAllowMixing: async value => { events.push(['mixing', value]); await nativeGate.promise; },
     setVoice: async (language, person) => { events.push(['voice', language, person]); await nativeGate.promise; },
     setFailurePolicy: value => events.push(['policy',value]), setPauseOnInterruption: value => events.push(['pause',value]) };
@@ -84,7 +85,9 @@ function readerFixture(file = lreFile) {
     ttsVoiceOptions: [{ language: 'en-US', person: 7 }],
     controlsPresentedForWindow: () => false,
     applyReaderWindowPolicy: async () => { events.push(['window']); await nativeGate.promise; },
-    ttsPreferencesGateway: { update(snapshot, resetOwned, admission) { writes.push({ snapshot, resetOwned, admission }); return writeGate.promise; } },
+    ttsPreferencesGateway: { writeFacts: () => ({ pendingReconciliation: pendingPreferences }),
+      update(snapshot, resetOwned, admission) { pendingPreferences = true; writes.push({ snapshot, resetOwned, admission });
+        return writeGate.promise.then(() => { pendingPreferences = false; }); } },
     logTtsFailure: (...args) => events.push(['error', ...args]),
   });
   return { owner, events, writes, nativeGate, writeGate };
@@ -120,7 +123,9 @@ async function runReaderCases(file = lreFile) {
     const f = readerFixture(file); f.owner[method](...args); f.nativeGate.resolve(); await settle();
     assert.equal(f.writes.length, 1, `${method}: active request reaches existing gateway`);
     assert.equal(f.writes[0].resetOwned, false); assert.equal(f.writes[0].admission(), true);
-    assert.equal(f.owner[field], value); f.writeGate.resolve(); await settle();
+    assert.equal(f.owner[field], value); assert.equal(f.owner.ttsPreferencesRecovery.visible, true);
+    assert.equal(f.owner.ttsPreferencesRecovery.canRetry, false, 'in-flight save has no duplicate retry');
+    f.writeGate.resolve(); await settle(); assert.equal(f.owner.ttsPreferencesRecovery.visible, false);
   }
 }
 await runReaderCases();

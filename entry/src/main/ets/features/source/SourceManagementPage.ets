@@ -103,6 +103,9 @@ export struct SourceManagementPage {
   onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
   @Prop statusKind: SourceManagementStatusKind = 'idle';
   @Prop statusMessage: string = '';
+  @Prop statusActionLabel: string = '';
+  @Prop statusActionGeneration: number = 0;
+  onStatusAction: (generation: number) => void = (_generation: number): void => {};
   onBack: () => void = (): void => {};
   onToggleSource: (id: string, enabled: boolean) => void = (_id: string, _enabled: boolean): void => {};
   onDetectSource: (id: string) => void = (_id: string): void => {};
@@ -365,6 +368,12 @@ export struct SourceManagementPage {
             if (this.recovery().canRetry) this.onReconcile(this.recovery().generation);
             else this.onRetryLoad();
           } });
+      }
+      if (this.statusActionLabel.length > 0) {
+        ForEach([this.statusActionGeneration], (generation: number): void => {
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-retry', label: this.statusActionLabel,
+            onAction: (): void => this.onStatusAction(generation) });
+        }, (generation: number): string => generation.toString());
       }
     }
     .width(this.contentFrame().width)

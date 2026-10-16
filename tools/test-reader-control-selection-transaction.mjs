@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import {
   readerControlSelectionMayClose,
   readerControlSelectionMayRecover,
@@ -83,8 +84,40 @@ assert.match(recovery, /this\.chapterSelectionToken \+= 1;/);
 assert.match(recovery, /this\.resetForChapterSelection\(\);/,
   'timeout recovery invalidates the failed load before restoring its committed origin');
 assert.match(recovery, /this\.phase = 'ready'/);
-assert.match(recovery, /this\.showReaderAlert\('confirmation'/, 'recoverable failure must remain visible to the user');
+assert.match(recovery, /this\.showReaderRecovery\(/, 'recoverable failure is projected through the inline recovery state');
+assert.doesNotMatch(recovery, /this\.showReaderAlert\(|showAlertDialog\(/,
+  'automatic selection recovery cannot claim a modal dialog');
 assert.doesNotMatch(recovery, /this\.onReadingFailure\(|this\.beginExit\(|this\.hideControl\(|resolveAndUpdateProgress\(/,
   'recoverable failure restores the display without external exit, hiding, or rolling back Core');
 assert.match(host, /if \(this\.recoverControlSelectionFailure\(error, lifecycleToken\)\) return;/);
+
+const FeedbackHost = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  ['showControlSelectionFailure', 'showReaderRecovery'], { readerControlSelectionOwnsReading, hilog: { error() {} } });
+for (const changed of [{}, {bookId:'book-B'}, {sourceId:'remote'}, {lifecycleToken:5},
+  {selectionToken:21}, {mounted:false}, {exitRequested:true}]) {
+  const current={...owner,...changed}, selections=[];
+  const retry={chapterIndex:10,chapterOffset:123,requireChapterStart:false,stopTts:true,
+    requestedProgress:.2,controlOwnerRevision:6,closeControlOnCommit:true,refreshContent:false,
+    positionContext:{bodyVersion:'body',processingVersion:'rules',anchors:[{id:'requested',offset:123}]}};
+  const previousProgress={chapterIndex:2,chapterOffset:80};
+  const feedback=Object.assign(new FeedbackHost(),{
+    phase:'ready',lastCommittedProgress:previousProgress,pendingControlSelectionRetry:retry,
+    errorMessage:error=>error.message,finishPageTurnPerf(){},controlSelectionOwner:()=>current,
+    selectChapterAnchor:(...args)=>selections.push(args),
+    getUIContext(){assert.fail('automatic failure must never open a modal');},
+  });
+  feedback.showControlSelectionFailure(ticket,Error('timeout'),'origin is confirmed');
+  assert.equal(feedback.readerRecoveryView.visible,true);assert.equal(feedback.readerRecoveryView.canRetry,true);
+  assert.equal(feedback.readerRecoveryActionLabel,'重试');
+  assert.equal(feedback.lastCommittedProgress,previousProgress,'feedback cannot rewrite durable or displayed progress');
+  assert.equal(feedback.phase,'ready','an inline notice cannot replace the confirmed reading page');
+  feedback.readerRecoveryAction();
+  assert.equal(selections.length,Object.keys(changed).length===0?1:0,
+    'an optional retry remains bound to its original reading transaction');
+  if(selections.length) {
+    assert.deepEqual(selections[0].slice(0,3),[10,123,false]);
+    assert.equal(selections[0][5],6,'retry cannot borrow a newer control opening');
+    assert.equal(selections[0][8],retry.positionContext,'retry preserves original body and processing proof');
+  }
+}
 console.log('reader control selection transaction: production ownership/commit policy passed');

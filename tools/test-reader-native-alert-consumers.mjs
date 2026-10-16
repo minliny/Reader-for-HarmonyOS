@@ -3,21 +3,21 @@ import { ReaderNativeAlertOwner, ReaderNativeAlertLease } from './lib/reader-nat
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const Reading = productionMotionMethods(file('features/reading/LocalReadingExperience.ets'),
-  ['requestCachedChapterRefresh', 'showReaderAlert', 'isMountedToken', 'isSelectionCurrent'], { ReaderNativeAlertOwner, ReaderNativeAlertLease, hilog: { warn() {} } });
-for (const exit of ['primary', 'secondary', 'cancel', 'retired', 'stale', 'native-error']) {
-  let shown;
-  const reading = Object.assign(new Reading(), { nativeAlertOwner: new ReaderNativeAlertOwner(), mounted: true,
-    lifecycleToken: 1, chapterSelectionToken: 2, getUIContext: () => ({ showAlertDialog(o) {
-      if (exit === 'native-error') throw Error('native rejected'); shown = o;
-    } }) });
-  const outcome = reading.requestCachedChapterRefresh({ message: '缓存需要核对' });
-  if (exit === 'primary') shown.primaryButton.action();
-  if (exit === 'secondary') shown.secondaryButton.action();
-  if (exit === 'cancel') shown.cancel();
-  if (exit === 'retired') reading.nativeAlertOwner.retire();
-  if (exit === 'stale') { reading.chapterSelectionToken++; shown.primaryButton.action(); }
-  assert.equal(await outcome, exit === 'primary', `${exit}: real reader Promise settles without replaying content mutation`);
-  if (shown) { assert.equal(shown.autoCancel, false); assert.equal(shown.primaryButton.value, '刷新本章'); }
+  ['requestCachedChapterRefresh', 'showReaderRecovery', 'reconcileReaderRecovery']);
+for (const stale of ['none', 'generation', 'unmount', 'exit']) {
+  let refreshed = 0, native = 0;
+  const reading = Object.assign(new Reading(), { mounted: true, exitRequested: false,
+    readerRecoveryView: { generation: 0 }, getUIContext: () => ({ showAlertDialog() { native++; } }) });
+  assert.equal(reading.requestCachedChapterRefresh({ message: '缓存需要核对' }, () => refreshed++), undefined,
+    'a cache error never leaves a decision Promise holding acquisition');
+  const generation = reading.readerRecoveryView.generation;
+  assert.equal(native, 0); assert.equal(refreshed, 0, 'recovery never silently reloads the body');
+  assert.equal(reading.readerRecoveryActionLabel, '刷新本章');
+  if (stale === 'generation') reading.showReaderRecovery('another operation');
+  if (stale === 'unmount') reading.mounted = false;
+  if (stale === 'exit') reading.exitRequested = true;
+  reading.reconcileReaderRecovery(generation); reading.reconcileReaderRecovery(generation);
+  assert.equal(refreshed, stale === 'none' ? 1 : 0, 'only the original live inline action can refresh, once');
 }
 const Source = productionMotionMethods(file('features/source/SourceToolsPage.ets'), ['confirmExportThen'], { ReaderNativeAlertOwner, ReaderNativeAlertLease, hilog: { warn() {} } });
 for (const stale of ['none', 'selection', 'sources', 'session', 'busy', 'exit']) {
@@ -44,4 +44,4 @@ for (const stale of [false, true]) {
   shown.secondaryButton.action(); shown.secondaryButton.action(); assert.equal(resets, stale ? 0 : 1);
   assert.equal(Object.hasOwn(shown, 'autoCancel'), false, 'original native AUTO policy remains omitted');
 }
-console.log('PASS actual SDK-parsed reader/source/settings Alert consumers: cache decision retirement/native error, exact export selection/session, reset revision, once-only native callbacks and baseline slots');
+console.log('PASS actual SDK-parsed reader/source/settings Alert consumers: nonmodal cache recovery/retirement, exact export selection/session, reset revision, once-only native callbacks and baseline slots');

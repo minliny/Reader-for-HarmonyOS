@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -14,7 +15,7 @@ const layout = { viewportWidth: 390, viewportHeight: 800, fontScale: 1 };
 const anchor = offset => ({ chapterIndex: 2, chapterOffset: offset, chapterProgress: offset / 1000,
   bodyVersion: 'body', processingVersion: 'processing' });
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
-async function settle() { for (let n = 0; n < 30; n++) await Promise.resolve(); }
+async function settle() { for (let n = 0; n < 120; n++) await Promise.resolve(); }
 function fixture(sourceId = 'local') {
   let durable = { sourceId, bookId: 'book', ...anchor(10), updatedAt: 1, locationRevision: 'r1' };
   const calls = [], gates = [], effects = [], readGates = [], readEffects = [];
@@ -64,9 +65,9 @@ const cases = [];
 // path. Constructors are extracted unchanged from production, not restated.
 const readerFile = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const tree = ts.createSourceFile('/tmp/ReaderRetainedProgress.ets', readFileSync(readerFile, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const tree = ts.createSourceFile(virtualFilePath('ReaderRetainedProgress.ets'), readFileSync(readerFile, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const dto = Object.fromEntries(['CoreReadingAnchor', 'ReadingCommit'].map(name => {
   const node = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.getText(tree) === name);
   assert.ok(node, name);
@@ -74,7 +75,7 @@ const dto = Object.fromEntries(['CoreReadingAnchor', 'ReadingCommit'].map(name =
 }));
 const RetainedReader = productionMotionMethods(readerFile,
   ['commitVisiblePage', 'admitCommittedProgress', 'admitRetainedReadingRecency', 'isVisiblePageCurrent',
-    'isSelectionCurrent', 'finishExit', 'awaitOrdinaryFirstPagePersistence', 'isOrdinaryFirstPagePresentationCurrent'], dto);
+    'isSelectionCurrent', 'finishExit', 'handoffExitProgress', 'awaitOrdinaryFirstPagePersistence', 'isOrdinaryFirstPagePresentationCurrent'], dto);
 function retainedReaderFixture(f) {
   const gateway = f.gateway(), events = [], alerts = [];
   let deviceReads = 0;
@@ -92,12 +93,15 @@ function retainedReaderFixture(f) {
     requireChapterLayoutMap: () => ({ scalarCount: () => 2000 }),
     readingRecordGateway: { async currentDeviceId() { deviceReads++; return 'harmony-current-device'; } },
     onReadingCommitted() { events.push('committed'); },
+    readingRecordHost: { handoff() {} },
     flushReadingRecordForExit: async () => {},
     retainConfirmedEntryPresentation() {}, onExit() { events.push('exit'); },
     showReaderAlert(_category, options) { alerts.push(options); return {decision:Promise.resolve('pending')}; },
   });
+  f.runtime.getReadingRecordGateway = () => owner.readingRecordGateway;
   return { owner, gateway, progress, events, alerts, deviceReads: () => deviceReads };
 }
+async function exitAndSettle(owner) { await owner.finishExit(1); await settle(); }
 for (const sourceId of ['local', 'remote']) {
   const f = fixture(sourceId), reader = retainedReaderFixture(f), owner = reader.owner;
   owner.admitRetainedReadingRecency();
@@ -107,7 +111,7 @@ for (const sourceId of ['local', 'remote']) {
   owner.windowChromeActive = true;
   owner.admitRetainedReadingRecency(); owner.admitRetainedReadingRecency();
   owner.exitRequested = true;
-  await owner.finishExit(1);
+  await exitAndSettle(owner);
   assert.equal(f.writes().length, 1, 'a real same-page visit saves once before returning to the shelf');
   assert.equal(f.durable().updatedAt, 2, 'Core supplies the newer actual reading time');
   assert.deepEqual({ chapterIndex: f.durable().chapterIndex, chapterOffset: f.durable().chapterOffset,
@@ -119,9 +123,9 @@ for (const sourceId of ['local', 'remote']) {
   assert.equal(params.expectedBodyVersion, 'body'); assert.equal(params.expectedProcessingVersion, 'processing');
   assert.equal(params.updatedAt, undefined, 'Host does not synthesize or increment a timestamp');
   assert.equal(Object.hasOwn(params, 'retainedProgressReceipt'), false, 'Host admission receipt is never a Core RPC field');
-  assert.deepEqual(reader.events, ['committed', 'exit'], 'shelf navigation observes the actual save ACK first');
+  assert.deepEqual(reader.events, ['exit'], 'navigation never depends on the recency receipt');
   assert.equal(owner.retainedReadingRecencyReceipt, undefined); assert.equal(owner.retainedReadingRecencyVisible, false);
-  await owner.commitVisiblePage(1); await owner.finishExit(1);
+  await owner.commitVisiblePage(1); await exitAndSettle(owner);
   assert.equal(f.writes().length, 1); assert.equal(reader.deviceReads(), 1, 'repeat renders or exit requests cannot renew twice');
   f.close(); cases.push(`retained-same-page-visible-exit-renews-without-moving/${sourceId}`);
 }
@@ -165,7 +169,7 @@ for (const sourceId of ['local', 'remote']) {
       assert.equal(f.durable().chapterOffset, offset); assert.equal(f.durable().updatedAt, 2);
       assert.equal(owner.lastCommittedProgress, reader.progress, 'foreign receipt is not published as this visit');
       assert.equal(reader.gateway.pendingPresentedProgress(),undefined);
-      owner.exitRequested=true; await owner.finishExit(1);
+      owner.exitRequested=true; await exitAndSettle(owner);
       assert.deepEqual(reader.events,['exit'],'optional refusal cannot block the actual exit');
       assert.equal(reader.alerts.length,0);
       f.close(); cases.push(`retained-origin-receipt-changed/${sourceId}/${timing}/${offset}`);
@@ -176,7 +180,7 @@ for (const sourceId of ['local', 'remote']) {
   const f = fixture(sourceId), reader = retainedReaderFixture(f), owner = reader.owner;
   f.runtime.supportsCoreCapability = () => false;
   owner.windowChromeActive = true; owner.admitRetainedReadingRecency();
-  owner.exitRequested=true; await owner.finishExit(1);
+  owner.exitRequested=true; await exitAndSettle(owner);
   assert.deepEqual(reader.events,['exit']); assert.equal(reader.alerts.length,0);
   assert.equal(f.writes().length, 0, 'a legacy runtime cannot safely renew over potentially late writes');
   f.close(); cases.push(`retained-renewal-requires-Core-CAS/${sourceId}`);
@@ -192,13 +196,13 @@ for (const sourceId of ['local', 'remote']) {
     if(failure==='same-second-same-position') f.sameSecondChange();
     if(failure==='formal-Core-CAS-refusal') f.effects.push('core-cas-rejected');
     if(failure==='transaction-pending') { const transaction=f.gateway('tx'); owner.activeGateway=()=>transaction; owner.sessionGateway=transaction; }
-    owner.exitRequested=true; await owner.finishExit(1);
+    owner.exitRequested=true; await exitAndSettle(owner);
     assert.deepEqual(reader.events,['exit'],`${failure}: actual exit must not depend on optional recency`);
     assert.equal(reader.alerts.length,0,`${failure}: no unsaved-body warning for a proven-unsent renewal`);
     assert.equal(f.writes().length,failure==='formal-Core-CAS-refusal'?1:0);
     assert.equal(owner.lastCommittedProgress,reader.progress,'a skip is not a fabricated ACK or a foreign receipt admission');
     assert.equal(owner.retainedReadingRecencyReceipt,undefined); assert.equal(owner.retainedReadingRecencyVisible,false);
-    assert.equal(owner.retainedReadingRecencySkipped,true,'unverified RAM presentation is not retained for another visit');
+    assert.equal(owner.lastCommittedProgress,reader.progress,'handoff never fabricates a new component receipt');
     assert.equal(reader.gateway.pendingPresentedProgress(),undefined);
     assert.equal(await reader.gateway.awaitPresentedProgressPersistence(),undefined,'no failed active remains to block another exit');
     f.close(); cases.push(`retained-optional-refusal-safe-real-exit/${sourceId}/${failure}`);
@@ -207,7 +211,7 @@ for (const sourceId of ['local', 'remote']) {
     const f=fixture(sourceId),reader=retainedReaderFixture(f),owner=reader.owner,gate=deferred();
     owner.windowChromeActive=true;owner.admitRetainedReadingRecency();
     const boundary=reader.gateway.runProgressCommitSerial(async()=>{await gate.promise;});await settle();
-    owner.exitRequested=true;await owner.finishExit(1);gate.resolve();await boundary;
+    owner.exitRequested=true;await exitAndSettle(owner);gate.resolve();await boundary;
     assert.deepEqual(reader.events,['exit']);assert.equal(reader.alerts.length,0);
     assert.equal(f.writes().length,0);assert.equal(reader.gateway.pendingPresentedProgress(),undefined);
     f.close();cases.push(`retained-serial-boundary-safe-real-exit/${sourceId}`);
@@ -217,7 +221,7 @@ for (const sourceId of ['local', 'remote']) {
     owner.windowChromeActive=true;owner.admitRetainedReadingRecency();f.gates.push(gate);
     const writing=owner.commitVisiblePage(1);await settle();owner.appForeground=false;gate.resolve();await writing;
     assert.equal(f.writes().length,1);assert.equal(owner.lastCommittedProgress,reader.progress,'background ACK has no current UI authority');
-    owner.appForeground=true;owner.exitRequested=true;await owner.finishExit(1);
+    owner.appForeground=true;owner.exitRequested=true;await exitAndSettle(owner);
     assert.deepEqual(reader.events,['exit']);assert.equal(reader.alerts.length,0);assert.equal(f.writes().length,1);
     assert.equal(owner.lastCommittedProgress,reader.progress,'later skip cannot borrow the durable background row as its own ACK');
     f.close();cases.push(`retained-background-ACK-return-safe-real-exit/${sourceId}`);
@@ -225,21 +229,22 @@ for (const sourceId of ['local', 'remote']) {
   {
     const f=fixture(sourceId),reader=retainedReaderFixture(f),owner=reader.owner;
     owner.windowChromeActive=true;owner.admitRetainedReadingRecency();f.effects.push('lost');
-    owner.exitRequested=true;await owner.finishExit(1);
-    assert.deepEqual(reader.events,[]);assert.equal(reader.alerts.length,1,'an actually dispatched unknown ACK still blocks exit for recovery');
+    owner.exitRequested=true;await exitAndSettle(owner);
+    assert.deepEqual(reader.events,['exit']);assert.equal(reader.alerts.length,0,'an unknown ACK stays with the runtime instead of blocking exit');
     assert.equal(f.writes().length,1);assert.notEqual(reader.gateway.pendingPresentedProgress(),undefined);
-    owner.exitRequested=true;await owner.finishExit(1);
-    assert.deepEqual(reader.events,['committed','exit'],'real retry admits only the exact recovered own ACK before exit');
-    assert.equal(f.writes().length,1);assert.equal(owner.lastCommittedProgress.progressRevision,'op:2');
-    f.close();cases.push(`retained-dispatched-unknown-ACK-real-exit-requires-recovery/${sourceId}`);
+    owner.exitRequested=true;await exitAndSettle(owner);
+    await reader.gateway.awaitPresentedProgressPersistence();
+    assert.deepEqual(reader.events,['exit'],'recovery cannot deliver another exit or mutate a retired component');
+    assert.equal(f.writes().length,1);assert.equal(f.durable().updatedAt,2);
+    f.close();cases.push(`retained-dispatched-unknown-ACK-nonblocking-background-recovery/${sourceId}`);
   }
   {
     const f=fixture(sourceId),reader=retainedReaderFixture(f),owner=reader.owner;
     owner.windowChromeActive=true;owner.admitRetainedReadingRecency();owner.visiblePage={startScalar:40,endScalar:50};f.effects.push('reject');
-    owner.exitRequested=true;await owner.finishExit(1);
-    assert.deepEqual(reader.events,[]);assert.equal(reader.alerts.length,1,'an actual changed-page progress failure is never swallowed');
+    owner.exitRequested=true;await exitAndSettle(owner);
+    assert.deepEqual(reader.events,['exit']);assert.equal(reader.alerts.length,0,'changed-page failures retain the owner without blocking navigation');
     assert.equal(f.writes().length,1);assert.notEqual(reader.gateway.pendingPresentedProgress(),undefined);
-    f.close();cases.push(`ordinary-changed-position-error-remains-real-exit-gate/${sourceId}`);
+    f.close();cases.push(`ordinary-changed-position-error-retained-without-exit-gate/${sourceId}`);
   }
 }
 // Keep the exact former same-position early return as a negative control.

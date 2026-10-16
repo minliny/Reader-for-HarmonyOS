@@ -31,7 +31,8 @@ for (const scope of ['valid', 'legacy', 'half', 'empty', 'stale']) {
 }
 
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const Host = productionMotionMethods(file, ['persistBeforeContentMutation', 'reloadMigratedContentPosition'], {
+const Host = productionMotionMethods(file, ['persistBeforeContentMutation', 'reloadMigratedContentPosition',
+  'showReaderRecovery', 'reconcileReaderRecovery'], {
   hilog: { error() {} },
 });
 function deferred() { let resolve, reject; const promise = new Promise((a,b) => {resolve=a; reject=b;}); return {promise,resolve,reject}; }
@@ -80,6 +81,7 @@ for (const change of ['leave','selection','turn','transaction','unconfirmed']) {
 }
 for(const change of ['book','selection','leave','missing','failure']) {
   const f=fixture(),pending=deferred(); f.gateway.loadProgress=()=>pending.promise;
+  const originalChapter=f.host.chapter, originalPage=f.host.visiblePage;
   const result=f.host.reloadMigratedContentPosition(1,'book');
   if(change==='book') f.host.bookId='other';
   if(change==='selection') f.host.chapterSelectionToken++;
@@ -87,6 +89,32 @@ for(const change of ['book','selection','leave','missing','failure']) {
   if(change==='failure') pending.reject(Error('storage unavailable'));
   else pending.resolve(change==='missing'?{kind:'missing'}:{kind:'restored',progress:{chapterIndex:3,chapterOffset:125}});
   await result; assert.equal(f.selections.length,0);
-  assert.equal(f.dialogs.length,change==='missing'||change==='failure'?1:0);
+  assert.equal(f.dialogs.length,0,'automatic content-position recovery cannot claim a modal dialog');
+  assert.equal(f.host.chapter,originalChapter,'a missing/foreign position never replaces the materialized chapter');
+  assert.equal(f.host.visiblePage,originalPage,'the last visible page is preserved instead of applying an unconfirmed scalar');
+  if(change==='missing'||change==='failure') {
+    assert.equal(f.host.readerRecoveryView.visible,true);
+    assert.equal(f.host.readerRecoveryView.canRetry,true);
+    assert.equal(f.host.readerRecoveryActionLabel,'重试恢复');
+    f.gateway.loadProgress=async()=>({kind:'restored',progress:{chapterIndex:3,chapterOffset:130,
+      bodyVersion:'current-body',processingVersion:'current-rules'}});
+    f.host.reconcileReaderRecovery(f.host.readerRecoveryView.generation);
+    for(let n=0;n<8;n++) await Promise.resolve();
+    assert.equal(f.host.readerRecoveryView.visible,false);
+    assert.equal(f.selections.length,1,'the optional inline retry executes the actual reload method');
+    assert.deepEqual(f.selections[0].slice(0,3),[3,130,false]);
+    assert.equal(f.selections[0][8].bodyVersion,'current-body');
+    assert.equal(f.selections[0][8].processingVersion,'current-rules');
+    assert.equal(f.selections[0][8].anchors[0].offset,130,'retry consumes Core migrated scalar with its exact body versions');
+  } else assert.equal(f.host.readerRecoveryView?.visible??false,false,'retired presentation cannot publish an inline recovery');
+}
+{
+  const f=fixture(); f.gateway.loadProgress=async()=>({kind:'missing'});
+  await f.host.reloadMigratedContentPosition(1,'book');
+  const oldAction=f.host.readerRecoveryAction;
+  f.host.bookId='new-book';
+  oldAction();
+  for(let n=0;n<8;n++) await Promise.resolve();
+  assert.equal(f.selections.length,0,'an old recovery action cannot restore a position into another book');
 }
 console.log('local Core versions + content-mutation visible-position confirmation and migrated-anchor reload: PASS');

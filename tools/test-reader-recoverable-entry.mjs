@@ -1,3 +1,5 @@
+import { readingFailureHint } from '../entry/src/main/ets/features/reading/ReadingFailurePresentation.ts';
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -217,11 +219,12 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
   const {owner}=createReaderBuilderProbe(readFileSync(source,'utf8'),['readingFailureContent'],{
     LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle:()=>({ink:'#123456',paperStart:'#eeeeee'})});
   Object.assign(owner,{sourceId:local?'local':'remote',sourceSwitchFailureMessage:switchFailure?'目标源目录失败':'',
-    failureCode:'当前正文失败',appearanceSnapshot:{activeTheme:'day'},
+    failureCode:'private raw error /path?token=secret',failureHint:readingFailureHint('private raw error /path?token=secret'),appearanceSnapshot:{activeTheme:'day'},
     readingLayout:()=>({bodyWidth:()=>300,bodyHeight:()=>600,contentLeft:16,contentTop:50}),
     retryReading:()=>actions.push('retry'),onRetryFailedSourceSwitch:()=>actions.push('switch-retry'),
     openReaderControl:()=>actions.push('settings'),onSwitchSource:()=>actions.push('switch'),onDismissSourceSwitchFailure:()=>actions.push('continue')});
   owner.readingFailureContent();const nodes=[...owner.nodes.values()];
+  assert.equal(JSON.stringify(nodes.filter(node=>node.type==='Text')).includes('token=secret'),false,'actual failure Builder never renders raw diagnostics');
   const buttons=nodes.filter(node=>node.type==='Button');const labels=buttons.map(node=>node.createWithLabel);
   assert.deepEqual(labels,['重试','阅读设置',...(switchFailure?['继续当前书源']:[]),...(local?[]:['切换书源'])]);
   for(const button of buttons)button.onClick();
@@ -238,7 +241,7 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
   assert.ok(start>=0&&end>start);
   const wrapper=`@Component struct ArenaProbe { @Builder private arena() { ${raw.slice(start,end)} } build() { Column() {} } }`;
   const require=createRequire(import.meta.url);
-  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdk=resolveEtsLoaderRoot();
   const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
   syntax.componentCollection.customComponents.add('ReaderPageInteractionLayer');
   const childSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageInteractionLayer.ets',import.meta.url),'utf8');
@@ -304,7 +307,7 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
   const end=raw.indexOf(tail,start)+tail.length;assert.ok(start>=0&&end>start);
   const wrapper=`@Component struct SourceOwnerProbe { @Builder private readingOwner() { ${raw.slice(start,end)} } build() { Column() {} } }`;
   const require=createRequire(import.meta.url);
-  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdk=resolveEtsLoaderRoot();
   const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);syntax.componentCollection.customComponents.add('ReadingExperience');
   syntax.propCollection.set('ReadingExperience',new Set([...readFileSync(source,'utf8').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
   class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
@@ -356,9 +359,9 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
 // host/component. Native rasterization and asynchronous IO stay explicit seams.
 {
   const raw=readFileSync(source,'utf8'),require=createRequire(import.meta.url);
-  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdk=resolveEtsLoaderRoot();
   const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-  const tree=ts.createSourceFile('/tmp/RecoverableLoading.ets',raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+  const tree=ts.createSourceFile(virtualFilePath('RecoverableLoading.ets'),raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
   const reader=tree.statements.find(node=>node.name?.text==='ReadingExperience');
   const selected=['chapterLoadingContent','shouldShowChapterLoading','loadingChapterTitle',
     'shouldShowSourceSwitchPreparation','beginExit','isSessionActive','isMountedToken','loadingChapterIndex'];

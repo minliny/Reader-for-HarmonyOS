@@ -106,7 +106,13 @@ assert.equal(sha(previous),successor.previousProducerSHA256,'old finite producer
 assert.equal(sha(sharedProducerShape(buttonSource,producer.file)),successor.currentProducerShapeSHA256);
 assert.equal(sha(buttonSource),successor.currentProducerSourceSHA256);
 assert.deepEqual(producer.shape.types,previous.shape.types);assert.deepEqual(producer.shape.declarations,previous.shape.declarations,'font scaling adds no free public appearance Props');
-assert.deepEqual(producer.consumers,previous.consumers);assert.deepEqual(producer.specSources,previous.specSources,'all41 existing style variants stay exact');
+const sourceFeedbackEdge={file:'features/source/SourceManagementPage.ets',method:'features/source/SourceManagementPage.ets#SourceManagementPage#statusBanner',component:'ReaderButton',specId:"'source-management-retry'",keys:['scheme','specId','label','onAction']};
+const sourceFeedbackMatches=previous.consumers.flatMap((value,index)=>JSON.stringify(value)===JSON.stringify(sourceFeedbackEdge)?[index]:[]);
+assert.equal(sourceFeedbackMatches.length,1,'the immutable witness already has exactly one catalog retry edge');
+const feedbackConsumers=previous.consumers.slice();feedbackConsumers.splice(sourceFeedbackMatches[0]+1,0,sourceFeedbackEdge);
+assert.deepEqual(producer.consumers,feedbackConsumers,'the only additional edge is the SDK-proven source import inline re-search action');
+assert.ok(producer.sdkProofs.includes('tools/test-source-index-presentation-consumers.mjs'),'the finite additional edge retains its actual SDK interaction proof');
+assert.deepEqual(producer.specSources,previous.specSources,'all41 existing style variants stay exact');
 assert.equal(producer.shape.styles.length,previous.shape.styles.length,'no new private typography or physical producer slots');
 const changed=producer.shape.styles.flatMap((value,index)=>JSON.stringify(value)===JSON.stringify(previous.shape.styles[index])?[]:[value]);
 assert.deepEqual(changed.map(value=>[value.owner,value.method,value.property]),[['ReaderButtonFrameModifier','applyNormalAttribute','height'],['ReaderButtonFrameModifier','applyNormalAttribute','responseRegion']], 'only vp frame and response region expressions change; every font tuple stays exact');

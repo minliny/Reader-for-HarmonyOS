@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {approvedTypographyContract, approvedTypographyFile, approvedMangaTypography, novelSourceSwitchSuccessor, mangaDirectoryTypographySuccessor, mangaDirectoryTypographySuccessorPath, validateMangaDirectoryTypographySuccessor,
  sharedSourceSwitchTypographySuccessor, sharedSourceSwitchTypographySuccessorPath, validateSharedSourceSwitchTypographySuccessor,
  unifiedActionSheetTypographySuccessor, unifiedActionSheetTypographySuccessorPath, validateUnifiedActionSheetTypographySuccessor,
@@ -178,7 +179,7 @@ for (const [path, from, to, message] of [
 // and MainTabBar SDK components. Only header content/native window metrics
 // are seams; navigation branching, label declarations and callbacks are real.
 {
-  const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdkRoot = resolveEtsLoaderRoot();
   createRequire(import.meta.url)(sdkRoot + '/lib/validate_ui_syntax.js').builderParamObjectCollection.set('BookshelfShell', new Set(['content']));
   const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
   Object.assign(sdk.childSources, { BookshelfShell: shelfShellSource, MainTabShell: mainSource, MainTabBar: barSource,
@@ -243,6 +244,33 @@ const file = baseline.files.find(file => file.path.endsWith('/LocalImportDialog.
 for (const node of file.nodes.filter(node => node.method === 'fileSelectionPanel' && [1, 2, 3].includes(node.index))) {
   assert.equal(typographyCarrierMethod(file.path, node, read(file.path)), 'fileSelectionBody');
 }
+const importHint = file.nodes.find(node => node.method === 'fileSelectionPanel' && node.index === 3);
+const importSource = read(file.path);
+const hintStart = importSource.indexOf('Text(this.selectionBlockedMessage.length > 0');
+const hintEnd = importSource.indexOf(';', hintStart) + 1;
+assert.ok(hintStart > 0 && hintEnd > hintStart);
+const hintCarrier = importSource.slice(hintStart, hintEnd);
+for (const [from, to] of [
+  ['this.selectionBlockedMessage.length > 0', 'this.selectionBlockedMessage.length === 0'],
+  ['.fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)', ".fontFamily('private-font')"],
+  ['.fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)', '.fontWeight(700)'],
+  ['.fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)', '.fontSize(99)'],
+  ['.lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)', '.lineHeight(99)'],
+  ['.letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)', '.letterSpacing(99)'],
+  ['.letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)', ''],
+]) {
+  const changed = importSource.slice(0, hintStart) + hintCarrier.replace(from, to) + importSource.slice(hintEnd);
+  assert.notEqual(changed, importSource);
+  assert.throws(() => typographyCarrierMethod(file.path, importHint, changed),
+    /exact authored successor carrier|exact public successor tuple|all native tuple attributes/,
+    'busy hint admits only its exact current expression and every original native tuple attribute');
+}
+const duplicatedHint = importSource.slice(0, hintEnd) + '\n' + hintCarrier + importSource.slice(hintEnd);
+assert.throws(() => typographyCarrierMethod(file.path, importHint, duplicatedHint), /one exact authored successor carrier/,
+  'the single historical hint cannot authorize a duplicate current carrier');
+assert.throws(() => validateTypographyLayoutSuccessor(typographyLayoutSuccessor,
+  path => path === 'tools/fixtures/design/typography-carrier-successors.json' ? read(path) + '\n' : read(path)),
+  /historical typography witness byte immutable/, 'busy-copy admission cannot rewrite the hash-bound relocation registry');
 console.log('bounded typography carriers PASS: retained import/source/directory witnesses and exact tuple/AUTO/public roles; 11 style +4 AUTO framework owner relocations, original 18 shelf occurrences with one actual wide shared rail/font/four-title callback proof; all prior controls plus 9 framework witness/count/slot/rail negative controls reject');
 
 // Worktree integration admits exactly two existing metadata status actors.

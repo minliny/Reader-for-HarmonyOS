@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -6,7 +7,7 @@ import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.
 import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
 import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const builders=createRequire(import.meta.url)(sdk+'/lib/component_map.js').CUSTOM_BUILDER_METHOD;
 for(const match of source('features/bookshelf/BookshelfPage.ets').matchAll(/@Builder\s+(?:private\s+)?(\w+)\(/g))builders.add(match[1]);
 const pageSource=source('features/bookshelf/BookshelfPage.ets');
@@ -20,7 +21,7 @@ function fixture(definition=pageSource){
   const leaf=source('features/bookshelf/BookshelfBookActionSheet.ets');p.hooks.childSources.BookshelfBookActionSheet=leaf;
   p.deps.BookshelfBookActionSheet=createReaderBuilderProbe(leaf,boundedMembers(leaf),p.deps,p.hooks).Component;
   const probe=createReaderBuilderProbe(definition,['books','navigationGeneration','actionBook','actionSheetId','actionSheetRevision','actionSheetNavigation','mounted',...names,'onShelfPresentationChanged','bookshelfTabContent','bookActionSheetContent','bookActionSheetPresentation'],
-    {...p.deps,readerAppColor,SheetType:{CENTER:'center'}},{...p.hooks,initialParams:{books:[A,B],navigationGeneration:7}});
+    {...p.deps,readerAppColor,SheetType:{BOTTOM:'bottom'}},{...p.hooks,initialParams:{books:[A,B],navigationGeneration:7}});
   const {owner}=probe;
   assert.match(probe.output,/bookActionSheetPresentation[^\n]*ObservedObject\.GetRawObject\(this\.actionBook\)/,'actual SDK unwraps the State value at the Builder call');
   const calls=[];Object.assign(owner,{mounted:true,appThemeScheme:'day',
@@ -35,7 +36,7 @@ function fixture(definition=pageSource){
 }
 for(const [index,name]of[['0','multi'],['1','info'],['2','group'],['3','remove']]){
   const f=fixture();f.owner.presentBookActionSheet(A);const current=f.render(),o=f.options();
-  assert.equal(o.height,270);assert.equal(o.width,352);assert.equal(o.preferType,'center');assert.equal(o.dragBar,false);assert.equal(o.showClose,false);assert.equal(o.enableOutsideInteractive,false);
+  assert.equal(o.height,270);assert.equal(o.width,352);assert.equal(o.preferType,'bottom');assert.equal(o.dragBar,false);assert.equal(o.showClose,false);assert.equal(o.enableOutsideInteractive,false);
   assert.deepEqual(o.radius,{topLeft:24,topRight:24,bottomLeft:0,bottomRight:0});current.buttons[Number(index)].onClick();current.buttons[Number(index)].onClick();
   assert.deepEqual(f.calls,[[name,A]],'actual native row has one dispatch to captured book');assert.equal(f.owner.actionBook,undefined);o.onDisappear();assert.equal(f.owner.actionBook,undefined);
 }

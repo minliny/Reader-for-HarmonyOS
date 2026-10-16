@@ -100,11 +100,14 @@ async function runUiCases(file) {
     const f=fixture();await f.owner.update(initial);f.failFlush('after');const ui=reader(f,file);ui.owner[method](...args);await settle();
     assert.equal(ui.owner[field],value,`${method}: unknown preference flush keeps the current accepted choice`);
     assert.equal(f.owner.writeFacts().pendingReconciliation,true);assert.equal(f.owner.writeFacts().savedRevision,1);
-    assert.equal(ui.events.filter(e=>e[0]==='notice').length,1);assert.match(ui.events.find(e=>e[0]==='notice')[1],/尚未确认/);
+    assert.equal(ui.events.filter(e=>e[0]==='notice').length,0,'unconfirmed durable preferences use a persistent notice');
+    assert.equal(ui.owner.ttsPreferencesRecovery.visible,true);assert.equal(ui.owner.ttsPreferencesRecovery.canRetry,true);
+    assert.match(ui.owner.ttsPreferencesRecovery.message,/尚未确认/);
     if(method==='changeTtsAllowMixing')assert.deepEqual(ui.events.filter(e=>e[0]==='mixing'),[['mixing',true]],'unknown preference failure does not roll back active audio mixing');
     if(method==='changeTtsVoice')assert.deepEqual(ui.events.filter(e=>e[0]==='voice'),[['voice','en-US',7]],'unknown preference failure does not reactivate an old voice');
     if(method==='changeTtsBackgroundPlayback')assert.deepEqual(ui.events.filter(e=>e[0]==='background'),[['background',false]],'unknown preference failure does not regrant a background choice');
-    await f.owner.retryAccepted();assert.equal(f.owner.writeFacts().pendingReconciliation,false);
+    ui.owner.retryPendingTtsPreferences();await settle();assert.equal(f.owner.writeFacts().pendingReconciliation,false);
+    assert.equal(ui.owner.ttsPreferencesRecovery.visible,false,'matching actual flush confirmation settles the persistent notice');
   }
 }
 await runUiCases();
@@ -115,21 +118,26 @@ for (const retired of [false,true]) {
   assert.equal(ui.owner.ttsAllowMixing,true,'real warm metadata load projects accepted choice while old flush is unreturned');
   assert.equal(warm.writeFacts().pendingReconciliation,true,'metadata does not infer durable from the loaded value');
   assert.equal(f.events.filter(e=>e[0]==='put').length,2,'metadata recovery does not bypass the still-held file IO lane');
-  if(retired){ui.owner.ttsPreferenceMutationGeneration++;ui.owner.ttsAllowMixing=false;}
+  if(retired){ui.owner.ttsPreferenceMutationGeneration++;ui.owner.ttsAllowMixing=false;
+    ui.owner.setReaderPreferenceNotice('tts','后续设置保存状态',false);}
   gate.resolve();await old;await settle();
   assert.equal(f.events.filter(e=>e[0]==='put').length,retired?2:3,
     'existing metadata entry dispatches one finite same-snapshot retry; retired generation cannot dispatch it');
   assert.equal(ui.events.filter(e=>e[0]==='notice').length,0,'retired retry does not publish a stale failure into new presentation');
+  if(retired)assert.equal(ui.owner.ttsPreferencesRecovery.message,'后续设置保存状态','old confirmation cannot clear a successor notice');
+  else assert.equal(ui.owner.ttsPreferencesRecovery.visible,false,'current finite retry settles the original notice');
 }
 {
   const f=fixture(),ui=reader(f);ui.owner.applyReaderWindowPolicy=async()=>{throw Error('native window policy refused');};
   ui.owner.changeTtsKeepScreenOn(true);await settle();assert.equal(f.events.filter(e=>e[0]==='put').length,0);
   assert.equal(ui.events.filter(e=>e[0]==='notice').length,0,'native window refusal does not masquerade as a dispatched preference flush');
+  assert.notEqual(ui.owner.ttsPreferencesRecovery?.visible,true,'window refusal cannot publish a preference write failure');
   assert.equal(ui.events.find(e=>e[0]==='diagnostic')[1],'window-policy');
 }
 {
   const f=fixture(),ui=reader(f);ui.owner.getUIContext=()=>{throw Error('UI retired');};ui.owner.logTtsFailure=()=>{throw Error('diagnostic failed');};
   ui.owner.notifyTtsPreferencePending(Error('lost flush ACK'),()=>true);
+  assert.equal(ui.owner.ttsPreferencesRecovery.visible,true,'diagnostic failure does not discard the persistent recovery');
   assert.equal(f.events.length,0,'notice/diagnostic failure cannot mutate preference or playback state');
 }
 const scratch=mkdtempSync(join(tmpdir(),'reader-tts-write-facts-'));

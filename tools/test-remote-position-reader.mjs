@@ -17,7 +17,7 @@ const CoreReadingAnchor=new Function(`${stripTypeScriptTypes(anchorSource)}; ret
 let captureContentEpoch=()=>()=>true;
 let waitContentIdle=async()=>{};
 const Reader=productionMotionMethods(file,['openChapter','loadSessionChapter','configureRestoredAnchor','lastVisibleScalar',
-  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','progressProducerIntent','ttsChapterRef','notifyPreservedContentRefresh','reloadBookmarksAfterContentRefresh','requestCachedChapterRefresh'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,RemoteChapterCacheRefreshError,LOCAL_READING_SOURCE_ID:'local',
+  'positionContextForScope','selectBookmarkAnchor','commitTtsProgress','progressProducerIntent','ttsChapterRef','notifyPreservedContentRefresh','reloadBookmarksAfterContentRefresh','requestCachedChapterRefresh','reconcileReaderRecovery'],{ReadingSurfaceLayoutMap,CoreReadingAnchor,RemoteChapterCacheRefreshError,LOCAL_READING_SOURCE_ID:'local',
   ReaderRuntimeOwner:{current:()=>({captureReadingContentValidity:(...args)=>captureContentEpoch(...args),
     waitForReadingContentIdle:(...args)=>waitContentIdle(...args)})}});
 const old={sourceId:'s',bookId:'b',chapterIndex:0,chapterTitle:'章',chapterUrl:'/0',bodyVersion:'old',processingVersion:'old-p',
@@ -178,25 +178,57 @@ console.log(`PH85 actual LRE preserved-refresh notice: ${feedbackScenarios} admi
  assert.equal(p.failure,undefined);assert.equal(p.chapter,cached);assert.equal(notices.length,1);
  assert.ok(calls.every(call=>call[3]===false));assert.match(notices[0],/旧版缓存.*待验证/);
 }
-// Only a rejected cache asks for explicit, per-chapter protected refresh.
-for(const accept of [false,true]){
+// A rejected cache remains on its error page with an optional inline refresh.
+// The real recovery action controls dispatch; neither an ignored notice nor an
+// obsolete native callback can exit the reader or silently replace the body.
+for(const scenario of ['refresh','decline','stale','late','preserved','already-refresh','failure']){
  const context={bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]};
- const session={identity:{sourceId:'s',bookId:'b'}};let dialogs=0;
+ const session={identity:{sourceId:'s',bookId:'b'}};let dialogs=0,active=true,release;
+ const gate=new Promise(resolve=>release=resolve);
+ const rejected=new RemoteChapterCacheRefreshError(session,0,context,scenario==='preserved');
  const {p,calls}=page(async(...args)=>{
-   if(!args[3])throw new RemoteChapterCacheRefreshError(session,0,context,false);
-   assert.deepEqual(args[4],context);return {...upgraded,positionMigration:receipt('requested')};
+   if(!args[3]||scenario==='already-refresh')throw rejected;
+   assert.deepEqual(args[4],context,'explicit refresh carries only the original protected position context');
+   if(scenario==='failure')throw Error('synthetic refresh failed');
+   if(scenario==='late')return gate;
+   return {...upgraded,positionMigration:receipt('requested')};
  });
- p.beginExit=()=>{p.exited=true;};p.getUIContext=()=>({showAlertDialog(row){dialogs++;row[accept?'primaryButton':'secondaryButton'].action();},
+ p.isSelectionActive=(lifecycle,selection)=>active&&lifecycle===p.lifecycleToken&&selection===p.chapterSelectionToken;
+ p.beginExit=()=>assert.fail('cache recovery must not force reader exit');
+ // Pagination/timeout scheduling is the existing fixture seam. The production
+ // openChapter/recovery admission and native action callbacks remain real.
+ p.resetForChapterSelection=()=>{p.failure=undefined;};p.armFirstPageReadyDeadline=()=>{};
+ p.getUIContext=()=>({showAlertDialog(){dialogs++;assert.fail('automatic cache failure must not open a modal');},
    getPromptAction:()=>({showToast(){}})});
- await p.openChapter(0,false,1,1,6);
- assert.equal(dialogs,1);assert.equal(p.failure,undefined);assert.equal(calls.length,accept?2:1);
- if(accept){assert.equal(p.desiredChapterOffset,3);assert.equal(p.chapter.bodyVersion,'new');}
- else{assert.equal(p.exited,true);assert.equal(p.chapter,undefined);}
+ await p.openChapter(0,false,1,1,6,undefined,scenario==='already-refresh');
+ assert.equal(dialogs,0);assert.equal(calls.length,1,'initial failure completes without waiting for UI');
+ assert.equal(p.failure,rejected);assert.equal(p.chapter,undefined);
+ if(scenario==='preserved'||scenario==='already-refresh'){
+   assert.equal(p.readerRecoveryView?.canRetry===true,false,'a preserved/already-refresh failure cannot recursively propose another replacement');
+   continue;
+ }
+ assert.equal(p.readerRecoveryView.visible,true);assert.equal(p.readerRecoveryView.canRetry,true);assert.equal(p.readerRecoveryActionLabel,'刷新本章');
+ const presentation=p.readerRecoveryView.generation;
+ if(scenario==='stale')active=false;
+ if(scenario!=='decline'){p.reconcileReaderRecovery(presentation);p.reconcileReaderRecovery(presentation);}
+ if(scenario==='late'){
+   for(let n=0;n<20&&calls.length<2;n++)await new Promise(resolve=>setImmediate(resolve));
+   assert.equal(calls.length,2,'late cancellation happens after the actual refresh dispatch');
+   active=false;p.chapterSelectionToken++;release({...upgraded,positionMigration:receipt('requested')});
+ }
+ for(let n=0;n<4;n++)await new Promise(resolve=>setImmediate(resolve));
+ const refreshed=['refresh','late','failure'].includes(scenario);
+ assert.equal(calls.length,refreshed?2:1,'only one current explicit inline action may refresh');assert.equal(dialogs,0);
+ if(refreshed){assert.equal(calls[1][3],true);assert.deepEqual(calls[1][4],context);}
+ if(scenario==='refresh'){assert.equal(p.failure,undefined);assert.equal(p.desiredChapterOffset,3);assert.equal(p.chapter.bodyVersion,'new');}
+ else if(scenario==='failure'){assert.match(p.failure.message,/synthetic refresh failed/);assert.equal(p.chapter,undefined);}
+ else assert.equal(p.chapter,undefined,'declined/stale/late recovery cannot publish replacement body');
 }
-console.log('ML cache: offline readable old body, one-session notice, explicit protected refresh and decline without write PASS');
+console.log('ML cache: old offline body stays readable; rejected cache keeps inline recovery, exact protected context, no forced exit/modal, once-only current refresh and no late/preserved/already-refresh replay PASS');
 
-// Execute the actual Index confirmation/recovery method; the RPC boundary is
-// controlled, and neither declining nor leaving the book dispatches a refresh.
+// Execute actual Index inline recovery plus its original ReadingEntry owner.
+// Completion of a background probe retains the page; refresh requires the
+// exact current explicit action, and all old version/position guards remain.
 {
  const admission=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
  const {withPreparedRemoteChapter}=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
@@ -204,39 +236,48 @@ console.log('ML cache: offline readable old body, one-session notice, explicit p
    detailUrl:'/b',tocUrl:'/toc',book:{title:'书',author:'作者'},entries:[{index:0,title:'章',url:'/0',variables:[]}],
    continuationVariables:[],hostRequirements:[]};
  const position={bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]};
- for(const scenario of ['refresh','decline','stale','preserved','failure']){
-   let active=true,revision=0;const calls=[],dialogs=[],failures=[];
-   const ErrorKind=RemoteChapterCacheRefreshError;
-   const error=new ErrorKind(session,0,position,scenario==='preserved');
+ for(const scenario of ['refresh','decline','stale','late','preserved','failure']){
+   let active=true,revision=0,release;const calls=[],dialogs=[],failures=[];
+   const gate=new Promise(resolve=>release=resolve);
+   const error=new RemoteChapterCacheRefreshError(session,0,position,scenario==='preserved');
    const runtime={bookAcquisitions:()=>({readingProjectionRevision:()=>revision,setPreparationVisible(){}})};
    const NativeGateway=class{async loadChapter(...args){calls.push(args);revision+=2;
-     if(scenario==='failure')throw Error('synthetic refresh failed');return upgraded;}};
+     if(scenario==='failure')throw Error('synthetic refresh failed');if(scenario==='late')return gate;return upgraded;}};
    const Entry=compileHost(undefined,{ReaderRuntimeOwner:{current:()=>runtime,isCurrent:owner=>owner===runtime},RemoteReadingFlowGateway:NativeGateway});
    const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
    const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-     ['refreshCachedChapterFromPrompt','bindReadingEntryReader'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
+     ['refreshCachedChapterFromPrompt','bindReadingEntryReader','runIndexRecoveryAction'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
        ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION:emptyAdmission,LOCAL_SOURCE_ID:'local',
        ReaderRuntimeOwner:{current:()=>runtime},hilog:{warn(){}},DOMAIN:0,
        RemoteReadingFlowGateway:NativeGateway});
    const page=Object.assign(new Index(),{route:'reading',shelfReceiptRetired:false,remoteSessionGeneration:1,remoteReadingSession:session,navigationGeneration:7,showReadingFailure:(...args)=>failures.push(args),
      mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},detailToc:session.entries,
      shelfOperation:{generation:0,removalKey:'',busy:false},detailReadableAdmission:()=>emptyAdmission,
-     getUIContext:()=>({showAlertDialog(row){
-       dialogs.push(row);if(scenario==='stale')active=false;
-       row[scenario==='decline'?'secondaryButton':'primaryButton'].action();}})});
+     getUIContext:()=>({showAlertDialog(row){dialogs.push(row);assert.fail('entry recovery must not create a native dialog');}})});
    page.bindReadingEntryReader();
-   const result=await page.refreshCachedChapterFromPrompt(error,()=>active);
-   assert.equal(calls.length,scenario==='refresh'||scenario==='failure'?1:0,scenario);
+   assert.equal(await page.refreshCachedChapterFromPrompt(error,()=>active),undefined,'background probe completes without waiting for a notice decision');
+   assert.equal(calls.length,0,'background failure never silently fetches another body');assert.equal(dialogs.length,0);
+   if(scenario!=='preserved'){
+     assert.equal(page.indexRecoveryNotice.canRetry,true);assert.equal(page.indexRecoveryActionLabel,'刷新本章');
+     const presentation=page.indexRecoveryNotice.generation;
+     if(scenario==='stale')active=false;
+     if(scenario!=='decline'){page.runIndexRecoveryAction(presentation);page.runIndexRecoveryAction(presentation);}
+     if(scenario==='late'){
+       for(let n=0;n<20&&calls.length<1;n++)await new Promise(resolve=>setImmediate(resolve));
+       assert.equal(calls.length,1,'late entry cancellation follows actual dispatch');active=false;release(upgraded);
+     }
+   }
+   for(let n=0;n<4;n++)await new Promise(resolve=>setImmediate(resolve));
+   assert.equal(calls.length,['refresh','failure','late'].includes(scenario)?1:0,scenario);
    if(calls.length){assert.equal(calls[0][0],session);assert.equal(calls[0][1],0);
      assert.equal(calls[0][3],true);assert.deepEqual(calls[0][4],position);}
-   if(scenario==='refresh'){assert.equal(result,0);assert.equal(page.remoteContentVerdict,'readable');
-     assert.equal(page.remoteReadingSession.identity,session.identity);}
-   else assert.equal(result,undefined);
+   if(scenario==='refresh'){assert.equal(page.remoteContentVerdict,'readable');assert.equal(page.remoteReadingSession.identity,session.identity);}
+   else assert.equal(page.remoteReadingSession.preparedChapter,undefined);
    assert.equal(failures.length,scenario==='preserved'||scenario==='failure'?1:0,scenario);
-   assert.equal(dialogs.length,scenario==='preserved'?0:1);
+   assert.equal(dialogs.length,0);assert.equal(page.route,'reading','feedback never changes the active route');
  }
 }
-console.log('ML actual Index cache recovery: explicit refresh, decline, stale route, preserved positions and failure feedback PASS');
+console.log('ML actual Index cache recovery: explicit inline refresh, ignored notice, stale/late scope, preserved positions and failure feedback PASS');
 
 // PH93: the real reader admits the committed fresh body and the Core's explicit
 // fallback anchor, retires older bookmark reads and gives accurate feedback.

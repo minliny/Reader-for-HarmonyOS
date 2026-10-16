@@ -1,5 +1,7 @@
+import { readingFailureHint } from './ReadingFailurePresentation';
 import { ReaderReadingRecordHost } from './ReaderReadingRecordHost';
-import { ReadingRecordRecoveryError } from './ReaderReadingRecordState';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../app/BookRequestScheduler';
 import { ReaderReadingImageResources, sameReaderReadingImageResource } from './ReaderReadingImageResources';
 import { ReaderProgressProducerHost, type ReaderProgressProducerIntent, type ReaderContinuousProgressDependencies } from './ReaderProgressProducerHost';
@@ -1130,6 +1132,7 @@ export struct ReadingExperience {
   @State private measurementEpoch: number = 0;
   /** Logged/returned synchronously; there is no rendered failure surface. */
   @State private failureCode: string = '';
+  @State private failureHint: string = readingFailureHint('');
   private cacheNoticeLifecycle: number = -1;
   @Prop bookTitle: string = '';
   @Prop sourceName: string = '';
@@ -1192,6 +1195,14 @@ export struct ReadingExperience {
   private chineseConversionActorKey: string = '';
   private chineseConversionActor: ((mode: ReaderChineseConversionMode) => void) | undefined;
   @State private readerSettingsSnapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
+  @State private readerRecoveryView: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @State private readerRecoveryActionLabel: string = '重试';
+  private readerRecoveryAction: (() => void) | undefined = undefined;
+  private readerRecoveryKind: 'general' | 'progress' | 'presentation' = 'general';
+  private readerRecoveryIdentity: string = '';
+  private readerRecoveryProgressRevision: string | undefined = undefined;
+  @State private readerSettingsRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @State private ttsPreferencesRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   @State private ttsState: ReaderTtsState = createReaderTtsState(false);
   // TTS progress callbacks can arrive out of order around an utterance
   // boundary. Keep the follow-page lane monotonic so a late callback cannot
@@ -1278,7 +1289,7 @@ export struct ReadingExperience {
   private screenAwakeKeepScreenOn: boolean = false;
   private readingSystemEventHost: ReaderReadingSystemEventHost | undefined = undefined;
   private readonly readingRecordGateway: ReadingRecordGateway =
-    new ReadingRecordGateway(ReaderRuntimeOwner.current());
+    ReaderRuntimeOwner.current().getReadingRecordGateway();
   private ttsGateway: ReaderTtsGateway | undefined = undefined;
   private ttsHttpGateway: ReaderHttpTtsGateway | undefined = undefined;
   private ttsCoordinator: ReaderTtsSessionCoordinator | undefined = undefined;
@@ -1450,6 +1461,7 @@ export struct ReadingExperience {
   /** Invalidates an old-style page that completed while a newer appearance reflow was queued. */
   private appearanceReflowInvalidateCurrentLayout: boolean = false;
   private commitInFlight: boolean = false;
+  private progressCommitGeneration: number = 0;
   private unicodeProbeVerified: boolean = false;
   /** Consecutive zero-line probe observations within the current generation. */
   private unicodeProbeEmptyAttempts: number = 0;
@@ -2498,6 +2510,7 @@ export struct ReadingExperience {
       }
       this.sourceSwitchPreparationContent();
       this.sourceSwitchCompletionToast();
+      this.readerRecoveryContent();
     }
     .width('100%')
     .height('100%')
@@ -2512,6 +2525,110 @@ export struct ReadingExperience {
       const height = this.numericAreaLength(newValue.height);
       this.admitReaderViewportSize(width, height, lifecycleToken);
     });
+  }
+
+  private readerRecoveryOwnerKey(): string {
+    return JSON.stringify([this.sourceId, this.bookId, this.lifecycleToken, this.chapterSelectionToken]);
+  }
+
+  private showReaderRecovery(message: string, actionLabel: string = '', action?: () => void,
+    kind: 'general' | 'progress' | 'presentation' = 'general'): void {
+    this.readerRecoveryKind = kind;
+    this.readerRecoveryIdentity = this.readerRecoveryOwnerKey();
+    this.readerRecoveryProgressRevision = this.lastCommittedProgress?.progressRevision;
+    this.readerRecoveryAction = action;
+    this.readerRecoveryActionLabel = actionLabel;
+    this.readerRecoveryView = { message, visible: message.length > 0, canRetry: action !== undefined,
+      generation: (this.readerRecoveryView?.generation ?? 0) + 1 };
+  }
+
+  private settleReaderRecovery(kind: 'progress' | 'presentation', progressRevision: string | undefined = undefined): void {
+    if (this.readerRecoveryKind !== kind || this.readerRecoveryIdentity !== this.readerRecoveryOwnerKey() ||
+      !this.mounted || this.exitRequested ||
+      (kind === 'progress' && (progressRevision === undefined || progressRevision === this.readerRecoveryProgressRevision))) return;
+    this.showReaderRecovery('');
+  }
+
+  private setReaderPreferenceNotice(domain: 'settings' | 'tts', message: string, canRetry: boolean): void {
+    const previous = domain === 'settings' ? this.readerSettingsRecovery : this.ttsPreferencesRecovery;
+    const view: ReaderRecoveryView = { message, visible: message.length > 0, canRetry,
+      generation: (previous?.generation ?? 0) + 1 };
+    if (domain === 'settings') this.readerSettingsRecovery = view;
+    else this.ttsPreferencesRecovery = view;
+  }
+
+  private settleReaderPreferenceNotice(domain: 'settings' | 'tts', current: () => boolean): void {
+    if (!current()) return;
+    const pending = domain === 'settings' ? this.readerSettingsGateway.writeFacts().pendingReconciliation :
+      this.ttsPreferencesGateway.writeFacts().pendingReconciliation;
+    this.setReaderPreferenceNotice(domain, pending ?
+      (domain === 'settings' ? '阅读设置保存尚未确认，当前效果已保留。' : '朗读设置保存尚未确认，当前选择已保留。') : '', pending);
+  }
+
+  private retryReaderPreferenceNotice(domain: 'settings' | 'tts', generation: number): void {
+    const view = domain === 'settings' ? this.readerSettingsRecovery : this.ttsPreferencesRecovery;
+    if (!view.canRetry || view.generation !== generation || !this.isSessionActive(this.lifecycleToken)) return;
+    if (domain === 'settings') {
+      const current = this.captureReaderSettingsAdmission(this.lifecycleToken, this.readerSettingsMutationGeneration);
+      if (this.readerSettingsGateway.writeFacts().pendingReconciliation) this.retryPendingReaderSettings(current);
+      else void this.persistReaderSettingsSnapshot(this.readerSettingsSnapshot, current)
+        .catch((error: Error): void => this.notifyReaderSettingsSavePending(error, current));
+    } else {
+      const current = this.captureTtsPreferenceAdmission(this.ttsPreferenceMutationGeneration);
+      if (this.ttsPreferencesGateway.writeFacts().pendingReconciliation) this.retryPendingTtsPreferences();
+      else void this.persistTtsPreferencesSnapshot(this.ttsPreferencesSnapshot(), current)
+        .catch((error: Error): void => this.notifyTtsPreferencePending(error, current));
+    }
+  }
+
+  private reconcileReaderRecovery(generation: number): void {
+    if (!this.mounted || this.exitRequested || generation !== this.readerRecoveryView.generation) return;
+    const action = this.readerRecoveryAction;
+    this.showReaderRecovery('');
+    action?.();
+  }
+
+  private readerPreferenceModule(): string {
+    const location = readerControlContentLocation(this.controlSession);
+    return location.level === 'secondary' ? location.module : '';
+  }
+
+  @Builder
+  private readerRecoveryContent() {
+    // Use the existing nonmodal recovery slot; settings and TTS each retain
+    // their own write facts while other recovery messages are replaced.
+    if (this.controlVisible() && this.phase !== 'failed' && !this.sourceSwitchPresentationVisible &&
+      (this.readerRecoveryView.visible ||
+        (this.readerPreferenceModule() === 'settings' && this.readerSettingsRecovery.visible) ||
+        (this.readerPreferenceModule() === 'tts' && this.ttsPreferencesRecovery.visible))) {
+      Scroll() {
+        Column({ space: 8 }) {
+          if (this.readerRecoveryView.visible) {
+            ForEach([this.readerRecoveryView.generation], (generation: number): void => {
+              ReaderRecoveryNotice({ view: this.readerRecoveryView, actionLabel: this.readerRecoveryActionLabel,
+                onReconcile: (): void => this.reconcileReaderRecovery(generation) });
+            }, (generation: number): string => `recovery:${generation}`);
+          }
+          if (this.readerPreferenceModule() === 'settings' && this.readerSettingsRecovery.visible) {
+            ForEach([this.readerSettingsRecovery.generation], (generation: number): void => {
+              ReaderRecoveryNotice({ view: this.readerSettingsRecovery, actionLabel: '重试保存',
+                onReconcile: (): void => this.retryReaderPreferenceNotice('settings', generation) });
+            }, (generation: number): string => `settings:${generation}`);
+          }
+          if (this.readerPreferenceModule() === 'tts' && this.ttsPreferencesRecovery.visible) {
+            ForEach([this.ttsPreferencesRecovery.generation], (generation: number): void => {
+              ReaderRecoveryNotice({ view: this.ttsPreferencesRecovery, actionLabel: '重试保存',
+                onReconcile: (): void => this.retryReaderPreferenceNotice('tts', generation) });
+            }, (generation: number): string => `tts:${generation}`);
+          }
+        }.width('100%').hitTestBehavior(HitTestMode.Transparent);
+      }
+      .width(this.controlLayout(this.readerWindowMetricsRevision).topBarWidth)
+      .constraintSize({ maxHeight: Math.max(0, this.viewportHeight / 3) })
+      .position({ x: (this.viewportWidth - this.controlLayout(this.readerWindowMetricsRevision).topBarWidth) / 2,
+        y: this.controlLayout(this.readerWindowMetricsRevision).topBarTop + 54 })
+      .zIndex(8).hitTestBehavior(HitTestMode.Transparent);
+    }
   }
 
   @Builder
@@ -4420,6 +4537,7 @@ export struct ReadingExperience {
    * screen or title-only PaperLayer.
    */
   private resetForChapterSelection(preserveRapidPageTarget: boolean = false, preserveTtsFollow: boolean = false): void {
+    this.showReaderRecovery('');
     this.ordinaryPageMeasurementSelection = -1;
     this.invalidatePageTurnRuntime(true, preserveRapidPageTarget, preserveTtsFollow);
     this.previousChapterMeasurement = undefined;
@@ -4603,27 +4721,25 @@ export struct ReadingExperience {
         return;
       }
       if (error instanceof RemoteChapterCacheRefreshError && !error.refreshPreserved && !refreshContent) {
-        const accepted = await this.requestCachedChapterRefresh(error).catch((): boolean => false);
-        if (!this.isSelectionActive(lifecycleToken, selectionToken)) return;
-        if (accepted) {
-          await this.openChapter(chapterIndex, isInitial, lifecycleToken, selectionToken,
+        this.fail(error as Error, lifecycleToken);
+        const failedSelection = this.chapterSelectionToken;
+        this.requestCachedChapterRefresh(error, (): void => {
+          if (!this.isSelectionActive(lifecycleToken, failedSelection)) return;
+          this.chapterSelectionToken += 1;
+          this.resetForChapterSelection();
+          this.failureCode = '';
+          this.armFirstPageReadyDeadline(lifecycleToken, this.chapterSelectionToken);
+          void this.openChapter(chapterIndex, isInitial, lifecycleToken, this.chapterSelectionToken,
             requestedOffset, requestedProgress, true, error.positionContext, layoutReady);
-        } else {
-          this.beginExit();
-        }
+        });
         return;
       }
       this.fail(error as Error, lifecycleToken);
     }
   }
 
-  private requestCachedChapterRefresh(error: RemoteChapterCacheRefreshError): Promise<boolean> {
-    try {
-      return this.showReaderAlert('choice-blocking', { title: '需要重新验证本章缓存', message: error.message,
-        primaryButton: { value: '刷新本章', action: (): void => {} },
-        secondaryButton: { value: '保留缓存并返回', action: (): void => {} },
-      }).decision.then((decision): boolean => decision === 'primary');
-    } catch (_) { return Promise.resolve(false); }
+  private requestCachedChapterRefresh(error: RemoteChapterCacheRefreshError, refresh: () => void): void {
+    this.showReaderRecovery(error.message, '刷新本章', refresh);
   }
 
   /** Cold chapter DTOs may contain the complete body. Prepare privately using
@@ -6550,6 +6666,11 @@ export struct ReadingExperience {
     this.rapidPageTurnState = cancelReaderRapidPageTurn(this.rapidPageTurnState);
     this.pendingPointerSegmentReserved = false;
     this.autoPageCoordinator.cancelPendingTurn();
+    if (this.pageTurnSettlementActive && this.pageTurnCommitStarted && !this.pageTurnCommitFinished) {
+      this.activeGateway().handoffPendingProgress();
+      this.pageTurnPendingExit = false;
+      this.releasePageTurnRecoveryInput();
+    }
     const inputPhase = this.pageTurnInputPhase();
     if (inputPhase === 'tracking' || inputPhase === 'dragging') {
       // Back wins over an uncommitted page turn, but it must first return the
@@ -6585,63 +6706,22 @@ export struct ReadingExperience {
   }
 
   private async finishExit(lifecycleToken: number): Promise<void> {
+    if (!this.isMountedToken(lifecycleToken) || this.exitDelivered) return;
     const exitAttemptGeneration = this.exitAttemptGeneration;
-    try {
-      const coordinator = this.ttsCoordinator;
-      if (coordinator !== undefined) await coordinator.stop('lifecycle');
-      await this.flushReadingRecordForExit();
-      await this.awaitOrdinaryFirstPagePersistence();
-      // stop() drains the ordered TTS progress tail. If its receipt is still
-      // the latest admitted position for this exact selection, saving the
-      // page start here would rewind the final spoken scalar. A newer page or
-      // manual commit supersedes that receipt and takes the normal exit path.
-      const ttsProgressOwnsExit = this.lastTtsCommittedProgress !== undefined &&
-        this.lastTtsCommittedProgress === this.lastCommittedProgress &&
-        this.lastTtsCommittedChapter === this.chapter &&
-        this.lastTtsCommittedSelectionToken === this.chapterSelectionToken &&
-        this.lastTtsCommittedProgress.sourceId === this.sourceId &&
-        this.lastTtsCommittedProgress.bookId === this.bookId &&
-        this.lastTtsCommittedProgress.chapterIndex === this.chapter?.chapterIndex;
-      if (!ttsProgressOwnsExit) {
-        // A loading/measuring failure has no materialized physical page, so
-        // this remains a no-op commit before exit in that case.
-        if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
-          this.continuousAnchorSampler?.();
-          await this.commitContinuousProgress(lifecycleToken);
-        } else {
-          await this.commitVisiblePage(lifecycleToken);
-        }
-      }
-    } catch (error) {
-      if (!this.isMountedToken(lifecycleToken) || exitAttemptGeneration !== this.exitAttemptGeneration) return;
-      this.exitRequested = false;
-      let decisionTaken = false;
-      const claimDecision = (): boolean => {
-        if (decisionTaken || !this.isMountedToken(lifecycleToken) ||
-          exitAttemptGeneration !== this.exitAttemptGeneration || this.exitRequested || this.exitDelivered) return false;
-        decisionTaken = true;
-        return true;
-      };
-      const continueReading = (): void => {
-        if (!claimDecision()) return;
-        // Cancelling this exit also cancels the Host's one-shot destination.
-        // Retry deliberately keeps it until the durable exit is delivered.
-        this.onExitCancelled();
-        this.beginReadingRecordClock(lifecycleToken);
-      };
-      const durationPending = error instanceof ReadingRecordRecoveryError;
-      const exitNotice = this.showReaderAlert('confirmation', { title: durationPending ? '阅读时长尚未确认' : '阅读进度尚未保存',
-        message: durationPending ? (error as ReadingRecordRecoveryError).message : '请重试保存后退出。当前阅读位置已保留。',
-        primaryButton: { value: '重试保存并退出', action: (): void => {
-          if (claimDecision()) this.beginExit();
-        } },
-        secondaryButton: { value: '继续阅读', action: continueReading },
-        cancel: continueReading,
+    // Runtime owns every accepted tail before the page can retire. Disk and
+    // Native receipts have no place in the navigation dependency chain.
+    try { this.readingRecordHost.handoff(); }
+    catch (error) { try { hilog.error(0x5244, 'Reader', '%{private}s', `Reading duration handoff: ${this.errorMessage(error as Error)}`); } catch (_) {} }
+    const coordinator = this.ttsCoordinator;
+    const spoken = coordinator?.captureCompletedProgress();
+    try { this.handoffExitProgress(lifecycleToken, spoken); }
+    catch (error) { try { hilog.error(0x5244, 'Reader', '%{private}s', `Reading progress handoff: ${this.errorMessage(error as Error)}`); } catch (_) {} }
+    if (coordinator !== undefined) {
+      // stop() invalidates the transport synchronously; its ordered storage
+      // tail remains independent of the mounted page and its route.
+      void coordinator.stop('lifecycle').catch((error: Error): void => {
+        try { hilog.error(0x5244, 'Reader', '%{private}s', `Reading TTS stop: ${this.errorMessage(error)}`); } catch (_) {}
       });
-      void exitNotice.decision.then((decision): void => {
-        if (decision === 'native-failure') continueReading();
-      });
-      return;
     }
     if (!this.isMountedToken(lifecycleToken) || exitAttemptGeneration !== this.exitAttemptGeneration || this.exitDelivered) return;
     this.exitDelivered = true;
@@ -6649,9 +6729,47 @@ export struct ReadingExperience {
     try {
       this.retainConfirmedEntryPresentation();
     } catch (error) {
-      hilog.warn(0x5244, 'Reader', '%{private}s', `Reading entry retention skipped: ${this.errorMessage(error as Error)}`);
+      try { hilog.warn(0x5244, 'Reader', '%{private}s', `Reading entry retention skipped: ${this.errorMessage(error as Error)}`); } catch (_) {}
     }
     this.onExit();
+  }
+
+  private handoffExitProgress(lifecycleToken: number, spoken?: ReaderTtsProgressCommit): void {
+    const gateway = this.activeGateway();
+    gateway.handoffPendingProgress();
+    const chapter = this.chapter;
+    if (!this.isMountedToken(lifecycleToken) || this.phase !== 'ready' || chapter === undefined) return;
+    const continuous = this.readerSettingsSnapshot.navigationMode === 'continuous';
+    if (continuous) this.continuousAnchorSampler?.();
+    const spokenCurrent = spoken !== undefined && spoken.chapter.sourceId === this.sourceId &&
+      spoken.chapter.bookId === this.bookId && spoken.chapter.chapterIndex === chapter.chapterIndex &&
+      spoken.chapter.bodyVersion === chapter.bodyVersion && spoken.chapter.processingVersion === chapter.processingVersion;
+    const ttsOwnsPosition = this.lastTtsCommittedProgress !== undefined &&
+      this.lastTtsCommittedProgress === this.lastCommittedProgress && this.lastTtsCommittedChapter === chapter &&
+      this.lastTtsCommittedSelectionToken === this.chapterSelectionToken;
+    if (!spokenCurrent && ttsOwnsPosition) return;
+    const scalar = spokenCurrent ? spoken.charEnd : continuous ? this.continuousVisibleScalar : this.visiblePage?.startScalar;
+    if (scalar === undefined || (!continuous && !spokenCurrent && (this.visiblePage === undefined ||
+      !this.isVisiblePageCurrent(this.visiblePage, chapter, this.visiblePageSelectionToken, lifecycleToken)))) return;
+    const count = this.requireChapterLayoutMap().scalarCount();
+    const offset = Math.max(0, Math.min(count, scalar));
+    const committed = this.lastCommittedProgress;
+    const samePosition = committed?.sourceId === this.sourceId && committed.bookId === this.bookId &&
+      committed.chapterIndex === chapter.chapterIndex && committed.chapterOffset === offset;
+    const renewal = samePosition && this.retainedReadingRecencyVisible && this.retainedReadingRecencyReceipt === committed;
+    if (samePosition && !renewal) return;
+    const anchor = new CoreReadingAnchor(chapter.chapterIndex, offset,
+      renewal && committed !== undefined ? committed.chapterProgress : count === 0 ? 0 : offset / count,
+      chapter.bodyVersion, chapter.processingVersion, chapter.directoryTargetProof);
+    if (renewal && committed !== undefined) anchor.retainedProgressReceipt = {
+      progressRevision: committed.progressRevision, updatedAt: committed.updatedAt, locationRevision: committed.locationRevision };
+    gateway.handoffPresentedProgress(this.bookId, chapter.chapterTitle, anchor, this.coreLayout(),
+      committed?.progressRevision === undefined || committed.sourceId !== this.sourceId || committed.bookId !== this.bookId ? undefined :
+        { kind: 'restored', progress: committed, progressRevision: committed.progressRevision });
+    if (renewal) {
+      this.retainedReadingRecencyVisible = false;
+      this.retainedReadingRecencyReceipt = undefined;
+    }
   }
 
   private async commitVisiblePage(lifecycleToken: number): Promise<void> {
@@ -6671,6 +6789,8 @@ export struct ReadingExperience {
     const renewRetainedReading = sameCommittedPosition && this.retainedReadingRecencyVisible &&
       this.retainedReadingRecencyReceipt === committed;
     if (sameCommittedPosition && !renewRetainedReading) return;
+    const commitGeneration = (this.progressCommitGeneration ?? 0) + 1;
+    this.progressCommitGeneration = commitGeneration;
     this.commitInFlight = true;
     let progressRequested = false;
     try {
@@ -6705,7 +6825,7 @@ export struct ReadingExperience {
       hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience progress commit failed: ${this.errorMessage(error as Error)}`);
       throw new Error(this.errorMessage(error as Error));
     } finally {
-      if (this.isMountedToken(lifecycleToken)) {
+      if (this.isMountedToken(lifecycleToken) && this.progressCommitGeneration === commitGeneration) {
         this.commitInFlight = false;
       }
     }
@@ -6785,6 +6905,7 @@ export struct ReadingExperience {
       stored.progressRevision,
     );
     this.lastCommittedProgress = commit;
+    this.settleReaderRecovery('progress', stored.progressRevision);
     // An acknowledged page/manual/TTS write already renewed this visit.
     this.retainedReadingRecencyReceipt = undefined;
     this.retainedReadingRecencyVisible = false;
@@ -7477,7 +7598,7 @@ export struct ReadingExperience {
       }
       if (this.pageTurnSettlingPrepared !== undefined) {
         if (this.pageTurnCommitStarted && !this.pageTurnCommitFinished) {
-          this.armPageTurnSettlementDeadline(generation);
+          this.admitPageTurnPersistenceOutcome(this.pageTurnSettlingPrepared, this.lifecycleToken, generation, undefined);
           return;
         }
         if (this.pageTurnCommitFinished) {
@@ -8047,19 +8168,23 @@ export struct ReadingExperience {
 
   private notifyTtsPreferencePending(error: Error, isCurrent: () => boolean): void {
     if (!isCurrent() || error.message === 'TTS_PREFERENCE_OWNER_SUPERSEDED') return;
-    try {
-      this.getUIContext().getPromptAction().showToast({ message: '朗读设置保存尚未确认，当前选择已保留，请稍后重试' });
-    } catch (_noticeError) {}
+    this.setReaderPreferenceNotice('tts', this.ttsPreferencesGateway.writeFacts().pendingReconciliation ?
+      '朗读设置保存尚未确认，当前选择已保留。' : '朗读设置未能保存，当前选择已保留，请重试保存。', true);
     try { this.logTtsFailure('preference-save-pending', error); } catch (_diagnosticError) {}
   }
 
   private retryPendingTtsPreferences(): void {
-    if (!this.ttsPreferencesGateway.writeFacts().pendingReconciliation) return;
+    if (!this.ttsPreferencesGateway.writeFacts().pendingReconciliation) {
+      this.setReaderPreferenceNotice('tts', '', false);
+      return;
+    }
     const current = this.captureTtsPreferenceAdmission(this.ttsPreferenceMutationGeneration);
     if (!current()) return;
     // One finite retry per existing metadata load. Do not hold first play or
     // reading behind unreturned Preferences IO, or start a background loop.
+    this.setReaderPreferenceNotice('tts', '正在核对并保存朗读设置…', false);
     void this.ttsPreferencesGateway.retryAccepted(current)
+      .then((): void => this.settleReaderPreferenceNotice('tts', current))
       .catch((error: Error): void => this.notifyTtsPreferencePending(error, current));
   }
 
@@ -8116,7 +8241,10 @@ export struct ReadingExperience {
 
   private async persistTtsPreferencesSnapshot(snapshot: ReaderTtsPreferencesSnapshot,
     isAdmitted?: () => boolean): Promise<void> {
+    if (isAdmitted?.() === false) return;
+    this.setReaderPreferenceNotice('tts', '正在保存朗读设置…', false);
     await this.ttsPreferencesGateway.update(snapshot, false, isAdmitted);
+    this.settleReaderPreferenceNotice('tts', (): boolean => isAdmitted?.() !== false);
   }
 
   private cancelPendingTtsPlay(): void {
@@ -9208,7 +9336,7 @@ export struct ReadingExperience {
         this.chineseConversionOperationId=fact.blocked && fact.method==='reader.chinese-conversion.put' ? fact.operationId ?? '' : '';
         const message=fact.confirmation==='unknown' || fact.blocked ?
           '转换原操作尚未确认，已保留原内容；再次选择只会核对/继续原操作' :
-          fact.confirmation==='confirmed' ? '转换已保存，当前内容刷新尚未完成，请重试阅读' : `转换未派发：${error.message}`;
+          fact.confirmation==='confirmed' ? '转换已保存，当前内容刷新尚未完成，请重试阅读' : '转换未能执行，请稍后重试；原内容已保留';
         try { this.getUIContext().getPromptAction().showToast({message}); } catch (_) {}
       });
   }
@@ -9293,7 +9421,7 @@ export struct ReadingExperience {
     this.applyReaderSystemEventPolicy(snapshot);
     this.pageTurnRenderRevision += 1;
     const current = this.captureReaderSettingsAdmission(lifecycleToken, generation);
-    void this.readerSettingsGateway.update(snapshot, false, current).catch((error: Error): void =>
+    void this.persistReaderSettingsSnapshot(snapshot, current).catch((error: Error): void =>
       this.notifyReaderSettingsSavePending(error, current));
   }
 
@@ -9319,7 +9447,7 @@ export struct ReadingExperience {
         }
         // The native policy succeeded. Its durable snapshot is a separate
         // operation: missing Preferences ACK must not undo the actual policy.
-        return this.readerSettingsGateway.update(snapshot, false, current)
+        return this.persistReaderSettingsSnapshot(snapshot, current)
           .catch((error: Error): void => this.notifyReaderSettingsSavePending(error, current)).then((): void => {});
       })
       .catch((error: Error): void => {
@@ -9355,13 +9483,29 @@ export struct ReadingExperience {
   }
 
   private notifyReaderSettingsSavePending(error: Error, current: () => boolean): void {
-    if (current()) this.showReaderSettingsFailure('阅读设置保存尚未确认，当前效果已保留，请稍后重试', error);
+    if (!current() || error.message === 'READER_SETTINGS_OWNER_SUPERSEDED') return;
+    this.setReaderPreferenceNotice('settings', this.readerSettingsGateway.writeFacts().pendingReconciliation ?
+      '阅读设置保存尚未确认，当前效果已保留。' : '阅读设置未能保存，当前效果已保留，请重试保存。', true);
+    try { hilog.warn(0x5244, 'Reader', '%{private}s', this.errorMessage(error)); } catch (_) {}
+  }
+
+  private async persistReaderSettingsSnapshot(snapshot: ReaderSettingsSnapshot, current: () => boolean): Promise<void> {
+    if (!current()) return;
+    this.setReaderPreferenceNotice('settings', '正在保存阅读设置…', false);
+    await this.readerSettingsGateway.update(snapshot, false, current);
+    this.settleReaderPreferenceNotice('settings', current);
   }
 
   private retryPendingReaderSettings(current: () => boolean): void {
-    if (!current() || !this.readerSettingsGateway.writeFacts().pendingReconciliation) return;
-    void this.readerSettingsGateway.retryAccepted(current).catch((error: Error): void =>
-      this.notifyReaderSettingsSavePending(error, current));
+    if (!current()) return;
+    if (!this.readerSettingsGateway.writeFacts().pendingReconciliation) {
+      this.setReaderPreferenceNotice('settings', '', false);
+      return;
+    }
+    this.setReaderPreferenceNotice('settings', '正在核对并保存阅读设置…', false);
+    void this.readerSettingsGateway.retryAccepted(current)
+      .then((): void => this.settleReaderPreferenceNotice('settings', current))
+      .catch((error: Error): void => this.notifyReaderSettingsSavePending(error, current));
   }
 
   private applyReaderWindowPolicy(snapshot: ReaderSettingsSnapshot,
@@ -9498,7 +9642,7 @@ export struct ReadingExperience {
     const lifecycleToken = this.lifecycleToken;
     const admission = this.captureReaderSettingsAdmission(lifecycleToken, mutationGeneration);
     const current = (): boolean => admission() && changeGeneration === this.pageStyleChangeGeneration;
-    void this.readerSettingsGateway.update(snapshot, false, current).catch((error: Error): void =>
+    void this.persistReaderSettingsSnapshot(snapshot, current).catch((error: Error): void =>
       this.notifyReaderSettingsSavePending(error, current));
   }
 
@@ -10319,6 +10463,10 @@ export struct ReadingExperience {
 
   private openReaderControl(): void {
     if (this.sessionLaunch !== undefined) { this.cancelSessionLaunch('openControl'); return; }
+    if (this.pageTurnSettlementActive && this.pageTurnCommitStarted && !this.pageTurnCommitFinished) {
+      this.activeGateway().handoffPendingProgress();
+      this.releasePageTurnRecoveryInput();
+    }
     if (!this.isControlInputEnabled() || !this.isReaderPageInteractionEnabled() || this.pageTurnOwnsReaderInput()) {
       return;
     }
@@ -10804,11 +10952,8 @@ export struct ReadingExperience {
       .catch((_error: Error): void => {
         if (this.isSelectionActive(lifecycleToken, selectionToken) &&
           panelGeneration === this.replacePanelGeneration && this.controlPage() === 'quickReplace') {
-          this.showReaderAlert('preview', {
-            title: '替换预览',
-            message: '当前章节原文缓存不可用，无法生成预览。',
-            confirm: { value: '关闭', action: (): void => {} },
-          });
+          this.showReaderRecovery('当前章节原文缓存不可用，暂时无法生成预览。', '重试预览',
+            (): void => this.previewQuickReplace());
         }
       });
   }
@@ -10837,8 +10982,7 @@ export struct ReadingExperience {
     this.projectReaderReplaceWriteFacts();
     const shared = this.rulesMutationOwner.snapshot();
     if (shared.busy || shared.blocked || shared.confirmation === 'unknown') {
-      this.showReaderAlert('preview', { title: '规则操作尚未确认', message: shared.message || '另一规则操作正在执行，请等待确认',
-        confirm: { value: '关闭', action: (): void => {} } });
+      this.showReaderRecovery(shared.message || '规则正在后台保存，当前内容仍可阅读。');
       return;
     }
     const mutationGeneration = this.beginReplaceMutation(lifecycleToken, bookId, ruleId);
@@ -10872,8 +11016,7 @@ export struct ReadingExperience {
           this.isReplaceMutationCurrent(mutationGeneration, lifecycleToken, bookId, ruleId);
         if (ownsWrite && this.controlReplaceCurrent(lifecycleToken, sourceId, bookId, panelGeneration)) {
           this.projectReaderReplaceWriteFacts();
-          this.showReaderAlert('preview', { title: '规则操作未确认', message: this.errorMessage(error),
-            confirm: { value: '关闭', action: (): void => {} } });
+          this.showReaderRecovery('规则保存结果待核对，当前内容已保留。');
         }
         // Retire this UI ticket only. The shared original rule authority keeps
         // dispatched unknown across panel closure, book changes and re-entry.
@@ -11030,10 +11173,8 @@ export struct ReadingExperience {
     } catch (error) {
       if (!isCurrent()) return;
       hilog.error(0x5244, 'Reader', '%{private}s', `Reading content position reload failed: ${this.errorMessage(error as Error)}`);
-      this.showReaderAlert('preview', { title: '阅读位置恢复失败',
-        message: '正文规则已更新，阅读位置尚未确认。请重试恢复。',
-        confirm: { value: '重试恢复', action: (): void => { if (isCurrent()) void this.reloadMigratedContentPosition(lifecycleToken, bookId); } },
-      });
+      this.showReaderRecovery('正文规则已更新，阅读位置暂未恢复。', '重试恢复',
+        (): void => { if (isCurrent()) void this.reloadMigratedContentPosition(lifecycleToken, bookId); });
     }
   }
 
@@ -11544,6 +11685,7 @@ export struct ReadingExperience {
     this.controlSelectionReconciliationInFlight = true;
     this.resetForChapterSelection();
     this.failureCode = this.errorMessage(error);
+    this.failureHint = readingFailureHint(this.failureCode, remoteReadingFailureKindOf(error));
     void this.reconcileFailedControlSelection(recoveryTicket, error).catch((recoveryError: Error): void => {
       if (this.pendingControlSelection !== recoveryTicket ||
         !readerControlSelectionOwnsReading(recoveryTicket, this.controlSelectionOwner())) return;
@@ -11687,6 +11829,7 @@ export struct ReadingExperience {
     this.traceInitialReadingPhase?.('ready-deliver', lifecycleToken);
     // Page consumers request only their missing original-paragraph range.
     this.scheduleEntryCatalogHydration?.();
+    this.settleReaderRecovery('presentation');
     try { this.onReadingReady(chapter.chapterIndex); }
     catch (error) { hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience ready observer failed: ${this.errorMessage(error as Error)}`); }
     if (!isCurrent()) return false;
@@ -11700,20 +11843,16 @@ export struct ReadingExperience {
 
   private showControlSelectionFailure(ticket: ReaderControlSelectionTicket, error: Error, detail: string): void {
     this.failureCode = this.errorMessage(error);
+    this.failureHint = readingFailureHint(this.failureCode, remoteReadingFailureKindOf(error));
     this.finishPageTurnPerf('failed');
     const retry = this.pendingControlSelectionRetry;
     hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience control selection failed: ${this.failureCode}; ${detail}`);
-    this.showReaderAlert('confirmation', {
-      title: ticket.refreshContent === true ? '刷新本章失败' : '跳转失败',
-      message: ticket.refreshContent === true ? `${this.failureCode}\n${detail}。可重试恢复本章，原书签和记录仍保留。` :
-        `${this.failureCode}\n${detail}。可重试本次选择，或关闭提示后重新选择章节。`,
-      primaryButton: { value: '重试', action: (): void => {
+    this.showReaderRecovery(ticket.refreshContent === true ? '本章暂未刷新，原书签和记录已保留。' :
+      '暂未跳转，原阅读位置已保留。', '重试', (): void => {
         if (retry === undefined || !readerControlSelectionOwnsReading(ticket, this.controlSelectionOwner())) return;
         this.selectChapterAnchor(retry.chapterIndex, retry.chapterOffset, retry.requireChapterStart,
           retry.stopTts, retry.requestedProgress, retry.controlOwnerRevision, retry.closeControlOnCommit, retry.refreshContent, retry.positionContext, retry.ttsOwner);
-      } },
-      secondaryButton: { value: '关闭提示', action: (): void => {} },
-    });
+      });
   }
 
   // ArkUI V1 drops handwritten accessors when lowering @Component structs.
@@ -12980,22 +13119,9 @@ export struct ReadingExperience {
     generation: number, succeeded: boolean | undefined): void {
     if (!this.isPreparedPageTurnCommitCurrent(prepared, lifecycle, generation)) return;
     if (succeeded === undefined) {
-      this.pageTurnPersistenceState = 'unknown';
-      this.cancelPageTurnSettlementDeadline();
-      if (this.pageTurnUnknownNotifiedGeneration === generation) return;
-      this.pageTurnUnknownNotifiedGeneration = generation;
-      this.showReaderAlert('retry-blocking', { title: '正在确认阅读进度',
-        message: '暂时无法确认保存结果。页面已保留，确认完成后继续翻页。',
-        primaryButton: { value: '重新确认', action: (): void => {
-          if (this.pageTurnReconciliationPending || !this.isPreparedPageTurnCommitCurrent(prepared, lifecycle, generation)) return;
-          this.pageTurnReconciliationPending = true;
-          this.pageTurnUnknownNotifiedGeneration = -1;
-          void this.reconcilePreparedPageTurn(prepared, lifecycle, generation)
-            .then((result: boolean | undefined): void => {
-              this.admitPageTurnPersistenceOutcome(prepared, lifecycle, generation, result);
-            }).finally((): void => { this.pageTurnReconciliationPending = false; });
-        } },
-      });
+      this.activeGateway().handoffPendingProgress();
+      this.releasePageTurnRecoveryInput();
+      this.showReaderRecovery('进度正在后台核对，原阅读位置已保留。', '', undefined, 'progress');
       return;
     }
     this.pageTurnCommitFinished = true;
@@ -13070,6 +13196,8 @@ export struct ReadingExperience {
     if (!this.isPreparedPageTurnCommitCurrent(prepared, lifecycleToken, settlementGeneration)) {
       return false;
     }
+    const commitGeneration = (this.progressCommitGeneration ?? 0) + 1;
+    this.progressCommitGeneration = commitGeneration;
     this.commitInFlight = true;
     try {
       let storedProgressAccepted = false;
@@ -13104,7 +13232,7 @@ export struct ReadingExperience {
       hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience prepared page commit failed: ${this.errorMessage(error as Error)}`);
       return this.reconcilePreparedPageTurn(prepared, lifecycleToken, settlementGeneration);
     } finally {
-      if (this.isMountedToken(lifecycleToken)) {
+      if (this.isMountedToken(lifecycleToken) && this.progressCommitGeneration === commitGeneration) {
         this.commitInFlight = false;
       }
     }
@@ -13224,6 +13352,7 @@ export struct ReadingExperience {
   private onBookTurnArkUIContentReady(revision: number): void {
     if (!this.mounted || this.exitRequested || revision !== this.pageTurnRenderRevision) return;
     this.bookTurnArkUIReadyRevision = revision;
+    this.settleReaderRecovery('presentation');
     if (this.bookTurn2DFallbackPending) this.completeBookTurn2DFallback(this.pageTurnSettlementGeneration);
   }
 
@@ -13232,18 +13361,22 @@ export struct ReadingExperience {
       generation !== this.pageTurnSettlementGeneration) return;
     this.bookTurn2DFallbackPending = true;
     if (this.completeBookTurn2DFallback(generation)) return;
-    // Re-deliver target content once. Keep the opaque terminal when its target
-    // has not reached the resident slot; a disconnected callback cannot cause
-    // infinite native retries, nor can it justify exposing an unadmitted page.
-    this.pageTurnRenderRevision += 1;
-    this.cancelPageTurnSettlementDeadline();
-    this.showReaderAlert('retry-blocking', { title: '正在恢复页面',
-      message: '阅读位置已保留，可以重新显示当前页面。',
-      primaryButton: { value: '重新显示', action: (): void => {
-        if (generation !== this.pageTurnSettlementGeneration || !this.mounted) return;
-        if (!this.completeBookTurn2DFallback(generation)) this.pageTurnRenderRevision += 1;
-      } },
-    });
+    // Rebuild the existing admitted page using the ordinary 2D stage. An
+    // absent native/ArkUI callback must not retain the whole input owner.
+    this.activeGateway().handoffPendingProgress();
+    this.releasePageTurnRecoveryInput();
+    this.showReaderRecovery('页面正在恢复，阅读位置已保留。', '', undefined, 'presentation');
+  }
+
+  private releasePageTurnRecoveryInput(): void {
+    this.bookTurnRuntimeFailed = true;
+    this.progressCommitGeneration = (this.progressCommitGeneration ?? 0) + 1;
+    this.commitInFlight = false;
+    // Invalidates every old completion before releasing the pointer. This
+    // keeps the current materialized page; it never promotes the candidate
+    // whose persistence outcome is still unknown.
+    this.invalidatePageTurnRuntime(true);
+    this.resumeDeferredPageTurnWork();
   }
 
   private completeBookTurn2DFallback(generation: number): boolean {
@@ -14052,6 +14185,7 @@ export struct ReadingExperience {
     }
     if (this.recoverControlSelectionFailure(error, lifecycleToken)) return;
     this.failureCode = this.errorMessage(error);
+    this.failureHint = readingFailureHint(this.failureCode, remoteReadingFailureKindOf(error));
     this.finishPageTurnPerf('failed');
     this.captureReadingRecordElapsed(false);
     this.clearReadingRecordTimer();
@@ -14108,7 +14242,7 @@ export struct ReadingExperience {
           .fontSize(TYPE_READER_READING_FAILURE_TITLE.fontSizeFp)
           .fontWeight(TYPE_READER_READING_FAILURE_TITLE.fontWeight as number)
           .fontColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink);
-        Text(this.sourceSwitchFailureMessage.length > 0 ? this.sourceSwitchFailureMessage : this.failureCode)
+        Text(this.sourceSwitchFailureMessage.length > 0 ? this.sourceSwitchFailureMessage : this.failureHint)
           .fontSize(TYPE_READER_READING_FAILURE_DETAIL.fontSizeFp)
           .fontColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink)
           .width('100%');
@@ -14117,7 +14251,14 @@ export struct ReadingExperience {
             Button('重试').onClick((): void => this.onRetryFailedSourceSwitch(scopeId));
           }, (scopeId: number): string => `${scopeId}`);
         } else {
-          Button('重试').onClick((): void => this.retryReading());
+          if (this.readerRecoveryView.visible && this.readerRecoveryView.canRetry) {
+            ForEach([this.readerRecoveryView.generation], (generation: number): void => {
+              ReaderRecoveryNotice({ view: this.readerRecoveryView, actionLabel: this.readerRecoveryActionLabel,
+                onReconcile: (): void => this.reconcileReaderRecovery(generation) });
+            }, (generation: number): string => `${generation}`);
+          } else {
+            Button('重试').onClick((): void => this.retryReading());
+          }
         }
         Button('阅读设置')
           .onClick((): void => this.openReaderControl());

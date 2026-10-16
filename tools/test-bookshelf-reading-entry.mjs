@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { ReaderNativeAlertOwner } from './lib/reader-native-alert-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -20,10 +21,10 @@ const {captureRemotePositionContext}=await import('../entry/src/main/ets/feature
 const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 
 const source = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const require = createRequire(import.meta.url), ts = require(`${sdk}/node_modules/typescript`);
 const sdkOptions = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const parseComponent = text => ts.createSourceFile('/tmp/ReaderInfoAssembly.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, sdkOptions);
+const parseComponent = text => ts.createSourceFile(virtualFilePath('ReaderInfoAssembly.ets'), text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, sdkOptions);
 const indexTree = parseComponent(source);
 assert.equal(indexTree.parseDiagnostics.length, 0, 'production Index parses with the SDK');
 const indexType = indexTree.statements.find(node => node.name?.getText(indexTree) === 'Index');
@@ -343,10 +344,13 @@ async function infoExitHarness(state) {
     pageTurnInputPhase: () => 'idle', stopReaderTtsAudition() {}, captureReadingRecordElapsed() {},
     finishSessionCapsuleMorph: () => calls.push('capsule-finished'), clearReadingRecordTimer() {},
     clearAutoPageTimer() {}, clearAutoPageSessionTimer() {}, cancelFirstPageReadyDeadline() {},
-    ttsCoordinator: { stop: () => { calls.push('stop'); return stop.promise; } },
-    flushReadingRecordForExit: () => { calls.push('record'); return record.promise; },
+    ttsCoordinator: { captureCompletedProgress: () => { calls.push('capture-tts'); return undefined; },
+      stop: () => { calls.push('stop'); return stop.promise; } },
+    readingRecordHost: { handoff: () => { calls.push('record-handoff'); void record.promise.catch(() => calls.push('record-pending')); } },
+    handoffExitProgress: () => { calls.push('progress-handoff'); void progress.promise.catch(() => calls.push('progress-pending')); },
+    flushReadingRecordForExit: () => assert.fail('route never waits on duration RPC'),
     awaitOrdinaryFirstPagePersistence: async () => {}, retainConfirmedEntryPresentation() {},
-    commitVisiblePage: () => { calls.push('progress'); return progress.promise; },
+    commitVisiblePage: () => assert.fail('route never waits on page progress RPC'),
     ...readingCallbacks,
     beginReadingRecordClock: () => calls.push('resume-record'),
     getUIContext: () => ({ showAlertDialog: dialog => t.alerts.push(dialog) }),
@@ -365,78 +369,33 @@ for (const state of [homeControl(), autoControl(), readerControlState.expandRead
   const admittedSession = t.index.remoteReadingSession, admittedToc = t.index.detailToc;
   t.panel.performMoreAction('info');
   assert.equal(t.panel.moreMenuVisible, false);
-  assert.equal(t.reading.exitRequested, true, 'Info must enter durable exit immediately, not be consumed as control Back');
-  assert.equal(t.index.route, 'reading', 'Info cannot navigate before persistence completes');
-  assert.deepEqual(t.calls, ['capsule-finished', 'stop']);
-  t.stop.resolve(); await settle(); assert.deepEqual(t.calls, ['capsule-finished', 'stop', 'record']);
-  assert.equal(t.index.route, 'reading');
-  t.record.resolve(); await settle(); assert.equal(t.calls.at(-1), 'progress');
-  assert.equal(t.index.route, 'reading');
-  t.progress.resolve(); await settle();
-  assert.equal(t.index.route, 'detail'); assert.equal(t.index.readingSessionActive, false);
+  assert.equal(t.reading.exitRequested, true, 'Info enters explicit navigation immediately instead of consuming a control layer');
+  assert.equal(t.index.route, 'detail', 'Info navigates before any storage or TTS RPC resolves');
+  assert.equal(t.index.readingSessionActive, false);
+  assert.deepEqual(t.calls, ['capsule-finished', 'record-handoff', 'capture-tts', 'progress-handoff', 'stop', 'route']);
   assert.equal(t.calls.filter(value => value === 'route').length, 1);
   assert.equal(t.index.remoteReadingSession, admittedSession); assert.equal(t.index.detailToc, admittedToc);
   assert.equal(t.probes.length, 0, 'shelf entry and Info do not duplicate the reader chapter request');
+  assert.equal(t.alerts.length, 0);
+  t.reading.beginExit();
+  assert.equal(t.calls.filter(value => value === 'route').length, 1, 'repeated exit never replays the destination');
+  t.stop.resolve(); t.record.resolve(); t.progress.resolve(); await settle();
+  assert.equal(t.index.route, 'detail'); assert.equal(t.calls.filter(value => value === 'route').length, 1);
 }
 
-{
+for (const failedTail of ['stop', 'record', 'progress']) {
   const t = await infoExitHarness(autoControl());
-  t.panel.performMoreAction('info'); t.stop.resolve(); t.record.resolve(); await settle();
-  t.progress.reject(new Error('durable save failed')); await settle();
-  assert.equal(t.index.route, 'reading'); assert.equal(t.index.readingSessionActive, true);
-  assert.equal(t.reading.exitRequested, false);
-  assert.equal(t.alerts.at(-1).title, '阅读进度尚未保存');
-  assert.equal(t.alerts.at(-1).message, '请重试保存后退出。当前阅读位置已保留。');
-  assert.equal(t.calls.includes('route'), false, 'failed save never grants route ownership');
-  const retried = deferred(); t.reading.commitVisiblePage = () => retried.promise;
-  const failureDialog = t.alerts.at(-1);
-  failureDialog.primaryButton.action(); await settle(); assert.equal(t.index.route, 'reading');
-  retried.resolve(); await settle(); assert.equal(t.index.route, 'detail', 'retry retains Info destination');
-  assert.equal(t.calls.includes('exit-cancelled'), false, 'retry and successful save never cancel navigation');
-  const callsAfterExit = [...t.calls]; failureDialog.secondaryButton.action();
-  assert.deepEqual(t.calls, callsAfterExit, 'old cancellation cannot revive reading after retry success');
-}
-
-for (const cancelKind of ['continue', 'dismiss']) {
-  const t = await infoExitHarness(homeControl());
-  t.panel.performMoreAction('info'); t.stop.resolve(); t.record.resolve(); await settle();
-  t.progress.reject(new Error('durable save failed')); await settle();
-  const failureDialog = t.alerts.at(-1);
-  if (cancelKind === 'continue') failureDialog.secondaryButton.action();
-  else failureDialog.cancel?.();
-  assert.equal(t.index.route, 'reading');
-  const closed = readerControlState.createReaderControlSessionState();
-  t.reading.latestControlVisualSession = closed; t.reading.controlSession = closed;
-  t.reading.commitVisiblePage = async () => {};
-  t.index.readingExitRequest(); await settle();
-  assert.equal(t.index.route, 'bookshelf', 'cancelled Info request must not redirect a later ordinary reading exit');
-  assert.equal(t.calls.filter(value => value === 'exit-cancelled').length, 1);
-  assert.equal(t.calls.filter(value => value === 'resume-record').length, 1);
-  const settledCalls = [...t.calls];
-  failureDialog.primaryButton.action(); failureDialog.secondaryButton.action(); failureDialog.cancel?.();
-  assert.deepEqual(t.calls, settledCalls, 'cancelled dialog cannot retry or cancel twice');
-}
-
-{
-  const t = await infoExitHarness(homeControl());
-  t.panel.performMoreAction('info'); t.stop.resolve(); t.record.resolve(); await settle();
-  t.progress.reject(new Error('durable save failed')); await settle();
-  const oldDialog = t.alerts.at(-1), newProgress = deferred();
-  t.reading.commitVisiblePage = () => newProgress.promise;
-  t.index.requestReaderBookInfo(); await settle();
-  oldDialog.secondaryButton.action(); oldDialog.primaryButton.action(); oldDialog.cancel?.();
-  assert.equal(t.calls.includes('exit-cancelled'), false, 'old dialog cannot cancel a newer explicit exit request');
-  newProgress.resolve(); await settle(); assert.equal(t.index.route, 'detail');
-}
-
-{
-  const t = await infoExitHarness(homeControl());
-  t.panel.performMoreAction('info'); t.stop.resolve(); t.record.resolve(); await settle();
-  t.progress.reject(new Error('durable save failed')); await settle();
-  const oldDialog = t.alerts.at(-1), calls = [...t.calls];
-  t.reading.isMountedToken = () => false;
-  oldDialog.secondaryButton.action(); oldDialog.primaryButton.action(); oldDialog.cancel?.();
-  assert.deepEqual(t.calls, calls, 'unmounted reader cannot cancel a different lifecycle navigation');
+  t.panel.performMoreAction('info');
+  assert.equal(t.index.route, 'detail');
+  t[failedTail].reject(new Error('background receipt pending'));
+  for (const name of ['stop', 'record', 'progress']) if (name !== failedTail) t[name].resolve();
+  await settle();
+  assert.equal(t.index.route, 'detail', 'late receipt failure cannot revoke the completed Info destination');
+  assert.equal(t.index.readingSessionActive, false);
+  assert.equal(t.alerts.length, 0, 'background receipt failure does not reopen a save/cancel modal');
+  assert.equal(t.calls.filter(value => value === 'route').length, 1);
+  assert.equal(t.calls.includes('exit-cancelled'), false);
+  assert.equal(t.calls.includes('resume-record'), false, 'retired page cannot resume a reading clock');
 }
 
 for (const state of [homeControl(), autoControl(), readerControlState.expandReaderControlSession(autoControl(), 0)]) {
@@ -446,4 +405,4 @@ for (const state of [homeControl(), autoControl(), readerControlState.expandRead
   assert.equal(t.index.route, 'reading'); assert.equal(t.calls.length, 0);
   assert.notDeepEqual(t.reading.controlSession, state, 'Back changes one control layer');
 }
-console.log('Reader Info production chain: explicit navigation, serialized stop/record/progress, save failure/retry and layered Back PASS');
+console.log('Reader Info production chain: immediate once-only navigation before TTS/duration/progress RPC, late failure preserves destination without modal, and layered Back PASS');

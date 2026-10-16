@@ -68,10 +68,17 @@ for (const mode of ['success', 'decline', 'leave', 'rules-changed']) {
   const page = Object.assign(new Index(), { mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),route:'detail',detailToc:session.entries,detailBook:{sourceId:'s',bookId:'b',sourceName:'书源',title:'书',author:'作者'},remoteReadingSession:session,shelfOperation:{generation:0,removalKey:'',busy:false},navigationGeneration: 1, remoteContentVerdict: 'readable',
     showReadingFailure: (...args) => failures.push(args),
     installRemoteReadingSession: value => { page.remoteReadingSession = value; },
-    getUIContext: () => ({ showAlertDialog: dialog => dialog[mode === 'decline' ? 'secondaryButton' : 'primaryButton'].action() }),
+    getUIContext: () => ({ showAlertDialog() { assert.fail('cache verification is nonmodal'); } }),
   });
   page.bindReadingEntryReader();
-  const result = page.refreshCachedChapterFromPrompt(new RemoteChapterCacheRefreshError(session, 0, undefined, false), () => current);
+  const cacheError = new RemoteChapterCacheRefreshError(session, 0, undefined, false);
+  const probe = await page.refreshCachedChapterFromPrompt(cacheError, () => current);
+  assert.equal(probe, undefined); assert.equal(calls.length, 0, 'a background probe never refreshes content');
+  assert.equal(page.indexRecoveryNotice.visible, true);
+  if (mode === 'decline') { coordinator.close(); continue; }
+  // The real inline action admits this exact error before entering this existing lane.
+  page.remoteCacheRefreshConsent = cacheError;
+  const result = page.refreshCachedChapterFromPrompt(cacheError, () => current);
   await tick();
   if (mode === 'leave') current = false;
   if (mode === 'rules-changed') await coordinator.request('replace-rule.put', {});

@@ -17,11 +17,11 @@ export struct ReaderRecoveryNotice {
         Text(this.view.message)
           .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .width('100%').padding(12);
+          .width('100%').padding(12).hitTestBehavior(HitTestMode.None);
         if (this.view.canRetry) {
           ReaderRecoveryAction({ label: this.actionLabel, generation: this.view.generation, onReconcile: this.onReconcile });
         }
-      }.width('100%');
+      }.width('100%').hitTestBehavior(HitTestMode.Transparent);
     }
   }
 }

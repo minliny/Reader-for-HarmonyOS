@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import {sourceSwitchLiveSdk} from './lib/source-switch-sdk-consumer.mjs';
@@ -94,6 +95,25 @@ for(const action of ['close','consume-back','retire','runtime-retire'])for(const
   f.host.retire();assert.equal(f.host.open(f.context,f.lease),false,'in-flight acquisition keeps the existing close/reopen guard');
   gate.resolve();await work;assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
   checks.push('qualified-acquisition-keeps-close-and-reopen-locked-until-real-settlement');
+}
+for(const action of ['close','consume-back','retire'])for(const outcome of ['resolve','reject']){
+  const gate=deferred(),f=fixture({preview:true,acquireGate:gate});await settle();
+  const scope=f.host.current().scopeId,work=f.host.pick(f.candidate(),scope);
+  await untilOwner(()=>f.calls.some(([method])=>method==='acquire'));
+  assert.equal(f.host.canCancelPreparation(scope),true);
+  if(action==='close')assert.equal(f.host.close(scope),true);
+  else if(action==='consume-back')assert.equal(f.host.consumeBack(scope),true);
+  else f.host.retire();
+  assert.equal(f.host.current().visible,false);assert.equal(f.host.blocksExit(origin),false);
+  assert.equal(f.host.open(f.context,f.lease),true);await settle();
+  const next=f.host.current().scopeId,rows=f.host.current().state.candidates;
+  if(outcome==='resolve')gate.resolve();else gate.reject(Error('old preview failure'));
+  await work;await settle();
+  assert.equal(f.host.current().visible,true);assert.equal(f.host.current().scopeId,next);
+  assert.equal(f.host.current().state.candidates,rows);assert.equal(f.host.previewPreparation,undefined);
+  assert.equal(f.effects.some(effect=>effect.kind==='previewReady'),false);
+  assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
+  f.retire();checks.push(`preview-preparation-${action}-rejects-late-${outcome}-without-locking-successor`);
 }
 for(const proofState of ['current','stale'])for(const preview of [false,true]){
   const f=fixture({open:false,preview}),gate=deferred(),base=f.runtime.request.bind(f.runtime);
@@ -217,7 +237,7 @@ for(const action of ['close-reopen','retire-reopen']){
   };
   f.host.open(f.context,f.lease);await settle();
   assert.equal(f.host.current().state.kind,'discoveryError');
-  assert.equal(f.host.current().state.message,'identity storage unavailable');
+  assert.equal(f.host.current().state.message,'换源暂时未完成，请重试或选择其他书源。');
   assert.equal(f.host.current().write,undefined,'identity read cannot become an unknown durable write');
   assert.equal(f.disk.finishes,0);assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
   failIdentity=false;f.host.retry(f.host.current().scopeId);
@@ -302,7 +322,7 @@ for(const action of ['close-reopen','retire-reopen']){
   assert.equal(f.host.bindReader(f.context,{...f.lease,isCurrent:()=>false}),false);
   assert.equal(f.host.bindReader(f.context,f.lease),true);
   assert.equal(f.calls.length,before,'reader rebind performs no read, acquisition or mutation');
-  assert.equal(f.host.current().failureMessage,'body unavailable');
+  assert.equal(f.host.current().failureMessage,'换源暂时未完成，请重试或选择其他书源。');
   const rebound=f.host.current().scopeId;assert.notEqual(rebound,original);
   f.host.retryFailed(original);assert.equal(f.calls.length,before,'old failure action cannot borrow the new scope');
   f.options.failAcquire=false;f.host.retryFailed(rebound);await settle();
@@ -644,14 +664,14 @@ for(const preview of [true,false]) {
 }
 // Installed SDK parses the full new production owner. Native rendering and
 // scheduler/SDK-send proof are separate tiers; this probe does not claim them.
-const require=createRequire(import.meta.url),etsRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),etsRoot=resolveEtsLoaderRoot();
 const ts=require(`${etsRoot}/node_modules/typescript`),opts=require(`${etsRoot}/lib/ets_checker.js`).compilerOptions;
 for(const name of ['SourceSwitchHost','SourceSwitchGateway','SourceSwitchIntentStore']) {
-  const tree=ts.createSourceFile(`/tmp/${name}.ts`,read(`features/source/${name}.ts`),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,opts);
+  const tree=ts.createSourceFile(virtualFilePath(`${name}.ts`),read(`features/source/${name}.ts`),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,opts);
   assert.equal(tree.parseDiagnostics.length,0,`${name} actual installed SDK syntax`);
 }
 {
-  const release=`    if (this.pickQualification !== undefined) {\n      this.pickQualification = undefined;\n      this.snapshot = { ...this.snapshot, state: { kind: 'discovering' } };\n    }\n`;
+  const release=`    if (this.pickQualification !== undefined || this.previewPreparation !== undefined) {\n      this.pickQualification = undefined;\n      this.previewPreparation = undefined;\n      this.snapshot = { ...this.snapshot, state: { kind: 'discovering' } };\n    }\n`;
   const unsafeRetire=hostSource.replace(release,'');assert.notEqual(unsafeRetire,hostSource);
   const {f,gate,work}=await pendingQualificationFixture(unsafeRetire);f.host.retire();
   assert.equal(f.host.current().state.kind,'switching');assert.equal(f.host.open(f.context,f.lease),false,
@@ -666,6 +686,26 @@ for(const name of ['SourceSwitchHost','SourceSwitchGateway','SourceSwitchIntentS
   gate.resolve();await work;assert.equal(f.host.current().visible,false,
     'negative control proves an unowned finally can hide a successor scope');
   f.retire();checks.push('negative-control-unowned-qualification-finally-hides-successor-scope');
+}
+{
+  const broken=hostSource.replace('if (this.previewPreparation === preparation)', 'if (true)');assert.notEqual(broken,hostSource);
+  const gate=deferred(),f=fixture({preview:true,acquireGate:gate},broken);await settle();
+  const work=f.host.pick(f.candidate(),f.host.current().scopeId);
+  await untilOwner(()=>f.calls.some(([method])=>method==='acquire'));
+  assert.equal(f.host.close(f.host.current().scopeId),true);assert.equal(f.host.open(f.context,f.lease),true);await settle();
+  gate.resolve();await work;assert.equal(f.host.current().visible,false,'negative control: unowned preview finally hides the successor');
+  f.retire();checks.push('negative-control-unowned-preview-finally-hides-successor');
+}
+{
+ const f=fixture({preview:true,failAcquire:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
+ assert.equal(f.host.current().failureMessage,'换源暂时未完成，请重试或选择其他书源。');
+ for(const raw of ['https://private.invalid/?token=PRIVATE','/private/user/file SQLITE_ERROR','无类型的私有上游正文']){
+  const error=Error(raw);assert.doesNotMatch(f.host.publicFailure(error),/PRIVATE|private|SQLITE|私有上游/);
+  assert.equal(f.host.lastFailure,error,'private diagnostic is retained without entering snapshot');
+ }
+ const typed=new f.intentClasses.SourceSwitchIntentRecoveryError('blocked','换源回执与原标识不一致，已保留并停止覆盖');
+ assert.equal(f.host.publicFailure(typed),typed.message);f.retire();
+ checks.push('public-source-failure-classifies-unknown-and-retains-private-diagnostic-with-typed-recovery-copy');
 }
 const unsafe=hostSource.replace('if (!current()) return;\n    this.snapshot = { ...this.snapshot, write:',
   'if (!current()) return;\n    if (observed.length === 1) await this.gateway.rollbackSwitch(observed[0].transactionId, current, new ReaderWriteEvidence());\n    this.snapshot = { ...this.snapshot, write:');

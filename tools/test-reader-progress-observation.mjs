@@ -2,6 +2,7 @@ import { withReaderProgressProducerFixture } from './lib/reader-progress-produce
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
+import { readerPageRecoveryDependencies, readerPageRecoveryPorts } from './lib/reader-page-recovery-fixture.mjs';
 const observe = operation => observeReaderProgressOperation(operation, 5);
 let release;
 const pending = new Promise(resolve => { release = resolve; });
@@ -14,22 +15,32 @@ release(); await new Promise(r => setImmediate(r));
 assert.equal(reads, 0, 'an expired queued query is inert without releasing or overtaking the actual write');
 
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const Page = productionMotionMethods(file, ['beginPreparedPageTurnPersistence', 'admitPageTurnPersistenceOutcome', 'canPresentOrdinaryPage'],
-  { observeReaderProgressOperation: observe, hilog: {warn(){}} });
-let completeWrite, completed = 0, dialogs = 0, current = true;
+class Anchor { constructor(chapterIndex, chapterOffset, chapterProgress) { Object.assign(this, { chapterIndex, chapterOffset, chapterProgress }); } }
+const Page = productionMotionMethods(file, ['beginPreparedPageTurnPersistence', 'admitPageTurnPersistenceOutcome',
+  'canPresentOrdinaryPage', 'persistPreparedPageTurn', 'isPreparedPageTurnCommitCurrent', 'invalidatePageTurnRuntime'],
+  { ...readerPageRecoveryDependencies, CoreReadingAnchor: Anchor, observeReaderProgressOperation: observe, hilog: {warn(){},error(){}} });
+let completeWrite, completed = 0, dialogs = 0, handoffs = 0;
 const write = new Promise(resolve => { completeWrite = resolve; });
-const page = Object.assign(new Page(), { mounted:true,lifecycleToken:1,chapterSelectionToken:1,pageTurnSettlementGeneration: 7, pageTurnCommitStarted: false,
-  activeGateway:()=>({canPersistPresentedProgress:()=>false}),
-  persistPreparedPageTurn: () => write, isPreparedPageTurnCommitCurrent: () => current,
+const prepared={context:{chapter:{chapterIndex:2,chapterTitle:'two'},layoutMap:{scalarCount:()=>100}},page:{startScalar:40}};
+const origin={startScalar:10};
+const page = readerPageRecoveryPorts(Object.assign(new Page(), { mounted:true,lifecycleToken:1,chapterSelectionToken:1,pageTurnSettlementGeneration: 7, pageTurnCommitStarted: false,
+  bookTurnSurfaceGeneration:7,pageTurnRenderRevision:1,pageTurnSettlingPrepared:prepared,pageTurnInputOwned:true,
+  pageTurnSettlementActive:true,visiblePage:origin,phase:'ready',bookId:'b',coreLayout:()=>({}),isPreparedPageTurnFresh:()=>true,
+  activeGateway:()=>({canPersistPresentedProgress:()=>false,hasPendingSourceSwitch:()=>false,
+    handoffPendingProgress(){handoffs++;},persistPresentedProgress:()=>write}),
   cancelPageTurnSettlementDeadline() {}, getUIContext: () => ({ showAlertDialog: () => dialogs++ }),
-  finishPreparedPageTurnSettlement() { completed++; current = false; } });
-const prepared={context:{chapter:{chapterIndex:2}}};
+  finishPreparedPageTurnSettlement() { completed++; } }));
 page.beginPreparedPageTurnPersistence(prepared, 1, 7);
 await new Promise(r => setTimeout(r, 12));
-assert.equal(page.pageTurnPersistenceState, 'unknown'); assert.equal(dialogs, 1); assert.equal(completed, 0);
-completeWrite(true); await new Promise(r => setImmediate(r));
-assert.equal(completed, 1); assert.equal(page.pageTurnPersistenceState, 'durable');
-page.admitPageTurnPersistenceOutcome(prepared, 1, 7, true); assert.equal(completed, 1);
+assert.equal(page.pageTurnPersistenceState, 'idle'); assert.equal(dialogs, 0); assert.equal(completed, 0);
+assert.equal(handoffs,1);assert.equal(page.pageTurnInputOwned,false);assert.equal(page.visiblePage,origin);
+assert.equal(page.readerRecoveryView.visible,true);
+page.commitInFlight=true;page.progressCommitGeneration++;
+completeWrite({bookId:'b',chapterIndex:2,chapterOffset:40}); await new Promise(r => setImmediate(r));
+assert.equal(completed, 0,'the actual late write cannot promote its retired candidate');
+assert.equal(page.commitInFlight,true,'the old production finally cannot release a newer progress owner');
+assert.equal(page.pageTurnPersistenceState, 'idle');
+page.admitPageTurnPersistenceOutcome(prepared, 1, 7, true); assert.equal(completed, 0);
 
 for (const kind of ['ordinary','unchanged-migration','source-switch','control','migrated','legacy']) {
   const calls=[];
@@ -49,7 +60,6 @@ for (const kind of ['ordinary','unchanged-migration','source-switch','control','
   if(kind==='ordinary')assert.equal(owner.pageTurnPersistenceState,'queued','pending CAS save is not mislabeled durable');
 }
 
-class Anchor { constructor(chapterIndex, chapterOffset, chapterProgress) { Object.assign(this, { chapterIndex, chapterOffset, chapterProgress }); } }
 const Continuous = withReaderProgressProducerFixture(productionMotionMethods(file, ['commitContinuousProgress'],
   { CoreReadingAnchor: Anchor, hilog: { error() {} }, observeReaderProgressOperation: observe, reconcileReaderControlSelectionProgress }));
 function continuous(gateway) {

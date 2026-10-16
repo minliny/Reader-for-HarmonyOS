@@ -35,9 +35,11 @@ async function fixture() {
    sourceId:'s',bookId:'b',bookTitle:'当前书',replacePanelGeneration:1,replaceMutationGeneration:0,
    replaceMutationActiveGeneration:-1,replaceMutationActiveLifecycleToken:-1,replaceMutationActiveBookId:'',replaceMutationActiveRuleId:-1,
    controlSession:{location:{module:'replace'}},reloads:0,notices:[],
+   readerRecoveryView:{message:'',visible:false,canRetry:false,generation:0},
    controlVisible(){return this.visible;},controlPage(){return this.page;},isSessionActive(t){return this.mounted&&t===this.lifecycleToken;},
    setControlPage(p){this.page=p;},persistBeforeContentMutation:async()=>()=>true,
-   reloadCurrentPageAfterReplacePersist(){this.reloads++;},errorMessage:e=>e.message,showReaderAlert(_id,o){this.notices.push(o);},
+   reloadCurrentPageAfterReplacePersist(){this.reloads++;},errorMessage:e=>e.message,
+   showReaderAlert(_id,o){this.notices.push(o);assert.fail('automatic Rules recovery must not open a modal');},
   });return owner;
  };
  return{...actual,shared,gateway,create,deps,owner:create()};
@@ -52,12 +54,19 @@ const results=[];
 {
  const f=await fixture();f.options.afterMethod='rules.mutation.apply';f.owner.toggleQuickReplaceRule(1,false);await until(()=>f.owner.controlReplaceState.writeUncertain);
  assert.equal(f.shared.snapshot().confirmation,'unknown');assert.equal(f.owner.replaceState.rules[0].isEnabled,true);
- assert.equal(f.owner.controlReplaceState.writeUncertain,true);assert.equal(f.owner.notices.length,1);
+ assert.equal(f.owner.controlReplaceState.writeUncertain,true);assert.equal(f.owner.notices.length,0);
+ assert.equal(f.owner.readerRecoveryView.visible,true,'actual production quiet recovery state retains the failure fact');
+ assert.equal(f.owner.readerRecoveryView.canRetry,false,'unknown mutation never becomes an automatic replay action');
+ assert.match(f.owner.readerRecoveryView.message,/待核对/);
+ const unknownId=f.shared.snapshot().operationId;
+ f.owner.toggleQuickReplaceRule(1,false);await tick();
+ assert.equal(f.writes().length,1,'another Quick click cannot replay the unknown mutation');
+ assert.equal(f.shared.snapshot().operationId,unknownId,'quiet feedback retains the original operation identity');
  await f.gateway.loadRules();assert.equal(f.owner.controlReplaceState.writeUncertain,true,'matching read retains original unknown');
  const reentered=f.create();reentered.page='home';reentered.openQuickReplace();await until(()=>reentered.controlReplaceState.status==='ready');
  assert.equal(reentered.controlReplaceState.writeUncertain,false,'new presentation exact original query releases only this original uncertainty');
  assert.equal(f.writes().length,1);assert.equal(reentered.controlReplaceState.rules[0].isEnabled,false);
- results.push('lost ACK: pure list retains unknown; reopen qualified exact original query settles without replay');
+ results.push('lost ACK: quiet recovery retains original unknown, no modal/replay; reopen qualified exact query settles');
 }
 {
  const f=await fixture();f.options.gate=deferred();f.options.pauseMethod='rules.mutation.apply';f.owner.toggleQuickReplaceRule(1,false);await until(()=>f.writes().length===1);

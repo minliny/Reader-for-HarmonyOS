@@ -422,6 +422,13 @@
   ],
   "nonPageActors": [
     {
+      "method": "indexRecoveryNoticeContent",
+      "component": "ReaderRecoveryNotice",
+      "kind": "nonmodalFeedback",
+      "contract": "tools/test-index-native-alert-consumers.mjs",
+      "boundary": "One intrinsic-height shared recovery notice, guarded by current route/runtime and visible state; generation-keyed actions preserve source/session identity. No full-screen native page, modal, scrim, or pointer mask."
+    },
+    {
       "component": "ReaderLayoutDebugOverlay",
       "kind": "runtimeDebug",
       "contract": "tools/test-developer-mode-settings.mjs"

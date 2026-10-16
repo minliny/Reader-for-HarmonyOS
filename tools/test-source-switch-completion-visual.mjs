@@ -1,6 +1,8 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { sourceSwitchLiveSdk } from './lib/source-switch-sdk-consumer.mjs';
 import { SourceSwitchCompletionPresentation } from '../entry/src/main/ets/features/source/SourceSwitchCompletionPresentation.ts';
@@ -22,9 +24,11 @@ const members = ['sourceSwitchCompletion', 'readingReadyGeneration', 'sourceSwit
   'sourceSwitchCompletionKey', 'sourceSwitchCompletionCurrent', 'sourceSwitchCompletionDisplayCurrent',
   'finishSourceSwitchReveal', 'cancelSourceSwitchCompletion', 'sourceSwitchCompletionVisibleChanged',
   'sourceSwitchCompletionChanged', 'sourceSwitchCompletionWash', 'sourceSwitchCompletionToast'];
+const visualScope = new AsyncLocalStorage();
+let visualTemplate, visualEmissions = 0;
+const visualActors = [];
 
 function fixture({ reduced = false, phase = 'ready', presented = true, extraMembers = [], extraDeps = {} } = {}) {
-  const p = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
   let nextTimer = 0;
   const timers = new Map(), animators = [];
   const uiContext = { getFont: () => ({}), createAnimator(options) {
@@ -34,10 +38,49 @@ function fixture({ reduced = false, phase = 'ready', presented = true, extraMemb
     animators.push(port);
     return port;
   } };
-  const deps = sourceSwitchLiveSdk(p, { uiContext,
+  const ports = { uiContext,
     setTimeout(callback, delay) { const id = ++nextTimer; timers.set(id, { callback, delay }); return id; },
-    clearTimeout(id) { timers.delete(id); }, ...extraDeps });
-  const reader = p.consumer(localSource, [...members, ...extraMembers], deps);
+    clearTimeout(id) { timers.delete(id); } };
+  const reusable = extraMembers.length === 0 && Object.keys(extraDeps).length === 0;
+  let base, deps, reader;
+  if (reusable && visualTemplate !== undefined) {
+    ({ p: base, deps } = visualTemplate);
+    reader = new visualTemplate.Component(undefined, {});
+  } else {
+    base = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
+    const scoped = () => { const value = visualScope.getStore(); assert.ok(value, 'each native callback owns its independent visual ports'); return value; };
+    deps = sourceSwitchLiveSdk(base, {
+      uiContext: new Proxy({}, { get: (_target, key) => (...args) => scoped().uiContext[key](...args) }),
+      setTimeout(callback, delay) { const owner = scoped(); return owner.setTimeout(() => visualScope.run(owner, callback), delay); },
+      clearTimeout(id) { scoped().clearTimeout(id); }, ...extraDeps });
+    reader = visualScope.run(ports, () => base.consumer(localSource, [...members, ...extraMembers], deps));
+    if (reusable) { visualEmissions++; visualTemplate = { p: base, deps, Component: reader.constructor }; }
+  }
+  // Only immutable SDK code is shared. Each actor keeps fresh property cells,
+  // watches, native nodes and clock/animator ports. Bind even late callbacks to
+  // their original ports rather than whichever scenario happens to run next.
+  const originals = new Map();
+  for (const name of [...members, ...extraMembers]) if (typeof reader[name] === 'function') {
+    const method = reader[name]; originals.set(name, method);
+    reader[name] = (...args) => visualScope.run(ports, () => method.apply(reader, args));
+  }
+  for (const [field, watch] of reader.watches) for (const [name, method] of originals)
+    if (watch === method) reader.watches.set(field, reader[name]);
+  reader.getUIContext = () => uiContext;
+  const ownsPropertyActor = owner => {
+    for (let current = owner; current !== undefined; current = current.owner)
+      if (current === reader) return true;
+    return false;
+  };
+  const p = { ...base, properties: { ...base.properties,
+    flush: () => visualScope.run(ports, () => base.properties.flush(ownsPropertyActor)) } };
+  for (const previous of visualActors) {
+    assert.notEqual(reader, previous); assert.notEqual(reader.nodes, previous.nodes);
+    assert.notEqual(reader.watches, previous.watches);
+    assert.notEqual(reader.__sourceSwitchCompletion, previous.__sourceSwitchCompletion);
+    assert.notEqual(reader.consumedSourceSwitchCompletions, previous.consumedSourceSwitchCompletions);
+  }
+  visualActors.push(reader);
   Object.assign(reader, { mounted: true, exitRequested: false, appForeground: true, reduceMotion: reduced,
     isReaderIdentityCurrent: () => true, sourceId: 'target', bookId: 'book', readingReadyGeneration: 7,
     sourceSwitchFailureMessage: '', sourceSwitchCompletionVisible: true, phase,
@@ -254,10 +297,10 @@ for (const mutation of [reader => { reader.chapter.cacheRefreshRequired = true; 
 // gateway receipt; this is model/SDK ordering proof, not a real Core/VM ACK.
 {
   const require = createRequire(import.meta.url);
-  const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdk = resolveEtsLoaderRoot();
   const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
   const actualClass = (source, name, deps = {}) => {
-    const tree = ts.createSourceFile('/tmp/CompletionActualClasses.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+    const tree = ts.createSourceFile(virtualFilePath('CompletionActualClasses.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
     const declaration = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.text === name);
     assert.ok(declaration, `actual production class ${name}`);
     return new Function(...Object.keys(deps), stripTypeScriptTypes(declaration.getText(tree)).replace(/^export /, '') + `;return ${name};`)(...Object.values(deps));
@@ -273,6 +316,10 @@ for (const mutation of [reader => { reader.chapter.cacheRefreshRequired = true; 
     extraMembers: ['completeFirstPage', 'persistMeasuredCanonicalProgress', 'activeGateway', 'requireChapter', 'requireChapterLayoutMap',
       'isMeasurementCurrent', 'isSessionActive', 'isMountedToken', 'isSelectionCurrent', 'isSelectionActive',
       'resumeSupersededAppearanceMeasurement', 'isOrdinaryPageMeasurement', 'admitCommittedProgress', 'isChapterFirstPageStart', 'errorMessage',
+      'readerRecoveryOwnerKey', 'showReaderRecovery', 'settleReaderRecovery',
+      'readerRecoveryView', 'readerRecoveryActionLabel', 'readerRecoveryAction', 'readerRecoveryKind',
+      'readerRecoveryIdentity', 'readerRecoveryProgressRevision', 'lastCommittedProgress',
+      'retainedReadingRecencyReceipt', 'retainedReadingRecencyVisible', 'retainedReadingRecencySkipped',
       'currentPageTurnRenderPage'] });
   Object.assign(x.reader, { visiblePage: undefined, visibleFragments: [], sourceSwitchTransactionId: 'canonical',
     physicalPagination: new ReaderPhysicalPaginationOwner(), chapterLayoutMap: new ReadingSurfaceLayoutMap(x.reader.chapter.content),
@@ -287,6 +334,11 @@ for (const mutation of [reader => { reader.chapter.cacheRefreshRequired = true; 
     prefetchNextChapter() {}, completeRapidPageTurnTransaction() {}, drainRapidPageTurn() {}, onAutoPagePageCommitted() {},
     resumeDeferredMeasurement() {}, fail(error) { throw error; } });
   x.reader.chapter.bodyVersion = 'fresh-body'; x.reader.chapter.processingVersion = 'fresh-processing';
+  x.reader.lastCommittedProgress = new ReadingCommit('target', 'book', 2, 0, 0,
+    undefined, undefined, undefined, 'fresh-body', 'fresh-processing', 'progress:before');
+  x.reader.showReaderRecovery('pending canonical progress', '', undefined, 'progress');
+  x.p.properties.flush();
+  assert.equal(x.reader.readerRecoveryView.visible, true, 'the real recovery helper owns the pending progress notice');
   let releaseReceipt;
   const receipt = new Promise(resolve => { releaseReceipt = resolve; });
   x.reader.sessionGateway = { hasPendingSourceSwitch: () => true,
@@ -303,17 +355,25 @@ for (const mutation of [reader => { reader.chapter.cacheRefreshRequired = true; 
   const fragments = [new ReadingSurfacePageFragment('canonical-body', x.reader.chapter.content, true)];
   const page = new PhysicalReadingPage(fragments, 0, 4, 30, 700);
   const generation = x.reader.physicalPagination.index.beginMeasurement(x.reader.chapterSelectionToken);
+  let committedObservers = 0;
   x.reader.onReadingCommitted = commit => {
+    committedObservers += 1;
     assert.equal(commit.sourceSwitchTransactionId, 'canonical');
+    assert.equal(commit.progressRevision, 'progress:confirmed');
+    assert.equal(x.reader.readerRecoveryView.visible, false, 'the same-owner new receipt settles progress before its observer');
     assert.ok(x.reader.pageTurnRenderRevision > before, 'canonical body invalidates the resident cache before its durable observer');
     x.accept(x.event('canonical'));
   };
   const completion = x.reader.completeFirstPage(page, generation, x.reader.chapterSelectionToken, x.reader.lifecycleToken);
   await Promise.resolve();
   assert.equal(x.reader.visiblePage, undefined); assert.equal(x.animators.length, 0);
+  assert.equal(committedObservers, 0); assert.equal(x.reader.readerRecoveryView.visible, true);
   releaseReceipt({ chapterIndex: 2, chapterOffset: 0, chapterProgress: 0, sourceSwitchTransactionId: 'canonical',
-    bodyVersion: 'fresh-body', processingVersion: 'fresh-processing' });
+    bodyVersion: 'fresh-body', processingVersion: 'fresh-processing', progressRevision: 'progress:confirmed' });
   await completion; x.p.properties.flush();
+  assert.equal(committedObservers, 1, 'the canonical receipt reaches its durable observer exactly once');
+  assert.equal(x.reader.lastCommittedProgress.progressRevision, 'progress:confirmed');
+  assert.equal(x.reader.readerRecoveryView.visible, false, 'the actual recovery helper admits the new progress revision');
   assert.equal(x.reader.pageTurnRenderRevision, before + 1);
   assert.equal(stage.currentRenderPage().fragments.length, 0, 'unchanged revision reproduces the old cached empty tree');
   stage.contentRevision = x.reader.pageTurnRenderRevision; x.p.properties.flush();
@@ -323,4 +383,17 @@ for (const mutation of [reader => { reader.chapter.cacheRefreshRequired = true; 
   assert.equal(x.animators.length, 1, 'current resident callback admits the already confirmed canonical receipt');
 }
 
-console.log('source switch completion visual: actual SDK receipt, guard, view and cancellation checks passed');
+{
+  const first = fixture(), second = fixture();
+  first.accept(first.event('independent-first')); second.accept(second.event('independent-second'));
+  assert.equal(first.timers.size, 1); assert.equal(second.timers.size, 1);
+  const lateFirst = first.animators[0].onFinish;
+  first.reader.sourceSwitchCompletionVisible = false; first.p.properties.flush();
+  assert.equal(first.timers.size, 0); assert.equal(second.timers.size, 1,
+    'retiring the old actor cannot clear a successor clock with the same numeric timer id');
+  lateFirst();
+  assert.equal(second.reader.sourceSwitchToastText, '已切换至 目标书源');
+  assert.equal(second.animators[0].cancels, 0, 'native animator ports remain actor-local');
+}
+assert.equal(visualEmissions, 1, 'the fixed visual graph compiles once without removing any scenario');
+console.log(`source switch completion visual: actual SDK receipt, guard, view and cancellation checks passed (${visualActors.length} independent actors; ${visualEmissions} fixed emission)`);

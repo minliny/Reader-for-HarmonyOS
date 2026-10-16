@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -11,8 +12,7 @@ import { resolveHorizontalFrame, SurfaceWidthSpec } from '../entry/src/main/ets/
 
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -21,17 +21,17 @@ const specSource = readFileSync(file('features/common/ReaderSurfaceSpecs.ets'), 
 const jsonSource = readFileSync(file('features/common/JsonImportDialog.ets'), 'utf8');
 const indexSource = readFileSync(file('pages/Index.ets'), 'utf8');
 const selectorSource = readFileSync(file('features/bookshelf/BookshelfGroupSelector.ets'), 'utf8');
-const specTree = ts.createSourceFile('/tmp/JsonImportSpecProbe.ets', specSource,
+const specTree = ts.createSourceFile(virtualFilePath('JsonImportSpecProbe.ets'), specSource,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 assert.equal(specTree.parseDiagnostics.length, 0, 'production spec registry parses');
 const { resolveDialogSpec } = new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', stripTypeScriptTypes(specSource)
   .replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '') + '; return { resolveDialogSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' }, SOURCE_SWITCH_VISUAL);
-const actionModel = ts.createSourceFile('/tmp/JsonImportSurfaceProbe.ets', surfaceSource,
+const actionModel = ts.createSourceFile(virtualFilePath('JsonImportSurfaceProbe.ets'), surfaceSource,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options)
   .statements.find(node => node.name?.text === 'DialogActionView');
 assert.ok(actionModel, 'production action model is present');
 const DialogActionView = new Function(stripTypeScriptTypes(actionModel.getText(
-  ts.createSourceFile('/tmp/JsonImportSurfaceModel.ets', surfaceSource,
+  ts.createSourceFile(virtualFilePath('JsonImportSurfaceModel.ets'), surfaceSource,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options)))
   .replace(/^export /, '') + '; return DialogActionView;')();
 syntax.componentCollection.customComponents.add('ReaderDialogSurface');

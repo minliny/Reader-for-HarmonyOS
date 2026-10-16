@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import * as directoryVisual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
 import * as directoryGeometry from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
@@ -17,8 +18,7 @@ import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.
 import { createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerPageBuilderSlots } from './reader-page-builder-slots.mjs';
 
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 export const readerBuilderSdkAvailable = existsSync(`${sdkRoot}/lib/process_component_class.js`);
 let pageFrameworkProperties;
 
@@ -34,7 +34,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const main = require(`${sdkRoot}/main.js`);
   const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
   const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
-  const parse = text => ts.createSourceFile('/tmp/ReaderBuilderProbe.ets', text,
+  const parse = text => ts.createSourceFile(virtualFilePath('ReaderBuilderProbe.ets'), text,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   const componentDeclaration = (tree, name) => {
     const declarations = tree.statements.filter(node => node.members && node.name &&
@@ -115,7 +115,14 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     'standardHeaderHeight', 'pageHeaderHeight', 'pageFooterHeight', 'headerHeight', 'fixedHeaderLayoutKey', 'searchHeaderLayoutKey',
     'catalogHeaderHeight','catalogHeaderTop',
     'searchFontScale','searchFilterHeight','searchFilterLabelWidth','searchBarHeight','bookFontScale',
-    'resultTagWidth','resultTagHeight']);
+    'resultTagWidth','resultTagHeight',
+    // Nonmodal feedback is a finite visual/admission seam. Keep the actual
+    // production defaults and helpers in focused pre-migration consumers.
+    'indexRecoveryNotice','indexRecoveryActionLabel','indexRecoveryAction','indexRecoveryCurrent',
+    'indexRecoveryRevision','remoteCacheRefreshConsent','indexRecoveryNoticeContent','showIndexRecoveryNotice','clearIndexRecoveryNotice','runIndexRecoveryAction',
+    'sourceImportSearchActionLabel','sourceImportSearchActionRevision','sourceImportSearchAction','runSourceImportSearchAction',
+    'statusActionLabel','statusActionGeneration','onStatusAction','rssOperationResultMessage','resultMessage',
+    'readerRecoveryView','readerRecoveryActionLabel','readerRecoveryAction','showReaderRecovery','reconcileReaderRecovery']);
   let addedChrome;
   do {
     addedChrome = false;
@@ -128,6 +135,16 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       }
     }
   } while (addedChrome);
+  // New quiet recovery defaults stay real in old focused, stateless Builder
+  // probes too. Supply the existing ArkUI property runtime only when the
+  // caller has not already selected its own genuine property seam.
+  if (names.some(name => ['readerRecoveryView','indexRecoveryNotice','sourceImportSearchActionLabel','rssOperationResultMessage','resultMessage'].includes(name)) &&
+    dependencies.ObservedPropertySimplePU === undefined && dependencies.ObservedPropertyObjectPU === undefined) {
+    const feedbackProperties = createArkUIPropertyRuntimeProbe();
+    const originalHooks = hooks;
+    dependencies = { ...feedbackProperties.sdk, ...dependencies };
+    hooks = { ...feedbackProperties.hooks, ...originalHooks };
+  }
   const members = names.map(name => {
     const member = struct.members.find(n => n.name?.getText(original) === name);
     assert.ok(member, `production member ${name}`);

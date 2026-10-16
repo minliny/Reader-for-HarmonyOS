@@ -327,8 +327,12 @@ await check('a failed replacement keeps the original identity and search parent 
   const originalBook = t.h.detailBook, originalSession = t.h.remoteReadingSession;
   t.gates.set(t.second.sourceId, failed);
   await pick(t,t.second);
-  failed.reject(new Error('target TOC failure')); await settle();
-  assert.equal(t.h.route, 'reading'); assert.equal(t.h.sourceSwitchFailureMessage, 'target TOC failure'); assert.equal(t.h.detailReturnRoute, 'search');
+  const diagnostic = new Error('target TOC failure');
+  failed.reject(diagnostic); await settle();
+  assert.equal(t.h.route, 'reading'); assert.equal(t.h.sourceSwitchFailureMessage, '换源暂时未完成，请重试或选择其他书源。'); assert.equal(t.h.detailReturnRoute, 'search');
+  assert.equal(t.h.sourceSwitchHost.lastFailure, diagnostic, 'the actual owner retains the original internal diagnostic');
+  assert.doesNotMatch(JSON.stringify(t.h.sourceSwitchHost.current()), /target TOC failure/,
+    'the public snapshot must not expose the internal acquisition error');
   assert.equal(t.h.detailBook, originalBook); assert.equal(t.h.remoteReadingSession, originalSession);
   noUnexpectedWrites(t);
 });

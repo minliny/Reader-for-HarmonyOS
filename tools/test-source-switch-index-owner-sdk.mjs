@@ -1,10 +1,14 @@
-import {makeIndex,failureChain,sourceSwitchLiveSdk} from './lib/source-switch-sdk-consumer.mjs';
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
+import {makeIndex as compileIndex,failureChain,sourceSwitchLiveSdk} from './lib/source-switch-sdk-consumer.mjs';
+import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './lib/general-settings-owner-probe.mjs';
+import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
+import {actualBookshelfOperationTypes,actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
 import {actualCacheAuthorityFixture} from './lib/reading-directory-sdk-consumer.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
-import {fixture,settle as settleOwner,deferred,origin,target,session,rawCandidate,Runtime,read,gatewayExports,setCurrentRuntime} from './lib/source-switch-owner-probe.mjs';
+import {fixture,settle as settleOwner,deferred,origin,target,session,rawCandidate,Runtime,read,gatewayExports,setCurrentRuntime,Core} from './lib/source-switch-owner-probe.mjs';
 const {ProductionHost:ReadingEntryHost,setRuntime:setEntryRuntime}=await import('./lib/reading-entry-owner-probe.mjs');
 const evidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
 import * as horizontal from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
@@ -12,6 +16,37 @@ import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowM
 import * as authorMetadata from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
 const {ReaderNativeAlertOwner}=await import('./lib/reader-native-alert-sdk-probe.mjs');
 const {ReadingOfflineHost}=await import('./lib/reader-reading-owner-sdk-probe.mjs');
+// Compile the fixed production SDK graph once. Every scenario still receives
+// its own actual V1 properties, native child tables, Runtime and source owner.
+const sourceOwners=new WeakMap(),cacheStores=new WeakMap();
+const sourceHostPort={forRuntime(runtime){const type=sourceOwners.get(runtime);assert.ok(type);return type.forRuntime(runtime);}};
+class CacheStorePort{constructor(runtime,...args){const Store=cacheStores.get(runtime);assert.ok(Store,'cleanup uses its own sandbox authority');return new Store(runtime,...args);}}
+const factorySource=compileIndex.toString(),initializerStart=factorySource.indexOf(' Object.assign(index,'),
+ initializerEnd=factorySource.indexOf(' const acquire=f.runtime.bookAcquisitions;');
+assert.ok(initializerStart>=0&&initializerEnd>initializerStart,'execute the unchanged finite fixture initializer');
+const initializeIndex=new Function('index','f','Runtime','origin','ReaderNativeAlertOwner','actualBookshelfOperationTypes',
+ 'actualBookshelfHostField','actualSourceManagementTypes','actualSourceManagementHostField','actualGeneralSettingsTypes',
+ 'actualGeneralSettingsHostField','Core','navigation','reading',factorySource.slice(initializerStart,initializerEnd));
+let indexTemplate,indexEmissions=0;
+const indexActors=[];
+function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
+ sourceOwners.set(f.runtime,f.Constructor);if(cacheAuthority)cacheStores.set(f.runtime,cacheAuthority.types.CacheClearOperationIntentStore);
+ setEntryRuntime(f.runtime);
+ let result;
+ if(indexTemplate===undefined){indexEmissions++;indexTemplate=compileIndex({...f,Constructor:sourceHostPort},{navigation,reading,
+   cacheAuthority:{types:{CacheClearOperationIntentStore:CacheStorePort}}});result=indexTemplate;}
+ else{
+  const {p,leafDeps}=indexTemplate,index=new indexTemplate.index.constructor(undefined,{sourceSwitchScopeId:0});
+  initializeIndex(index,f,Runtime,origin,ReaderNativeAlertOwner,actualBookshelfOperationTypes,actualBookshelfHostField,
+   actualSourceManagementTypes,actualSourceManagementHostField,actualGeneralSettingsTypes,actualGeneralSettingsHostField,Core,navigation,reading);
+  const acquire=f.runtime.bookAcquisitions;f.runtime.bookAcquisitions=()=>({...acquire(),readingProjectionRevision:()=>0,setPreparationVisible(){}});
+  result={p,index,leafDeps,mount(){index.sourceSwitchOverlayContent();return p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchPanel).at(-1);},
+   rows:()=>p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchNovelRow)};
+ }
+ for(const old of indexActors){assert.notEqual(result.index,old);assert.notEqual(result.index.nodes,old.nodes);
+  assert.notEqual(result.index.__sourceSwitchState,old.__sourceSwitchState,'V1 state cells remain scenario-local');}
+ indexActors.push(result.index);return result;
+}
 const settle=async()=>{await settleOwner();await new Promise(setImmediate);await settleOwner();};
 async function waitForRetiredSourceCleanup(host,identity,previousGeneration,outcome){
  const deadline=performance.now()+15_000;
@@ -117,10 +152,29 @@ for(const mode of ['valid','stale-proof','wrong-book','wrong-author','target-ver
   assert.ok(message.length>0,mode);
   assert.equal(f.calls.filter(([method])=>method==='acquire').length,['wrong-target-author','registry-during-image'].includes(mode)?1:0);
   if(mode==='registry-during-image'){assert.equal(released.length,1);assert.match(message,/书源配置已变更/);}
+  const failedScope=x.index.sourceSwitchScopeId;
+  assert.equal(f.host.current().visible,false,'preparation retired discovery');
+  panel.onRefresh();await settle();
+  assert.equal(f.host.current().visible,true,'actual retry button binds a live owner');
+  assert.notEqual(x.index.sourceSwitchScopeId,failedScope);
+  const refreshedScope=x.index.sourceSwitchScopeId;
+  x.index.refreshSourceSwitch(failedScope);await settle();assert.equal(x.index.sourceSwitchScopeId,refreshedScope,'old button cannot reopen newer scope');
  }
  assert.equal(x.index.detailBook.author,'@Writer','proof recovery never mutates the rendered detail');
  assert.equal(f.calls.some(([method])=>['manga.sourceSwitch.commit','reading.progress.update','bookshelf.add'].includes(method)),false);
  checks.push('actual-cold-manga-SDK-'+mode);
+}
+for(const late of ['resolve','reject']){
+ const gate=deferred(),f=fixture({open:false,shared:true,preview:true,acquireGate:gate}),x=makeIndex(f);
+ x.index.openDetailSourceSwitch();await settle();const panel=x.mount(),row=x.rows().find(value=>value.candidate.sourceId==='new');
+ row.onSelect();await settle();assert.ok(f.calls.some(([method])=>method==='acquire'));
+ const preparing=x.mount();assert.equal(preparing.allowCancelWhileSwitching,true,'actual novel preview control admits cancellation after qualification');
+ const previous=x.index.sourceSwitchScopeId;preparing.onClose();assert.equal(x.index.sourceSwitchVisible,false);
+ x.index.openDetailSourceSwitch();await settle();const next=x.index.sourceSwitchScopeId;assert.notEqual(next,previous);
+ if(late==='resolve')gate.resolve();else gate.reject(Error('old preview failed'));await settle();
+ assert.equal(x.index.sourceSwitchVisible,true);assert.equal(x.index.sourceSwitchScopeId,next);assert.equal(x.index.sourceSwitchState.kind,'candidates');
+ assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
+ checks.push('actual-SDK-preview-preparation-close-reopen-before-late-'+late);
 }
 // The actual Index method must retain a proven author identity when its
 // reading session is gone, while refusing a different book or stale/raw proof.
@@ -251,7 +305,7 @@ for(const outcome of ['resolve','reject']){
 {
  const f=fixture({shared:true,open:false,preview:true,failAcquire:true}),x=makeIndex(f);
  x.index.openDetailSourceSwitch();await settle();const old=x.mount();old.onSelectCandidate(f.candidate());await settle();
- assert.equal(x.index.route,'reading');assert.equal(x.index.readingSessionActive,true);assert.equal(x.index.sourceSwitchFailureMessage,'body unavailable');
+ assert.equal(x.index.route,'reading');assert.equal(x.index.readingSessionActive,true);assert.equal(x.index.sourceSwitchFailureMessage,'换源暂时未完成，请重试或选择其他书源。');
  const oldScope=old.owner.sourceSwitchScopeId;const scope=x.index.sourceSwitchScopeId;
  assert.equal(f.host.current().scopeId,scope);const calls=f.calls.length;x.index.retryFailedSourceSwitch(oldScope-1);assert.equal(f.calls.length,calls);
  f.options.failAcquire=false;x.index.retryFailedSourceSwitch(scope);await settle();assert.ok(x.index.effects.some(e=>e.validated));
@@ -274,7 +328,7 @@ for(const outcome of ['resolve','reject']){
  const chain=failureChain(x),old=chain.render(),oldScope=x.index.sourceSwitchScopeId;
  x.index.nextNavigationGeneration();x.index.bindSourceSwitchReader(f.host);assert.notEqual(x.index.sourceSwitchScopeId,oldScope);
  chain.o.updateStateVars({sourceSwitchScopeId:x.index.sourceSwitchScopeId,sourceSwitchFailureMessage:x.index.sourceSwitchFailureMessage});
- const count=f.calls.length;old.retry();old.dismiss();await settle();assert.equal(f.calls.length,count);assert.equal(f.host.current().failureMessage,'body unavailable');
+ const count=f.calls.length;old.retry();old.dismiss();await settle();assert.equal(f.calls.length,count);assert.equal(f.host.current().failureMessage,'换源暂时未完成，请重试或选择其他书源。');
  f.options.failAcquire=false;chain.render().retry();await settle();assert.ok(x.index.effects.some(e=>e.validated));
  assert.equal(f.calls.filter(([m])=>m==='acquire').length,2);assert.equal(f.calls.filter(([m])=>m==='source.switch.commit').length,0);
  checks.push('actual-Index-ReaderShell-retained-ReadingExperience-failure-lexical-scope-recovery');
@@ -486,8 +540,8 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
  }
  // Select the exact Index -> retained ReaderShell payload rather than a test
  // copy, to catch mistakes between the book field and the shell property.
- const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
- const ts=require(sdk+'/node_modules/typescript'),tree=ts.createSourceFile('/tmp/SourceSwitchMetadataBridge.ets',indexSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+ const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
+ const ts=require(sdk+'/node_modules/typescript'),tree=ts.createSourceFile(virtualFilePath('SourceSwitchMetadataBridge.ets'),indexSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
  let call;const visit=n=>{if(ts.isCallExpression(n)&&n.expression.getText(tree)==='ReaderShell')call=n;ts.forEachChild(n,visit);};visit(tree);
  const names=new Set(['latestChapterTitle','bookTitle','bookAuthor','bookCoverUrl','sourceName','sourceId','contentKind']);
  const fields=call.arguments[0].properties.filter(f=>names.has(f.name?.getText(tree))).map(f=>f.getText(tree));assert.equal(fields.length,names.size);
@@ -499,4 +553,5 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
  assert.equal(actors.length,25,'both formats, both schemes and both motion states still execute all 24 independent host actors plus the metadata carrier');
  checks.push('actual-Index-ReaderShell-Panel-latest-chapter-payload-and-shared-drawer-both-content-hosts');
 }
-console.log(JSON.stringify({status:'PASS',checks,scope:'actual Host/Gateway/full durable intent + Index delegates/seam + SDK Window/shared Row and metadata/drawer host builders; controlled runtime/native file boundary. Native layout/removal/focus/device remain separate.'}));
+assert.equal(indexEmissions,1,'the immutable SDK graph is emitted once; all original independent actors still execute');
+console.log(JSON.stringify({status:'PASS',checks,indexActors:indexActors.length,indexEmissions,scope:'actual Host/Gateway/full durable intent + Index delegates/seam + SDK Window/shared Row and metadata/drawer host builders; controlled runtime/native file boundary. Native layout/removal/focus/device remain separate.'}));

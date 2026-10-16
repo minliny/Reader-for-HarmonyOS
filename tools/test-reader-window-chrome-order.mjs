@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } from './lib/manga-directory-adaptive-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -8,6 +9,7 @@ import * as metrics from '../entry/src/main/ets/features/common/ReaderWindowMetr
 import {READER_THEME_DEFINITIONS, readerAppColor, findReaderTheme} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import {readerAppearanceThemeStyle, readerAppearanceChromeTone} from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
+import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
 import {mangaSurfaceSdkDependencies,mangaSurfaceBoundedControls} from './lib/manga-surface-sdk-probe.mjs';
@@ -15,13 +17,27 @@ registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith(
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
 const controlSession=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
 const {readerControlHostVisible}=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
-const {createDefaultReaderSettingsSnapshot}=await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+const readerSettingsState=await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+const {createDefaultReaderSettingsSnapshot}=readerSettingsState;
 const require=createRequire(import.meta.url);
-const ts=require(((process.env.READER_ETS_LOADER_ROOT ?? ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader')) + '/node_modules/typescript'));
+const ts=require(((resolveEtsLoaderRoot()) + '/node_modules/typescript'));
 const base=new URL('../entry/src/main/ets/',import.meta.url);
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function settle(){for(let i=0;i<8;i++)await tick();}
 function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};}
+async function confirmedSettingsGateway(initial,saved){
+ const runtime={getUIAbilityContext:()=>({})},Runtime=runtimeOwnerIdentityProbe(()=>runtime),cache=new Map(),durable=new Map();
+ const source=readFileSync(new URL('features/reading/ReaderSettingsGateway.ts',base),'utf8').replace(/^import[\s\S]*?;\n/gm,'');
+ const out=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});
+ assert.deepEqual(out.diagnostics,[],'the complete production settings Gateway supplies accepted/saved facts');
+ const store={async get(key,fallback){return cache.get(key)??fallback;},async put(key,value){cache.set(key,value);saved.push(JSON.parse(value));},
+   async flush(){for(const[key,value]of cache)durable.set(key,value);}};
+ const exported={};new Function('exports',...Object.keys(readerSettingsState),'ReaderRuntimeOwner','ReaderThemeHost','preferences',out.outputText)(
+   exported,...Object.values(readerSettingsState),Runtime,{prepareUserChange:async()=>{}},{getPreferences:async()=>store});
+ const gateway=new exported.ReaderSettingsGateway(runtime);await gateway.update(initial);saved.length=0;
+ assert.equal(gateway.writeFacts().pendingReconciliation,false);assert.deepEqual(gateway.writeFacts().saved,JSON.parse(durable.get('snapshot')));
+ return gateway;
+}
 function fixture(){
  const app=new Map();globalThis.AppStorage={setOrCreate:(k,v)=>app.set(k,v)};
  const displayInfo={id:0,rotation:0,densityPixels:1,scaledDensity:1};
@@ -37,7 +53,8 @@ function fixture(){
  const module={exports:{}};new Function('require','module','exports',out)(id=>{assert.ok(id in deps,id);return deps[id];},module,module.exports);
  const {ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P}=module.exports;
  const E=productionMotionMethods(new URL('features/reading/LocalReadingExperience.ets',base),
-   ['applyWindowChrome','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor','captureReaderSettingsAdmission','notifyReaderSettingsSavePending'],{
+   ['applyWindowChrome','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor','captureReaderSettingsAdmission','notifyReaderSettingsSavePending',
+    'persistReaderSettingsSnapshot','settleReaderPreferenceNotice','setReaderPreferenceNotice'],{
    ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P,readerAppearanceThemeStyle,readerAppearanceChromeTone});
  function windowPort(options={}){
    const zero={left:0,top:0,width:0,height:0};
@@ -76,9 +93,9 @@ const baselineShell=readFileSync(new URL('./fixtures/manga-system-bars-r5/Reader
 // source notice. The referenced vendor licensing remains in the project tree.
 assert.equal(sha256(baselineManga),'0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897','exact pre-R6 Manga baseline');
 assert.equal(sha256(baselineShell),'ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba','exact pre-R6 Shell baseline');
-const sdkRoot='/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot=resolveEtsLoaderRoot();
 function componentMembers(source){
- const file=ts.createSourceFile('/tmp/MangaChromeMemberSelection.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions);
+ const file=ts.createSourceFile(virtualFilePath('MangaChromeMemberSelection.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions);
  assert.deepEqual(file.parseDiagnostics,[]);
  const component=file.statements.find(n=>n.members?.some(m=>m.name?.getText(file)==='build'));
  return{file,component,names:new Set(component.members.map(m=>m.name?.getText(file)))};
@@ -545,16 +562,21 @@ await check('actual cutout setting true to false preserves immersion and measure
  for(const t of READER_THEME_DEFINITIONS)for(const initiallyOpen of [false,true]){
    const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
    let controls=initiallyOpen;const saved=[];
+   const initial={...createDefaultReaderSettingsSnapshot(),extendIntoCutout:true,hideNavigationBar:false,screenDirection:'system'};
+   const gateway=await confirmedSettingsGateway(initial,saved);
    const e=Object.assign(new f.E(),{windowChromeActive:true,windowChromeOverlayActive:false,appearanceSnapshot:{activeTheme:t.id},
-     readerSettingsSnapshot:{extendIntoCutout:true,hideNavigationBar:false,screenDirection:'system'},readerSettingsMutationGeneration:0,
+     readerSettingsSnapshot:initial,readerSettingsMutationGeneration:0,
      lifecycleToken:1,screenAwakeKeepScreenOn:false,ttsKeepScreenOn:false,controlsPresentedForWindow:()=>controls,
      configureReaderScreenAwakeLease(){},applyReaderSystemEventPolicy(){},isSessionActive:()=>true,
-     readerSettingsGateway:{update:async s=>{saved.push(s);}},reflowAfterWindowGeometryChange(){this.applyWindowChrome();},
+     readerSettingsGateway:gateway,reflowAfterWindowGeometryChange(){this.applyWindowChrome();},
      showReaderSettingsFailure(){assert.fail('unexpected settings failure');}});
    e.applyWindowChrome();await e.applyReaderWindowPolicy(e.readerSettingsSnapshot);await settle();
    assert.equal(f.C.metrics().statusBarHeight,48);
    if(!initiallyOpen)w.avoidTop={left:0,top:0,width:0,height:0}; // API ACK precedes visible-area event.
    e.commitReaderWindowSettings({...e.readerSettingsSnapshot,extendIntoCutout:false});await settle();
+   assert.equal(saved.length,1);assert.equal(gateway.writeFacts().pendingReconciliation,false);
+   assert.deepEqual(gateway.writeFacts().saved,e.readerSettingsSnapshot,'the actual Gateway confirms the same settings used by native chrome');
+   assert.equal(e.readerSettingsRecovery.visible,false,'confirmed persistence settles its delegated recovery view');
    assert.equal(saved.at(-1).extendIntoCutout,false);assert.equal(w.barEnabled.status,initiallyOpen,
      'cutout safety settings cannot show the system status bar during immersion');
    assert.equal(f.C.metrics().statusBarHeight,48,`${t.id}: show ACK must not erase measured band`);

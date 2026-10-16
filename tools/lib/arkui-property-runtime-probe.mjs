@@ -1,3 +1,4 @@
+import { resolveArkUIRuntime } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -7,8 +8,7 @@ import { createHash } from 'node:crypto';
  * V1 proxy handlers, value wrapping and recursive copying are all executed.
  */
 export function createArkUIPropertyRuntimeProbe() {
-  const path = process.env.READER_ARKUI_PREVIEW_RUNTIME ??
-    '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/previewer/common/bin/libace_compatible.dylib';
+  const path = resolveArkUIRuntime();
   const binary = readFileSync(path), marker = binary.indexOf(Buffer.from('class SynchedPropertyOneWayPU'));
   assert.ok(marker > 0, 'installed SDK embeds its property runtime');
   const source = binary.subarray(binary.lastIndexOf(0, marker) + 1, binary.indexOf(0, marker)).toString('utf8');
@@ -97,11 +97,13 @@ export function createArkUIPropertyRuntimeProbe() {
     sdk, hooks, reads, updates, copies, dependencies,
     source: { path, classesSha256: createHash('sha256').update(classes).digest('hex'),
       layer: 'actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels' },
-    flush() {
+    flush(acceptOwner = () => true) {
       let turns = 0;
       while (dirty.size) {
+        const next = [...dirty.entries()].find(([owner]) => acceptOwner(owner));
+        if (next === undefined) return;
         assert.ok(++turns < 100, 'bounded dependency delivery');
-        const [owner, ids] = dirty.entries().next().value;
+        const [owner, ids] = next;
         dirty.delete(owner); owner.replayOnly(ids);
       }
     },

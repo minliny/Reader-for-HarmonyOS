@@ -59,6 +59,8 @@ export struct LocalImportDialog {
   @Prop @Watch('onBatchChanged') batch: LocalImportBatch | undefined;
   @Prop @Watch('onPresentationChanged') reduceMotion: boolean = false;
   @Prop failureMessage: string = '';
+  @Prop selectionEnabled: boolean = true;
+  @Prop selectionBlockedMessage: string = '';
   @Prop recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppForeground') @Watch('onPresentationChanged') private foreground: boolean = true;
@@ -150,8 +152,9 @@ export struct LocalImportDialog {
   @Builder
   private fileSelectionActions() {
     ReaderBoundedSurfaceActions({ specId: 'local-file-selection',
-      primaryLabel: this.state === 'pickerOpening' ? '正在选择…' : '选择文件', primaryEnabled: this.state !== 'pickerOpening',
-      onAction: (id: string): void => { if (id === 'primary') this.onSelectFiles(); else this.onClose(); } });
+      primaryLabel: this.state === 'pickerOpening' ? '正在选择…' : this.selectionEnabled ? '选择文件' : '请稍候',
+      primaryEnabled: this.state !== 'pickerOpening' && this.selectionEnabled,
+      onAction: (id: string): void => { if (id === 'primary') { if (this.selectionEnabled) this.onSelectFiles(); } else this.onClose(); } });
   }
 
   @Builder
@@ -202,15 +205,16 @@ export struct LocalImportDialog {
         .borderRadius(14)
         // The illustrated drop zone is itself the primary picker affordance;
         // keep it equivalent to the explicit bottom action for touch users.
-        .enabled(this.state !== 'pickerOpening')
-        .onClick((): void => this.onSelectFiles());
+        .enabled(this.state !== 'pickerOpening' && this.selectionEnabled)
+        .onClick((): void => { if (this.selectionEnabled) this.onSelectFiles(); });
 
         Row({ space: TOK_SPACE_XS }) {
           Image((this.appThemeScheme === 'night' ? $r('app.media.import_info_theme_night') : $r('app.media.import_info')))
             .width(13)
             .height(13)
             .margin({ top: 2 });
-          Text(this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')
+          Text(this.selectionBlockedMessage.length > 0 ? this.selectionBlockedMessage :
+            this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')
             .layoutWeight(1)
             .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)
             .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)

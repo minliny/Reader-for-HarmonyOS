@@ -41,6 +41,8 @@ export function mangaUserError(code: string): string {
     case 'MANGA_RESOURCE_HOST_UNAVAILABLE': return '图片读取服务尚未就绪，请返回后重新打开。';
     case 'MANGA_IMAGE_FAILED':
     case 'MANGA_TILE_FAILED': return '图片暂时无法加载，请重试。';
-    default: return code;
+    case 'MANGA_CATALOG_REQUIRED': return '目录尚未准备好，请重新获取目录后打开章节。';
+    case 'MANGA_SESSION_IDENTITY_MISMATCH': return '当前阅读内容已变化，请返回后重新打开本书。';
+    default: return '漫画暂时无法加载，请重试；仍失败时可尝试切换书源。';
   }
 }

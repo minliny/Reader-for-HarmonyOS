@@ -32,7 +32,8 @@ function fixture(options = {}) {
     ensureCurrentContentMetrics: async () => true, admitChapterContentVersion() {}, retainCurrentChapterWindow() {},
     rebuildChapterImageIndexes() {}, configureRestoredAnchor() {}, hasMeasuredViewport: () => true,
     beginMeasurement: () => layouts.push('measured'), notifyPreservedContentRefresh() {},
-    requestCachedChapterRefresh: async () => true, fail: error => failures.push(error.message),
+    requestCachedChapterRefresh(_error, refresh) { this.cacheRefreshAction = refresh; },
+    resetForChapterSelection() {}, armFirstPageReadyDeadline() {}, fail: error => failures.push(error.message),
   });
   Object.defineProperty(owner, 'chapter', { get: () => publications.at(-1), set: value => publications.push(value) });
   return { owner, calls, failures, layouts, publications };
@@ -66,9 +67,12 @@ if (!baseline) {
     let attempts = 0; const layout = deferred();
     const f = fixture({ loadChapter: () => ++attempts === 1 ? Promise.reject(new RemoteChapterCacheRefreshError('refresh')) : Promise.resolve(sample) });
     const pending = f.owner.loadInitialChapter(1, layout.promise); await settle();
+    await pending;
+    assert.equal(f.calls.length, 1, 'cache recovery does not silently replace the body or hold acquisition');
+    f.owner.cacheRefreshAction(); await settle();
     assert.equal(f.calls.length, 2); assert.equal(f.calls[1][3], true);
     assert.equal(f.publications.length, 0); assert.equal(f.layouts.length, 0);
-    layout.resolve([]); await pending; assert.equal(f.layouts.length, 1); assert.deepEqual(f.failures, []);
+    layout.resolve([]); await settle(); assert.equal(f.layouts.length, 1); assert.deepEqual(f.failures, ['refresh']);
     report.cases.push({ case: 'accepted cache refresh', refreshedBeforeLayout: true, publicationsBeforeLayout: 0, finalMeasurements: 1 });
   }
   const unhandled = [];

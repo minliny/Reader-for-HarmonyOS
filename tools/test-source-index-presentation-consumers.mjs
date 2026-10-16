@@ -45,8 +45,8 @@ function runtime(){return{rows:[row()],calls:[],lost:false,readFail:0,pause:unde
   throw Error(method);
  },count(m){return this.calls.filter(c=>c.method===m).length;}};}
 function index(r,text=indexSource){
- const i=createReaderBuilderProbe(text,names,{ReaderRuntimeOwner:Runtime,SourceManagementPage:Child,JsonImportDialog:Child,deviceInfo:{deviceType:'phone'}},
-  {childSources:{SourceManagementPage:pageSource,JsonImportDialog:jsonSource}}).owner;
+ const i=createReaderBuilderProbe(text,names,{...sdk.deps,ReaderRuntimeOwner:Runtime,SourceManagementPage:Child,JsonImportDialog:Child,deviceInfo:{deviceType:'phone'}},
+  {...sdk.hooks,childSources:{SourceManagementPage:pageSource,JsonImportDialog:jsonSource}}).owner;
  Object.assign(i,{route:'source',navigationGeneration:1,detailShelfAdmissionMount:1,mountedRuntimeOwner:r,shelfReceiptRetired:false,rssInstanceIdentity:++sequence,
   sourceSources:[],sourceOperation:{action:'load',sourceId:''},sourceStatusKind:'idle',sourceStatusMessage:'',sourcePresentationIdentity:'',settingsSnapshot:{reduceMotion:false},
   jsonImportVisible:false,jsonImportGeneration:0,jsonImportContext:'bookSource',rulesPresentationIdentity:''});
@@ -115,15 +115,26 @@ for(const retirement of['nav','mount','unset']){
 }
 {
  const r=runtime();installed=r;const a=index(r);await a.open();let shown,returned=0;
- const p=createReaderBuilderProbe(indexSource,['showIndexAlert','showSourceImportResult','showSourceImportResultFromSearch','isCurrentRuntime'],
-  {ReaderRuntimeOwner:Runtime,ReaderNativeAlertOwner,hilog:{warn(){}},DOMAIN:1,errorMessageOf:e=>e.message}).owner;
- Object.assign(p,{route:'source',navigationGeneration:1,shelfReceiptRetired:false,nativeAlertOwner:new ReaderNativeAlertOwner(),
+ const p=createReaderBuilderProbe(indexSource,['showSourceImportResult','showSourceImportResultFromSearch','runSourceImportSearchAction','isCurrentRuntime'],
+  {...sdk.deps,ReaderRuntimeOwner:Runtime},sdk.hooks).owner;
+ Object.assign(p,{route:'source',navigationGeneration:1,shelfReceiptRetired:false,mountedRuntimeOwner:r,detailShelfAdmissionMount:1,
   sourceManagementSearchKeyword:'original',sourceManagementReturnTarget:'search',returnFromSourceManagement:()=>returned++,
   getUIContext:()=>({showAlertDialog:options=>{shown=options;}})});
  const id=a.i.sourcePresentationIdentity,current=()=>a.i.isCurrentSourceManagement(1,r,1,a.i.sourceHost,id);
+ const inlineAction=()=>{
+  const page=sdk.consumer(pageSource,['appThemeScheme','operation','statusKind','statusMessage','statusActionLabel','statusActionGeneration','onStatusAction','recovery','statusBanner'],
+   {readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView')},
+   {operation:{action:'load',sourceId:''},statusKind:p.sourceStatusKind,statusMessage:p.sourceStatusMessage,
+    statusActionLabel:p.sourceImportSearchActionLabel,statusActionGeneration:p.sourceImportSearchActionRevision,
+    onStatusAction:revision=>p.runSourceImportSearchAction(revision)});
+  page.contentFrame=()=>({width:350});page.statusBanner();
+  const button=sdk.walk(page).findLast(c=>c.specId==='source-management-retry'&&c.label==='重新搜索');
+  assert.ok(button,'actual inline source result action');return sdk.nodes(button).find(n=>n.onClick).onClick;
+ };
  p.showSourceImportResultFromSearch('书源导入完成','Core 已导入 1 个书源。',current);
- assert.equal(shown.secondaryButton.value,'用新书源搜索「original」');shown.secondaryButton.action();assert.equal(returned,1);
- p.showSourceImportResultFromSearch('书源导入完成','Core 已导入 1 个书源。',current);const old=shown.secondaryButton.action;
- const b=index(r);await b.open();old();assert.equal(returned,1,'real native owner rejects original Source lease after alive Index replacement');cases++;
+ assert.equal(shown,undefined);const first=inlineAction();first();first();assert.equal(returned,1);
+ p.showSourceImportResultFromSearch('书源导入完成','Core 已导入 1 个书源。',current);const old=inlineAction();
+ const b=index(r);await b.open();old();assert.equal(returned,1,'actual inline result rejects retired Source lease after alive Index replacement');cases++;
 }
+
 console.log(`PASS ${cases} actual Source Host/Gateway/shared runtime→Index scoped Builder→SDK page/ReaderToggle/JSON-local native actions: current/old physical/actual field payload/ACK/read/unknown/remount/getter/late picker/retirement/negative. Cold Core source receipts remain separately required.`);
