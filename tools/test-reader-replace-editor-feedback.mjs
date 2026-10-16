@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks } from 'node:module';
@@ -88,7 +89,7 @@ await check('same mounted footer reacts to mutation, uncertain writes and endpoi
 });
 await check('actual standalone settings Add action has no inherited reading scope',()=>{
   const settingsSource=readFileSync(new URL('../entry/src/main/ets/features/settings/RulesManagementPage.ets',import.meta.url),'utf8');
-  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdk=resolveEtsLoaderRoot();
   const syntax=createRequire(import.meta.url)(`${sdk}/lib/validate_ui_syntax.js`);
   const toggleSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderToggle.ets',import.meta.url),'utf8');
   syntax.componentCollection.customComponents.add('ReaderToggle');

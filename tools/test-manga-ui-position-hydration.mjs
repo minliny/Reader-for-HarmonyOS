@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -263,7 +264,7 @@ async function drain(){
   // Real installed SDK closures pass the replaced snapshot into the retained
   // detail and external catalog, then render the existing detail facts Builder.
   const require=createRequire(import.meta.url);
-  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdk=resolveEtsLoaderRoot();
   const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
   const ts=require(`${sdk}/node_modules/typescript`);
   const options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
@@ -274,7 +275,7 @@ async function drain(){
     syntax.componentCollection.customComponents.add(name);
     // Match the installed frontend's decorator prepass. @Watch between @Prop
     // and a field name must not erase that field from retained-child updates.
-    const tree=ts.createSourceFile(`/tmp/${name}PositionHydration.ets`,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+    const tree=ts.createSourceFile(virtualFilePath(`${name}PositionHydration.ets`),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
     assert.deepEqual(tree.parseDiagnostics,[]);
     const component=tree.statements.find(node=>node.name?.getText(tree)===name);
     assert.ok(component);
@@ -300,7 +301,7 @@ async function drain(){
       ReaderRuntimeOwner:runtimeAuthority,MangaSessionGateway:Gateway,
       AppStorage:{setOrCreate:(_key,value)=>writes.push(value)},
     },{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:directorySource}});
-  const emitted=ts.createSourceFile('/tmp/IndexPositionHydrationEmission.ts',output,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
+  const emitted=ts.createSourceFile(virtualFilePath('IndexPositionHydrationEmission.ts'),output,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
   const updatePayloads=[];
   const inspect=node=>{
     if(ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&

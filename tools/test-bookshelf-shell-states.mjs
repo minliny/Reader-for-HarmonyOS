@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
@@ -17,7 +18,7 @@ import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowM
 const root = resolve(import.meta.dirname, '..');
 const read = file => readFileSync(resolve(root, 'entry/src/main/ets', file), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const builders = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }

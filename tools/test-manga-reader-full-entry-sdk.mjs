@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -15,7 +16,7 @@ const sources = {
 // Match the SDK frontend's actual Builder-name prepass. Only the directory
 // branch runs: retained reader paint/source switch are explicit unrelated ports.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const componentMap = require(`${sdk}/lib/component_map.js`);
 for (const name of ['mangaSurface', 'sourceSwitchOverlayContent', 'overlayStatusBarUnderlay']) {
   assert.ok(new RegExp(`@Builder\\s+private ${name}\\(`).test(sources.shell), 'only real declared Builders enter the prepass');

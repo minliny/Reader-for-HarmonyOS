@@ -1,3 +1,4 @@
+import { localFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import * as autoPolicy from '../entry/src/main/ets/features/reading/ReaderAutoPageState.ts';
 import { ReaderAutoPageCoordinator } from '../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts';
@@ -9,7 +10,7 @@ import { ReaderPageChromeSnapshot } from '../entry/src/main/ets/features/reading
 import { copyReaderControlSessionState, createReaderControlSessionState } from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
 import { ReaderPageChromeMeasurements } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-const file=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url).pathname;
+const file=localFilePath(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url));
 const names=['toggleTts','stopTts','toggleAutoPage','startAutoPageSession','stopAutoPage','cancelPendingAutoPageStart',
   'cancelPendingTtsPlay','createTtsPlayIntent','isTtsPlayIntentCurrent',
   'captureControlPlaybackPresentation','isControlPlaybackPresentationCurrent','toggleSessionCapsule'];

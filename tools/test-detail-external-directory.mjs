@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes, registerHooks } from 'node:module';
@@ -111,7 +112,7 @@ for(const mutate of [h=>{h.requestedBookmarkAnchor.positionScope=undefined;},h=>
  host.detailToc[19].navigable=true;host.onDirectoryChapterSelected(19);let exits=0;host.readingExitRequest=()=>{exits++;host.readingSessionActive=false;host.route='detail';};host.onBackPress();assert.equal(exits,1);assert.equal(host.route,'detail');
 }
 // Actual SDK-generated external Builder: no reader child may be constructed.
-const require=createRequire(import.meta.url);const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url);const sdk=resolveEtsLoaderRoot();
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('BookDirectoryPage');syntax.propCollection.set('BookDirectoryPage',new Set(['sourceId','bookId','bookKind','contentKind','entries','catalogMessage','chapterStartBookmarkCreationEnabled']));
 syntax.componentCollection.customComponents.add('ReaderFullDirectory');syntax.propCollection.set('ReaderFullDirectory',new Set(['catalogContext','bookTitle','chapterTitle','entries','catalogMessage','directoryRecovery','currentChapterIndex','sourceId','mangaSearch','reduceMotion','offlineBookOperationActive','onSelectChapter','onSelectNavigationTarget','onSelectBookmark','bookmarkIdentity','onDownloadChapter','onDownloadBook','onClearBookOffline','onDeleteBookmarks','chapterStartBookmarkCreationEnabled','onCreateChapterStartBookmark','onSwitchSource','onExit','onReconcileBookmarks','onContinueBookmarks','onReconcileOffline','onContinueOffline']));

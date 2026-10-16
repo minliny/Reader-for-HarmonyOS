@@ -21,7 +21,8 @@ import {
   readFileSync, realpathSync, statSync, writeFileSync,
 } from 'node:fs';
 import { isIP } from 'node:net';
-import { basename, isAbsolute, parse, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { basename, isAbsolute, parse, resolve, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { setTimeout as delay } from 'node:timers/promises';
 import { acquireLease, canonicalServerKey, releaseLease, targetRef as serverRefHash } from './reader-hdc-lease.mjs';
@@ -279,7 +280,7 @@ async function acquireTargetLock(target, hdc, configuredServer) {
   // HDC session/channel state is shared by all targets on one server.
   const serverKey = canonicalServerKey(configuredServer || process.env.READER_HDC_SERVER_KEY || '127.0.0.1:8710');
   const serverRef = serverRefHash(serverKey);
-  const root = process.env.READER_HDC_LEASE_ROOT || '/private/tmp/reader-hdc-target-leases';
+  const root = process.env.READER_HDC_LEASE_ROOT || resolve(process.env.READER_LOCK_DIR || tmpdir(), 'reader-hdc-target-leases');
   const owner = {
     pid: process.pid, ppid: process.ppid, agentId: process.env.CODEX_AGENT_ID || process.env.AGENT_ID || 'unspecified',
     target, targetRef, serverKey, serverRef, hdc, command: ['probe-session'], startedAt: new Date().toISOString(), token: randomUUID(),
@@ -584,9 +585,9 @@ function selfTest() {
   assert.equal(pngExtent(png).bytes, png.length);
   assert.throws(() => pngExtent(Buffer.concat([png, Buffer.from('stale tail')])));
   assert.throws(() => pngExtent(png.subarray(0, png.length - 1)));
-  const directory = '/private/tmp/probe-self-test-evidence';
+  const directory = resolve(tmpdir(), 'probe-self-test-evidence');
   const plan = value => operationPlan({ preflightConfirmed: true, ...value }, directory);
-  const validArgs = ['--target', 'test-serial', '--hdc', '/absolute/hdc', '--server', '::ffff:127.0.0.1:8710', '--output-dir', directory];
+  const validArgs = ['--target', 'test-serial', '--hdc', resolve(tmpdir(), 'fixture-hdc'), '--server', '::ffff:127.0.0.1:8710', '--output-dir', directory];
   assert.equal(optionsFrom(validArgs).server, '::ffff:127.0.0.1:8710');
   assert.throws(() => optionsFrom([...validArgs, '--target', 'other']));
   assert.throws(() => optionsFrom(validArgs.map(value => value === 'test-serial' ? 'x; reboot' : value)));
@@ -631,7 +632,7 @@ function selfTest() {
   for (const path of ['/data/local/tmp/reader-control-ok.png; reboot', '/data/local/tmp/reader-control-../x.png', '/data/local/tmp/other.png', '/data/local/tmp/reader-control-ok.png/../x']) {
     assert.throws(() => plan({ op: 'recv', path }));
   }
-  assert.equal(plan({ op: 'recv', path: '/data/local/tmp/reader-control-ok.png' }).localPath, `${directory}/reader-control-ok.png`);
+  assert.equal(plan({ op: 'recv', path: '/data/local/tmp/reader-control-ok.png' }).localPath, join(directory, 'reader-control-ok.png'));
   assert.throws(() => plan({ op: 'screenCap', path: '/data/local/tmp/reader-control-ok.json' }));
   assert.deepEqual(plan({ op: 'start' }).args.slice(-3), ['--pb', 'readerControlMotionVerification', 'true']);
   assert.throws(() => plan({ op: 'start', bundle: 'other' }));
@@ -653,12 +654,12 @@ function selfTest() {
   assert.equal(operationPlan({ op: 'quit' }, directory).kind, 'quit');
   const down = { atMs: 0, action: 'DOWN', finger: 0, x: 100, y: 200 };
   const up = { ...down, atMs: 100, action: 'UP' };
-  const prepare = { op: 'prepareTouchSequence', elfPath: '/private/tmp/reader-control-touch-sequence',
+  const prepare = { op: 'prepareTouchSequence', elfPath: resolve(tmpdir(), 'reader-control-touch-sequence'),
     elfSha256: TOUCH_ELF_SHA256, width: 1320, height: 2856, display: 0, plan: [down, up] };
   assert.equal(plan(prepare).planText, '0 DOWN 0 100 200\n100 UP 0 100 200\n');
   assert.equal(plan({ ...prepare, plan: [down, { ...down, finger: 1 }, { ...up, action: 'CANCEL' },
     { ...up, action: 'CANCEL', finger: 1 }] }).planText.split('\n').length, 5);
-  for (const invalid of [{ elfSha256: '0'.repeat(64) }, { elfPath: '/tmp/other' }, { elfPath: 'reader-control-touch-sequence' },
+  for (const invalid of [{ elfSha256: '0'.repeat(64) }, { elfPath: resolve(tmpdir(), 'other') }, { elfPath: 'reader-control-touch-sequence' },
     { display: 16 }, { width: 0 }, { plan: [] }, { plan: [down] }, { plan: [down, down, up] },
     { plan: [up, down] }, { plan: [down, { ...up, atMs: 10001 }] }, { plan: [down, { ...up, x: 1320 }] },
     { plan: [down, { ...up, x: '1;reboot' }] }, { plan: [down, { ...up, action: 'CANCEL' }, down, up] },

@@ -1,3 +1,4 @@
+import { localFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -520,7 +521,7 @@ for (const mismatch of ['source', 'chapter']) await withControlDiagnostics(async
 }
 {
   const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-  const Entry = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url).pathname,
+  const Entry = productionMotionMethods(localFilePath(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url)),
     ['downloadDirectoryBook', 'submitReaderDownload'], { readingOfflineFailureHint, DOMAIN: 0, hilog: { warn() {} } });
   const f = fixture(), s = session(), opened = [], messages = [];
   const owner = { getDownloadCoordinator: () => f.coordinator };

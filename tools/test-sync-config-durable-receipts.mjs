@@ -1,3 +1,4 @@
+import { resolveOpenHarmonySdkRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
@@ -13,7 +14,7 @@ const continueOriginal=async x=>{const action=x.page().continueAction;assert.ok(
 const encode=value=>new TextEncoder().encode(JSON.stringify(value));
 // UUID generation is delegated to the installed platform; test injection uses
 // Node's standard UUID factory and never implements random generation.
-const utilApi=readFileSync('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/api/@ohos.util.d.ts','utf8');
+const utilApi=readFileSync(resolveOpenHarmonySdkRoot() + '/ets/api/@ohos.util.d.ts','utf8');
 assert.match(utilApi,/function generateRandomUUID\(entropyCache\??: boolean\): string/);
 assert.match(f.source('features/sync/SyncGateway.ts'),/util\.generateRandomUUID\(true\)/);
 {

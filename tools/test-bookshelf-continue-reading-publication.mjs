@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -13,7 +14,7 @@ const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, impor
 const indexSource = read('pages/Index.ets');
 const pageSource = read('features/bookshelf/BookshelfPage.ets');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const builders = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 for (const name of ['sectionAction', 'filterRow', 'projectionRow']) builders.add(name);

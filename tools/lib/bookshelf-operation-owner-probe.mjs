@@ -1,14 +1,13 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import {BookshelfReadOwner} from '../../entry/src/main/ets/features/bookshelf/BookshelfReadOwner.ts';
 import {projectOperationFacts} from '../../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import {classifyReaderSource} from '../../entry/src/main/ets/features/source/ReaderSourceCategory.ts';
 import * as sourceNames from '../../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts';
 import {readFileSync} from 'node:fs';
-import {createRequire} from 'node:module';
 import {BookRequestNotDispatchedError} from '../../entry/src/main/ets/app/BookRequestScheduler.ts';
 import {ReaderWriteEvidence} from '../../entry/src/main/ets/app/ReaderWriteEvidence.ts';
 import {isReaderCoreTransactionPendingError} from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript');
+const { ts } = installedEtsCompiler();
 export const bookshelfOperationSource=path=>readFileSync(new URL('../../entry/src/main/ets/'+path,import.meta.url),'utf8');
 export function bookshelfOperationClass(path,result,deps={}) {
  const text=bookshelfOperationSource(path).replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export (?:type )?\{[\s\S]*?\} from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,'');

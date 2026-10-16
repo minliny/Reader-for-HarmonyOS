@@ -1,3 +1,4 @@
+import { localFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -14,8 +15,8 @@ assert.equal(require('postcss/package.json').version, '8.5.29', 'CSS parser uses
 const spec = JSON.parse(readFileSync(new URL('visual.json', ui)));
 const reference = readFileSync(new URL('reference.css', ui), 'utf8');
 assert.equal(createHash('sha256').update(reference).digest('hex'), spec.reference.sha256);
-const baseline = postcss.parse(reference, { from: new URL('reference.css', ui).pathname, map: { prev: false } });
-const generated = postcss.parse(readFileSync(new URL('visual.generated.css', ui), 'utf8'), { from: new URL('visual.generated.css', ui).pathname, map: { prev: false } });
+const baseline = postcss.parse(reference, { from: localFilePath(new URL('reference.css', ui)), map: { prev: false } });
+const generated = postcss.parse(readFileSync(new URL('visual.generated.css', ui), 'utf8'), { from: localFilePath(new URL('visual.generated.css', ui)), map: { prev: false } });
 function declaration(ast, selector, property) {
   let value;
   ast.walkRules(selector, rule => { rule.walkDecls(property, decl => { value = decl.value; }); });

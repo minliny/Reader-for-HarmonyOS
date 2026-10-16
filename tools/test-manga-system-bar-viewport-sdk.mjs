@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -6,7 +7,7 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
 import {mangaSurfaceSdkDependencies, mountMangaViewportBuilder,mangaSurfaceBoundedControls} from './lib/manga-surface-sdk-probe.mjs';
 import {createDefaultReaderWindowMetrics,ReaderInsetsVp,ReaderRectVp,readerInteractiveSafeInsets,readerContentSafeTop} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
 const componentMap=require(`${sdk}/lib/component_map.js`);
@@ -20,7 +21,7 @@ const sha=text=>createHash('sha256').update(text).digest('hex');
 assert.equal(sha(baseline),'f84e5289f30711f31b9c7df2999fdba30dc6af4d175d6100c0e0bfb801ee3448');
 assert.equal(sha(indexBaseline),'0e54a722f8bd7da88e50acd021e58f1380cfdd945608b6ea5938ab68962692c5');
 function parse(text,name){
- const tree=ts.createSourceFile('/tmp/MangaFullWindowSdk.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ const tree=ts.createSourceFile(virtualFilePath('MangaFullWindowSdk.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  assert.deepEqual(tree.parseDiagnostics,[]);const type=tree.statements.find(n=>n.name?.getText(tree)===name);
  assert.ok(type);return{tree,type,names:type.members.map(n=>n.name?.getText(tree)).filter(Boolean)};
 }

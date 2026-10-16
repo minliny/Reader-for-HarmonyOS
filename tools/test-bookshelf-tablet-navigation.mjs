@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -22,7 +23,7 @@ assert.match(shellText, /showTabletRail:\s*!this\.showBottomNav\(\),\s*railVaria
 assert.match(mainText, /MainTabBar\(\{[\s\S]*vertical: true, railVariant: this\.railVariant/, 'actual main shell owns the vertical navigation');
 
 function runNavigation(mainSource=mainText) {
-const sdkRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot=resolveEtsLoaderRoot();
 createRequire(import.meta.url)(sdkRoot+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('BookshelfShell',new Set(['content']));
 const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
 Object.assign(sdk.childSources, { MainTabShell: mainSource, MainTabBar: barText, BookshelfShell: shellText, BookshelfMoreMenu: read('features/bookshelf/BookshelfMoreMenu.ets') });

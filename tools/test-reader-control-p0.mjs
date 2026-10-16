@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -10,13 +11,12 @@ const read = (path) => readFileSync(resolve(repo, path), 'utf8');
 // Parse the installed SDK's actual ETS call/object syntax. A file-wide count
 // cannot prove that each existing reading owner receives the setting.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const etsOptions = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const shellMotionOwners = ['ReadingExperience', 'ReaderFullDirectory', 'SourceSwitchPanel', 'MangaReadingSurface'];
 function assertShellReduceMotionWiring(source) {
-  const tree = ts.createSourceFile('/tmp/ReaderShellMotionWiring.ets', source,
+  const tree = ts.createSourceFile(virtualFilePath('ReaderShellMotionWiring.ets'), source,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, etsOptions);
   assert.equal(tree.parseDiagnostics.length, 0, 'ReaderShell production ETS parses');
   const owners = new Map(shellMotionOwners.map(name => [name, []]));
@@ -279,7 +279,7 @@ for (const owner of assertShellReduceMotionWiring(shell)) {
     new RegExp(`${owner.name} receives the live ReaderShell reduceMotion setting`));
 }
 function assertReadingVisibilityDelegation(candidate, scaffold) {
-  const tree = ts.createSourceFile('/tmp/ReaderShellVisibility.ets', candidate,
+  const tree = ts.createSourceFile(virtualFilePath('ReaderShellVisibility.ets'), candidate,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, etsOptions);
   assert.deepEqual(tree.parseDiagnostics, []);
   const calls=[];

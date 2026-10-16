@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -11,7 +12,7 @@ import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeR
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const document=JSON.stringify({bookSourceUrl:'https://index-original.test',bookSourceName:'Original',enabled:true});
 const id='https://index-original.test';
-const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const loader=resolveEtsLoaderRoot();
 const syntax=createRequire(import.meta.url)(loader+'/lib/validate_ui_syntax.js');
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 for(const [name,path] of [['SourceManagementPage','features/source/SourceManagementPage.ets'],['SourceToolsPage','features/source/SourceToolsPage.ets']]){

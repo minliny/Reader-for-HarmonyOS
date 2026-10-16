@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -18,10 +19,10 @@ const stageFile = new URL('../entry/src/main/ets/features/reading/ReaderPageTurn
 const lreSource = readFileSync(lreFile, 'utf8'), stageSource = readFileSync(stageFile, 'utf8');
 const measurementModelsSource = readFileSync(new URL('ReadingMeasurementModels.ets', lreFile), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 function actualClass(source, name, dependencies = {}) {
-  const tree = ts.createSourceFile('/tmp/AppearancePage.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  const tree = ts.createSourceFile(virtualFilePath('AppearancePage.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   const node = tree.statements.find(n => ts.isClassDeclaration(n) && n.name?.getText(tree) === name);
   assert.ok(node, name);
   return new Function(...Object.keys(dependencies), stripTypeScriptTypes(node.getText(tree)).replace(/^export /, '') + `;return ${name};`)(...Object.values(dependencies));

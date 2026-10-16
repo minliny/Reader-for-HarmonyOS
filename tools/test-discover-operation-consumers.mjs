@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -16,7 +17,7 @@ const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),...load('app/Ht
 const SourceGateway=load('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner,isReaderCoreTransactionPendingError:()=>false,...helpers});
 const DiscoverGateway=load('features/discover/DiscoverGateway.ts','DiscoverGateway',{ReaderRuntimeOwner});
 const {DiscoverOrchestrator,EMPTY_DISCOVER_PRESENTATION}=load('features/discover/DiscoverOrchestrator.ets','{DiscoverOrchestrator,EMPTY_DISCOVER_PRESENTATION}',{DiscoverGateway,SourceGateway,ReaderRuntimeOwner,projectOperationFacts,hilog:{error(){}},...helpers});
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader',syntax=require(sdk+'/lib/validate_ui_syntax.js');
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot(),syntax=require(sdk+'/lib/validate_ui_syntax.js');
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 for(const [name,p] of [['DiscoverPage','features/discover/DiscoverPage.ets'],['ReaderRecoveryNotice','features/common/ReaderRecoveryNotice.ets'],['ReaderRecoveryAction','features/common/ReaderRecoveryAction.ets']]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(p).matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(m=>m[1])));}
 const clone=v=>structuredClone(v),tick=()=>new Promise(r=>setImmediate(r));

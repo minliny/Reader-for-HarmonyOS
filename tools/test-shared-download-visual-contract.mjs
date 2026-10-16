@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 // Deterministic source/SDK-attribute evidence only. This test never runs a
 // browser, performs native layout, paints glyphs, builds a HAP or uses a VM.
 import assert from 'node:assert/strict';
@@ -98,7 +99,7 @@ assert.deepEqual({ ...visual.sharedDownloadTextScale(13, 21, NaN) }, { fontSize:
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/downloads/SharedDownloadPage.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(sdk + '/node_modules/typescript');
 const tree = ts.createSourceFile('SharedDownloadPage.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS);
 const page = tree.statements.find(node => node.name?.getText(tree) === 'SharedDownloadPage');

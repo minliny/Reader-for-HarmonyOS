@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -605,7 +606,7 @@ console.log('PASS real Surface/Gateway/Controller failed changed-content reopen 
  const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
  const surfaceSource=readFileSync(new URL('MangaReadingSurface.ets',root),'utf8');
  const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/ReaderShell.ets',import.meta.url),'utf8');
- const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+ const sdk=resolveEtsLoaderRoot();
  const syntax=createRequire(import.meta.url)(`${sdk}/lib/validate_ui_syntax.js`);
  syntax.componentCollection.customComponents.add('MangaReadingSurface');
  syntax.propCollection.set('MangaReadingSurface',new Set([...surfaceSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match=>match[1])));

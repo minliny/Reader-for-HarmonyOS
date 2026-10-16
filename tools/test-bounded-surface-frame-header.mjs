@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -9,9 +10,9 @@ const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}`,import.met
 const source=read('features/source/SourceSwitchWindow.ets'),tts=read('features/reading/ReaderTtsConfigOverlay.ets');
 // SDK lowering alone does not diagnose incompatible inherited properties.
 // Compare real business callbacks with the installed CustomComponent API.
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript');
-const api=ts.createSourceFile('/tmp/common.d.ts',readFileSync(resolve(sdk,'../../component/common.d.ts'),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
+const api=ts.createSourceFile(virtualFilePath('common.d.ts'),readFileSync(resolve(sdk,'../../component/common.d.ts'),'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
 const declarations=new Map(api.statements.filter(ts.isClassDeclaration).map(node=>[node.name.text,node]));
 const inherited=new Set(),visited=new Set();
 function collectInherited(name){
@@ -22,7 +23,7 @@ function collectInherited(name){
 collectInherited('CustomComponent');assert.ok(inherited.has('onDragStart')&&inherited.has('onDragEnd'),'installed SDK reserves both native drag APIs');
 const headerSource=read('features/common/ReaderBoundedSurfaceHeader.ets');
 function verifyBusinessCallbacks(candidate){
-  const parsed=ts.createSourceFile('/tmp/ReaderBoundedSurfaceHeader.ets',candidate,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+  const parsed=ts.createSourceFile(virtualFilePath('ReaderBoundedSurfaceHeader.ets'),candidate,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
   const header=parsed.statements.find(node=>node.name?.text==='ReaderBoundedSurfaceHeader');assert.ok(header);
   for(const member of header.members.filter(node=>ts.isPropertyDeclaration(node)&&node.type&&ts.isFunctionTypeNode(node.type)))
     assert.equal(inherited.has(member.name.getText(parsed)),false,'business callback shadows ArkUI CustomComponent API: '+member.name.getText(parsed));

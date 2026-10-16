@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -17,9 +18,9 @@ import { findReaderTheme } from '../entry/src/main/ets/features/common/ReaderThe
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const source = readFileSync(new URL('features/manga/MangaReadingSurface.ets', root), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
-const tree = ts.createSourceFile('/tmp/MangaRollbackPaintProbe.ets', source, ts.ScriptTarget.Latest, true,
+const tree = ts.createSourceFile(virtualFilePath('MangaRollbackPaintProbe.ets'), source, ts.ScriptTarget.Latest, true,
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length, 0);
 const component = tree.statements.find(node => node.name?.getText(tree) === 'MangaReadingSurface');
@@ -28,7 +29,7 @@ const classText = name => tree.statements.find(node => node.name?.getText(tree) 
 const DataSource = new Function('MangaStripProjection', `${stripTypeScriptTypes(classText('MangaStripDataSource'))};return MangaStripDataSource`)(MangaStripProjection);
 const MangaLayoutFrame = new Function('FrameCallback', `${stripTypeScriptTypes(classText('MangaLayoutFrame'))};return MangaLayoutFrame`)(class {});
 const windowSource = readFileSync(new URL('app/ReaderWindowCoordinator.ts', root), 'utf8');
-const windowTree = ts.createSourceFile('/tmp/MangaRollbackWindowValues.ts', windowSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+const windowTree = ts.createSourceFile(virtualFilePath('MangaRollbackWindowValues.ts'), windowSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const windowValue = name => new Function('findReaderTheme', `${stripTypeScriptTypes(windowTree.statements.find(node => node.name?.getText(windowTree) === name).getText(windowTree).replace(/^export /, ''))};return ${name}`)(findReaderTheme);
 const ReaderWindowChromeStyle = windowValue('ReaderWindowChromeStyle'), ReaderWindowPolicy = windowValue('ReaderWindowPolicy');
 function load(name, dependencies = {}) {

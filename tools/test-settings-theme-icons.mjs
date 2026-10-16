@@ -1,9 +1,10 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 const source=readFileSync(new URL('../entry/src/main/ets/features/settings/SettingsPage.ets',import.meta.url),'utf8');
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(sdk+'/lib/validate_ui_syntax.js'),ts=require(sdk+'/node_modules/typescript');
 for(const [name,props] of [['CategoryRow',['icon','label']],['ReaderToggle',['value','specId','inputIdentity','accessibilityLabel','actionEnabled','isBusy']]]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set(props));}
 syntax.builderParamObjectCollection.set('CategoryRow',new Set(['content']));

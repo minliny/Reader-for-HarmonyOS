@@ -1,3 +1,4 @@
+import { resolveHostTool } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -10,7 +11,7 @@ const root = mkdtempSync(resolve(tmpdir(), 'reader-authority-test-'));
 try {
   writeFileSync(resolve(root, 'openssl.cnf'), '[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=Reader signing test\n[ext]\nbasicConstraints=critical,CA:false\nkeyUsage=digitalSignature\n');
   for (const name of ['approved', 'other']) {
-    execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
+    execFileSync(resolveHostTool('openssl'), ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
       '-config', resolve(root, 'openssl.cnf'), '-keyout', resolve(root, `${name}.key`),
       '-out', resolve(root, `${name}.cer`)], { stdio: 'ignore' });
   }

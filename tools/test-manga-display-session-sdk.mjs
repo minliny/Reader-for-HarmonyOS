@@ -1,11 +1,12 @@
+import { localFilePath, resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const loader = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const loader = resolveEtsLoaderRoot();
 const ts = require(`${loader}/node_modules/typescript`), checker = require(`${loader}/lib/ets_checker.js`);
-const path = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url).pathname;
+const path = name => localFilePath(new URL(`../entry/src/main/ets/${name}`, import.meta.url));
 function tree(name) { return ts.createSourceFile(path(name), readFileSync(path(name), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS); }
 function declarations(file, names) { return file.statements.filter(node => names.includes(node.name?.text)).map(node => node.getText(file)).join('\n'); }
 function members(file, className, names) {
@@ -47,7 +48,7 @@ ${members(runtime, 'ReaderRuntimeOwner', ['mangaDisplaySessions','nextMangaDispl
 }
 ${gateway}
 `;
-const virtualPath = '/tmp/ReaderMangaDisplaySessionsSdk.ts';
+const virtualPath = virtualFilePath('ReaderMangaDisplaySessionsSdk.ts');
 const options = { ...checker.compilerOptions,
   ets: { ...checker.compilerOptions.ets, libs: [`${loader}/declarations/index-full.d.ts`] },
   target: ts.ScriptTarget.ES2021, lib: ['lib.es2021.d.ts'], module: ts.ModuleKind.CommonJS,

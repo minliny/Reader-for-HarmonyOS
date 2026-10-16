@@ -1,6 +1,9 @@
+async function main() {
 // One-time reviewed migration utility; palette values remain in Reader-UI/theme/registry.json.
 const fs=require('fs'),path=require('path');
-const sdk=process.env.READER_ETS_LOADER_ROOT||'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const sdk=resolveEtsLoaderRoot();
+if (process.argv.includes('--environment-check')) { console.log(JSON.stringify({ status: 'PASS', etsLoader: sdk })); return; }
 const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
 const root=path.resolve(__dirname,'../entry/src/main/ets'), registryPath=path.resolve(__dirname,'../../Reader-UI/theme/registry.json');
 const registry=JSON.parse(fs.readFileSync(registryPath,'utf8'));
@@ -39,7 +42,7 @@ let count=0;const bindingRows=[];
 function scan(dir){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){const file=path.join(dir,ent.name);if(ent.isDirectory())scan(file);else if(file.endsWith('.ets')&&!skipFiles.has(ent.name)&&(!ownedFiles.has(ent.name)||process.argv.includes('--include-shared'))){
  let source=fs.readFileSync(file,'utf8');const tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);if(tree.parseDiagnostics.length)throw Error('ETS_PARSE '+file);
  const edits=[],structs=new Map(),defaults=new Map();
- const relative=path.relative(root,file);
+ const relative=path.relative(root,file).split(path.sep).join('/');
  function visit(n,struct,member){
   if(ts.SyntaxKind[n.kind]==='StructDeclaration'){struct=n;structs.set(n,{used:false,scheme:'appThemeScheme'});const declared=n.members.find(m=>m.getText(tree).includes("@StorageLink('readerAppScheme')"));if(declared)structs.get(n).scheme=declared.name.text;}
   if(struct&&n.parent===struct&&n.name)member=n.name.getText(tree);
@@ -74,3 +77,6 @@ scan(root);fs.writeFileSync(registryPath,JSON.stringify(registry,null,2)+'\n');
 const output=path.resolve(__dirname,'../evidence/2026-09-13-current-gap-register/theme-consumer-bindings.json');
 let previous=[];if(fs.existsSync(output))previous=JSON.parse(fs.readFileSync(output,'utf8'));
 fs.writeFileSync(output,JSON.stringify([...previous,...bindingRows],null,2)+'\n');console.log('Migrated components files:',count,'bindings:',bindingRows.length);
+
+}
+main().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });

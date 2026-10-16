@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -11,7 +12,7 @@ export const untilReaderReplaceSdk = until;
 const path = 'features/reading/ReaderControlReplaceGateway.ts';
 const source = readFileSync(new URL('../../entry/src/main/ets/' + path, import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(sdk + '/node_modules/typescript');
 const tree = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 assert.deepEqual(tree.parseDiagnostics, [], 'actual partial-update gateway SDK syntax');

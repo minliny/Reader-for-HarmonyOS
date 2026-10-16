@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { boundedSurfaceSdk } from './bounded-surface-sdk-probe.mjs';
@@ -21,11 +22,11 @@ const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('
 /** Register the same imported child names/Props as the SDK frontend. Child
  * native paint is outside the surface ownership/geometry probes. */
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const ts = require(`${sdk}/node_modules/typescript`);
 const surfaceSource = readFileSync(new URL('../../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
-const surfaceTree = ts.createSourceFile('/tmp/MangaFrameSdkBoundary.ets', surfaceSource, ts.ScriptTarget.Latest, true,
+const surfaceTree = ts.createSourceFile(virtualFilePath('MangaFrameSdkBoundary.ets'), surfaceSource, ts.ScriptTarget.Latest, true,
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 const sheetFrame = surfaceTree.statements.find(node => node.name?.getText(surfaceTree) === 'MangaSheetFrame');
 // Only scheduling is native: execute the unchanged production callback class.

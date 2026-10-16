@@ -1,20 +1,20 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { virtualFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
+import { stripTypeScriptTypes } from 'node:module';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript');
-const options=createRequire(import.meta.url)(sdk+'/lib/ets_checker.js').compilerOptions;
+const { root: sdk, require, ts, options } = installedEtsCompiler();
 const file=name=>new URL('../../entry/src/main/ets/features/common/'+name+'.ets',import.meta.url);
 export const buttonSource=readFileSync(file('ReaderButton'),'utf8'),fieldSource=readFileSync(file('ReaderFormField'),'utf8');
 const tokenSource=readFileSync(file('ReaderTokens'),'utf8'),tokenNames=[...tokenSource.matchAll(/^export const (\w+)/gm)].map(m=>m[1]);
 export const readerFoundationTokens=new Function('readerAppColor','readerThemeDefinition',stripTypeScriptTypes(tokenSource).replace(/^import[^;]+;\s*/gm,'').replace(/^export /gm,'')+';return{'+tokenNames.join(',')+'};')(readerAppColor,readerThemeDefinition);
 function withoutImports(source) {
- const tree=ts.createSourceFile('/tmp/Foundation.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ const tree=ts.createSourceFile(virtualFilePath('Foundation.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  assert.equal(tree.parseDiagnostics.length,0,'actual foundation source parses');
  for(const n of tree.statements.filter(ts.isImportDeclaration).reverse())source=source.slice(0,n.getStart(tree))+source.slice(n.end);
  return source.replace(/^export /gm,'');
@@ -35,7 +35,7 @@ export function foundationControls({specs=foundationSpecs(),ColorMetrics,buttonS
  const beforeObserver=properties.hooks.onObserverEnter;properties.hooks.onObserverEnter=(owner,id)=>{beforeObserver?.(owner,id);let nodes=creationOrder.get(owner);if(!nodes)creationOrder.set(owner,nodes=new Map());if(!nodes.has(id))nodes.set(id,creationSequence++);};
  const modifiers=foundationModifiers(specs,ColorMetrics,{buttonSource:buttonDefinition,fieldSource:fieldDefinition});
  const deps={...properties.sdk,...readerFoundationTokens,...specs,...modifiers,ReaderWindowCoordinator:{metrics:windowMetrics},InputType:{Password:'InputType.Password',Number:'InputType.Number'}};
- createRequire(import.meta.url)(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderButton',new Set(['leading']));
+ require(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderButton',new Set(['leading']));
  const button=createReaderBuilderProbe(buttonDefinition,['scheme','specId','label','primary','actionEnabled','layout','isBusy','availableWidth','actionAccessibilityLabel','leading','emptyLeading','onAction','mounted','aboutToAppear','aboutToDisappear','build','commit'],deps,properties.hooks);
  const field=createReaderBuilderProbe(fieldDefinition,['scheme','specId','text','placeholder','isEditable','password','inputIdentity','fieldAccessibilityLabel','inputController','onEditingChange','editChanged','onTextChange','onSubmit','submit','mounted','aboutToAppear','aboutToDisappear','build','change'],deps,properties.hooks);
  const dependencies={...deps,ReaderButton:button.Component,ReaderFormField:field.Component};

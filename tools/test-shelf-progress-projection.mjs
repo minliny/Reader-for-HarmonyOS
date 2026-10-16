@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -14,7 +15,7 @@ const listSource = read('bookshelf/ShelfBookListDetails.ets');
 const projectionSource = read('bookshelf/ShelfBookPresentation.ts');
 const frozenGrid = readFileSync(new URL('./fixtures/design/shelf-progress-grid-baseline.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(sdk + '/node_modules/typescript');
 const options = require(sdk + '/lib/ets_checker.js').compilerOptions;
 const parse = text => ts.createSourceFile('ShelfProgress.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);

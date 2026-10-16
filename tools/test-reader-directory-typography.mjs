@@ -1,10 +1,11 @@
+import { localFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 
 for (const probe of ['test-conventional-typography.mjs', 'test-conventional-typography-sdk.mjs']) {
-  process.stdout.write(execFileSync(process.execPath, [new URL(`./${probe}`, import.meta.url).pathname,
+  process.stdout.write(execFileSync(process.execPath, [localFilePath(new URL(`./${probe}`, import.meta.url)),
     '--fixture=reader-directory-typography-baseline.json', ...(process.argv.includes('--verify-migration-source') ? ['--verify-migration-source'] : [])], { encoding: 'utf8' }));
 }
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/FullDirectoryPanel.ets', import.meta.url), 'utf8');

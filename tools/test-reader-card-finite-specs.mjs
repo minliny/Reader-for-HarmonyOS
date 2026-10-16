@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -15,7 +16,7 @@ const read=file=>readFileSync(file,'utf8'),golden=JSON.parse(read('tools/fixture
 for(const entry of Object.values(golden.sources))assert.equal(createHash('sha256').update(entry.source).digest('hex'),entry.sha256,'frozen actual original source bytes');
 const common='entry/src/main/ets/features/common/',category='entry/src/main/ets/features/settings/CategorySection.ets',sync='entry/src/main/ets/features/sync/SyncPage.ets';
 const before=golden.sources[common+'ReaderCard.ets'].source;
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const layout=JSON.parse(read('tools/fixtures/reader-card-page-layout-successor-20261014.json'));
@@ -27,7 +28,7 @@ assert.deepEqual(layout.previousLayoutMethods,['build','contentFrame','bottomCon
 assert.deepEqual(Object.keys(layout.currentLayoutMethods),['build','pageContent','contentFrame']);
 assert.deepEqual([layout.host,layout.variant,layout.slots],['ReaderStandardPage','sync',{header:'backBar',content:'pageContent'}]);
 assert.deepEqual(layout.sections,['webdavSection','manualActionsSection','autoBackupSection','historySection']);
-const parse=text=>ts.createSourceFile('/tmp/CardConsumer.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+const parse=text=>ts.createSourceFile(virtualFilePath('CardConsumer.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 function sdkOwner(source){const tree=parse(source);assert.deepEqual(tree.parseDiagnostics,[]);return{tree,owner:tree.statements.find(ts.isStructDeclaration)};}
 function calls(node,tree,name){const found=[];const visit=current=>{if((ts.isCallExpression(current)||ts.isEtsComponentExpression(current))&&current.expression.getText(tree)===name)found.push(current);ts.forEachChild(current,visit);};visit(node);return found;}
 function proveSyncLayout(source){
@@ -54,7 +55,7 @@ function proveSyncLayout(source){
  assert.equal(measured[0].replace(/\s/g,''),oldMeasured[0].replace(/\s/g,''),'same width publication callback and state admission');
 }
 function bodiesWithoutCardInputs(source){
- const parse=text=>ts.createSourceFile('/tmp/CardConsumer.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options),tree=parse(source),inputs=[];
+ const parse=text=>ts.createSourceFile(virtualFilePath('CardConsumer.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options),tree=parse(source),inputs=[];
  assert.equal(tree.parseDiagnostics.length,0);
  const visit=node=>{if(ts.isEtsComponentExpression(node)&&node.expression.getText(tree)==='ReaderCard')inputs.push(node.arguments[0]);ts.forEachChild(node,visit);};visit(tree);
  for(const input of inputs.reverse())source=source.slice(0,input.getStart(tree))+'{}'+source.slice(input.end);

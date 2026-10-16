@@ -1,9 +1,10 @@
+import { localFilePath, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
-const sourcePath=new URL('../entry/src/main/ets/pages/ReaderTextNodeDiagnostic.ets',import.meta.url).pathname;
+const sourcePath=localFilePath(new URL('../entry/src/main/ets/pages/ReaderTextNodeDiagnostic.ets',import.meta.url));
 const source=readFileSync(sourcePath,'utf8');
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const ts=createRequire(import.meta.url)(`${sdk}/node_modules/typescript`);
 const prefix=source.slice(0,source.indexOf('@Component'));
 const component=source.slice(source.indexOf('@Component'),source.indexOf('  build() {'))

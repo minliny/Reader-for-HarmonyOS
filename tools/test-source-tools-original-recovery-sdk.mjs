@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -24,7 +25,7 @@ function sdkPage(f,host,snapshot){
   // Builder own the data and every action. No domain algorithm is substituted.
   LazyForEach:{create(_id,_owner,data,generator){for(let i=0;i<data.totalCount();i++)generator(data.getData(i));},pop(){}}};
  const hooks={...controls.hooks,allowEmptyBranchAdmission:true,childSources:{...controls.hooks.childSources,ReaderRecoveryAction:recoverySource,PageBackBar:headerSource}};
- const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader',syntax=createRequire(import.meta.url)(loader+'/lib/validate_ui_syntax.js');
+ const loader=resolveEtsLoaderRoot(),syntax=createRequire(import.meta.url)(loader+'/lib/validate_ui_syntax.js');
  syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
  deps.ReaderRecoveryAction=createReaderBuilderProbe(recoverySource,boundedMembers(recoverySource),deps,hooks).Component;
  deps.PageBackBar=createReaderBuilderProbe(headerSource,boundedMembers(headerSource),deps,hooks).Component;

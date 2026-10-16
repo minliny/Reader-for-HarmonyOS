@@ -26,8 +26,9 @@ import {
 } from 'node:fs';
 import { isAbsolute, parse, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 
-const DEFAULT_ROOT = resolve(tmpdir(), 'reader-hdc-target-leases');
+const DEFAULT_ROOT = resolve(process.env.READER_LOCK_DIR || tmpdir(), 'reader-hdc-target-leases');
 const DEFAULT_WAIT_MS = 30000;
 const DEFAULT_SERVER_KEY = '127.0.0.1:8710';
 const POLL_MS = 100;
@@ -178,7 +179,7 @@ async function main(argv) {
   process.exitCode = exitCode;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   main(process.argv.slice(2)).catch(error => { console.error(`reader-hdc-lease: ${error.message}`); process.exitCode = 2; });
 }
 

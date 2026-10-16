@@ -1,3 +1,4 @@
+import { coreCliPath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -105,7 +106,7 @@ for (const withdrawn of [false, true]) {
 // Existing Core CLI, metadata-only pipeline: exact bundled search/detail rules
 // and public search payload. Unrelated discovery/network/TOC/content stages are
 // omitted; the detail payload is explicitly synthetic, never called live proof.
-const cli = process.env.READER_CORE_CLI ?? resolve(repo, '../Reader-Core-Native/target/debug/reader-cli');
+const cli = coreCliPath(resolve(repo, '../Reader-Core-Native'));
 assert.ok(existsSync(cli), `an existing Core CLI is required for the offline metadata fixture: ${cli}`);
 const scratch = mkdtempSync(join(tmpdir(), 'reader-source-metadata-'));
 function parseMetadata(bookSource, label) {

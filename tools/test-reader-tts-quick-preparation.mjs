@@ -1,3 +1,4 @@
+import { localFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -12,7 +13,7 @@ import { ReaderTtsConfigurationHost } from './lib/reader-tts-configuration-fixtu
 import { FakeGateway, FakeHost, chapter, canonicalRemoteContent } from './lib/reader-tts-fixtures.mjs';
 
 const root = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const lre = new URL('LocalReadingExperience.ets', root).pathname;
+const lre = localFilePath(new URL('LocalReadingExperience.ets', root));
 const source = readFileSync(lre, 'utf8');
 const defaults = { version: 1, language: 'zh-CN', person: 0, pauseOnInterruption: true,
   allowMixing: false, failurePolicy: 'stop', followHighlight: true, backgroundPlayback: true, keepScreenOn: false };

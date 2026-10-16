@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -9,7 +10,7 @@ import { readerAppearanceThemeStyle } from '../entry/src/main/ets/features/readi
 const source = readFileSync(new URL(
   '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
-const syntax = require(((process.env.READER_ETS_LOADER_ROOT ?? ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader')) + '/lib/validate_ui_syntax.js'));
+const syntax = require(((resolveEtsLoaderRoot()) + '/lib/validate_ui_syntax.js'));
 const childSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderStatusBarPaper.ets', import.meta.url), 'utf8');
 syntax.componentCollection.customComponents.add('ReaderStatusBarPaper');
 syntax.propCollection.set('ReaderStatusBarPaper', new Set([...childSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -14,11 +15,11 @@ const noCoverSource = read('bookshelf/NoCoverCover.ets');
 const motionSource = read('common/MotionSpec.ets');
 const tokensSource = read('common/ReaderTokens.ets');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-const parse = text => ts.createSourceFile('/tmp/BookshelfHandoffProbe.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const parse = text => ts.createSourceFile(virtualFilePath('BookshelfHandoffProbe.ets'), text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 function constants(text, names, dependencies = {}) {
   const tree = parse(text);
   const declarations = tree.statements.filter(ts.isVariableStatement).flatMap(statement =>

@@ -1,3 +1,4 @@
+import { localFilePath, resolveArkFrontend, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -200,10 +201,9 @@ console.log('PASS null subscription and config completion after destroy keep cle
 // The actual production module matches installed official API types. This seam
 // does not substitute for the later canonical ArkTS/HAP build or device proof.
 {
-  const require = createRequire(import.meta.url), sdk = process.env.READER_ETS_LOADER_ROOT ??
-    '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const require = createRequire(import.meta.url), sdk = resolveEtsLoaderRoot();
   const ts = require(`${sdk}/node_modules/typescript`), sdkRoot = `${sdk}/../..`;
-  const virtual = new URL('../entry/src/main/ets/app/ReaderMangaPlatformDiagnosticSdkCheck.ts', import.meta.url).pathname;
+  const virtual = localFilePath(new URL('../entry/src/main/ets/app/ReaderMangaPlatformDiagnosticSdkCheck.ts', import.meta.url));
   const text = source.replace(/^import type \{ MangaProbeSelectionMode \}.*?;\n/m, "type MangaProbeSelectionMode = 'reading' | 'offline';\n");
   const options = { noEmit: true, skipLibCheck: true, moduleResolution: ts.ModuleResolutionKind.NodeJs,
     target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, types: [], baseUrl: '/',
@@ -217,8 +217,8 @@ console.log('PASS null subscription and config completion after destroy keep cle
   }
   assert.deepEqual(errors(text), []);
   assert.ok(errors(text.replace('holder.setRow(1)', 'holder.setRow("wrong")')).length > 0, 'actual SDK rejects invalid holder arguments');
-  const frontend = `${sdk}/bin/ark/build-mac/bin/es2abc`;
-  const parsed = spawnSync(frontend, ['--target-api-version', '23', '--module', '--parse-only', file.pathname], { encoding: 'utf8' });
+  const frontend = resolveArkFrontend();
+  const parsed = spawnSync(frontend, ['--target-api-version', '23', '--module', '--parse-only', localFilePath(file)], { encoding: 'utf8' });
   assert.equal(parsed.status, 0, parsed.stderr || parsed.stdout || String(parsed.error));
   const dir = mkdtempSync(join(tmpdir(), 'reader-manga-dfx-'));
   try {

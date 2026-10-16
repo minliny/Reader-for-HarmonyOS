@@ -1,6 +1,6 @@
+import { requireToolPackage } from './lib/tool-environment.mjs';
 // Finite approved-demo adapter: Chromium parses CSS; Reader only maps named
 // properties to platform roles. No parallel CSS parser or layout engine.
-import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -18,9 +18,7 @@ const storageCss = storageRaw.match(/<style>([\s\S]*?)<\/style>/)?.[1];
 const storageFontLink = storageRaw.match(/<link[^>]+href="https:\/\/fonts\.googleapis\.com[^>]+>/)?.[0];
 if (!storageCss) throw Error('Approved storage demo stylesheet missing');
 const storageSha = createHash('sha256').update(storageRaw).digest('hex');
-const require = createRequire(process.env.READER_PLAYWRIGHT_MODULE ||
-  '/Users/minliny/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/package.json');
-const { chromium } = require('playwright');
+const { chromium } = requireToolPackage('playwright', process.env.READER_PLAYWRIGHT_MODULE);
 const browser = await chromium.launch({ headless: true });
 let rules;
 let radioSize;

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
 import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import assert from 'node:assert/strict';
@@ -14,7 +15,7 @@ const methods=['isCurrentRssPresentation','isCurrentRssHostPresentation','rssFee
 const deps={RssPresentationProjection,ReaderRuntimeOwner:RssRuntime,RssOrchestrator:RealRssOrchestrator,RssSubscriptionEditorOrchestrator:RealRssEditor,
  projectOperationFacts:rssFacts.projectOperationFacts,isReaderProductSurfaceEnabled:()=>true,hilog:{warn(){},error(){}},DOMAIN:1,deviceInfo:{deviceType:'phone'}};
 const Index=productionMotionMethods(file('pages/Index.ets'),methods,deps);
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(sdk+'/lib/validate_ui_syntax.js');
 for(const [name,path]of[['RssSubscriptionManagementPage','rss'],['RssPage','rss'],['RssSourceFeedPage','rss'],['RssEntryDetailPage','rss'],['RssSubscriptionEditorPage','rss'],['ReaderRecoveryNotice','common'],['ReaderRecoveryAction','common']]){
  syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source('features/'+path+'/'+name+'.ets').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));

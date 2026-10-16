@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -21,10 +22,10 @@ assert.equal(createHash('sha256').update(read(searchScale.iconConsumer.originalW
 for (const row of golden.methods) assert.equal(createHash('sha256').update(row.source).digest('hex'), row.sha256);
 const consumerMethods = [...golden.methods.filter(row => row.file !== approved.file), approved];
 assert.equal(createHash('sha256').update(before).digest('hex'), golden.iconSourceSha256, 'immutable original component');
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const req = createRequire(import.meta.url), ts = req(sdk + '/node_modules/typescript'), options = req(sdk + '/lib/ets_checker.js').compilerOptions;
 const syntax = req(sdk + '/lib/validate_ui_syntax.js');
-const parse = source => ts.createSourceFile('/tmp/IconConsumer.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const parse = source => ts.createSourceFile(virtualFilePath('IconConsumer.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const ids = ['toolbar-standard', 'toolbar-wide', 'navigation-back', 'toolbar-compact'];
 const tuples = [[44, 24, 22], [44, 44, 22], [32, 20, 16], [44, 20, 22]];
 const expected = { 'bookshelf/BookshelfShell.ets': ['floating-more'],

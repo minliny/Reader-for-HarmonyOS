@@ -24,7 +24,7 @@ try {
 
   // Exercise the real default lease path under a custom temp directory, with
   // Node standing in for HDC. No actual device operation can occur.
-  const env = { ...process.env, TMPDIR: root }; delete env.READER_HDC_LEASE_ROOT;
+  const env = { ...process.env, TMPDIR: root, TMP: root, TEMP: root }; delete env.READER_HDC_LEASE_ROOT; delete env.READER_LOCK_DIR;
   const defaultLease = spawnSync(process.execPath, [resolve('tools/reader-hdc-lease.mjs'),
     '--target', 'fixture', '--hdc', process.execPath, '--', '-e', 'process.exit(0)'], { encoding: 'utf8', env });
   assert.equal(defaultLease.status, 0, defaultLease.stderr);

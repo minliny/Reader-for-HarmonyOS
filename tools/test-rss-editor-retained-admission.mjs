@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -5,7 +6,7 @@ import { rssSource, rssFacts, rssProjection, RssWriteEvidence, RssRuntime, repla
   rssRpc, RealRssOrchestrator, deferredRss, settleRss } from './lib/rss-operation-fixture.mjs';
 import { isReaderCoreTransactionPendingError } from '../entry/vendor/core-harmony/sdk/reader_core.ts';
 
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript');
 const compile=(raw,name,deps)=>new Function(...Object.keys(deps),ts.transpileModule(
   raw.replace(/^import[\s\S]*?;\n/gm,'').replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^export /gm,''),

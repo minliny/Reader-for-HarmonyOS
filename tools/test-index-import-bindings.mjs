@@ -1,10 +1,10 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
-const sdk = process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default';
+const loader = resolveEtsLoaderRoot();
 const require = createRequire(import.meta.url);
-const loader = `${sdk}/openharmony/ets/build-tools/ets-loader`;
 const ts = require(`${loader}/node_modules/typescript`);
 const arkOptions = require(`${loader}/lib/ets_checker.js`).compilerOptions;
 const source = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');

@@ -40,7 +40,7 @@ manifest=dict(schemaVersion=1,generator='Pillow '+Image.__version__+' RGB fixed 
  fullRgbaBytes=width*height*4,roiRgbaBytes=1024*1024*4,rois=rois,
  control=dict(file=control.name,width=1024,height=2048,encodedBytes=len(control_bytes),sha256=hashlib.sha256(control_bytes).hexdigest(),firstRoiSha256=rois[0]['sha256']),
  evidence='Fixture geometry/oracles only; no platform decoder, peak memory, or display evidence')
-(root/'large-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+(root/'large-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n', encoding='utf-8')
 print(json.dumps(manifest,indent=2))
 
 region_keys=['id','position','regionY','width','height','sha256']
@@ -49,4 +49,4 @@ export interface MangaPlatformLargeRegion { id: string; position: number; region
 export interface MangaPlatformLargeFixture { id: string; file: string; sha256: string; width: number; height: number; orientation: number; rois: MangaPlatformLargeRegion[]; }
 export const MANGA_PLATFORM_LARGE_FIXTURE: MangaPlatformLargeFixture = """+json.dumps(dict(id='large-long',file=manifest['file'],sha256=manifest['sha256'],width=width,height=height,orientation=1,rois=[{k:r[k] for k in region_keys} for r in rois]),indent=2)+';\n'
 large_ts += 'export const MANGA_PLATFORM_LARGE_CONTROL: MangaPlatformLargeFixture = '+json.dumps(dict(id='large-control',file=control.name,sha256=manifest['control']['sha256'],width=1024,height=2048,orientation=1,rois=[{k:rois[0][k] for k in region_keys}]),indent=2)+';\n'
-(ROOT/'entry/src/main/ets/app/MangaPlatformLargeFixture.ts').write_text(large_ts)
+(ROOT/'entry/src/main/ets/app/MangaPlatformLargeFixture.ts').write_text(large_ts, encoding='utf-8')

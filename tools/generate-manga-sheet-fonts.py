@@ -74,7 +74,7 @@ for weight in (550, 600, 650, 900):
     assert 'fvar' not in saved and saved['OS/2'].usWeightClass == weight
     assert saved['name'].getDebugName(6) == family
     outputs.append({'axis': {'wght': weight}, 'family': family,
-                    'output': str(output.relative_to(ROOT)),
+                    'output': output.relative_to(ROOT).as_posix(),
                     'sha256': digest(output), 'bytes': output.stat().st_size,
                     'glyphCount': len(saved.getGlyphOrder()),
                     'unicodeCount': len(saved.getBestCmap()),
@@ -83,7 +83,7 @@ for weight in (550, 600, 650, 900):
                     'requiredTitles': TITLES if weight == 900 else []})
     print(f'{family}: {output.stat().st_size} bytes {digest(output)}', flush=True)
 
-provenance = {'source': str(SOURCE.relative_to(ROOT)), 'sourceSha256': SOURCE_SHA,
+provenance = {'source': SOURCE.relative_to(ROOT).as_posix(), 'sourceSha256': SOURCE_SHA,
               'license': 'entry/src/main/resources/rawfile/Noto-OFL.txt',
               'tool': 'fonttools 4.60.2 instantiateVariableFont',
               'generator': 'tools/generate-manga-sheet-fonts.py',
@@ -93,4 +93,4 @@ provenance = {'source': str(SOURCE.relative_to(ROOT)), 'sourceSha256': SOURCE_SH
                             'sha256': digest(RAW / 'NotoSansSC-UIRegular.otf')},
               'outputs': outputs}
 (ROOT / 'docs/ui-design/MANGA_SHEET_FONTS_PROVENANCE.json').write_text(
-    json.dumps(provenance, ensure_ascii=False, indent=2) + '\n')
+    json.dumps(provenance, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')

@@ -1,12 +1,11 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
-import {registerHooks, createRequire} from 'node:module';
+import {registerHooks} from 'node:module';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const require=createRequire(import.meta.url);
-const ets=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const ts=require(ets+'/node_modules/typescript');
+const { ts } = installedEtsCompiler();
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const coreRoots=[process.env.READER_CORE_ROOT,resolve(root,'../Reader-Core-Native'),resolve(root,'../../../Reader-Core-Native'),resolve(root,'../../Reader-Core-Native')].filter(Boolean);
 const coreRoot=coreRoots.find(path=>existsSync(resolve(path,'bindings/harmony/sdk/reader_core.ts')));

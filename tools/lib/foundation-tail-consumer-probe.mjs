@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -11,7 +12,7 @@ import {boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {compileCardSpecs} from './reader-card-probe.mjs';
 import {compileIconButtonSpecs} from './reader-icon-button-probe.mjs';
-const req=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const req=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const map=req(sdk+'/lib/component_map.js');
 export function compileTailConsumer(source,names,deps,hooks){const saved=new Map(map.ID_ATTRS);map.ID_ATTRS.clear();try{return createReaderBuilderProbe(source,names,deps,hooks);}finally{map.ID_ATTRS.clear();for(const[k,v]of saved)map.ID_ATTRS.set(k,v);}}
 /** Composition of actual production shared classes with the same V1 property

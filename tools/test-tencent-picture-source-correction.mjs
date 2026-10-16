@@ -1,3 +1,4 @@
+import { coreCliPath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -118,7 +119,7 @@ for (let index = 0; index < current.length; index += 1) {
 
 // Real production protocol and QuickJS parser, using the exact public DATA and
 // nonce script bytes captured from chapter 531040/1. No network is needed.
-const cli = process.env.READER_CORE_CLI ?? fileURLToPath(new URL('../../Reader-Core-Native/target/debug/reader-cli', import.meta.url));
+const cli = coreCliPath();
 const html = read('../../Reader-Core-Native/tests/fixtures/manga/tencent-free-chapter-531040-1.html');
 const expected = JSON.parse(read('../../Reader-Core-Native/tests/fixtures/manga/tencent-free-chapter-531040-1-pages.json'));
 assert.equal(expected.length, 36);

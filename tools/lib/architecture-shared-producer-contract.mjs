@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -11,7 +12,7 @@ import { novelSourceSwitchSuccessorPath, sharedSourceSwitchTypographySuccessorPa
 
 import {fullDirectoryLayoutSuccessorPath,verifyFullDirectoryLayoutSuccession} from './reader-full-directory-layout-successor.mjs';
 import {indexSyncColdLayoutSuccessorPath,verifyIndexSyncColdLayoutSuccession} from './index-sync-cold-layout-successor.mjs';
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript'),options=createRequire(import.meta.url)(sdk+'/lib/ets_checker.js').compilerOptions;
 const physical=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin','width','height','constraintSize','opacity','clip','responseRegion']);
 const callerPhysical=new Set([...physical,'minFontScale','maxFontScale']);
@@ -40,7 +41,7 @@ export function sharedProducerShape(source,file){
 const fontProperties=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing']);
 const argumentKey=(method,property,expression)=>JSON.stringify([method,property,expression]);
 function canonicalArgument(expression){
- const tree=ts.createSourceFile('/tmp/SharedTypographyArgument.ts','const value = '+expression+';',ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
+ const tree=ts.createSourceFile(virtualFilePath('SharedTypographyArgument.ts'),'const value = '+expression+';',ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
  assert.equal(tree.parseDiagnostics.length,0,'actual producer Typography argument');
  return print(tree.statements[0].declarationList.declarations[0].initializer,tree);
 }
@@ -57,7 +58,7 @@ export function registeredProducerTypographySlots(source,file,contract){
 }
 const relative=file=>file.replace(/^entry\/src\/main\/ets\//,'');
 function edge(element,row){
- const tree=ts.createSourceFile('/tmp/SharedConsumer.ts','const props = '+(element.args[0]??'{}')+';',ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
+ const tree=ts.createSourceFile(virtualFilePath('SharedConsumer.ts'),'const props = '+(element.args[0]??'{}')+';',ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
  const obj=tree.statements[0]?.declarationList?.declarations[0]?.initializer;
  assert.ok(ts.isObjectLiteralExpression(obj),'actual shared props object: '+row.file+':'+element.line);
  const keys=obj.properties.map(p=>p.name?.getText(tree)??'spread');

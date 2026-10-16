@@ -1,10 +1,11 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {tailControls,compileTailConsumer,seedTailOwner,searchActionMethods} from './lib/foundation-tail-consumer-probe.mjs';
 import {foundationSpecs} from './lib/reader-foundation-control-probe.mjs';
 import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import {createRequire}from'node:module';
-const req=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader',ts=req(sdk+'/node_modules/typescript'),opts=req(sdk+'/lib/ets_checker.js').compilerOptions;
+const req=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot(),ts=req(sdk+'/node_modules/typescript'),opts=req(sdk+'/lib/ets_checker.js').compilerOptions;
 const baseline=JSON.parse(readFileSync(new URL('./fixtures/design/foundation-search-discover-sync-baseline.json',import.meta.url)));
 const props=['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','textAlign','maxLines','textOverflow','padding','margin','constraintSize','width','height','layoutWeight','backgroundColor','borderRadius','border','responseRegion'];
 const tuple=n=>Object.fromEntries(props.filter(k=>Object.hasOwn(n,k)).map(k=>[k,n[k]]));

@@ -1,6 +1,7 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { virtualFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { readerFoundationTokens } from './reader-foundation-control-probe.mjs';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
@@ -9,12 +10,10 @@ import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { boundedMembers } from './bounded-surface-sdk-probe.mjs';
 
 const read = name => readFileSync(new URL('../../entry/src/main/ets/features/common/' + name + '.ets', import.meta.url), 'utf8');
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const require = createRequire(import.meta.url), ts = require(sdk + '/node_modules/typescript');
-const options = require(sdk + '/lib/ets_checker.js').compilerOptions;
+const { ts, options } = installedEtsCompiler();
 export const iconButtonSource = read('ReaderIconButton'), iconButtonSpecSource = read('ReaderControlSpecs');
 export function compileIconButtonSpecs(source = iconButtonSpecSource) {
-  const tree = ts.createSourceFile('/tmp/ReaderControlSpecs.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  const tree = ts.createSourceFile(virtualFilePath('ReaderControlSpecs.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(tree.parseDiagnostics.length, 0, 'actual finite icon specification parses');
   for (const node of tree.statements.filter(ts.isImportDeclaration).reverse()) source = source.slice(0, node.getStart(tree)) + source.slice(node.end);
   const js = ts.transpileModule(source.replace(/^export /gm, ''), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;

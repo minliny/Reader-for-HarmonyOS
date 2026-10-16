@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -134,8 +135,7 @@ checkBackdrop(Host);
 // device is touched. Portable gates above still run on machines without SDK.
 // We intentionally omit build(): this tests component-member preservation only,
 // and accepts only the expected "missing build" diagnostic from the SDK.
-const sdk = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 if (existsSync(`${sdk}/lib/process_component_class.js`)) {
   const require = createRequire(import.meta.url);
   const ts = require(`${sdk}/node_modules/typescript`);
@@ -145,7 +145,7 @@ if (existsSync(`${sdk}/lib/process_component_class.js`)) {
   main.partialUpdateConfig.partialUpdateMode = true;
   function compileMembers(componentMethods) {
     utils.storedFileInfo.setCurrentArkTsFile();
-    const file = ts.createSourceFile('/tmp/ReaderControlInputProbe.ets',
+    const file = ts.createSourceFile(virtualFilePath('ReaderControlInputProbe.ets'),
       `@Component struct ReaderControlInputProbe { ${componentMethods} }`,
       ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS);
     const diagnostics = [];

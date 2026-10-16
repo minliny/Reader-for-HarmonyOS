@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -8,11 +9,11 @@ registerHooks({ resolve(specifier, context, next) { try { return next(specifier,
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
 const root = new URL('../../entry/src/main/ets/', import.meta.url);
 const read = name => readFileSync(new URL(name, root), 'utf8');
-const req = createRequire(import.meta.url), sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const req = createRequire(import.meta.url), sdk = resolveEtsLoaderRoot();
 const ts = req(sdk + '/node_modules/typescript'), options = req(sdk + '/lib/ets_checker.js').compilerOptions;
 const pageSource = read('features/search/SearchPage.ets');
 export const searchIndexSource = read('pages/Index.ets');
-const parse = source => ts.createSourceFile('/tmp/SearchAttachment.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const parse = source => ts.createSourceFile(virtualFilePath('SearchAttachment.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const pageTree = parse(pageSource);
 const scopeConstants = Object.fromEntries(['SEARCH_LOCAL_SCOPE', 'SEARCH_ONLINE_SCOPE'].map(name => {
   const declaration = pageTree.statements.filter(ts.isVariableStatement)

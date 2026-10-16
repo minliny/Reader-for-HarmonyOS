@@ -1,8 +1,9 @@
+import { localFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const repo = resolve(new URL('..', import.meta.url).pathname);
+const repo = resolve(localFilePath(new URL('..', import.meta.url)));
 const index = readFileSync(resolve(repo, 'entry/src/main/ets/pages/Index.ets'), 'utf8');
 const host = readFileSync(resolve(repo, 'entry/src/main/ets/features/bookshelf/BookshelfHost.ets'), 'utf8');
 

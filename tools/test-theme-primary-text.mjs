@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
 import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
@@ -48,7 +49,7 @@ for(const file of ['settings/RulesManagementPage.ets','source/SourceToolsPage.et
 }
 // Inspect the actual SDK AST for every foreground consumer. Restrict this gate
 // to foregrounds: primaryDark remains valid for filled surfaces and borders.
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
 function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){
   const file=path.join(dir,entry.name);if(entry.isDirectory()){scan(file);continue;}if(!file.endsWith('.ets'))continue;

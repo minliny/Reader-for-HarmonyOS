@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -11,7 +12,7 @@ import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mj
 import {SOURCE_SWITCH_VISUAL} from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 import {sourceSwitchNovelScale,sourceSwitchNovelHeadingHeight} from '../entry/src/main/ets/features/source/SourceSwitchNovelPresentation.ts';
 import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`),map=require(`${sdk}/lib/component_map.js`);
 const read=relative=>readFileSync(new URL(`../entry/src/main/ets/${relative}`,import.meta.url),'utf8');
@@ -43,7 +44,7 @@ const shelfTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:Runtime});
 // In particular, scope identity must come from Index's State initializer, not a
 // fixture literal that bypasses the keyed overlay's real constructor.
 function constructorFields(source,name,excluded=[]){
- const tree=ts.createSourceFile('/tmp/MangaEntryConstructor.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ const tree=ts.createSourceFile(virtualFilePath('MangaEntryConstructor.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  const declaration=tree.statements.find(node=>node.name?.getText(tree)===name);
  assert.ok(declaration,`actual constructor ${name}`);
  return declaration.members.filter(ts.isPropertyDeclaration).map(member=>member.name.getText(tree)).filter(name=>!excluded.includes(name));
@@ -61,7 +62,7 @@ const retirementMembers=['retireSettingsPresentation','retireSourceManagementPre
  'bindReadingEntryReader','getReadingEntryHost','isCurrentRuntime','isKnownDetailChapter'];
 function indexOwner(overrides={}){
  map.resetComponentMap();
- const tree=ts.createSourceFile('/tmp/MangaEntryIndex.ets',index,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ const tree=ts.createSourceFile(virtualFilePath('MangaEntryIndex.ets'),index,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  const localSource=tree.statements.filter(ts.isVariableStatement).flatMap(statement=>[...statement.declarationList.declarations])
   .find(declaration=>declaration.name.getText(tree)==='LOCAL_SOURCE_ID')?.initializer;
  assert.ok(localSource&&ts.isStringLiteral(localSource),'actual Index local-source constant');

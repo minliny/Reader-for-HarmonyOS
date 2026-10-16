@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { managementFixture } from './lib/bookshelf-management-durable-probe.mjs';
 import { fixture as durableRulesFixture } from './lib/rules-mutation-durable-probe.mjs';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
@@ -18,7 +19,7 @@ const unused=class{observeWrites(){}};
 const Rules=load('features/settings/RulesManagementOrchestrator.ets','{RulesManagementOrchestrator,EMPTY_RULES_MANAGEMENT_SNAPSHOT}',{ReaderRuntimeOwner,ReaderWriteEvidence,RulesManagementGateway,SourceGateway:unused,RssGateway:unused,hilog:{error(){},warn(){}},projectPersistedReceipt,...facts});
 const BookshelfManagementGateway=load('features/bookshelf/BookshelfManagementGateway.ts','BookshelfManagementGateway',{ReaderRuntimeOwner,ReaderCoreGateway:class{constructor(owner){this.owner=owner;}async loadBookshelf(){return this.owner.shelf;}}});
 const Shelf=load('features/bookshelf/BookshelfManagementOrchestrator.ets','{BookshelfManagementOrchestrator,EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT}',{ReaderRuntimeOwner,ReaderWriteEvidence,BookshelfManagementGateway,hilog:{error(){},warn(){}},projectPersistedReceipt,...facts});
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(sdk+'/lib/validate_ui_syntax.js');
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 for(const [name,path] of [['RulesManagementPage','features/settings/RulesManagementPage.ets'],['BookshelfManagementPage','features/bookshelf/BookshelfManagementPage.ets'],['ReaderRecoveryAction','features/common/ReaderRecoveryAction.ets']]){

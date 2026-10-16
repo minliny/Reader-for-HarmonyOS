@@ -1,3 +1,4 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 // Full unchanged Settings production classes for method-level Index probes.
 // Platform writes require explicit seams; a probe cannot fake successful IO.
 import {bookshelfOperationClass,bookshelfOperationSource} from './bookshelf-operation-owner-probe.mjs';
@@ -32,9 +33,7 @@ export function actualGeneralSettingsHostField(index,SettingsHost) {
  // Use the same installed SDK transpiler as all neighboring owner probes.
  return bookshelfOperationClassText(expression,index,SettingsHost);
 }
-import {createRequire} from 'node:module';
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript');
+const { ts } = installedEtsCompiler();
 function bookshelfOperationClassText(expression,index,SettingsHost) {
  const code=ts.transpileModule('const value='+expression+';',{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
  return new Function('SettingsHost',code+'return value;').call(index,SettingsHost);

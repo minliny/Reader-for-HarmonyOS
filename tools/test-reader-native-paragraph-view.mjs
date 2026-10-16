@@ -1,11 +1,12 @@
+import { localFilePath, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {ReadingSurfaceLayoutMap} from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
 import {readerSelectedOriginalText} from '../entry/src/main/ets/features/reading/ReaderTextSelectionProjection.ts';
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const ts=createRequire(import.meta.url)(`${sdk}/node_modules/typescript`);
-const path=new URL('../entry/src/main/ets/features/reading/ReaderNativeParagraphView.ets',import.meta.url).pathname;
+const path=localFilePath(new URL('../entry/src/main/ets/features/reading/ReaderNativeParagraphView.ets',import.meta.url));
 const source=readFileSync(path,'utf8');
 const classSource=source.slice(0,source.indexOf('  build() {')).replace('@Component\nexport struct ReaderNativeParagraphView {',
  'class View { getUIContext(): UIContext { return this.context; } context: UIContext;')

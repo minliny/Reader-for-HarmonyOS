@@ -1,3 +1,4 @@
+import { resolveHostTool } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -164,7 +165,7 @@ const hash = value => createHash('sha256').update(value).digest('hex');
 try {
   for (const algorithm of ['ec', 'rsa']) {
     const certPath = resolve(certificateFixture, `${algorithm}.pem`);
-    execFileSync('/usr/bin/openssl', ['req', '-x509', '-newkey', algorithm === 'ec' ? 'ec' : 'rsa:2048',
+    execFileSync(resolveHostTool('openssl'), ['req', '-x509', '-newkey', algorithm === 'ec' ? 'ec' : 'rsa:2048',
       ...(algorithm === 'ec' ? ['-pkeyopt', 'ec_paramgen_curve:P-256'] : []), '-nodes',
       '-keyout', resolve(certificateFixture, `${algorithm}.key`), '-out', certPath,
       '-subj', '/CN=Reader pipeline test', '-days', '1'], { stdio: 'pipe' });

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -28,7 +29,7 @@ const surfaceSource = read('features/reading/ReadingSurface.ets');
 const shellSource = read('features/shell/ReaderShell.ets');
 const lreSource = read('features/reading/LocalReadingExperience.ets');
 const require = createRequire(import.meta.url);
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 function register(name, source) {
   syntax.componentCollection.customComponents.add(name);

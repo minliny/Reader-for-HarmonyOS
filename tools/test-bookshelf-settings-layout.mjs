@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {actualModeHost,readerRecoveryView} from './lib/bookshelf-view-mode-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -16,7 +17,7 @@ const file = new URL('../entry/src/main/ets/features/bookshelf/BookshelfSettings
 const source = readFileSync(file, 'utf8');
 const headerSource = readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('PageBackBar');
 syntax.componentCollection.customComponents.add('ReaderRecoveryNotice');

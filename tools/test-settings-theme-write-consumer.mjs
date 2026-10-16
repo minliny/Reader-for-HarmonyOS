@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -27,7 +28,7 @@ function platform(){
  const owner=()=>{const store=new ReaderAppearanceStore(new Preferences({}));currentOwner={waitForPredecessorClose:async()=>{},getAppearanceStore:()=>store,store};return currentOwner;};
  return{disk,Host,storage,owner};
 }
-const sdkRequire=createRequire(import.meta.url),sdkRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRequire=createRequire(import.meta.url),sdkRoot=resolveEtsLoaderRoot();
 for(const item of source('features/settings/SettingsPage.ets').matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g))sdkRequire(sdkRoot+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add(item[1]);
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 function page(f,runtime,identity='settings-back:first'){

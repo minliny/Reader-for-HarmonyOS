@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -39,7 +40,7 @@ const observed = runtime.sdk.ObservedObject.createNew(makeGroup([a,b]), undefine
 const linked = new SearchResultDataSource(); linked.replace([observed]);
 let nativeChanges=0;linked.registerDataChangeListener({onDatasetChange:ops=>nativeChanges+=ops.length});
 const require = createRequire(import.meta.url);
-require((process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader') + '/lib/validate_ui_syntax.js').observedClassCollection.add('SearchBookGroup');
+require((resolveEtsLoaderRoot()) + '/lib/validate_ui_syntax.js').observedClassCollection.add('SearchBookGroup');
 const card = source.slice(source.indexOf('@Component\nstruct SearchResultCard'));
 const members=['group','build','displayIntro','coverWidth','coverHeight'];
 if (card.includes('private coverErrorHandler')) members.push('coverErrorHandler');

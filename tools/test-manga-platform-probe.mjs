@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
@@ -20,7 +21,7 @@ for(const f of [large,control]){assert.equal(hash(read(f.file)),f.sha256);assert
 for(const r of large.rois){assert.equal(largePixels.get(r.regionY).length,4194304);assert.equal(hash(largePixels.get(r.regionY)),r.sha256);}
 const runnerCode=readFileSync(new URL('ets/app/MangaPlatformProbeRunner.ts',root),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,'');
 const require=createRequire(import.meta.url);
-const ts=require('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/node_modules/typescript');
+const ts=require(resolveEtsLoaderRoot() + '/node_modules/typescript');
 const compile=ts.transpileModule(runnerCode,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 function fixture({pixelCorruption=false,preencodeMissing=false,preencodeWrongFormat=false,display=true,debug=true,buildMode='debug',largeCorruption=false,largeWrongRegion=false,profileMissing=false}={}){
  let bodyObserver,graphicsObserver,started=0,allocations=0,nativeReadbacks=0,readbackReleases=0;

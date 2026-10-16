@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks } from 'node:module';
@@ -242,7 +243,7 @@ console.log(`PASS PH86: ${cases.length} real chrome/bookmark Builder geometries,
 // Execute the actual three component-call boundaries. Only native font/layout
 // leaves are stubbed; a missing primitive Prop connection fails this chain.
 const require = createRequire(import.meta.url);
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 const stageSource = readFileSync(file('ReaderPageTurnStage.ets'), 'utf8');
 const readingSource = readFileSync(file('ReadingSurface.ets'), 'utf8');

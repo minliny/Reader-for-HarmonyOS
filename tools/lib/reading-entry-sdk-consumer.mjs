@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './general-settings-owner-probe.mjs';
 import {actualSourceManagementTypes,actualSourceManagementHostField} from './source-management-owner-probe.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField} from './bookshelf-operation-owner-probe.mjs';
@@ -15,16 +16,16 @@ import {MangaBookPresentation} from '../../entry/src/main/ets/features/manga/Man
 import {MangaSessionGateway} from '../../entry/src/main/ets/features/manga/MangaSessionGateway.ts';
 import {readerRecoveryView} from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {ReaderCoreRequestError} from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript');
-const parsed=(source)=>ts.createSourceFile('/tmp/EntryConsumer.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+const parsed=(source)=>ts.createSourceFile(virtualFilePath('EntryConsumer.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
 const properties=source=>parsed(source).statements.find(n=>n.members&&n.members.some(m=>m.name?.getText()==='build')).members.filter(m=>ts.isPropertyDeclaration(m)&&ts.getAllDecorators(m).length>0).map(m=>m.name.getText());
 const methods=['getReadingEntryHost','readingEntryLease','applyReadingEntrySnapshot','bindReadingEntryReader','retireReadingEntryPresentation',
  'readingPreparationContext','sharedReadingPreparationSeeds','preparePersistedShelfBooks','prepareVisibleReadingBooks','onSearchVisibilityChanged',
  'hydrateMangaPositions','refreshDetailMangaPosition','pumpMangaPositionProjections','mangaPositionProjectionCurrent','projectMangaPosition',
  'openLocalBookDetail','openRemoteBookDetail','onRemoteSessionReady','installRemoteReadingSession','probeRemoteContentVerdict','refreshCachedChapterFromPrompt','chooseCachedChapterRefresh',
  'refreshDetailAcquisitionProjection','openReading','isKnownDetailChapter','presentPreparedReading','returnToReadingOrigin','applyReaderDirectoryProjection',
- 'retireSettingsPresentation','retireSourceManagementPresentation','nextNavigationGeneration','retireSourceSwitchPresentation','retireRssPresentation','retireRssEditorPresentation','isCurrentRuntime','showIndexAlert','showReadingFailure',
+ 'retireSettingsPresentation','retireSourceManagementPresentation','nextNavigationGeneration','retireSourceSwitchPresentation','retireRssPresentation','retireRssEditorPresentation','isCurrentRuntime','showIndexAlert','showReadingFailure','runIndexRecoveryAction',
  'externalDirectory','detailContent','detailSurface','isCurrentDetailPresentation','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','detailReadableAdmission','detailShelfMessage','detailBookKey','remoteContentVerdictLabel',
  'requestDetailShelfMutation','addDetailBook','cancelDetailBookAddition','readableAdmissionCurrent','publishReadableAdmission',
  'isSameDetailBook','canRemoveDetailBook','removeDetailBook','applyDetailBookRemoval','shelfFilter','shelfRecovery','emptyShelfRecovery',

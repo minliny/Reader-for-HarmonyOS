@@ -24,4 +24,4 @@ for case in out['cases']:
  if case['file'].startswith('long-') and case['orientation'] not in (1,5):
   case['rgbaFrom']='long-1.png' if case['orientation']<5 else 'long-5.png'
   del case['rgba']
-(root/'goldens.json').write_text(json.dumps(out,separators=(',',':'))+'\n')
+(root/'goldens.json').write_text(json.dumps(out,separators=(',',':'))+'\n', encoding='utf-8')

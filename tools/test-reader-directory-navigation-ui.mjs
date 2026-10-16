@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/ReaderDirectoryTrace.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -456,7 +457,7 @@ console.log('PASS directory disclosure actual SDK Builder: fold/unfold arrow, ac
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
   const require = createRequire(import.meta.url);
-  const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdkRoot = resolveEtsLoaderRoot();
   const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
   syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationSurface');
   for (const name of ['ReaderBookmarkErrorState','ReaderBookmarkLoadingState','ReaderBookmarkEmptyState']) syntax.componentCollection.customComponents.add(name);
@@ -505,7 +506,7 @@ console.log('PASS directory search actual SDK State dispatch: submit/miss/clear 
   const { createRequire } = await import('node:module');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const require = createRequire(import.meta.url);
-  const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdk = resolveEtsLoaderRoot();
   const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
   syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationList');
   class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
@@ -616,7 +617,7 @@ console.log('PASS tree download actual SDK Builder and Core target fencing: day/
   const { createRequire } = await import('node:module');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const require=createRequire(import.meta.url);
-  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdk=resolveEtsLoaderRoot();
   const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
   syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationSurface');
   syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationList');

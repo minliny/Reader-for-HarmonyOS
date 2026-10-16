@@ -1,7 +1,8 @@
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
 const nativeAttributes=require(sdk+'/lib/component_map.js').COMMON_ATTRS;
 const hosts=new Set(['ReaderPageScaffold','ReaderStandardPage','MainTabShell']);

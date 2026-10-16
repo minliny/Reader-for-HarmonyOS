@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -39,7 +40,7 @@ assert.doesNotMatch(bookshelf, /private tabletNavigation(?:Item)?\(/,
   'bookshelf content delegates navigation to the actual public owner');
 assert.match(bookshelfShell, /MainTabShell\(\{[\s\S]*railVariant: 'bookshelf'/,
   'the bookshelf delegates its explicit legal rail variant to the public shell');
-const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const loader=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(loader+'/node_modules/typescript');
 const compilerOptions=require(loader+'/lib/ets_checker.js').compilerOptions;
 const tabAst=ts.createSourceFile('MainTabBar.ets',mainTabs,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,compilerOptions);

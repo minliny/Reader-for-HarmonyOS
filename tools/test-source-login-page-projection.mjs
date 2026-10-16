@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -14,8 +15,7 @@ const original = JSON.stringify(bundled);
 
 // Execute the actual Owner method and actual ArkWeb queue/URL admission. Only
 // native browser run is a seam; this probe does not claim an authenticated site.
-const sdk = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = createRequire(import.meta.url)(`${sdk}/node_modules/typescript`);
 const tree = ts.createSourceFile('ReaderRuntimeOwner.ts', read('ReaderRuntimeOwner.ts'), ts.ScriptTarget.Latest, true);
 assert.equal(tree.parseDiagnostics.length, 0);

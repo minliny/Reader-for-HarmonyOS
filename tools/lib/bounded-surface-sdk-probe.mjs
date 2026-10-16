@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
@@ -8,11 +9,11 @@ import * as readerFonts from '../../entry/src/main/ets/features/common/ReaderFon
 import { SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 import { ReaderInsetsVp } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 const read=name=>readFileSync(new URL(`../../entry/src/main/ets/features/common/${name}.ets`,import.meta.url),'utf8');
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(`${sdk}/node_modules/typescript`);
 const compilerOptions=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 export function boundedMembers(source,componentName){
-  const tree=ts.createSourceFile('/tmp/BoundedConsumer.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,compilerOptions);
+  const tree=ts.createSourceFile(virtualFilePath('BoundedConsumer.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,compilerOptions);
   if(tree.parseDiagnostics.length)throw Error('real ETS parse diagnostics');
   const components=tree.statements.filter(n=>n.members&&n.name&&n.members.some(m=>m.name?.getText(tree)==='build'));
   const exact=componentName===undefined?undefined:components.find(n=>n.name.getText(tree)===componentName);

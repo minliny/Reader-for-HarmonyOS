@@ -1,3 +1,4 @@
+import { coreCliPath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
@@ -5,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
-const cli = process.env.READER_CORE_CLI ?? fileURLToPath(new URL('../../Reader-Core-Native/target/debug/reader-cli', import.meta.url));
+const cli = coreCliPath();
 assert.ok(existsSync(cli), 'READER_CORE_CLI must select the current Core CLI');
 const server = spawn(process.execPath, [fileURLToPath(new URL('./test-reading-text-source-server.mjs', import.meta.url)), '0'], { stdio:['ignore','pipe','pipe'] });
 const scratch=mkdtempSync(join(tmpdir(),'reader-directory-fixture-'));

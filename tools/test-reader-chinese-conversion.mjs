@@ -1,10 +1,11 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {fixture,compile,until,deferred} from './lib/rules-mutation-durable-probe.mjs';
-const require=createRequire(import.meta.url),ts=require((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/node_modules/typescript');
+const require=createRequire(import.meta.url),ts=require((resolveEtsLoaderRoot())+'/node_modules/typescript');
 const lre=readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'utf8');
-const options=require((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/ets_checker.js').compilerOptions;
+const options=require((resolveEtsLoaderRoot())+'/lib/ets_checker.js').compilerOptions;
 const methodsTree=ts.createSourceFile('LRE.ets',lre,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 assert.equal(methodsTree.parseDiagnostics.length,0,'actual LRE ETS parser');
 const names=['chineseConversionIdentity','dispatchChineseConversionAction','chineseConversionAction','loadChineseConversionMode','changeChineseConversionMode'];

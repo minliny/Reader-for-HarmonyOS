@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -8,9 +9,9 @@ import { actualReaderPageShell, readerPageShellSourceUrl } from './lib/reader-pa
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaBoundaryTurnFeedback.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
-const tree = ts.createSourceFile('/tmp/MangaBoundaryFeedback.ets', source, ts.ScriptTarget.Latest, true,
+const tree = ts.createSourceFile(virtualFilePath('MangaBoundaryFeedback.ets'), source, ts.ScriptTarget.Latest, true,
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length, 0);
 const actor = tree.statements.find(node => node.name?.getText(tree) === 'MangaBoundaryTurnFeedback');
@@ -63,7 +64,7 @@ for (const [scheme, palette] of Object.entries({
 // A retained chapter's empty paper gaps must hide candidate pixels, while the
 // noninteractive paint layer keeps native gestures owned by the reading stage.
 const surfaceSource = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
-const surfaceTree = ts.createSourceFile('/tmp/MangaRetainedPaint.ets', surfaceSource, ts.ScriptTarget.Latest, true,
+const surfaceTree = ts.createSourceFile(virtualFilePath('MangaRetainedPaint.ets'), surfaceSource, ts.ScriptTarget.Latest, true,
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(surfaceTree.parseDiagnostics.length, 0);
 const surface = surfaceTree.statements.find(node => node.name?.getText(surfaceTree) === 'MangaReadingSurface');

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -10,14 +11,13 @@ import { readerInteractiveSafeLeft, readerInteractiveSafeRight, ReaderWindowMetr
 
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const surfaceSource = readFileSync(file('features/common/ReaderDialogSurface.ets'), 'utf8');
 const indexSource = readFileSync(file('pages/Index.ets'), 'utf8');
-const surfaceTree = ts.createSourceFile('/tmp/BookRemovalSurfaceProbe.ets', surfaceSource,
+const surfaceTree = ts.createSourceFile(virtualFilePath('BookRemovalSurfaceProbe.ets'), surfaceSource,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 assert.equal(surfaceTree.parseDiagnostics.length, 0, 'production dialog surface parses');
 const actionModel = surfaceTree.statements.find(node => node.name?.text === 'DialogActionView');

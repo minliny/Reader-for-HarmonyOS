@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -11,9 +12,9 @@ const sourceRoot=process.env.READER_PREDECESSOR_PROBE_ROOT===undefined?new URL('
   pathToFileURL(`${resolve(process.env.READER_PREDECESSOR_PROBE_ROOT)}/`);
 const file=name=>new URL(`entry/src/main/ets/${name}`,sourceRoot),read=name=>readFileSync(file(name),'utf8');
 const themeSource=read('app/ReaderThemeHost.ts'),runtimeSource=read('app/ReaderRuntimeOwner.ts');
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const tree=(text,name)=>ts.createSourceFile(`/tmp/${name}.ts`,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
+const tree=(text,name)=>ts.createSourceFile(virtualFilePath(`${name}.ts`),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
 const runtimeTree=tree(runtimeSource,'RuntimeThemeOperation'),runtime=runtimeTree.statements.find(node=>node.name?.getText(runtimeTree)==='ReaderRuntimeOwner');
 const runtimeMethod=name=>{const method=runtime.members.find(node=>node.name?.getText(runtimeTree)===name);assert.ok(method,name);return method.getText(runtimeTree);};
 const compile=(source,name,deps)=>new Function(...Object.keys(deps),stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm,''))

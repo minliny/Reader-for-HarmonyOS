@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {removalFixture} from './lib/bookshelf-removal-durable-probe.mjs';
@@ -8,7 +9,7 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedMembers,boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
-const require=createRequire(import.meta.url),sdkRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdkRoot=resolveEtsLoaderRoot();
 const syntax=require(sdkRoot+'/lib/validate_ui_syntax.js');
 syntax.componentCollection.customComponents.add('BookshelfShell');
 syntax.propCollection.set('BookshelfShell',new Set([...read('features/bookshelf/BookshelfShell.ets').matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(m=>m[1])));

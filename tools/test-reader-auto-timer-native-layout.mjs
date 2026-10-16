@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -9,7 +10,7 @@ import * as auto from '../entry/src/main/ets/features/reading/ReaderAutoPageFull
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlAutoPageContent.ets', import.meta.url), 'utf8');
 const wheelSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlTimerWheel.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('ReaderControlTimerWheel');
 syntax.propCollection.set('ReaderControlTimerWheel', new Set([...wheelSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));

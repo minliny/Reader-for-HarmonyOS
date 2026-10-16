@@ -1,3 +1,4 @@
+import { coreCliPath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { promises as fsp } from 'node:fs';
@@ -15,7 +16,7 @@ import * as sdk from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
 
 const run=promisify(execFile),host=fileURLToPath(new URL('../../',import.meta.url));
 export const coreRoot=process.env.READER_BOOKSHELF_MANAGEMENT_CORE_ROOT??process.env.READER_CORE_ROOT??resolve(host,'../Reader-Core-Native');
-export const binary=resolve(coreRoot,'target/debug/reader-cli');
+export const binary=coreCliPath(coreRoot);
 export const read=p=>fs.readFileSync(resolve(host,'entry/src/main/ets',p),'utf8');
 
 /** Actual AtomicFile adapter + complete production SDK-emitted classes. Every

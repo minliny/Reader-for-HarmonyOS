@@ -1,3 +1,5 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { coreCliPath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -5,17 +7,18 @@ import { promises as fsp } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
+import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const sdk=await import('../../entry/vendor/core-harmony/sdk/reader_core.ts');
 const scheduler=await import('../../entry/src/main/ets/app/BookRequestScheduler.ts');
 const {ReaderWriteEvidence}=await import('../../entry/src/main/ets/app/ReaderWriteEvidence.ts');
-const run=promisify(execFile),require=createRequire(import.meta.url),loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const ts=require(loader+'/node_modules/typescript'),host=fileURLToPath(new URL('../../',import.meta.url));
+const run=promisify(execFile);
+const { ts } = installedEtsCompiler();
+const host=fileURLToPath(new URL('../../',import.meta.url));
 const read=p=>fs.readFileSync(resolve(host,'entry/src/main/ets',p),'utf8');
-export const binary=resolve(process.env.READER_RULES_RECEIPT_CORE_ROOT??resolve(host,'../Reader-Core-Native'),'target/debug/reader-cli');
+export const binary=coreCliPath(process.env.READER_RULES_RECEIPT_CORE_ROOT??resolve(host,'../Reader-Core-Native'));
 export function compile(p,name,deps,official=false,source=read(p)) {
  const body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'');
  if(!official)return new Function(...Object.keys(deps),stripTypeScriptTypes(body).replace(/^export /gm,'')+`;return ${name==='*'?'({'+[...source.matchAll(/^export (?:async )?(?:class|const|function) ([A-Za-z0-9_]+)/gm)].map(m=>m[1]).join(',')+'})':name};`)(...Object.values(deps));

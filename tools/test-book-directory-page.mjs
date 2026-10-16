@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import * as directoryState from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
 import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
 import { mangaDirectoryEntryRows } from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
@@ -141,7 +142,7 @@ function flush() { while (pending.length) pending.shift()(); }
 
 // Exercise the SDK-emitted Builder callbacks, not an independently rewritten UI.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 for (const [name, props] of Object.entries({ ReaderDirectoryRecoverySurface: ['recovery'], ReaderDirectoryRules: ['bookId'], PageBackBar: [], ReaderDirectoryToolbar: ['text', 'placeholder', 'ascending', 'showChapterTools'],
   ReaderDirectoryList: ['entries', 'rowHeight', 'listPaddingX', 'listPaddingY', 'contentStartInset', 'contentEndInset', 'edgeEffectMode'],

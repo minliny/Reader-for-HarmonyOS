@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import {fixture as sourceSwitchFixture} from './lib/source-switch-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -17,9 +18,9 @@ import {isReaderProductSurfaceEnabled} from '../entry/src/main/ets/app/ReaderPro
 // Reuse only the real leaf constructors/fixtures, not that test's assertions.
 const fixtureUrl=new URL('./test-temporary-back-leaf-sdk.mjs',import.meta.url);
 const fixtureSource=readFileSync(fixtureUrl,'utf8').split('function assertCycle(')[0].replace(/^import[^\n]+\n/gm,'').replaceAll('import.meta.url',JSON.stringify(fixtureUrl.href));
-const deps={readerWindowMetrics,assert,readFileSync,createRequire,stripTypeScriptTypes,ReaderNativeAlertOwner,createReaderBuilderProbe,boundedSurfaceSdk,boundedMembers,choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier,menuSource,ReaderMenuActionView};
+const deps={resolveEtsLoaderRoot,virtualFilePath,readerWindowMetrics,assert,readFileSync,createRequire,stripTypeScriptTypes,ReaderNativeAlertOwner,createReaderBuilderProbe,boundedSurfaceSdk,boundedMembers,choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier,menuSource,ReaderMenuActionView};
 const leaf=new Function(...Object.keys(deps),fixtureSource+';return{harness,settingsSource,sourceSource,shelfSource,read};')(...Object.values(deps));
-const syntax=createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('BookshelfShell',new Set(['content']));createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('bookshelfContent');
+const syntax=createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('BookshelfShell',new Set(['content']));createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('bookshelfContent');
 const indexPath=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),indexSource=readFileSync(indexPath,'utf8');
 let installed;const Runtime=runtimeOwnerIdentityProbe(()=>installed);
 const methods=['registerTemporaryBackBridge','consumeTemporaryBackBridge','isCurrentRuntime','shelfReadRecovery','emptyShelfRecovery','nextNavigationGeneration','onBackPress',

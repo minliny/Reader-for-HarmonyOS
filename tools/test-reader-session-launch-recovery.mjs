@@ -1,9 +1,10 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import * as sessionPolicy from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
-const sdk=process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {ReaderControlMotionFrameCache} from '../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts';

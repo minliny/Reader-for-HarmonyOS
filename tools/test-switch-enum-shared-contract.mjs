@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -79,7 +80,7 @@ for(const guard of ['identity === this.inputIdentity','this.actionEnabled','!thi
  if(guard.startsWith('identity'))p.update(o,{inputIdentity:'new'});if(guard==='this.actionEnabled')p.update(o,{actionEnabled:false});if(guard==='!this.isBusy')p.update(o,{isBusy:true});if(guard==='this.mounted')o.aboutToDisappear();
  click();assert.equal(calls.length,1,'removed '+guard+' demonstrably admits illegal action');cases++;
 }
-const req=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';req(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('CategoryRow',new Set(['content']));
+const req=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();req(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('CategoryRow',new Set(['content']));
 // Original production consumer methods and native shared controls execute in
 // one installed SDK property runtime. No business owner algorithm is copied.
 function consumer(file,members,params={},extra={}){
@@ -121,7 +122,7 @@ console.log('PASS '+cases+' F04 actual SDK baseline/native AUTO, controlled proj
  const p=switchControls();Object.assign(p.dependencies,readerFoundationTokens);
  const t=req(sdk+'/node_modules/typescript'),options=req(sdk+'/lib/ets_checker.js').compilerOptions;
  const editor=read('entry/src/main/ets/features/rss/RssSubscriptionEditorPage.ets'),ownerSource=read('entry/src/main/ets/features/rss/RssSubscriptionEditorOrchestrator.ets');
- const tree=t.createSourceFile('/tmp/RssEditor.ets',ownerSource,t.ScriptTarget.Latest,true,t.ScriptKind.ETS,options);
+ const tree=t.createSourceFile(virtualFilePath('RssEditor.ets'),ownerSource,t.ScriptTarget.Latest,true,t.ScriptKind.ETS,options);
  const declaration=tree.statements.find(n=>t.isVariableStatement(n)&&n.declarationList.declarations.some(d=>d.name.getText(tree)==='EMPTY_RSS_EDITOR_SNAPSHOT')).declarationList.declarations[0];
  const {projectOperationFacts}=await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
  const {stripTypeScriptTypes}=await import('node:module');

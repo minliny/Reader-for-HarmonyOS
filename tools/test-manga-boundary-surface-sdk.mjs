@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -18,9 +19,9 @@ const shellURL = new URL('features/shell/ReaderShell.ets', root);
 const indexURL = new URL('pages/Index.ets', root);
 const source = readFileSync(surfaceURL, 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
-const parse = text => ts.createSourceFile('/tmp/MangaBoundarySurface.ets', text, ts.ScriptTarget.Latest, true,
+const parse = text => ts.createSourceFile(virtualFilePath('MangaBoundarySurface.ets'), text, ts.ScriptTarget.Latest, true,
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 const tree = parse(source);
 assert.equal(tree.parseDiagnostics.length,0);

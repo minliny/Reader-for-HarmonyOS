@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -10,7 +11,7 @@ const wholeSurface = read('ReadingSurface');
 const surfaceSource = wholeSurface.slice(wholeSurface.lastIndexOf('@Component', wholeSurface.indexOf('export struct ReadingSurface')));
 const continuousSource = read('ReaderContinuousReadingStage');
 const nativeSource = read('ReaderNativeParagraphView');
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const require = createRequire(import.meta.url);
 const ts = require(`${sdk}/node_modules/typescript`);
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);

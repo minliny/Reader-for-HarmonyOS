@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +16,7 @@ const file = path => fileURLToPath(new URL(`../entry/src/main/ets/${path}`, impo
 const shelfFile = file('features/bookshelf/BookshelfPage.ets');
 const shelfSource = readFileSync(shelfFile, 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const builderMethods = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 for (const name of ['continueReadingCard', 'filterRow', 'projectionRow']) builderMethods.add(name);
 const specSource = readFileSync(file('features/common/MotionSpec.ets'), 'utf8');

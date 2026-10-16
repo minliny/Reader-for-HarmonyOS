@@ -1,11 +1,12 @@
+import { localFilePath, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync,readdirSync } from 'node:fs';
 const require=createRequire(import.meta.url);
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),root=`${sdk}/../..`;
-const diskPath=new URL('../entry/src/main/ets/app/ReadingImageDiskCache.ts',import.meta.url).pathname;
-const displayPath=new URL('../entry/src/main/ets/app/MangaDisplayRetention.ts',import.meta.url).pathname;
+const diskPath=localFilePath(new URL('../entry/src/main/ets/app/ReadingImageDiskCache.ts',import.meta.url));
+const displayPath=localFilePath(new URL('../entry/src/main/ets/app/MangaDisplayRetention.ts',import.meta.url));
 const disk=readFileSync(diskPath,'utf8').replace(/import \{\s*assertReadingOfflineWriteCapacity,[^]*?from '\.\.\/features\/reading\/ReadingOfflineContract';/,
   `declare function assertReadingOfflineWriteCapacity(free:number,bytes:number,reserve:number):void;
 declare class ReadingOfflineMaterializationError extends Error { constructor(kind:string,message:string); }

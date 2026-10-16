@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import { ReaderAutoPageCoordinator } from '../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts';
 import assert from 'node:assert/strict';
@@ -6,8 +7,7 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 
 // Exercise the SDK's actual @Component member lowering. A normal TypeScript
 // class keeps accessors which ArkUI V1 silently drops, hiding this cold-entry bug.
-const sdk = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
 const names = ['automaticReadingState', 'automaticReadingConfiguration', 'currentMeasurementGeneration', 'currentMeasurementSelection',
   'beginMeasurement', 'admitReaderViewportSize', 'hasMeasuredViewport',
@@ -27,7 +27,7 @@ if (!existsSync(`${sdk}/lib/process_component_class.js`)) {
   const utils = require(`${sdk}/lib/utils.js`);
   const main = require(`${sdk}/main.js`);
   const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-  const parse = text => ts.createSourceFile('/tmp/ReaderFirstPageSdkProbe.ets', text,
+  const parse = text => ts.createSourceFile(virtualFilePath('ReaderFirstPageSdkProbe.ets'), text,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   const tree = parse(source);
   assert.equal(tree.parseDiagnostics.length, 0);

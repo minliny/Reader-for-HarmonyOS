@@ -1,5 +1,6 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import {readFileSync} from 'node:fs';
-import {stripTypeScriptTypes,createRequire} from 'node:module';
+import {stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './arkui-property-runtime-probe.mjs';
 import {readerTypographyRoles} from './reader-typography-probe.mjs';
@@ -11,8 +12,7 @@ export const {resolveReaderChoiceSpec}=new Function(...Object.keys(readerTypogra
   stripTypeScriptTypes(text).replace(/^export /gm,'')+';return {resolveReaderChoiceSpec};')(...Object.values(readerTypographyRoles));
 
 export function compileReaderChoiceLabelModifier(resolve=resolveReaderChoiceSpec,source=choiceSource) {
-  const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-  const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript');
+  const { ts } = installedEtsCompiler();
   const modifierSource=source.slice(source.indexOf('class ReaderChoiceLabelModifier'),source.indexOf('/** Controlled option'));
   return new Function('resolveReaderChoiceSpec','TextAlign','TextOverflow',ts.transpileModule(modifierSource,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText+';return ReaderChoiceLabelModifier;')(resolve,{Start:'TextAlign.Start'},{Ellipsis:'TextOverflow.Ellipsis'});
 }

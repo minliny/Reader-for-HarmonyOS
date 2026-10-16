@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder, mangaSurfaceBoundedControls } from './lib/manga-surface-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -6,10 +7,10 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
 import {createDefaultReaderWindowMetrics, ReaderInsetsVp, readerInteractiveSafeInsets} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 const require=createRequire(import.meta.url);
-const sdk='/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`);
 const source=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),'utf8');
-const tree=ts.createSourceFile('/tmp/MangaReadingSurface.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
+const tree=ts.createSourceFile(virtualFilePath('MangaReadingSurface.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 const component=tree.statements.find(node=>node.name?.getText(tree)==='MangaReadingSurface');
 const names=component.members.map(node=>node.name?.getText(tree)).filter(Boolean);
 const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');

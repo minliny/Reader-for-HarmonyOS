@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -36,7 +37,7 @@ const common = { ReaderRuntimeOwner: Runtime, ...sdk, ...errors, ...metadata, ..
 // production. Extract its ordinary function dependency closure with the
 // installed compiler instead of copying the JSON/admission implementation.
 const require = createRequire(import.meta.url);
-const etsLoader = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const etsLoader = resolveEtsLoaderRoot();
 const ts = require(`${etsLoader}/node_modules/typescript`);
 const searchTree = ts.createSourceFile('SearchGateway.ts', read('features/search/SearchGateway.ts'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 assert.equal(searchTree.parseDiagnostics.length, 0, 'production SearchGateway parses');

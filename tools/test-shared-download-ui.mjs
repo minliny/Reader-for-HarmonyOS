@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks } from 'node:module';
@@ -182,7 +183,7 @@ await assert.rejects(pending, /失效/, 'late status cannot publish after presen
 // Run the actual SDK-emitted page callbacks. Native paint is a separate gate.
 const source = readFileSync('entry/src/main/ets/features/downloads/SharedDownloadPage.ets', 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(sdk + '/node_modules/typescript');
 const pageTree = ts.createSourceFile('SharedDownloadPage.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS);
 const pageMembers = pageTree.statements.find(node => node.name?.getText(pageTree) === 'SharedDownloadPage').members;

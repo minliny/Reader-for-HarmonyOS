@@ -1,13 +1,14 @@
+import { localFilePath, resolveOpenHarmonySdkRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 
 const declarations = await readFile(
-  ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/api/@ohos.graphics.text.d.ts'),
+  (resolveOpenHarmonySdkRoot() + '/ets/api/@ohos.graphics.text.d.ts'),
   'utf8',
 );
 const textDeclarations = await readFile(
-  ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader/declarations/text.d.ts'),
+  (resolveOpenHarmonySdkRoot() + '/ets/build-tools/ets-loader/declarations/text.d.ts'),
   'utf8',
 );
 assert.match(declarations, /interface ParagraphStyle/);
@@ -31,9 +32,9 @@ assert.match(probe, /indentPx/);
 assert.match(probe, /paragraph\.layoutSync/);
 assert.match(probe, /paragraph\.paint/);
 
-const sdkRoot = ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets');
+const sdkRoot = (resolveOpenHarmonySdkRoot() + '/ets');
 const ts = createRequire(import.meta.url)(`${sdkRoot}/build-tools/ets-loader/node_modules/typescript`);
-const adapterPath = probeUrl.pathname;
+const adapterPath = localFilePath(probeUrl);
 const options = { noEmit: true, allowJs: false, skipLibCheck: true,
   moduleResolution: ts.ModuleResolutionKind.NodeJs, target: ts.ScriptTarget.Latest,
   module: ts.ModuleKind.ESNext, types: [], baseUrl: '/', paths: {

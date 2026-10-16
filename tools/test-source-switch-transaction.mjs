@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -98,9 +99,9 @@ assert.match(window,
 // Key ownership moved into the retained observed row. Execute the actual
 // emitted source key factory rather than requiring its old inline spelling.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
-const tree = ts.createSourceFile('/tmp/SourceSwitchTransactionIdentity.ets', window,
+const tree = ts.createSourceFile(virtualFilePath('SourceSwitchTransactionIdentity.ets'), window,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.deepEqual(tree.parseDiagnostics, []);
 let nativeKeyFactory;

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -19,7 +20,7 @@ const Store=productionMotionMethods(file('features/sync/WebDavCredentialStore.ts
 const Host=new Function('WebDavCredentialStore','ReaderThemeHost','ReaderRuntimeOwner','ReaderWriteEvidence','errorMessageOf','projectOperationFacts','projectPersistedReceipt',
  stripTypeScriptTypes(source('features/bookshelf/BookshelfViewModeHost.ts').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''))+';return BookshelfViewModeHost;')(
  {instance:{}},{prepareUserChange:async()=>{}},runtimeOwnerIdentityProbe(()=>runtime),ReaderWriteEvidence,e=>e.message,projectOperationFacts,projectPersistedReceipt);
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(sdk+'/lib/validate_ui_syntax.js'),maps=require(sdk+'/lib/component_map.js');
 for(const name of ['ReaderRecoveryNotice','ReaderRecoveryAction','PageBackBar']){
  syntax.componentCollection.customComponents.add(name);

@@ -1,8 +1,9 @@
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import {tailControls,seedTailOwner} from './foundation-tail-consumer-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes, createRequire } from 'node:module';
-const req=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const req=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=req(sdk+'/node_modules/typescript'),options=req(sdk+'/lib/ets_checker.js').compilerOptions;
 import { labeledIconControls, labeledIconSpecs } from './reader-labeled-icon-action-probe.mjs';
 import { foundationControls, foundationSpecs } from './reader-foundation-control-probe.mjs';

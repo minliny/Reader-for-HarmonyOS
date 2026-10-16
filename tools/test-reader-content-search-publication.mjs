@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -12,11 +13,11 @@ import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlSea
 import { searchListDependencies, searchListMethods } from './lib/reader-content-search-list-probe.mjs';
 
 const require=createRequire(import.meta.url);
-const sdkRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot=resolveEtsLoaderRoot();
 const ts=require(`${sdkRoot}/node_modules/typescript`),syntax=require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 const options=require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
 const read=name=>readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`,import.meta.url),'utf8');
-const parse=source=>ts.createSourceFile('/tmp/ReaderSearchPublication.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+const parse=source=>ts.createSourceFile(virtualFilePath('ReaderSearchPublication.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 const member=(source,name)=>{const tree=parse(source);const type=tree.statements.find(node=>node.members?.some(item=>item.name?.getText(tree)===name));
   const node=type.members.find(node=>node.name?.getText(tree)===name);assert.ok(node,name);return node.getText(tree);};
 function register(name,source){const tree=parse(source),type=tree.statements.find(node=>node.members?.some(item=>item.name?.getText(tree)==='build'));

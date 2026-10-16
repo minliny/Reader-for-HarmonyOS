@@ -1,3 +1,4 @@
+import { temporaryOutput } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync, mkdirSync} from 'node:fs';
 import {resolve} from 'node:path';
@@ -17,7 +18,7 @@ const baseSource=readFileSync(basePath,'utf8');
 const shaPath=process.env.READER_SUBSCRIPTION_STORE_SOURCE??new URL('./evidence/p9-subscription-capacity/whole-sha-store.txt',import.meta.url);
 const shaSource=readFileSync(shaPath,'utf8');
 assert.ok(shaSource.includes('recordFingerprint')&&shaSource.includes('validateIntegrity'));
-const out=resolve(process.env.READER_SUBSCRIPTION_CAPACITY_OUTPUT??'/private/tmp/reader-subscription-capacity-20261003');mkdirSync(out,{recursive:true});
+const out=resolve(process.env.READER_SUBSCRIPTION_CAPACITY_OUTPUT??temporaryOutput('reader-subscription-capacity-'));mkdirSync(out,{recursive:true});
 const byteLength=s=>Buffer.byteLength(s,'utf8');
 const digest=s=>createHash('sha256').update(s).digest('hex');
 const uuid=i=>'00000000-0000-4000-8000-'+String(i).padStart(12,'0');
@@ -126,7 +127,7 @@ async function corruption(source){const f=build(source),{document,plan}=original
  writeFileSync(resolve(out,'INTEGRITY.json'),JSON.stringify(cases,null,2)+'\n');console.log(JSON.stringify({integrity:cases}));return cases;
 }
 const dependencyHashes=Object.fromEntries(['app/ReaderAtomicSnapshotFile.ts','app/BundledBookSourceSupply.ts','features/settings/RulesMutationOwner.ts','features/settings/RulesManagementGateway.ts','features/settings/RulesMutationContract.ts','features/source/SourceGateway.ts'].map(p=>[p,digest(readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8'))]));
-const manifest={hostBase:'3df16be152bcb7701a08670a218cb90b964d6cca',baseStoreSource:String(basePath),baseStoreSha256:digest(baseSource),candidateStoreSource:String(shaPath),candidateStoreSha256:digest(shaSource),dependencyHashes,boundaries:['No Core database writes or native target used','Installed SDK full production Store/Owner/SourceGateway/Gateway and Atomic thin IO','Memory-backed API bytes and Mac CPU/RSS observations are not OS durability or HarmonyOS budgets','Complete 50/500 paths validate exact normal-journey byte/hash formula; 5000 cumulative numbers are derived, with real API cold checkpoint verification']};
+const manifest={hostBase:'3df16be152bcb7701a08670a218cb90b964d6cca',baseStoreSource:String(basePath),baseStoreSha256:digest(baseSource),candidateStoreSource:String(shaPath),candidateStoreSha256:digest(shaSource),dependencyHashes,boundaries:['No Core database writes or native target used','Installed SDK full production Store/Owner/SourceGateway/Gateway and Atomic thin IO','Memory-backed API bytes and Host CPU/RSS observations are not OS durability or HarmonyOS budgets','Complete 50/500 paths validate exact normal-journey byte/hash formula; 5000 cumulative numbers are derived, with real API cold checkpoint verification']};
 writeFileSync(resolve(out,'INPUTS.json'),JSON.stringify(manifest,null,2)+'\n');
 const rows=[];for(const n of [50,500])for(const [kind,s]of [['baseline',baseSource],['whole-sha',shaSource]])rows.push((await full(n,kind,s)).result);
 const large=await checkpoints(5000,shaSource),integrity=await corruption(shaSource);

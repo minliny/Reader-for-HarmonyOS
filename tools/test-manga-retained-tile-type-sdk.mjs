@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -6,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 // Check the complete production lease adapter against the installed official
 // platform Map/payload declarations. This is a focused boundary, not a HAP build.
 const require = createRequire(import.meta.url);
-const loaderRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const loaderRoot = resolveEtsLoaderRoot();
 const ts = require(`${loaderRoot}/node_modules/typescript`);
 const officialChecker = require(`${loaderRoot}/lib/ets_checker.js`);
 const ownerPath = fileURLToPath(new URL('../entry/src/main/ets/features/manga/MangaRetainedTileCache.ts', import.meta.url));
@@ -18,7 +19,7 @@ function declaration(path, name) {
 }
 const tile = declaration(controllerPath, 'MangaTile');
 const image = declaration(imagePath, 'ReadingGatewayImage');
-const contractPath = '/tmp/ReaderMangaTileTypeContract.d.ts';
+const contractPath = virtualFilePath('ReaderMangaTileTypeContract.d.ts');
 const contract = `import type image from '@ohos.multimedia.image';\n${image}\n${tile}\n`;
 const options = { ...officialChecker.compilerOptions,
   ets: { ...officialChecker.compilerOptions.ets, libs: [`${loaderRoot}/declarations/index-full.d.ts`] },

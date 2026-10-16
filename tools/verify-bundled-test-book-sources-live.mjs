@@ -1,3 +1,4 @@
+import { coreCliPath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -7,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const coreRepo = resolve(repo, '../Reader-Core-Native');
-const cli = process.env.READER_CORE_CLI ?? resolve(coreRepo, 'target/debug/reader-cli');
+const cli = coreCliPath(coreRepo);
 const sourcePath = resolve(repo,
   'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json');
 

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -47,7 +48,7 @@ assert.equal(shelf.readingFilter,'all');assert.equal(shelf.contentFilter,'all');
 assert.equal(shelf.isSectionActionActive('bookshelf_filter'),false);
 // Run the surviving production filter closure after the group entry is removed.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const tree = ts.createSourceFile('BookshelfPage.ets',shelfSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 const callbacks = new Map();

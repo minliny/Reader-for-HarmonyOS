@@ -1,3 +1,4 @@
+import { coreCliPath } from './lib/tool-environment.mjs';
 // Live admission suite for the bundled book-source supply chain.
 // Per source: HTTPS-only + secret + paywall static gates, then a reader-cli
 // live chain across >=3 keywords (cold process each), a warm repeat of the
@@ -24,7 +25,7 @@ import {
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const coreRepo = resolve(repo, '../Reader-Core-Native');
-const cliPath = process.env.READER_CORE_CLI ?? resolve(coreRepo, 'target/debug/reader-cli');
+const cliPath = coreCliPath(coreRepo);
 const sourcePath = resolve(repo,
   'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json');
 const evidenceIndex = process.argv.indexOf('--evidence-dir');

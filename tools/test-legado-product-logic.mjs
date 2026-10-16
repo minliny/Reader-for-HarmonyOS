@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { readingPrefetchOwnerProbe } from './lib/reading-prefetch-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -157,7 +158,7 @@ assert.match(shelfMoreMenu, /检查更新/,
 const shellFile = new URL('../entry/src/main/ets/features/bookshelf/BookshelfShell.ets', import.meta.url);
 const ShellUpdate = productionMotionMethods(shellFile, ['moreIntentAction','dismissMoreMenu','requestCheckUpdates']);
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 function suppliedCallback(text, component, property, owner) {
   const tree = ts.createSourceFile('ShelfUpdateContract.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);

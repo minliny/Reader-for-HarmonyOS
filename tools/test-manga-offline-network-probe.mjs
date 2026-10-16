@@ -1,3 +1,4 @@
+import { localFilePath, resolveArkFrontend, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import * as nodeFs from 'node:fs';
@@ -340,22 +341,21 @@ console.log('PASS actual normal Index shelf selection binds Native identity once
 // Installed official SDK and actual vendored Core SDK types validate the new
 // Want/parser + send/wait seam. This is not a substitute for an ArkTS/HAP gate.
 if (process.env.READER_SKIP_PROBE_SDK_CHECK !== '1') {
-  const require=createRequire(import.meta.url), sdk=process.env.READER_ETS_LOADER_ROOT??
-    '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
   const ts=require(`${sdk}/node_modules/typescript`),sdkRoot=`${sdk}/../..`;
   const ownerSource=readFileSync(url('app/ReaderRuntimeOwner.ts'),'utf8');
   const tree=ts.createSourceFile('Owner.ts',ownerSource,ts.ScriptTarget.Latest,true);
   const ownerClass=tree.statements.find(n=>n.name?.getText(tree)==='ReaderRuntimeOwner');
   const requestMethod=ownerClass.members.find(n=>n.name?.getText(tree)==='requestDirect').getText(tree);
-  const virtualPath=url('app/MangaOfflineProbeSdkCheck.ts').pathname;
+  const virtualPath=localFilePath(url('app/MangaOfflineProbeSdkCheck.ts'));
   // The source gate runs before the HAP pipeline installs generated oh_modules.
   // Use the tracked, Native-sync vendored SDK for this type seam so a fresh
   // isolated worktree remains reproducible; oh_modules is only a build output.
-  const coreSdk=new URL('../entry/vendor/core-harmony/sdk/reader_core',import.meta.url).pathname;
-  const text=`import type {JsonObject, ReaderCoreRuntime, ReaderCoreResultEvent, RequestOptions} from '${coreSdk}';
-import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError, type BookRequestOptions } from '${url('app/BookRequestScheduler').pathname}';
-import { readerRuleMutationEffects } from '${url('app/ReaderRuleMutationEffects').pathname}';
-import type {MangaPlatformObservation, MangaBodyDiagnosticState} from '${new URL('../entry/src/main/ets/app/MangaPlatformObservation',import.meta.url).pathname}';
+  const coreSdk=localFilePath(new URL('../entry/vendor/core-harmony/sdk/reader_core',import.meta.url));
+  const text=`import type {JsonObject, ReaderCoreRuntime, ReaderCoreResultEvent, RequestOptions} from ${JSON.stringify(coreSdk.replaceAll('\\', '/'))};
+import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError, type BookRequestOptions } from ${JSON.stringify(localFilePath(url('app/BookRequestScheduler')).replaceAll('\\', '/'))};
+import { readerRuleMutationEffects } from ${JSON.stringify(localFilePath(url('app/ReaderRuleMutationEffects')).replaceAll('\\', '/'))};
+import type {MangaPlatformObservation, MangaBodyDiagnosticState} from ${JSON.stringify(localFilePath(new URL('../entry/src/main/ets/app/MangaPlatformObservation',import.meta.url)).replaceAll('\\', '/'))};
 import Want from '@ohos.app.ability.Want';
 import {hilog} from '@kit.PerformanceAnalysisKit';
 ${readFileSync(url('app/MangaOfflineNetworkProbe.ts'),'utf8').replace(/^import .*?;\n/gm,'')}
@@ -399,15 +399,15 @@ console.log('PASS installed SDK Want and actual Core SDK send/wait types, with i
   // The TS typechecker accepts a nested conditional object which the installed
   // bytecode frontend rejects. Exercise that official frontend on the actual
   // complete production module as well; parse-only neither links nor runs it.
-  const frontend=`${sdk}/bin/ark/build-mac/bin/es2abc`;
+  const frontend=resolveArkFrontend();
   const parse=path=>spawnSync(frontend,['--target-api-version','23','--module','--parse-only',path],{encoding:'utf8'});
   for(const path of ['app/ReaderRuntimeOwner.ts','app/MangaOfflineNetworkProbe.ts','app/ReaderControlVerificationLaunch.ts']) {
-    const actualParse=parse(url(path).pathname);
+    const actualParse=parse(localFilePath(url(path)));
     assert.equal(actualParse.status,0,actualParse.stderr||actualParse.stdout||String(actualParse.error));
   }
   const invalidDir=nodeFs.mkdtempSync(join(tmpdir(),'reader-manga-owner-frontend-'));
   try {
-    const entryPath=url('entryability/EntryAbility.ets').pathname;
+    const entryPath=localFilePath(url('entryability/EntryAbility.ets'));
     const etsOptions=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
     const ui=require(`${sdk}/lib/process_ui_syntax.js`);
     const entryTree=ts.createSourceFile(entryPath,readFileSync(entryPath,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,etsOptions);

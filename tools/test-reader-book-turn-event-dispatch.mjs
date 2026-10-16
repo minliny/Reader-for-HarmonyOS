@@ -61,9 +61,9 @@ int main(){
 const scratch=mkdtempSync(path.join(tmpdir(),'reader-native-event-'));
 try{
   writeFileSync(path.join(scratch,'dispatch.cpp'),cpp);
-  const compile=spawnSync('c++',['-std=c++17','-O2','-Wall','-Wextra','-Werror',path.join(scratch,'dispatch.cpp'),'-o',path.join(scratch,'dispatch')],{encoding:'utf8',timeout:120000});
+  const compile=spawnSync(process.env.CXX || (process.platform === 'win32' ? 'clang++' : 'c++'),['-std=c++17','-O2','-Wall','-Wextra','-Werror',path.join(scratch,'dispatch.cpp'),'-o',path.join(scratch,process.platform==='win32'?'dispatch.exe':'dispatch')],{encoding:'utf8',timeout:120000});
   assert.equal(compile.status,0,compile.stdout+compile.stderr);
-  const run=spawnSync(path.join(scratch,'dispatch'),[],{encoding:'utf8',timeout:10000});
+  const run=spawnSync(path.join(scratch,process.platform==='win32'?'dispatch.exe':'dispatch'),[],{encoding:'utf8',timeout:10000});
   assert.equal(run.status,0,run.stdout+run.stderr);process.stdout.write(run.stdout);
   assert.match(source,/previous->second->active\.store\(false, std::memory_order_release\)/,'replacement retires the old registration');
   assert.match(source,/EventPayload\s*\{\s*event, generation, detail, surfaceEpoch, weakHost, bridge\s*\}/,'enqueue uses the original Host epoch');

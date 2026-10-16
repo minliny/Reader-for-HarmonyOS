@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -10,7 +11,7 @@ import * as registry from '../entry/src/main/ets/features/common/ReaderThemeRegi
 import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const require=createRequire(import.meta.url);
-const ts=require(((process.env.READER_ETS_LOADER_ROOT ?? ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader')) + '/node_modules/typescript'));
+const ts=require(((resolveEtsLoaderRoot()) + '/node_modules/typescript'));
 const base=new URL('../entry/src/main/ets/',import.meta.url);
 const copy=x=>JSON.parse(JSON.stringify(x));
 function compile(file,dependencies){

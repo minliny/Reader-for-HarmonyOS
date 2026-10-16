@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes,createRequire} from 'node:module';
 import {ReaderSystemFileOpenQueue} from '../../entry/src/main/ets/app/ReaderSystemFileOpenQueue.ts';
@@ -39,9 +40,9 @@ export function systemFileIndexFixture({bridge,book={sourceId:'local',bookId:'lo
  * minimal SDK child payload. This verifies actual V1 ordinary callback emission,
  * not native ReaderShell mounting or complete application compilation. */
 export function systemReaderExitSdk(page){
- const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+ const sdk=resolveEtsLoaderRoot();
  const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),text=systemFileSource('pages/Index.ets');
- const tree=ts.createSourceFile('/tmp/FileOpenReaderConsumer.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+ const tree=ts.createSourceFile(virtualFilePath('FileOpenReaderConsumer.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
  let shell;
  const walk=n=>{if(ts.isCallExpression(n)&&n.expression.getText(tree)==='ReaderShell')shell=n;ts.forEachChild(n,walk);};walk(tree);
  const names=new Set(['onExitRequestHandler','onExit','onExitCancelled']);

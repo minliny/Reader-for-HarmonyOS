@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {rssRecoverySurfaceSdk as boundedSurfaceSdk} from './lib/rss-recovery-surface-sdk-probe.mjs';
@@ -8,7 +9,7 @@ import {isReaderCoreTransactionPendingError} from '../entry/vendor/core-harmony/
 import {actualBookshelfOperationTypes, actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
 import {actualSourceManagementTypes} from './lib/source-management-owner-probe.mjs';
 import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './lib/general-settings-owner-probe.mjs';
-const require=createRequire(import.meta.url),ts=require((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/node_modules/typescript');
+const require=createRequire(import.meta.url),ts=require((resolveEtsLoaderRoot())+'/node_modules/typescript');
 function compile(file,n,deps){const source=read(file),tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);assert.deepEqual(tree.parseDiagnostics,[]);const emitted=ts.transpileModule(source.replace(/^import[\s\S]*?;\n/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(emitted.diagnostics,[]);const exports={};new Function('exports',...Object.keys(deps),emitted.outputText)(exports,...Object.values(deps));return n===undefined?exports:exports[n];}
 const Gateway=compile('features/rss/RssGateway.ts','RssGateway',{ReaderRuntimeOwner:RssRuntime,isReaderCoreTransactionPendingError});
 const deps={RssGateway:Gateway,ReaderRuntimeOwner:RssRuntime,ReaderWriteEvidence:RssWriteEvidence,RssRouteOperationHost:RealRssRouteHost,

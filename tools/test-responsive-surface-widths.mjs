@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -8,7 +9,7 @@ import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const require = createRequire(import.meta.url), ts = require(sdk + '/node_modules/typescript'), options = require(sdk + '/lib/ets_checker.js').compilerOptions;
 const parse = source => ts.createSourceFile('ResponsivePage.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 function proveStandardBinding(name, source, variant, builder) {

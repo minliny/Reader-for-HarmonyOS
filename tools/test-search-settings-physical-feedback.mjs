@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {switchControls} from './lib/reader-switch-control-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -17,7 +18,7 @@ const base = process.env.READER_FEEDBACK_SOURCE_ROOT ?? fileURLToPath(new URL('.
 const path = value => resolve(base, 'entry/src/main/ets', value);
 const read = value => readFileSync(path(value), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const builders = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 function registerBuilders(source) { for (const m of source.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) builders.add(m[1]); }
@@ -123,7 +124,7 @@ await check('PH36 real Index Back returns General to Settings before Bookshelf a
   const runtime={},Runtime=runtimeOwnerIdentityProbe(()=>runtime);
   const Index = productionMotionMethods(path('pages/Index.ets'), ['consumeTemporaryBackBridge','isCurrentRuntime','onBackPress'],{ReaderRuntimeOwner:Runtime});
   const SourceSwitch=productionMotionMethods(path('features/source/SourceSwitchHost.ts'),
-    ['consumeBack','close','currentScope','currentLease','identity','busyOrUnknown','stopDiscovery','publish','deliver'],{ReaderRuntimeOwner:Runtime});
+    ['consumeBack','close','canCancelPreparation','currentScope','currentLease','identity','busyOrUnknown','stopDiscovery','publish','deliver'],{ReaderRuntimeOwner:Runtime});
   const owner = Object.assign(new Index(), { hasVisibleImportDialog:()=>false, route: 'settings', settingsSection: 'general',
     returnToBookshelf: () => { owner.route = 'bookshelf'; },sourceSwitchVisible: true,sourceSwitchScopeId:1 });
   owner.sourceSwitchHost=Object.assign(new SourceSwitch(),{runtime,generation:0,

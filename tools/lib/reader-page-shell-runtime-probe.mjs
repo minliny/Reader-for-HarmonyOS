@@ -1,10 +1,9 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { localFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 
-const sdk = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const ts = createRequire(import.meta.url)(`${sdk}/node_modules/typescript`);
+const { ts } = installedEtsCompiler();
 export const readerPageShellSourceUrl = new URL(
   '../../entry/src/main/ets/features/common/ReaderPageShell.ts', import.meta.url);
 const allowed = new Set(['ReaderPageShell', 'ReaderThemeRegistry', 'ReaderWindowMetrics',
@@ -18,13 +17,13 @@ allowed.add(new URL('../manga/MangaDirectoryVisual.ts', readerPageShellSourceUrl
 export function actualReaderPageShell(source = readFileSync(readerPageShellSourceUrl, 'utf8')) {
   const modules = new Map();
   const load = url => {
-    assert.ok(allowed.has(url.href), 'only finite actual page-policy dependencies are resolved: ' + url.pathname);
+    assert.ok(allowed.has(url.href), 'only finite actual page-policy dependencies are resolved: ' + localFilePath(url));
     if (modules.has(url.href)) return modules.get(url.href);
     const emitted = ts.transpileModule(url.href === readerPageShellSourceUrl.href ? source : readFileSync(url, 'utf8'), {
-      fileName: url.pathname, reportDiagnostics: true,
+      fileName: localFilePath(url), reportDiagnostics: true,
       compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS, strict: true },
     });
-    assert.deepEqual(emitted.diagnostics, [], 'actual shared page-policy module SDK emit: ' + url.pathname);
+    assert.deepEqual(emitted.diagnostics, [], 'actual shared page-policy module SDK emit: ' + localFilePath(url));
     const exports = {}; modules.set(url.href, exports);
     new Function('exports', 'require', 'Color', emitted.outputText)(exports, name => {
       assert.ok(name.startsWith('.'), 'page policy has no new platform dependency');

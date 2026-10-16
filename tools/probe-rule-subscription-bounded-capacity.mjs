@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, temporaryOutput } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync, mkdirSync} from 'node:fs';
 import {resolve} from 'node:path';
@@ -20,7 +21,7 @@ const shaSource=readFileSync(shaPath,'utf8');
 assert.ok(shaSource.includes('planCache')&&shaSource.includes('hydratePlan'));
 const ownerPath=process.env.READER_SUBSCRIPTION_OWNER_SOURCE??new URL('./evidence/p9-subscription-bounded-capacity/owner-candidate.txt',import.meta.url);
 const ownerSource=readFileSync(ownerPath,'utf8');
-const out=resolve(process.env.READER_SUBSCRIPTION_CAPACITY_OUTPUT??'/private/tmp/reader-subscription-bounded-capacity-20261003');mkdirSync(out,{recursive:true});
+const out=resolve(process.env.READER_SUBSCRIPTION_CAPACITY_OUTPUT??temporaryOutput('reader-subscription-bounded-capacity-'));mkdirSync(out,{recursive:true});
 const byteLength=s=>Buffer.byteLength(s,'utf8');
 const digest=s=>createHash('sha256').update(s).digest('hex');
 const uuid=i=>'00000000-0000-4000-8000-'+String(i).padStart(12,'0');
@@ -129,9 +130,9 @@ async function integrity(){const seed=build(shaSource),{plan}=originalPlan(seed,
  }
  writeFileSync(resolve(out,'INTEGRITY.json'),JSON.stringify(results,null,2)+'\n');console.log(JSON.stringify({integrity:results}));return results;
 }
-const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const loader=resolveEtsLoaderRoot();
 const dependencyHashes=Object.fromEntries(['app/ReaderAtomicSnapshotFile.ts','app/BundledBookSourceSupply.ts','features/settings/RulesManagementGateway.ts','features/settings/RulesMutationContract.ts','features/source/SourceGateway.ts'].map(p=>[p,digest(readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8'))]));
-const manifest={hostDependencyBase:'3df16be152bcb7701a08670a218cb90b964d6cca',candidateCommit:process.env.READER_SUBSCRIPTION_CANDIDATE_COMMIT??null,storeSource:String(shaPath),storeSha256:digest(shaSource),ownerSource:String(ownerPath),ownerSha256:digest(ownerSource),dependencyHashes,environment:{node:process.version,platform:process.platform,arch:process.arch,loader,sdkTypeScriptVersion:createRequire(import.meta.url)(loader+'/node_modules/typescript').version},boundaries:['Full production methods compiled with installed SDK; controlled memory file and official crypto API seams','50/500/5000 complete Host protocol chains use typed observations, zero Core database writes','Mac probe CPU/RSS are not HarmonyOS target/device budgets or Atomic crash durability']};
+const manifest={hostDependencyBase:'3df16be152bcb7701a08670a218cb90b964d6cca',candidateCommit:process.env.READER_SUBSCRIPTION_CANDIDATE_COMMIT??null,storeSource:String(shaPath),storeSha256:digest(shaSource),ownerSource:String(ownerPath),ownerSha256:digest(ownerSource),dependencyHashes,environment:{node:process.version,platform:process.platform,arch:process.arch,loader,sdkTypeScriptVersion:createRequire(import.meta.url)(loader+'/node_modules/typescript').version},boundaries:['Full production methods compiled with installed SDK; controlled memory file and official crypto API seams','50/500/5000 complete Host protocol chains use typed observations, zero Core database writes','Host probe CPU/RSS are not HarmonyOS target/device budgets or Atomic crash durability']};
 writeFileSync(resolve(out,'INPUTS.json'),JSON.stringify(manifest,null,2)+'\n');
 const rows=[];for(const n of [50,500,5000])rows.push(await full(n));
 const cold=await checkpoints(5000),faults=await localFaults(),damage=await integrity();

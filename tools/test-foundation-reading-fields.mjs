@@ -1,7 +1,8 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync}from'node:fs';
 import {createRequire}from'node:module';
-const sdkRequire=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRequire=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 function compile(source,names,deps,hooks){sdkRequire(sdk+'/lib/component_map.js').ID_ATTRS.clear();return createReaderBuilderProbe(source,names,deps,hooks);}
 import{createReaderBuilderProbe}from'./lib/reader-control-builder-probe.mjs';
 import{foundationControls,foundationSpecs,readerFoundationTokens}from'./lib/reader-foundation-control-probe.mjs';

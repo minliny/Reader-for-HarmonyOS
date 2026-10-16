@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -16,9 +17,9 @@ assert.equal(createHash('sha256').update(readFileSync(new URL('LICENSE', vendorR
 assert.equal(createHash('sha256').update(readFileSync(new URL('reader.patch', vendorRoot))).digest('hex'), sourceLock.patchSha256);
 const configSource = readFileSync(new URL('../entry/src/main/ets/features/manga/vendor/pulltorefresh/PullToRefreshConfigurator.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
-const tree = ts.createSourceFile('/tmp/PullToRefresh.ets', source, ts.ScriptTarget.Latest, true,
+const tree = ts.createSourceFile(virtualFilePath('PullToRefresh.ets'), source, ts.ScriptTarget.Latest, true,
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length, 0);
 const component = tree.statements.find(node => node.name?.getText(tree) === 'PullToRefresh');
@@ -70,7 +71,7 @@ check('adapter API avoids actual SDK inherited attribute methods', () => {
     .flatMap(node => node.members.map(member => member.name?.getText(nativeAttributes)).filter(Boolean)));
   assert.ok(reserved.has('enabled') && reserved.has('onTouch'), 'actual ArkUI CommonAttribute inherited names');
   function verify(candidate) {
-    const parsed = ts.createSourceFile('/tmp/PullApi.ets', candidate, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS,
+    const parsed = ts.createSourceFile(virtualFilePath('PullApi.ets'), candidate, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS,
       require(`${sdk}/lib/ets_checker.js`).compilerOptions);
     assert.equal(parsed.parseDiagnostics.length, 0);
     const declaration = parsed.statements.find(node => node.name?.getText(parsed) === 'PullToRefresh');

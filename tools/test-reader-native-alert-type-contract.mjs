@@ -1,10 +1,11 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 const require = createRequire(import.meta.url);
-const loaderRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const loaderRoot = resolveEtsLoaderRoot();
 const ts = require(`${loaderRoot}/node_modules/typescript`);
 const officialChecker = require(`${loaderRoot}/lib/ets_checker.js`);
 const officialDeclarations = officialChecker.readDeaclareFiles();
@@ -24,7 +25,7 @@ const options = { ...officialChecker.compilerOptions, ets: { ...officialChecker.
   moduleResolution: ts.ModuleResolutionKind.NodeJs, strict: true, noEmit: true, skipLibCheck: true,
   allowNonTsExtensions: true, needDoArkTsLinter: true, isCompatibleVersion: false, etsLoaderPath: loaderRoot };
 const validInput = "{ title: '原标题', message: '原内容', primaryButton: { value: '确认', action: (): void => {} } }";
-const legacyPath = '/tmp/ReaderNativeAlertOwner.ts', legacyContractPath = '/tmp/ReaderNativeAlertContract.d.ts';
+const legacyPath = virtualFilePath('ReaderNativeAlertOwner.ts'), legacyContractPath = virtualFilePath('ReaderNativeAlertContract.d.ts');
 const legacyContract = actualOptions.getText(declaration) + '\n';
 // Invert only the approved syntax migration. This hash pins the complete
 // previously shipped TS production body, without reproducing its algorithm.
@@ -35,10 +36,10 @@ for (const [name, slot] of [['primary', 'primary'], ['secondary', 'secondary'], 
   legacyOwner = legacyOwner.replace(`readerNativeAlertButtonCopy(${name}, (): void => lease.act('${slot}', ${name}.action))`, `{ ...${name}, action: (): void => lease.act('${slot}', ${name}.action) }`);
 assert.equal(createHash('sha256').update(legacyOwner).digest('hex'), '6f524e3e07832df16f17b09eae5be387c2b4ed854465f3a4ddad7219bbe664fb', 'negative uses the exact prior production TS source');
 function check(input, legacy = false) {
-  const consumerPath = '/tmp/ReaderNativeAlertTypeContract.ets';
+  const consumerPath = virtualFilePath('ReaderNativeAlertTypeContract.ets');
   const sourceOwner = legacy ? legacyPath : ownerPath;
   const consumerSource = `import type { UIContext } from '@ohos.arkui.UIContext';
-import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '${sourceOwner.replace(/\.(?:ts|ets)$/, '')}';
+import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from ${JSON.stringify(sourceOwner.replace(/\.(?:ts|ets)$/, '').replaceAll('\\', '/'))};
 declare let context: UIContext;
 const owner = new ReaderNativeAlertOwner();
 owner.present((native: ReaderNativeAlertOptions): void => context.showAlertDialog(native), 'notice', ${input}, (): boolean => true);`;

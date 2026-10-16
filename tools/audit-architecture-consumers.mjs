@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 /** Read-only actual ETS/TS source inventory. No production or build file writes.
  * Static reachability is conservative: conditional/callback paths are possible,
  * not proof of native scheduling or a user journey. Product-disabled branches
@@ -11,7 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { isSharedTypographyExpression, typographyExpressionContext } from './lib/reader-typography-consumer-audit.mjs';
 const args=Object.fromEntries(process.argv.slice(2).map(arg=>{const [key,...rest]=arg.split('=');return [key,rest.join('=')];}));
 const root=path.resolve(args['--root']||process.cwd()),sourceRoot=path.join(root,'entry/src/main/ets');
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const productSource=readFileSync(path.join(sourceRoot,'app/ReaderProductScope.ts'),'utf8');
 const productPolicy=new Function(`${stripTypeScriptTypes(productSource.replace(/^export /gm,''))}; return { profile: READER_PRODUCT_PROFILE, enabled: isReaderProductSurfaceEnabled };`)();

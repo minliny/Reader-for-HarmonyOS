@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './general-settings-owner-probe.mjs';
 import {actualSourceManagementTypes,actualSourceManagementHostField} from './source-management-owner-probe.mjs';
 import {actualBookshelfOperationTypes,actualBookshelfHostField} from './bookshelf-operation-owner-probe.mjs';
@@ -70,14 +71,14 @@ export function sourceSwitchFontSdk({ready=()=>true,load=async()=>{},warn=()=>{}
  * production state, UI builders and callback guards are emitted by the SDK. */
 export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  const windowSource=sources.SourceSwitchPanel??read('features/source/SourceSwitchWindow.ets');
- const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+ const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
  const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
- const tree=ts.createSourceFile('/tmp/SourceSwitchLiveFixture.ets',windowSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ const tree=ts.createSourceFile(virtualFilePath('SourceSwitchLiveFixture.ets'),windowSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  const frame=tree.statements.find(node=>node.name?.getText(tree)==='SourceSwitchLayoutFrame');
  const SourceSwitchLayoutFrame=new Function('FrameCallback',stripTypeScriptTypes(frame.getText(tree))+';return SourceSwitchLayoutFrame;')(class FrameCallback{});
  const {SourceSwitchCandidateRow,SourceSwitchCandidateDataSource}=sourceSwitchRowSdk(p.properties,windowSource);
  require(sdk+'/lib/validate_ui_syntax.js').objectLinkCollection.set('SourceSwitchNovelRow',new Set(['row']));
- const gatewayTree=ts.createSourceFile('/tmp/SourceCountFixture.ts',read('features/source/SourceSwitchGateway.ts'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
+ const gatewayTree=ts.createSourceFile(virtualFilePath('SourceCountFixture.ts'),read('features/source/SourceSwitchGateway.ts'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
  const count=gatewayTree.statements.find(node=>node.name?.getText(gatewayTree)==='sourceSwitchSourceCount');
  const sourceSwitchSourceCount=new Function(stripTypeScriptTypes(count.getText(gatewayTree)).replace(/^export /,'')+';return sourceSwitchSourceCount;')();
  // Request an explicit bounded range using the existing SDK lazy callback
@@ -145,9 +146,9 @@ export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
  return{p,index,mount,rows,leafDeps};
 }
 export function failureChain(x){
- const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+ const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
  const ts=require(sdk+'/node_modules/typescript'),source=read('pages/Index.ets');
- const ast=ts.createSourceFile('/tmp/ActualSourceFailureBridge.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+ const ast=ts.createSourceFile(virtualFilePath('ActualSourceFailureBridge.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
  let actualShell;const visit=n=>{if(ts.isCallExpression(n)&&n.expression.getText(ast)==='ReaderShell')actualShell=n;ts.forEachChild(n,visit);};visit(ast);
  const names=new Set(['sourceSwitchScopeId','sourceSwitchFailureMessage','onRetryFailedSourceSwitch','onDismissSourceSwitchFailure']);
  const fields=actualShell.arguments[0].properties.filter(p=>names.has(p.name?.getText(ast))).map(p=>p.getText(ast));assert.equal(fields.length,4);

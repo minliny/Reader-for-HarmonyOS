@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -19,9 +20,9 @@ console.log('PASS manga strip: last crop, unknown geometry, original-image posit
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 const surfaceURL=new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url);
 const require=createRequire(import.meta.url);
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`);
-const tree=ts.createSourceFile('/tmp/MangaStripAnchorProbe.ets',readFileSync(surfaceURL,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
+const tree=ts.createSourceFile(virtualFilePath('MangaStripAnchorProbe.ets'),readFileSync(surfaceURL,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length,0);
 const frame=tree.statements.find(n=>n.name?.getText(tree)==='MangaLayoutFrame');assert.ok(frame);
 const MangaLayoutFrame=new Function('FrameCallback',`${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {});

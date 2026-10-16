@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
 import { ProductionHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import assert from 'node:assert/strict';
@@ -234,7 +235,7 @@ console.log('PASS production Index + actual Coordinator/Gateway: stable return/n
 // Actual typed Core read -> production Index -> SDK detail payload/hero consumer.
 class DetailChild { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 class CoverChild extends DetailChild {}
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 const sdkRequire = createRequire(import.meta.url), uiSyntax = sdkRequire(sdkRoot + '/lib/validate_ui_syntax.js');
 for (const name of ['LocalBookDetail', 'NoCoverCover']) {
   uiSyntax.componentCollection.customComponents.add(name);

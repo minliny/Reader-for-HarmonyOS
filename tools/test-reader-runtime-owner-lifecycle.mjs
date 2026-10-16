@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -8,8 +9,7 @@ const ability = readFileSync('entry/src/main/ets/entryability/EntryAbility.ets',
 
 // Execute actual lifecycle methods; adding an optional constructor parameter
 // must not invalidate proof of the owner/lease/teardown invariants.
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`);
 const tree=ts.createSourceFile('ReaderRuntimeOwner.ts',owner,ts.ScriptTarget.Latest,true);
 const type=tree.statements.find(n=>n.name?.getText(tree)==='ReaderRuntimeOwner');

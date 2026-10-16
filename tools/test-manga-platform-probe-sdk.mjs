@@ -1,13 +1,14 @@
+import { localFilePath, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
 const require=createRequire(import.meta.url);
-const sdk='/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),sdkRoot=`${sdk}/../..`;
-const runnerPath=new URL('../entry/src/main/ets/app/MangaPlatformProbeRunner.ts',import.meta.url).pathname;
-const pagePath=new URL('../entry/src/main/ets/pages/ReaderMangaPlatformDiagnostic.ets',import.meta.url).pathname;
+const runnerPath=localFilePath(new URL('../entry/src/main/ets/app/MangaPlatformProbeRunner.ts',import.meta.url));
+const pagePath=localFilePath(new URL('../entry/src/main/ets/pages/ReaderMangaPlatformDiagnostic.ets',import.meta.url));
 const runner=readFileSync(runnerPath,'utf8');
 // Reader application seams are declared narrowly; ImageKit, file I/O, hash,
 // ResourceManager and UIContext all resolve from the installed official SDK.

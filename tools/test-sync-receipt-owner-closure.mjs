@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import { randomUUID } from 'node:crypto';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
@@ -20,7 +21,7 @@ const fileIo={OpenMode:{READ_WRITE:1,READ_ONLY:0},
 };
 const cryptoFramework={createMd(){const hash=require('node:crypto').createHash('sha256');return{async update({data}){hash.update(data);},async digest(){return {data:new Uint8Array(hash.digest())};}};}};
 
-const syntax=require((process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/validate_ui_syntax.js');
+const syntax=require((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');
 const source = p => readFileSync(new URL(`../entry/src/main/ets/${p}`,import.meta.url),'utf8');
 syntax.builderParamObjectCollection.set('ReaderCard',new Set([...source('features/common/ReaderCard.ets').matchAll(/@BuilderParam\s+(\w+):/g)].map(m=>m[1])));
 const ordinary = text => stripTypeScriptTypes(text.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
@@ -183,9 +184,9 @@ for(const fail of ['none','applyAck','commitAck','host']){
 // Transform the complete production page, including real decorated Props and
 // @Watch. Shared child slots are registered from their actual declarations.
 {
-  const sdk=process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdk=resolveEtsLoaderRoot();
   const ts=require(sdk+'/node_modules/typescript');const options=require(sdk+'/lib/ets_checker.js').compilerOptions;
-  const text=source('features/sync/SyncPage.ets');const tree=ts.createSourceFile('/tmp/SyncPage.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+  const text=source('features/sync/SyncPage.ets');const tree=ts.createSourceFile(virtualFilePath('SyncPage.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
   const names=tree.statements.find(n=>n.members&&n.name?.text==='SyncPage').members.map(n=>n.name?.getText(tree)).filter(Boolean);
   class Property { constructor(value,owner,name){Object.assign(this,{value,owner,name});}get(){return this.value;}set(v){this.value=v;this.owner.watches?.get(this.name)?.call(this.owner,this.name);}reset(v){this.set(v);}purgeDependencyOnElmtId(){}aboutToBeDeleted(){} }
   class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}

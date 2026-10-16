@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -78,7 +79,7 @@ assert.doesNotMatch(page, /搜索|分类|正常|需登录/);
  class Scroller{scrollTo(value){scrolls.push(value);}}
  class Header{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
  sdk.childSources.PageBackBar=readFileSync(resolve(repo,'entry/src/main/ets/features/common/PageBackBar.ets'),'utf8');
- const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+ const loader=resolveEtsLoaderRoot();
  createRequire(import.meta.url)(loader+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
  const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=393;metrics.systemInsets.left=24;metrics.cutoutInsets.right=30;
  const owner=sdk.consumer(page,['build','pageContent','backBar','pageScroller','focusSubscriptionIfNeeded','expandedSubscriptionId','focusedSubscriptionId'],

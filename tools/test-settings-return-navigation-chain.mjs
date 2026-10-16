@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { formatDownloadStorageBytes } from '../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -12,7 +13,7 @@ import {isReaderProductSurfaceEnabled} from '../entry/src/main/ets/app/ReaderPro
 
 const read=path=>readFileSync(new URL('../entry/src/main/ets/'+path,import.meta.url),'utf8');
 const indexSource=read('pages/Index.ets'), pageSource=read('features/settings/SettingsPage.ets');
-const sdkRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url), ts=require(sdkRoot+'/node_modules/typescript');
 const syntax=require(sdkRoot+'/lib/validate_ui_syntax.js');
 const ordinary=text=>stripTypeScriptTypes(text
@@ -216,7 +217,7 @@ for(const changedKey of ['reduceMotion','developerMode'])for(const failure of ['
   assert.deepEqual(owner.gateway.writeFacts(),original);cases++;
 }
 {
-  const tree=ts.createSourceFile('/tmp/SettingsReturnMutation.ets',indexSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS);
+  const tree=ts.createSourceFile(virtualFilePath('SettingsReturnMutation.ets'),indexSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS);
   const method=tree.statements.find(node=>node.members?.some(member=>member.name?.getText(tree)==='returnToSettings'))
     .members.find(member=>member.name?.getText(tree)==='returnToSettings');
   const original=method.getText(tree),mutated=original.replace('this.bindSettingsPresentation()','false');

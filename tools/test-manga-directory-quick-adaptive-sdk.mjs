@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -10,7 +11,7 @@ const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaR
 // The real frontend registers all declared Builder names before lowering a
 // selected branch. Inactive mode/settings/more remain outside this scope.
 const require = createRequire(import.meta.url);
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 const componentMap = require(`${sdkRoot}/lib/component_map.js`);
 for (const match of source.matchAll(/@Builder\s+private (\w+)\(/g)) componentMap.CUSTOM_BUILDER_METHOD.add(match[1]);
 const members = [...mangaDirectoryAdaptiveFields, ...mangaDirectoryAdaptiveMembers,

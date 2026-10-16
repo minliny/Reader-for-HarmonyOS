@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
@@ -11,19 +12,19 @@ import { deriveReaderSessionCapsule } from '../entry/src/main/ets/features/readi
 import { completeReaderPageGestureSettlement } from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
 
 const require = createRequire(import.meta.url);
-const sdk = (process.env.READER_ETS_LOADER_ROOT ?? ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader'));
+const sdk = (resolveEtsLoaderRoot());
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const baseline = process.env.READER_CAPSULE_BASELINE;
 let file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 if (baseline) {
   file = join(mkdtempSync(join(tmpdir(), 'reader-ph109-')), 'LocalReadingExperience.ets');
-  writeFileSync(file, execFileSync('/Library/Developer/CommandLineTools/usr/bin/git',
+  writeFileSync(file, execFileSync('git',
     ['show', `${baseline}:entry/src/main/ets/features/reading/LocalReadingExperience.ets`],
     { cwd: new URL('..', import.meta.url) }));
 }
 const source = readFileSync(file, 'utf8');
-const tree = ts.createSourceFile('/tmp/CapsuleSource.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const tree = ts.createSourceFile(virtualFilePath('CapsuleSource.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const component = tree.statements.find(node => node.members?.some(m => m.name?.getText(tree) === 'liveSessionCapsuleSnapshot'));
 const member = name => component.members.find(node => node.name?.getText(tree) === name);
 const observed = new Set(component.members.filter(node =>

@@ -334,7 +334,11 @@ contract('settings and Appearance share one ReaderSettings page-turn truth', () 
 contract('page-turn style unknown save retains the current session and uses captured admission', () => {
   const style = methodSection(localReading, 'changeReaderPageTurnStyle');
   assert.match(style, /const previous = this\.readerSettingsSnapshot;/);
-  assert.match(style, /readerSettingsGateway\.update\(snapshot, false, current\)\.catch\(\(error: Error\)/);
+  assert.match(style, /persistReaderSettingsSnapshot\(snapshot, current\)\.catch\(\(error: Error\)/);
+  const persist = methodSection(localReading, 'persistReaderSettingsSnapshot');
+  assert.match(persist, /if \(!current\(\)\) return;/);
+  assert.match(persist, /await this\.readerSettingsGateway\.update\(snapshot, false, current\);/);
+  assert.match(persist, /this\.settleReaderPreferenceNotice\('settings', current\);/);
   assert.match(style, /captureReaderSettingsAdmission\(lifecycleToken, mutationGeneration\)/);
   assert.match(style, /changeGeneration === this\.pageStyleChangeGeneration/);
   assert.doesNotMatch(style, /this\.readerSettingsSnapshot = previous;/);

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } from './lib/manga-directory-adaptive-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -359,11 +360,10 @@ assert.equal(reduced.frames.length, 0); assert.equal(reduced.animations.length, 
 
 // Narrow production-method regressions must fail the same lifecycle behavior;
 // neither the expected result nor the native I/O boundary is rewritten.
-const require = createRequire(import.meta.url), sdk = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require = createRequire(import.meta.url), sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 function mutate(name, transform) {
-  const tree = ts.createSourceFile('/tmp/MangaSheetMotionNegative.ets', source, ts.ScriptTarget.Latest, true,
+  const tree = ts.createSourceFile(virtualFilePath('MangaSheetMotionNegative.ets'), source, ts.ScriptTarget.Latest, true,
     ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
   const component = tree.statements.find(node => node.name?.getText(tree) === 'MangaReadingSurface');
   const member = component.members.find(node => node.name?.getText(tree) === name);
@@ -379,7 +379,7 @@ await assert.rejects(() => verifyMotion(mutate('settlePanel', text =>
   text.replace('0.9, 500, 43', '1.05, 250, 30'))), /deep-equal/);
 
 await assert.rejects(() => verifyMotion(mutate('openPanel', text => {
-  const tree = ts.createSourceFile('/tmp/FirstFrameSheet.ets', `class Probe { ${text} }`, ts.ScriptTarget.Latest, true,
+  const tree = ts.createSourceFile(virtualFilePath('FirstFrameSheet.ets'), `class Probe { ${text} }`, ts.ScriptTarget.Latest, true,
     ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
   const requests = [];
   const visit = node => { if (ts.isCallExpression(node) && node.expression?.name?.getText(tree) === 'postFrameCallback') requests.push(node); ts.forEachChild(node, visit); };

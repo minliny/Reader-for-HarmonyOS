@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {switchSpecs} from './lib/reader-switch-control-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -9,7 +10,7 @@ import {productionReaderPressFeedback} from './lib/reader-press-feedback-probe.m
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const indexSource=read('pages/Index.ets'),pageSource=read('features/settings/SettingsPage.ets'),shelfSource=read('features/bookshelf/BookshelfSettingsPage.ets');
-const require=createRequire(import.meta.url),sdkRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdkRoot=resolveEtsLoaderRoot();
 require(sdkRoot+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('CategoryRow',new Set(['content']));
 let sequence=0,cases=0;
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}

@@ -1,3 +1,4 @@
+import { localFilePath, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
@@ -28,8 +29,7 @@ const io = { OpenMode: { CREATE: 1, READ_WRITE: 2, TRUNC: 4 }, access: async p =
   AtomicFile: class { constructor(p) { this.path = p; } readFully() { const b = readFileSync(this.path); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); } } };
 // Platform util.LRUCache is an IO seam in Node; delegate eviction to the
 // SDK's installed ISC lru-cache 5.1.1 instead of implementing another cache.
-const sdkLru = createRequire(import.meta.url)(`${process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader'}/node_modules/lru-cache`);
+const sdkLru = createRequire(import.meta.url)(`${resolveEtsLoaderRoot()}/node_modules/lru-cache`);
 const util = { LRUCache: class {
   constructor(capacity) { this.cache = new sdkLru({max: capacity}); }
   get(key) { return this.cache.get(key); } put(key, value) { this.cache.set(key, value); }
@@ -40,7 +40,7 @@ const crypto = { createMd: () => { const h = createHash('sha256'); return { upda
 const Cache = new Function('fileIo', 'statfs', 'cryptoFramework', 'util', 'canonicalReadingImageBaseUrl',
   'assertReadingOfflineWriteCapacity', 'ReadingOfflineMaterializationError', `${executable};return ReadingImageDiskCache;`)(
   io, { getFreeSize: async () => 1e9 }, crypto, util, value => value?.trim().split('#')[0] || undefined, () => {}, Error);
-const Owner = productionMotionMethods(new URL('entry/src/main/ets/app/ReaderRuntimeOwner.ts', root).pathname,
+const Owner = productionMotionMethods(localFilePath(new URL('entry/src/main/ets/app/ReaderRuntimeOwner.ts', root)),
   ['markOfflineImageChapterComplete', 'isOfflineImageChapterComplete']);
 const directories = [];
 const checks = [];

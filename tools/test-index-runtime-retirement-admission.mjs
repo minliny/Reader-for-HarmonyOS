@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import {bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,9 +6,9 @@ import {createRequire} from 'node:module';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 const path=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),source=readFileSync(path,'utf8');
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader',require=createRequire(import.meta.url);
+const sdk=resolveEtsLoaderRoot(),require=createRequire(import.meta.url);
 const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
-const tree=ts.createSourceFile('/tmp/Index.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.equal(tree.parseDiagnostics.length,0);
+const tree=ts.createSourceFile(virtualFilePath('Index.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.equal(tree.parseDiagnostics.length,0);
 const current=n=>ts.isCallExpression(n)&&n.expression.getText(tree)==='ReaderRuntimeOwner.current'&&n.arguments.length===0;
 function visit(n){if(ts.isBinaryExpression(n)&&[ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(n.operatorToken.kind))assert.equal(current(n.left)||current(n.right),false,'late identity checks use authoritative static admission, without throwing getter');ts.forEachChild(n,visit);}visit(tree);
 let installed;const Runtime=runtimeOwnerIdentityProbe(()=>installed);

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks } from 'node:module';
@@ -23,7 +24,7 @@ const Host = productionMotionMethods(
 const file = new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = (process.env.READER_ETS_LOADER_ROOT ?? ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader'));
+const sdk = (resolveEtsLoaderRoot());
 const ts = require(`${sdk}/node_modules/typescript`), syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const children = ['topBar', 'controlContent', 'controlHeader', 'brightnessRail', 'moduleNavBar', 'readerMoreMenu', 'launchSourceContent'];
 const TouchType = { Down: 0, Move: 1, Up: 2, Cancel: 3 };

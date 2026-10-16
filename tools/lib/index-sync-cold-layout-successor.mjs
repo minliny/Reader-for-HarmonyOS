@@ -1,10 +1,11 @@
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
 import {auditNativeTextElements} from './reader-typography-consumer-audit.mjs';
 
 export const indexSyncColdLayoutSuccessorPath='tools/fixtures/index-sync-cold-page-layout-successor-20261014.json';
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 

@@ -1,3 +1,4 @@
+import {resolveEtsLoaderRoot} from './tool-environment.mjs';
 import {foundationControls} from './reader-foundation-control-probe.mjs';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
@@ -13,12 +14,12 @@ export function configIntentFixture(previous) {
   let text=readFileSync(url,'utf8').split('\nasync function open(f)')[0]
     .replace(/^import[^\n]+\n/gm,'').replaceAll('import.meta.url',JSON.stringify(url.href))
     .replace('const asset={','const asset=sharedAsset ?? {');
-  const f=new Function('readFileSync','createRequire','stripTypeScriptTypes','createReaderBuilderProbe','runtimeOwnerIdentityProbe','randomUUID','sharedAsset','foundationControls',text+`;return {
+  const f=new Function('readFileSync','createRequire','stripTypeScriptTypes','createReaderBuilderProbe','runtimeOwnerIdentityProbe','randomUUID','sharedAsset','foundationControls','resolveEtsLoaderRoot',text+`;return {
     fixture,asset,config,Store,Gateway,Orchestrator,SyncWriteObservation,ReaderWriteEvidence,DEFAULT_SYNC_SNAPSHOT,source,execute,readerRecoveryView,util,fileIo,pause,until,
     setRuntimeOwner:owner=>{currentOwner=owner;},setPreferences:store=>{nativePreferences=store;},
     setDirectory:path=>{configDirectory=path;},directory:()=>configDirectory,
     cleanup:()=>{for(const path of realConfigDirectories) nativeFs.rmSync(path,{recursive:true,force:true});}
-  };`)(readFileSync,createRequire,stripTypeScriptTypes,createReaderBuilderProbe,runtimeOwnerIdentityProbe,randomUUID,previous?.asset,foundationControls);
+  };`)(readFileSync,createRequire,stripTypeScriptTypes,createReaderBuilderProbe,runtimeOwnerIdentityProbe,randomUUID,previous?.asset,foundationControls,resolveEtsLoaderRoot);
   if(previous) f.setDirectory(previous.directory());
   return f;
 }

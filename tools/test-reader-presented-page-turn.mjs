@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -8,11 +9,11 @@ import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const gatewayFile = new URL('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts', import.meta.url);
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const source = readFileSync(file, 'utf8');
-const tree = ts.createSourceFile('/tmp/ReaderPresentedTurnClasses.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const tree = ts.createSourceFile(virtualFilePath('ReaderPresentedTurnClasses.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const classes = Object.fromEntries(['CoreReadingAnchor', 'PreparedReaderPageTurn', 'ReadingCommit', 'ReaderUIFrameCallback'].map(name => {
   const node = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.getText(tree) === name);
   assert.ok(node, name);

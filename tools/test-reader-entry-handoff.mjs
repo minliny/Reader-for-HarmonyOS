@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -170,9 +171,9 @@ for (const callback of ['admitCommittedProgress', 'onDirectoryProjectionChanged'
 // SessionGateway it creates. Resource assertions must inspect the resulting
 // reference graph, not only the displayed chapter's images flag.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const tree = ts.createSourceFile('/tmp/ReaderEntryRetain.ets', readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const tree = ts.createSourceFile(virtualFilePath('ReaderEntryRetain.ets'), readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const classes = Object.fromEntries(['ReaderRetainedPresentation', 'ReaderMaterializedChapterContext'].map(name => {
   const node = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.getText(tree) === name);
   assert.ok(node, name);

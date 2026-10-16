@@ -43,7 +43,7 @@ try {
     '--core-input-snapshot', snapshot, '--napi-manifest', manifest, '--native-so', native,
     '--app-native-so', app, '--harmony-vendor', vendor, '--core-build-evidence', evidence, '--output', join(root, 'result.json')];
   const run = () => spawnSync(process.execPath, args, { encoding: 'utf8', timeout: 15000 });
-  assert.equal(run().status, 0);
+  const baseline = run(); assert.equal(baseline.status, 0, baseline.stderr);
   symlinkSync(native, join(vendor, 'escaped-input'));
   assert.match(run().stderr, /must not contain symbolic links/);
   rmSync(join(vendor, 'escaped-input'));

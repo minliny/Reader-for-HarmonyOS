@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -20,9 +21,9 @@ assert.equal(baseline.referencedVersion, 'e1e7d06c7e02b0439e837985dc878b22bac14d
 assert.equal(createHash('sha256').update(JSON.stringify(baseline.methods)).digest('hex'),
   'b671ad1159a6f16cfaa34c00361bf031d1185bf43d5c165fb3cc8a3b3bf46d23', 'immutable e1 production excerpts');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
-const parse = text => ts.createSourceFile('/tmp/MangaRestoreIntent.ets', text, ts.ScriptTarget.Latest, true,
+const parse = text => ts.createSourceFile(virtualFilePath('MangaRestoreIntent.ets'), text, ts.ScriptTarget.Latest, true,
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 const tree = parse(source);
 assert.equal(tree.parseDiagnostics.length, 0);

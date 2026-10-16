@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -17,7 +18,7 @@ const read = path => readFileSync(new URL('../entry/src/main/ets/' + path, impor
 const originalIndexProof = JSON.parse(readFileSync(new URL('./fixtures/icon-button-family/bookshelf-search-owner-before.json', import.meta.url), 'utf8'));
 const originalIndexFixture = readFileSync(new URL('./fixtures/icon-button-family/bookshelfShellContent.before.ets', import.meta.url), 'utf8');
 assert.equal(createHash('sha256').update(originalIndexFixture).digest('hex'), originalIndexProof.fixtureSha256, 'frozen actual original Index member cannot drift');
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const require = createRequire(import.meta.url), syntax = require(sdk + '/lib/validate_ui_syntax.js');
 syntax.builderParamObjectCollection.set('BookshelfShell', new Set(['content']));
 syntax.builderParamObjectCollection.set('AppTopBar', new Set(['trailing']));

@@ -48,7 +48,7 @@ const input = {
 
 assert.equal(harness.requireLocalBookStagePath(input, hash), stagedPath);
 assert.throws(
-  () => harness.requireLocalBookStagePath({ ...input, stagedPath: `/tmp/${hash}.source` }, hash),
+  () => harness.requireLocalBookStagePath({ ...input, stagedPath: `/tmp/${hash}.source` }, hash), // reader-portability-allow fixed-temp-path -- Negative target-path fixture proves files outside app staging are rejected; no host IO.
   /outside the app staging directory/,
 );
 assert.throws(

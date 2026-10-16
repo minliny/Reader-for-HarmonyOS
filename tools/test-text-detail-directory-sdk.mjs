@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks } from 'node:module';
@@ -27,7 +28,7 @@ const indexSource = read('pages/Index.ets'), fullSource = read('features/reading
 const panelSource = read('features/reading/FullDirectoryPanel.ets'), listSource = read('features/reading/ReaderDirectoryList.ets');
 const surfaceSource = read('features/reading/ReaderDirectoryNavigationSurface.ets');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(sdk + '/node_modules/typescript'), options = require(sdk + '/lib/ets_checker.js').compilerOptions;
 const syntax = require(sdk + '/lib/validate_ui_syntax.js');
 const listTree = ts.createSourceFile('ReaderDirectoryList.ets', listSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);

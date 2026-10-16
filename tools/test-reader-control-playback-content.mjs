@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import * as ttsConfig from '../entry/src/main/ets/features/reading/ReaderTtsConfigOptions.ts';
 import * as morphScroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
 import * as presentation from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
@@ -441,7 +442,7 @@ wheel.neighbours = 1; assert.deepEqual(wheel.offsets(), [-1, 0, 1], 'AutoPage ha
 
 // The SDK parse check is read-only and does not build/sign a HAP. It catches
 // ArkUI DSL syntax that standard TypeScript-only method tests cannot parse.
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 if (existsSync(`${sdkRoot}/node_modules/typescript`)) {
   const require = createRequire(import.meta.url), ts = require(`${sdkRoot}/node_modules/typescript`);
   const options = require(`${sdkRoot}/lib/ets_checker`).compilerOptions;

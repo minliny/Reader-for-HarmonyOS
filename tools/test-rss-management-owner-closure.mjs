@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
@@ -18,7 +19,7 @@ const RssGateway = new Function('ReaderRuntimeOwner','isReaderCoreTransactionPen
 const RssOrchestrator = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','RssRouteOperationHost','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts',
   ordinary(source('features/rss/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,{warn(){},error(){}},isReaderCoreTransactionPendingError,projectPersistedReceipt,facts.projectOperationFacts);
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const pageSource = source('features/rss/RssSubscriptionManagementPage.ets');
 syntax.componentCollection.customComponents.add('RssSubscriptionManagementPage');

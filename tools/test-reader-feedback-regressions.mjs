@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { themeDayDesignSource } from './lib/reader-theme-design-source.mjs';
 import assert from 'node:assert/strict';
 import {createRequire, registerHooks, stripTypeScriptTypes} from 'node:module';
@@ -127,8 +128,7 @@ assert.match(shelf, /return \/\^\(https\?:\\\/\\\/\|data:image/,
 const shelfBreakpoint = Number(read('entry/src/main/ets/features/bookshelf/BookshelfShell.ets')
   .match(/export const BOOKSHELF_WIDE_BREAKPOINT = (\d+);/)[1]);
 let shelfMetrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 390, 844));
-const builderMethods = createRequire(import.meta.url)(`${process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader'}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
+const builderMethods = createRequire(import.meta.url)(`${resolveEtsLoaderRoot()}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 for (const name of ['continueReadingCard', 'sectionAction', 'filterRow', 'projectionRow']) builderMethods.add(name);
 const shelfProperties = createArkUIPropertyRuntimeProbe();
 const {owner: shelfLayout} = createReaderBuilderProbe(shelf,
@@ -198,7 +198,7 @@ assert.match(rss,
 
 // The approved source view keeps discovery in a small live status row. Run
 // its SDK-emitted child update rather than asserting the removed loading body.
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('SourceSwitchSpinner');syntax.propCollection.set('SourceSwitchSpinner',new Set(['active','diameter','strokeWidth','durationMs','reduceMotion']));
 class SpinnerChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}

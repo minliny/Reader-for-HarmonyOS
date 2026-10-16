@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -10,7 +11,7 @@ const projection=await import('../entry/src/main/ets/app/ReaderPersistedReceiptP
 const recovery=await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const indexSource=source('pages/Index.ets'),pageSource=source('features/settings/RulesManagementPage.ets');
-const require=createRequire(import.meta.url),syntax=require((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/validate_ui_syntax.js');
+const require=createRequire(import.meta.url),syntax=require((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');
 for(const [name,path]of[['RulesManagementPage','features/settings/RulesManagementPage.ets'],['JsonImportDialog','features/common/JsonImportDialog.ets'],['ReaderToggle','features/common/ReaderToggle.ets'],['PageBackBar','features/common/PageBackBar.ets']]){
  syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(m=>m[1])));
 }

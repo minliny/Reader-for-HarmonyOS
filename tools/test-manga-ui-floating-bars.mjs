@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -70,7 +71,7 @@ for(const trailing of [false,true]) for(const scheme of ['day','night']) {
   left.onClick();assert.equal(back,1);assert.equal(more,trailing?1:0);
 }
 console.log('PASS actual centered header SDK Builder: symmetric 44vp slots, 19/28 title, 52/R18 float, asymmetric parent safe frame and one back dispatch');
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('MainTabBar');syntax.propCollection.set('MainTabBar',new Set(['current','vertical']));
 const shellSource=read('features/shell/MainTabShell.ets');

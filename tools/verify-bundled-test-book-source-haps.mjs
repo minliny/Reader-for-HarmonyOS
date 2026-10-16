@@ -1,3 +1,4 @@
+import { resolveHostTool } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
@@ -25,7 +26,7 @@ for (const hapPath of hapPaths) {
 }
 
 for (const hapPath of hapPaths) {
-  const extracted = spawnSync('unzip', [
+  const extracted = spawnSync(resolveHostTool('unzip'), [
     '-p', hapPath, 'resources/rawfile/reader-tested-book-source-collection.json',
   ], { encoding: null, maxBuffer: 32 * 1024 * 1024 });
   assert.equal(extracted.status, 0,

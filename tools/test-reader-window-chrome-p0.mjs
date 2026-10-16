@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -17,7 +18,7 @@ assert.doesNotMatch(index, /\$r\('app\.color\.reader_surface'\)/,
 // Read the actual outer Stack modifier chain. A count over the whole Index
 // was accidentally coupled to the old failure branch's duplicate background.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const parse = text => ts.createSourceFile('WindowChromeContract.ets', text, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const tree = parse(index);

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -15,14 +16,13 @@ import { MotionPointTrack } from '../entry/src/main/ets/features/common/MotionPo
 // Full, unchanged production component: SDK constructors, fields, @Watch,
 // lifecycle and every Builder. Only platform layout/Scroller/font services and
 // child view rendering are instrumented. This does not simulate device pixels.
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 const require = createRequire(import.meta.url);
 const ts = require(`${sdkRoot}/node_modules/typescript`);
 const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
 const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url), 'utf8');
-const parsed = ts.createSourceFile('/tmp/ReaderControlAppearanceContent.ets', source,
+const parsed = ts.createSourceFile(virtualFilePath('ReaderControlAppearanceContent.ets'), source,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const component = parsed.statements.find(node => node.name?.getText(parsed) === 'ReaderControlAppearanceContent');
 const members = component.members.map(node => node.name?.getText(parsed)).filter(Boolean);

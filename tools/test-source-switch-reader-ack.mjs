@@ -1,3 +1,4 @@
+import { localFilePath, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {registerHooks,createRequire} from 'node:module';
@@ -7,9 +8,9 @@ registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith(
 const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
 const {LOCAL_SOURCE_ID}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 const sourceURL=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),source=readFileSync(sourceURL,'utf8');
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript');
-const ast=ts.createSourceFile(sourceURL.pathname,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+const ast=ts.createSourceFile(localFilePath(sourceURL),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
 assert.deepEqual(ast.parseDiagnostics,[]);
 const exactClass=ast.statements.find(n=>n.name?.getText(ast)==='ReadingCommit').getText(ast);
 const emitted=ts.transpileModule(exactClass,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(emitted.diagnostics,[]);

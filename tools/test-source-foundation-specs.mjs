@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {readFileSync} from 'node:fs';
@@ -50,7 +51,7 @@ assert.equal(successorProperties,palette.bindings.length,'all and only exact pal
 for(const g of golden.widths){const p=labeledIconControls(),owner=createReaderBuilderProbe(source,['chip'],p.dependencies,p.hooks).owner;
  Object.assign(owner,{appThemeScheme:'day',filterControlWidth:()=>g.availableWidth,rebuildSourceProjection(){}});owner.chip('有限状态',g.width,false,true);
  const actor=[...owner.children.values()].at(-1);assert.equal(p.nodes(actor).find(n=>n.type==='Text').width,g.expected,'original responsive width remains exact');}
-const syntax=createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/validate_ui_syntax.js');
+const syntax=createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');
 syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
 // Actual shared native icon hit target consumes the Page's real trailing slot.
 for(const scheme of ['day','night']){

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -154,10 +155,10 @@ verifyFit(source);
 // previously shipped computed Resource/selected boolean parameters. No model or
 // expected result is changed; the same retained-observer behavior must reject it.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 function changeMember(text, name, mutate) {
-  const tree = ts.createSourceFile('/tmp/MangaSheetRegressionControl.ets', text, ts.ScriptTarget.Latest, true,
+  const tree = ts.createSourceFile(virtualFilePath('MangaSheetRegressionControl.ets'), text, ts.ScriptTarget.Latest, true,
     ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
   const component = tree.statements.find(node => node.name?.getText(tree) === 'MangaReadingSurface');
   const member = component.members.find(node => node.name?.getText(tree) === name);

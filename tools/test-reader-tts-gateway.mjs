@@ -1,3 +1,4 @@
+import { localFilePath } from './lib/tool-environment.mjs';
 import { withReaderProgressProducerFixture } from './lib/reader-progress-producer-fixture.mjs';
 import assert from 'node:assert/strict';
 
@@ -115,8 +116,8 @@ console.log('reader TTS precise rate round trip: PASS');
 // unversioned hand-written fixtures never exercised that production boundary.
 const wireChapterKeys = Object.keys(JSON.parse(readFileSync(new URL(
   '../../Reader-Core-Native/protocol/reader-command.schema.json', import.meta.url), 'utf8')).$defs.TtsChapterRef.properties);
-const Page = withReaderProgressProducerFixture(productionMotionMethods(new URL(
-  '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url).pathname,
+const Page = withReaderProgressProducerFixture(productionMotionMethods(localFilePath(new URL(
+  '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url)),
 ['ttsChapterRef', 'commitTtsProgress'], {
   CoreReadingAnchor: class { constructor(chapterIndex, chapterOffset, chapterProgress, bodyVersion, processingVersion) {
     Object.assign(this, { chapterIndex, chapterOffset, chapterProgress, bodyVersion, processingVersion });

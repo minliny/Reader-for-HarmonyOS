@@ -55,7 +55,7 @@ try{
  assert.equal(existsSync(join(old,'entry-default-signed.hap')),false);
  assert.ok(existsSync(join(old,'manifest.json')),'immutable manifest survives pruning');
  const ended=spawnSync(process.execPath,['-e','process.exit(0)']);assert.equal(ended.status,0);
- const staleLock=join(process.platform==='darwin'?'/private/tmp':tmpdir(),
+ const staleLock=join(process.env.READER_LOCK_DIR || tmpdir(),
   'reader-harmony-hap-run-'+createHash('sha256').update(realpathSync(latest)).digest('hex')+'.lock');
  mkdirSync(staleLock);staleLocks.push(staleLock);json(join(staleLock,'owner.json'),{pid:ended.pid,token:'dead-owner-fixture'});
  const staleOwner=readFileSync(join(staleLock,'owner.json'),'utf8');

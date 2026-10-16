@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -9,7 +10,7 @@ export const typographyLayoutSuccessorPath = 'tools/fixtures/design/ui-framework
 export const typographyLayoutSuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/ui-framework-typography-layout-successor-20261014.json', import.meta.url), 'utf8'));
 const read = file => readFileSync(new URL('../../' + file, import.meta.url), 'utf8');
 const digest = value => createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
-const require = createRequire(import.meta.url), sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require = createRequire(import.meta.url), sdk = resolveEtsLoaderRoot();
 const ts = require(sdk + '/node_modules/typescript'), options = require(sdk + '/lib/ets_checker.js').compilerOptions;
 function component(source, file) {
   const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);

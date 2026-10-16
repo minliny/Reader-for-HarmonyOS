@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -12,9 +13,9 @@ const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}.ets`, i
 const listSource = read('features/reading/ReaderDirectoryList');
 const pageSource = read('features/bookshelf/BookDirectoryPage');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
-const tree = ts.createSourceFile('/tmp/MangaEmptyList.ets', listSource, ts.ScriptTarget.Latest, true,
+const tree = ts.createSourceFile(virtualFilePath('MangaEmptyList.ets'), listSource, ts.ScriptTarget.Latest, true,
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length, 0);
 const dataSourceDeclaration = tree.statements.find(node => node.name?.getText(tree) === 'DirectoryListDataSource');

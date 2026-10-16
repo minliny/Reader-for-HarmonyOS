@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -14,8 +15,7 @@ const read = name => readFileSync(new URL(name, prefix), 'utf8');
 const clean = text => text.replace(/^import[\s\S]*?;\n/gm, '');
 const evaluate = async text => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(text)).toString('base64')}`);
 const require = createRequire(import.meta.url);
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 const ts = require(`${sdkRoot}/node_modules/typescript`);
 const compilerOptions = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
 const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
@@ -61,7 +61,7 @@ const formerDiagnostics = boundaryDiagnostics(true);
 assert.equal(formerDiagnostics.length, 1, 'negative control has exactly one SDK diagnostic');
 assert.equal(formerDiagnostics[0].code, 28017, 'SDK rejects TS→ETS type imports');
 assert.deepEqual(boundaryDiagnostics(false), [], 'SDK accepts actual pure-TS publication/presentation modules');
-const parse = source => ts.createSourceFile('/tmp/SearchPublicationBoundary.ets', source,
+const parse = source => ts.createSourceFile(virtualFilePath('SearchPublicationBoundary.ets'), source,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, compilerOptions);
 const pageSource = read('features/search/SearchPage.ets'), indexSource = read('pages/Index.ets');
 const pageTree = parse(pageSource), indexTree = parse(indexSource);

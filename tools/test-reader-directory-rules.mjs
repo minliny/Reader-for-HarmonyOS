@@ -1,16 +1,17 @@
+import { localFileUrl, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,rmSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {resolve} from 'node:path';
-import {fixture,compile,until,deferred,binary} from './lib/rules-mutation-durable-probe.mjs';
+import {fixture,compile,until,deferred} from './lib/rules-mutation-durable-probe.mjs';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
 import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 
 const sourceUrl=new URL('../entry/src/main/ets/features/reading/ReaderDirectoryRules.ets',import.meta.url);
 const source=readFileSync(sourceUrl,'utf8'),require=createRequire(import.meta.url);
-const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const loader=resolveEtsLoaderRoot();
 const ts=require(loader+'/node_modules/typescript'),tree=ts.createSourceFile('ReaderDirectoryRules.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(loader+'/lib/ets_checker.js').compilerOptions);
 assert.deepEqual(tree.parseDiagnostics,[]);
 const draft=tree.statements.find(node=>node.name?.text==='DirectoryRuleDraft');
@@ -31,12 +32,12 @@ async function setup(prior) {
  return f;
 }
 async function nonTxt(f) {
- const bytes=readFileSync(resolve(binary,'../../../crates/reader-local-book/tests/fixtures/epub/sample.epub')),
+ const bytes=readFileSync(new URL('../../Reader-Core-Native/crates/reader-local-book/tests/fixtures/epub/sample.epub',import.meta.url)),
   id='local:'+createHash('sha256').update(bytes).digest('hex'),file=resolve(f.root,'source.epub');
  writeFileSync(file,bytes);await f.command('local_book.import',{bookId:id,filePath:file,format:'epub'});return id;
 }
 function editor(f,alternate=source) {
- const methods=alternate===source?sourceUrl:new URL('file://'+resolve(f.root,'mutated-directory.ets'));
+ const methods=alternate===source?sourceUrl:localFileUrl(resolve(f.root,'mutated-directory.ets'));
  if(alternate!==source)writeFileSync(methods,alternate);
  const Editor=productionMotionMethods(methods,['loadRules','changed','edit','run','recover','aboutToDisappear','canEdit','actorIdentity','ownsActor','recoveryIdentity','ownsRecovery','recoveryView','canContinueOriginal','notifyApplied','retryDirectoryRefresh'],{DirectoryRuleDraft:Draft,ReaderRuntimeOwner:f.Runtime});
  return Object.assign(new Editor(),{bookId:f.id,mounted:true,generation:0,presentationGeneration:1,nextRuleId:1,

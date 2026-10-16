@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
@@ -13,7 +14,7 @@ let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentO
 const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),...load('app/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),...load('features/source/ReaderSourceCategory.ts','{classifyReaderSource}')};
 const SourceGateway=load('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner,isReaderCoreTransactionPendingError:()=>false,...helpers});
 const {SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}=load('features/source/SourceToolsOrchestrator.ets','{SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}',{SourceGateway,ReaderRuntimeOwner,ReaderWriteEvidence,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt,...facts});
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader',syntax=require(sdk+'/lib/validate_ui_syntax.js');
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot(),syntax=require(sdk+'/lib/validate_ui_syntax.js');
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 for(const [name,path] of [['SourceToolsPage','features/source/SourceToolsPage.ets'],['ReaderRecoveryAction','features/common/ReaderRecoveryAction.ets']]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));}
 const clone=v=>structuredClone(v),tick=()=>new Promise(r=>setImmediate(r));

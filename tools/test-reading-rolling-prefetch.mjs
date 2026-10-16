@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { registerHooks,createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
@@ -24,9 +25,9 @@ const deferred=()=>{let resolve;const promise=new Promise(r=>{resolve=r;});retur
 // Exact registered Index attributes and exact retained ReaderShell ForEach;
 // generated SDK observers retain the same ReadingExperience child on TOC patch.
 function sdkReaderPayload(page){
- const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+ const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
  const ts=require(sdk+'/node_modules/typescript'),indexSource=readFileSync(file,'utf8');
- const tree=ts.createSourceFile('/tmp/ActualPrefetchPayload.ets',indexSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
+ const tree=ts.createSourceFile(virtualFilePath('ActualPrefetchPayload.ets'),indexSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
  let call;const visit=n=>{if(ts.isCallExpression(n)&&n.expression.getText(tree)==='ReaderShell')call=n;ts.forEachChild(n,visit);};visit(tree);
  const names=new Set(['sourceId','bookId','readingReadyGeneration','remoteSession','tocEntries','onReadingCommitted']);
  const props=call.arguments[0].properties.filter(p=>names.has(p.name?.getText(tree))).map(p=>p.getText(tree));assert.equal(props.length,6);

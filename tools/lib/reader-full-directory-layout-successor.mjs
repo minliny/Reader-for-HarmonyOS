@@ -1,11 +1,10 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {createRequire} from 'node:module';
 import {createDefaultReaderWindowMetrics,readerVisualSafeTop,readerContentSafeTop} from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 export const fullDirectoryLayoutSuccessorPath='tools/fixtures/reader-full-directory-page-layout-successor-20261014.json';
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
+const { ts, options } = installedEtsCompiler();
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 /** A single actual page moves its frame/slots to the shared owner. The old

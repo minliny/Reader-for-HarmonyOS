@@ -1,3 +1,5 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { coreCliPath } from './tool-environment.mjs';
 import { formatDownloadStorageBytes } from '../../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts';
 import {fixture as actualGeneralSettingsFixture} from './general-settings-persistence-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './reader-runtime-admission-probe.mjs';
@@ -7,7 +9,7 @@ import { promises as fsp } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
+import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if((s.startsWith('.')&&!s.endsWith('.ts')))return next(s+'.ts',c);throw e;}}});
@@ -19,12 +21,11 @@ const { ReadingOfflineGateway } = await import('../../entry/src/main/ets/feature
 const { MangaDownloadActionsGateway } = await import('../../entry/src/main/ets/features/manga/MangaDownloadActionsGateway.ts');
 const { loadReaderControlBookmarkProjection } = await import('../../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
 const sdk = await import('../../entry/vendor/core-harmony/sdk/reader_core.ts');
-const run = promisify(execFile), require=createRequire(import.meta.url);
-const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const ts=require(loader+'/node_modules/typescript');
+const run = promisify(execFile);
+const { ts } = installedEtsCompiler();
 const hostRoot=fileURLToPath(new URL('../../',import.meta.url));
 export const coreRoot=process.env.READER_READING_RECEIPT_CORE_ROOT??resolve(hostRoot,'../Reader-Core-Native');
-export const coreBinary=resolve(coreRoot,'target/debug/reader-cli');
+export const coreBinary=coreCliPath(coreRoot);
 const read=p=>fs.readFileSync(resolve(hostRoot,'entry/src/main/ets',p),'utf8');
 export function compile(p,n,deps,official=false){
  const source=read(p),body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export type \{[^\n]+\n/gm,'');

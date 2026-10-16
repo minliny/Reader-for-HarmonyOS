@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -20,7 +21,7 @@ const sources = Object.fromEntries(Object.entries({
   tree: 'features/reading/ReaderDirectoryNavigationList.ets',
 }).map(([key, path]) => [key, read(path)]));
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const builders = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 for (const source of Object.values(sources)) {

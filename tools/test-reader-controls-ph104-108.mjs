@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -14,8 +15,8 @@ import { createReaderControlSessionState } from '../entry/src/main/ets/features/
 import { readerWidthClass } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
 
 const require = createRequire(import.meta.url);
-const ts = require(((process.env.READER_ETS_LOADER_ROOT ?? ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader')) + '/node_modules/typescript'));
-const syntax = require(((process.env.READER_ETS_LOADER_ROOT ?? ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader')) + '/lib/validate_ui_syntax.js'));
+const ts = require(((resolveEtsLoaderRoot()) + '/node_modules/typescript'));
+const syntax = require(((resolveEtsLoaderRoot()) + '/lib/validate_ui_syntax.js'));
 const statusPaperSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderStatusBarPaper.ets', import.meta.url), 'utf8');
 syntax.componentCollection.customComponents.add('ReaderStatusBarPaper');
 syntax.propCollection.set('ReaderStatusBarPaper', new Set([...statusPaperSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
@@ -25,7 +26,7 @@ const scratch = baseline ? mkdtempSync(join(tmpdir(), 'reader-controls-baseline-
 function sourcePath(relative) {
   if (!baseline) return new URL(`../entry/src/main/ets/${relative}`, import.meta.url);
   const path = join(scratch, relative.replaceAll('/', '-'));
-  writeFileSync(path, execFileSync('/Library/Developer/CommandLineTools/usr/bin/git',
+  writeFileSync(path, execFileSync('git',
     ['show', `${baseline}:entry/src/main/ets/${relative}`], { cwd: new URL('..', import.meta.url) }));
   return path;
 }

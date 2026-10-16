@@ -1,9 +1,10 @@
+import { localFilePath, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
-const file=new URL('../entry/src/main/ets/features/reading/ReaderNativeTextMeasurement.ets',import.meta.url).pathname;
+const file=localFilePath(new URL('../entry/src/main/ets/features/reading/ReaderNativeTextMeasurement.ets',import.meta.url));
 const source=readFileSync(file,'utf8');
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const ts=createRequire(import.meta.url)(`${sdk}/node_modules/typescript`);
 const virtual=file.replace('.ets','SdkProbe.ts');
 const options={noEmit:true,skipLibCheck:true,moduleResolution:ts.ModuleResolutionKind.NodeJs,target:ts.ScriptTarget.ESNext,module:ts.ModuleKind.ESNext,types:[],baseUrl:'/',paths:{'@ohos.*':[`${sdk}/../../api/@ohos.*.d.ts`]}};

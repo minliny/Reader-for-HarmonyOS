@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -88,7 +89,7 @@ for(const kind of ['library','full']){
 }
 {
   const f=await fixture(true),require=createRequire(import.meta.url);
-  const sdkPath=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const sdkPath=resolveEtsLoaderRoot();
   const ts=require(`${sdkPath}/node_modules/typescript`),options=require(`${sdkPath}/lib/ets_checker.js`).compilerOptions;
   const source=read('reading/LocalReadingExperience'),tree=ts.createSourceFile('LRE.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
   const names=['chineseConversionIdentity','dispatchChineseConversionAction','chineseConversionAction','loadChineseConversionMode','changeChineseConversionMode'];

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { createRequire, registerHooks } from 'node:module';
@@ -75,7 +76,7 @@ function fixture(books=[book('/one')]) {
 }
 const ets = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-const sdkRequire = createRequire(import.meta.url), sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRequire = createRequire(import.meta.url), sdkRoot = resolveEtsLoaderRoot();
 sdkRequire(sdkRoot + '/lib/validate_ui_syntax.js').builderParamObjectCollection.set('BookshelfShell', new Set(['content']));
 sdkRequire(sdkRoot + '/lib/component_map.js').CUSTOM_BUILDER_METHOD.add('bookshelfContent');
 function actualFeedbackShell(composition, shellSource, props) {

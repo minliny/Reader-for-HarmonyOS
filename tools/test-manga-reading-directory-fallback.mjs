@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import * as directoryState from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
 import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
 import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
@@ -195,7 +196,7 @@ assert.equal(requests[0].method, 'reading.directory.view.open.v2');
 // Compile the shared production child as well as the owning fallback. The
 // native List seam retains its actual params/callbacks without simulating layout.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const listSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryList.ets', import.meta.url), 'utf8');
 syntax.componentCollection.customComponents.add('ReaderDirectoryList');
@@ -260,7 +261,7 @@ for (const current of [false, true]) {
 // Mount the unchanged shared List, its actual data source and the owner's
 // deferred empty slot. Native scheduling/layout is never reconstructed.
 const ts = require(`${sdk}/node_modules/typescript`);
-const listTree = ts.createSourceFile('/tmp/FallbackNativeList.ets', listSource, ts.ScriptTarget.Latest, true,
+const listTree = ts.createSourceFile(virtualFilePath('FallbackNativeList.ets'), listSource, ts.ScriptTarget.Latest, true,
   ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 const dataSourceDeclaration = listTree.statements.find(node => node.name?.getText(listTree) === 'DirectoryListDataSource');
 const DirectoryListDataSource = new Function('sameReaderDirectoryData', 'snapshotReaderDirectoryData',

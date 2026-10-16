@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { readFileSync } from 'node:fs';
@@ -12,7 +13,7 @@ const source = readFileSync(process.env.READER_SEARCH_PAGE_SOURCE ??
 // StateContent branches reference the page's other real Builders; register
 // their production names with the same SDK registry without executing them.
 const require = createRequire(import.meta.url);
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 const { CUSTOM_BUILDER_METHOD } = require(`${sdkRoot}/lib/component_map.js`);
 for (const match of source.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) CUSTOM_BUILDER_METHOD.add(match[1]);
 const enumValues = name => new Proxy({}, { get: (_, key) => `${name}.${String(key)}` });

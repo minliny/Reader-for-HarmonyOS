@@ -1,3 +1,4 @@
+import { resolveOpenHarmonySdkRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -9,9 +10,9 @@ import { coreBuildSnapshot } from '../../Reader-Core-Native/scripts/build-input-
 
 // Real LLVM ELF/strip and ZIP operations exercise the production generator.
 // This small unsigned ZIP is not an installable Reader or signing evidence.
-const sdk = process.env.OHOS_SDK_HOME || '/Applications/DevEco-Studio.app/Contents/sdk/default';
-const llvm = join(sdk, 'openharmony/native/llvm/bin');
-const clang = join(llvm, 'clang'), strip = join(llvm, 'llvm-objcopy'), readelf = join(llvm, 'llvm-readelf');
+const sdk = resolveOpenHarmonySdkRoot();
+const llvm = join(sdk, 'native/llvm/bin');
+const clang = join(llvm, process.platform === 'win32' ? 'clang.exe' : 'clang'), strip = join(llvm, process.platform === 'win32' ? 'llvm-objcopy.exe' : 'llvm-objcopy'), readelf = join(llvm, process.platform === 'win32' ? 'llvm-readelf.exe' : 'llvm-readelf');
 for (const tool of [clang, strip, readelf]) assert.ok(existsSync(tool), `required Native test tool missing: ${tool}`);
 const root = mkdtempSync(join(tmpdir(), 'reader-native-provenance-'));
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -111,7 +112,7 @@ try {
   const staticInputOptions = ['--native-so', '--app-native-so', '--core-identity', '--napi-manifest',
     '--core-build-evidence', '--core-input-snapshot', '--hap', '--native-strip-tool'];
   const staticInputsBefore = capturedInputs(), staticPreviousJson = readFileSync(output);
-  for (const [index, option] of staticInputOptions.entries()) {
+  if (process.platform !== 'win32') for (const [index, option] of staticInputOptions.entries()) {
     const fifo = join(root, `static-input-${index}.fifo`), link = join(root, `static-input-${index}.link`);
     execFileSync('mkfifo', [fifo]); assert.equal(lstatSync(fifo).isFIFO(), true);
     symlinkSync(native, link);
@@ -139,11 +140,13 @@ try {
     }
     rmSync(fifo); rmSync(link);
   }
+  if (process.platform !== 'win32') {
   const vendorFifo = join(vendor, 'special.fifo'); execFileSync('mkfifo', [vendorFifo]);
   const vendorReject = run(); assert.notEqual(vendorReject.status, 0);
   assert.match(vendorReject.stderr, /vendored SDK must contain only regular files and directories/);
   assert.deepEqual(readFileSync(output), staticPreviousJson); inputsUnchanged(staticInputsBefore);
   assert.equal(lstatSync(vendorFifo).isFIFO(), true); rmSync(vendorFifo);
+  } else console.log('SKIP POSIX FIFO cases: Windows has no filesystem FIFO node.');
   assert.equal(run().status, 0, 'restored ordinary static inputs must pass');
   const reject = (hap, message) => {
     const before = readFileSync(output), originalInputs = capturedInputs();
@@ -221,7 +224,7 @@ try {
     assert.match(overwrite.stderr, /output must not replace.*input/); inputsUnchanged(originalInputs);
   }
   assert.equal(existsSync(join(vendor, 'new-manifest.json')), false);
-  const directoryAlias = join(root, 'sdk-alias'); symlinkSync(vendor, directoryAlias);
+  const directoryAlias = join(root, 'sdk-alias'); symlinkSync(vendor, directoryAlias, 'dir');
   const deepOutput = join(directoryAlias, 'deep/not-created/new-output.json');
   const escapedPublish = run(goodHap, deepOutput); assert.notEqual(escapedPublish.status, 0);
   assert.match(escapedPublish.stderr, /output must not replace.*input/);

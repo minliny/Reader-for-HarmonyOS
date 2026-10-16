@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -13,13 +14,12 @@ registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith(
 const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
 const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
 const { readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
-const require=createRequire(import.meta.url), sdk=process.env.READER_ETS_LOADER_ROOT??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`), options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const runtimeFile=new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url);
 const abilityFile=new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url);
 const runtimeSource=readFileSync(runtimeFile,'utf8'), abilitySource=readFileSync(abilityFile,'utf8');
-const tree=ts.createSourceFile('/tmp/ReaderOptionalEntryOwner.ts',runtimeSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
+const tree=ts.createSourceFile(virtualFilePath('ReaderOptionalEntryOwner.ts'),runtimeSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
 const ownerClass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(tree)==='ReaderRuntimeOwner');
 const selected=new Set(['instance','state','abilityLeases','coreCapabilities','entryPreparations','optionalEntryMemoryEnabled',
   'install','current','readingEntryPreparations','optionalReadingEntryMemoryEnabled','releaseOptionalReadingEntryMemory','captureReadingContentValidity']);
@@ -188,7 +188,7 @@ assert.match(runtimeSource,/private readonly optionalEntryMemoryEnabled: boolean
 // Execute all three production guards; the disabled reader cannot even query a
 // provider, and its producer must discard an old RAM handoff before returning.
 const readingFile=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
-const readingTree=ts.createSourceFile('/tmp/ReaderOptionalRetained.ets',readFileSync(readingFile,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+const readingTree=ts.createSourceFile(virtualFilePath('ReaderOptionalRetained.ets'),readFileSync(readingFile,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
 const dto=Object.fromEntries(['ReaderRetainedPresentation','ReaderMaterializedChapterContext'].map(name=>{
   const node=readingTree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(readingTree)===name);
   assert.ok(node,name);

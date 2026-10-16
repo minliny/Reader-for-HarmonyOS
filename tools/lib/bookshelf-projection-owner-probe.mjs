@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {boundedMembers,boundedSurfaceSdk} from './bounded-surface-sdk-probe.mjs';
@@ -63,7 +64,7 @@ export function actualProjectionSdkFeedback(f) {
     ...sdk.deps,...frameDeps,MainTabBar:Child,
   },sdk.hooks);
   sdk.deps.MainTabShell=actualMain.Component;
-  const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+  const loader=resolveEtsLoaderRoot();
   const require=createRequire(import.meta.url),syntax=require(loader+'/lib/validate_ui_syntax.js'),builders=require(loader+'/lib/component_map.js').CUSTOM_BUILDER_METHOD;
   syntax.builderParamObjectCollection.set('BookshelfShell',new Set(['content']));
   for(const match of shellText.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g))builders.add(match[1]);builders.add('bookshelfContent');

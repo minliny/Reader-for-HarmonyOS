@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -112,7 +113,7 @@ assert.match(owner, /fileDigest !== BUNDLED_RAW_FILE_SHA256/,
 // Check semantic statement order instead of a character-distance window:
 // adding another non-awaited post-ready owner must not invalidate this proof.
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 function sourceStartsAfterReady(text) {
   const ast = ts.createSourceFile('ReaderRuntimeOwner.ts', text, ts.ScriptTarget.Latest, true);

@@ -1,6 +1,7 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { virtualFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {readerRecoveryView} from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
@@ -9,15 +10,15 @@ import {ReaderWindowMetricsSnapshot,ReaderRectVp,readerInteractiveSafeLeft,reade
 import {resolveHorizontalFrame,SurfaceWidthSpec,SurfaceHorizontalFrame} from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import {SOURCE_SWITCH_VISUAL} from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
 const read=p=>readFileSync(new URL('../../entry/src/main/ets/'+p,import.meta.url),'utf8');
-const require=createRequire(import.meta.url),loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const syntax=require(loader+'/lib/validate_ui_syntax.js'),ts=require(loader+'/node_modules/typescript'),options=require(loader+'/lib/ets_checker.js').compilerOptions;
+const { require, root: loader, ts, options } = installedEtsCompiler();
+const syntax=require(loader+'/lib/validate_ui_syntax.js');
 const indexSource=read('pages/Index.ets'),bookSource=read('features/bookshelf/BookRemovalDialog.ets'),surfaceSource=read('features/common/ReaderDialogSurface.ets'),selectorSource=read('features/bookshelf/BookshelfGroupSelector.ets');
 for(const[name,text]of[['BookRemovalDialog',bookSource],['ReaderDialogSurface',surfaceSource],['BookshelfGroupSelector',selectorSource]]){
  syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...text.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 }
 syntax.componentCollection.customComponents.add('ReaderRecoveryNotice');syntax.propCollection.set('ReaderRecoveryNotice',new Set(['view','actionLabel']));
 syntax.componentCollection.customDialogs.add('BookRemovalDialog');syntax.builderParamObjectCollection.set('ReaderDialogSurface',new Set(['body']));
-function declaration(text,name){const t=ts.createSourceFile('/tmp/dialog-declaration.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);return t.statements.find(n=>n.name?.text===name).getText(t);}
+function declaration(text,name){const t=ts.createSourceFile(virtualFilePath('dialog-declaration.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);return t.statements.find(n=>n.name?.text===name).getText(t);}
 const model=ts.transpileModule(declaration(surfaceSource,'DialogActionView'),{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
 const actionExports={};new Function('exports',model)(actionExports);const DialogActionView=actionExports.DialogActionView;
 const specText=read('features/common/ReaderSurfaceSpecs.ets'),specJs=ts.transpileModule(specText.replace(/^import[^;]+;\s*/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;

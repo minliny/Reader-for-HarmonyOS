@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -7,10 +8,10 @@ const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, impor
 const source = read('features/common/ReaderActionSheetContent.ets');
 // ArkTS requires the registry literal to have a declared interface. A mapped
 // Record type lowers in the SDK probe but fails the real ArkTS checker.
-const loader=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const loader=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(loader+'/node_modules/typescript');
 function verifyRegistryContext(candidate){
-  const parsed=ts.createSourceFile('/tmp/ReaderSurfaceSpecs.ets',candidate,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(loader+'/lib/ets_checker.js').compilerOptions);
+  const parsed=ts.createSourceFile(virtualFilePath('ReaderSurfaceSpecs.ets'),candidate,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(loader+'/lib/ets_checker.js').compilerOptions);
   const registry=parsed.statements.filter(ts.isVariableStatement).flatMap(statement=>[...statement.declarationList.declarations]).find(declaration=>declaration.name.getText(parsed)==='ACTION_SHEET_SPECS');
   assert.ok(registry&&ts.isTypeReferenceNode(registry.type),'actual action-sheet registry has a declared type');
   const declaration=parsed.statements.find(node=>ts.isInterfaceDeclaration(node)&&node.name.getText(parsed)===registry.type.typeName.getText(parsed));

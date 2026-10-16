@@ -1,5 +1,6 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { virtualFilePath } from './tool-environment.mjs';
 import {bookshelfOperationClass,bookshelfOperationSource} from './bookshelf-operation-owner-probe.mjs';
-import {createRequire} from 'node:module';
 import {isReaderCoreTransactionPendingError} from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
 import {projectOperationFacts,projectCommitReadback} from '../../entry/src/main/ets/app/ReaderOperationFacts.ts';
 import {ReaderWriteEvidence} from '../../entry/src/main/ets/app/ReaderWriteEvidence.ts';
@@ -17,10 +18,9 @@ export function actualSourceManagementTypes(deps) {
 }
 
 export function actualSourceManagementHostField(index,SourceHost) {
- const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
- const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript');
+ const { ts } = installedEtsCompiler();
  const text=bookshelfOperationSource('pages/Index.ets');
- const ast=ts.createSourceFile('/tmp/ActualSourceManagementField.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS);
+ const ast=ts.createSourceFile(virtualFilePath('ActualSourceManagementField.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS);
  const owner=ast.statements.find(n=>n.members?.some(m=>m.name?.getText(ast)==='sourceHost'));
  const field=owner?.members.find(m=>m.name?.getText(ast)==='sourceHost');
  if (!field?.initializer) throw Error('actual SourceHost Index field initializer missing');

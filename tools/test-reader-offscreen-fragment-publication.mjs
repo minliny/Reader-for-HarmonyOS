@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -13,7 +14,7 @@ const textureMethod = textureSource.slice(textureSource.indexOf('@Builder\nexpor
   .replace('export function BookTurnTextureBuilder', 'private texture');
 const inputClass = textureSource.slice(textureSource.indexOf('export class BookTurnTextureBuildInput'), textureSource.indexOf('/** A bounded offscreen'));
 const BookTurnTextureBuildInput = new Function(`${stripTypeScriptTypes(inputClass.replace('export class', 'class'))}; return BookTurnTextureBuildInput;`)();
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const require = createRequire(import.meta.url);
 const ts = require(`${sdk}/node_modules/typescript`);
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);

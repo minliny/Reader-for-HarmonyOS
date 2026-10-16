@@ -1,3 +1,4 @@
+import { localFilePath, resolveArkFrontend, resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { readFileSync, readdirSync, statSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
@@ -6,19 +7,19 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
-const path = new URL('../../entry/src/main/ets/app/MangaAtomicPayloadReader.ets', import.meta.url).pathname;
+const sdk = resolveEtsLoaderRoot();
+const path = localFilePath(new URL('../../entry/src/main/ets/app/MangaAtomicPayloadReader.ets', import.meta.url));
 const ts = require(`${sdk}/node_modules/typescript`);
 const ui = require(`${sdk}/lib/process_ui_syntax.js`);
 const main = require(`${sdk}/main.js`);
 const sdkOptions = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const portPath = new URL('../../entry/src/main/ets/app/MangaAtomicPayloadPort.ts', import.meta.url).pathname;
+const portPath = localFilePath(new URL('../../entry/src/main/ets/app/MangaAtomicPayloadPort.ts', import.meta.url));
 
 // The official ETS pass supplies the concurrent directive. Removing a
 // decorator ourselves would conceal the native taskpool admission contract.
 process.env.compileTool = 'rollup';
 main.projectConfig.compileMode = 'esmodule';
-main.projectConfig.projectPath = new URL('../../entry/src/main/ets/', import.meta.url).pathname;
+main.projectConfig.projectPath = localFilePath(new URL('../../entry/src/main/ets/', import.meta.url));
 main.projectConfig.processTs = false;
 const source = readFileSync(path, 'utf8');
 const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, sdkOptions);
@@ -50,7 +51,7 @@ export function checkMangaAtomicPayloadSdk() {
   // 10605999). Flattened worker syntax checks cannot establish this boundary.
   const moduleOptions = { ...sdkOptions, ...options, incremental:false,
     needDoArkTsLinter:true, isCompatibleVersion:false, tsImportSendableEnable:false, etsLoaderPath:sdk };
-  const clients = ['ReadingImageDiskCache.ts', 'MangaDisplayRetention.ts'].map(name => new URL(`../../entry/src/main/ets/app/${name}`, import.meta.url).pathname);
+  const clients = ['ReadingImageDiskCache.ts', 'MangaDisplayRetention.ts'].map(name => localFilePath(new URL(`../../entry/src/main/ets/app/${name}`, import.meta.url)));
   const directionErrors = mutate => {
     const host = ts.createCompilerHost(moduleOptions), get = host.getSourceFile.bind(host);
     if (mutate) host.getSourceFile = (name, ...args) => clients.includes(name) ?
@@ -67,13 +68,13 @@ export function checkMangaAtomicPayloadSdk() {
   try {
     const emitted = join(directory, 'actual.ts'), invalid = join(directory, 'invalid.ts');
     writeFileSync(emitted, mangaAtomicPayloadSdkSource); writeFileSync(invalid, 'export const invalid = (;\n');
-    const frontend = `${sdk}/bin/ark/build-mac/bin/es2abc`;
+    const frontend = resolveArkFrontend();
     const parse = name => spawnSync(frontend, ['--target-api-version','23','--module','--parse-only',name], { encoding:'utf8' });
     const actual = parse(emitted);
     assert.equal(actual.status, 0, actual.stderr || actual.stdout || String(actual.error));
     assert.notEqual(parse(invalid).status, 0, 'official bytecode frontend rejects invalid syntax');
     for (const name of ['ReadingImageDiskCache.ts', 'MangaDisplayRetention.ts', 'MangaAtomicPayloadPort.ts']) {
-      const result = parse(new URL(`../../entry/src/main/ets/app/${name}`, import.meta.url).pathname);
+      const result = parse(localFilePath(new URL(`../../entry/src/main/ets/app/${name}`, import.meta.url)));
       assert.equal(result.status, 0, result.stderr || result.stdout || String(result.error));
     }
   } finally { rmSync(directory, { recursive:true, force:true }); }

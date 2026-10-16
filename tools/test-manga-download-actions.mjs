@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } from './lib/manga-directory-adaptive-probe.mjs';
 import assert from 'node:assert/strict';
 import {createRequire,registerHooks,stripTypeScriptTypes} from 'node:module';
@@ -275,7 +276,7 @@ const fonts=await import('../entry/src/main/ets/features/common/ReaderFontFamili
 const {mangaDirectoryPresentation}=await import('../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts');
 const {sameReaderDirectoryData}=await import('../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts');
 const {readerDirectoryAccessibilityText}=await import('../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts');
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 function component(name,relative){const source=readFileSync(new URL(relative,import.meta.url),'utf8');syntax.componentCollection.customComponents.add(name);

@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
 import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
 import assert from 'node:assert/strict';
@@ -21,9 +22,9 @@ const Scale = load('vendor/photoview/PhotoViewScaleModel');
 const surfaceURL = process.env.READER_MANGA_MOTION_SURFACE ?? new URL('MangaReadingSurface.ets', root);
 const source = readFileSync(surfaceURL, 'utf8');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
-const tree = ts.createSourceFile('/tmp/MangaMotionProgress.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
+const tree = ts.createSourceFile(virtualFilePath('MangaMotionProgress.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length, 0);
 const frame = tree.statements.find(node => node.name?.getText(tree) === 'MangaLayoutFrame');
 const MangaLayoutFrame = new Function('FrameCallback', `${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {});

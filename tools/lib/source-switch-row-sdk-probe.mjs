@@ -1,10 +1,10 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 
 const sourceUrl = new URL('../../entry/src/main/ets/features/source/SourceSwitchWindow.ets', import.meta.url);
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 const require = createRequire(import.meta.url);
 
 /** Execute the production retained-row classes and the installed SDK's exact
@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url);
 export function sourceSwitchRowSdk(properties, source = readFileSync(sourceUrl, 'utf8')) {
   const ts = require(`${sdkRoot}/node_modules/typescript`);
   const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
-  const parse = (text, kind) => ts.createSourceFile('/tmp/SourceSwitchRowSdk.ets', text,
+  const parse = (text, kind) => ts.createSourceFile(virtualFilePath('SourceSwitchRowSdk.ets'), text,
     ts.ScriptTarget.Latest, true, kind, options);
   const tree = parse(source, ts.ScriptKind.ETS);
   assert.deepEqual(tree.parseDiagnostics, [], 'production source-switch rows parse');

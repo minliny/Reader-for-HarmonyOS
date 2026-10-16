@@ -1,3 +1,4 @@
+import { localFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -17,7 +18,7 @@ const {SearchGateway,SourceSwitchGateway}=await import(`data:text/javascript;bas
 
 // Core executes these same expectations against its actual SQLite alias key,
 // including old-index migration. Keep both platform adapters on one corpus.
-const coreRoot=process.env.READER_CORE_ROOT??new URL('../../Reader-Core-Native/',import.meta.url).pathname;
+const coreRoot=process.env.READER_CORE_ROOT??localFilePath(new URL('../../Reader-Core-Native/',import.meta.url));
 const fixture=JSON.parse(readFileSync(resolve(coreRoot,'fixtures/metadata/book-author-labels.json'),'utf8'));
 assert.equal(fixture.version,1);
 for(const row of fixture.cases){

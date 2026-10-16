@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -12,13 +13,13 @@ assert.equal(createHash('sha256').update(prototype).digest('hex'), '6a37247662ce
 assert.match(prototype, /button:not\(:disabled\):active \{ opacity:\.73/);
 assert.match(prototype, /button:disabled \{ opacity:\.36/);
 assert.match(prototype, /:focus-visible \{ outline:2px solid var\(--accent\); outline-offset:3px/);
-const sdkApi = readFileSync('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/declarations/common.d.ts', 'utf8');
+const sdkApi = readFileSync(resolveEtsLoaderRoot() + '/declarations/common.d.ts', 'utf8');
 for (const callback of ['applyNormalAttribute', 'applyPressedAttribute', 'applyDisabledAttribute']) {
   assert.match(sdkApi, new RegExp(`${callback}\\?\\(instance: T\\): void`), 'installed SDK owns this attribute-state callback');
 }
 assert.match(sdkApi, /focusBox\(style: FocusBoxStyle\): T/);
 assert.match(sdkApi, /focusable\(value: boolean\): T/);
-const focusApi = readFileSync('/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader/declarations/focus.d.ts', 'utf8');
+const focusApi = readFileSync(resolveEtsLoaderRoot() + '/declarations/focus.d.ts', 'utf8');
 assert.match(focusApi, /strokeWidth\?: LengthMetrics/); assert.match(focusApi, /margin\?: LengthMetrics/);
 assert.match(focusApi, /strokeColor\?: ColorMetrics/);
 const expectedFocus = scheme => ({ strokeWidth: { value: 2, unit: 'vp' },

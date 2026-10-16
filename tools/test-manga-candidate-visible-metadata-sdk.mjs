@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire, stripTypeScriptTypes} from 'node:module';
@@ -36,9 +37,9 @@ const unfencedCandidateSource = controllerSource
 assert.notEqual(unfencedCandidateSource, controllerSource, 'counterfactual removes the exact production candidate intention fences');
 const UnfencedCandidateController = load('MangaSessionController', dependencies, unfencedCandidateSource);
 const source = readFileSync(new URL('MangaReadingSurface.ets', root), 'utf8');
-const require = createRequire(import.meta.url), sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require = createRequire(import.meta.url), sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
-const tree = ts.createSourceFile('/tmp/MangaCandidateVisibleMetadata.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS,
+const tree = ts.createSourceFile(virtualFilePath('MangaCandidateVisibleMetadata.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS,
   require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length, 0);
 const component = tree.statements.find(node => node.name?.getText(tree) === 'MangaReadingSurface');

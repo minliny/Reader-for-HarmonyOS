@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -14,7 +15,7 @@ assert.deepEqual([contract.id,contract.file,contract.previousMethod,contract.cur
  ['NATIVE-DEFAULT-01','features/bookshelf/BookDirectoryPage.ets','standardPage','standardToolbar','ReaderPageScaffold','directory','standardHeader','standardContent']);
 assert.equal(contract.onClick,'(): void => { this.rulesExpanded = !this.rulesExpanded; }','the finite successor retains the original local display-state action');
 assert.equal(contract.sdkProof,'tools/test-native-default-control-contracts.mjs');
-const sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk=resolveEtsLoaderRoot();
 const req=createRequire(import.meta.url),ts=req(sdk+'/node_modules/typescript'),options=req(sdk+'/lib/ets_checker.js').compilerOptions;
 export function proveNativeDefaultLayout(source){
  const tree=ts.createSourceFile(contract.file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);

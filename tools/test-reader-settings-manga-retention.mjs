@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -7,8 +8,7 @@ import * as state from '../entry/src/main/ets/features/reading/ReaderSettingsSta
 // Each fixture emits the full production Gateway class, with independent static
 // state for cold processes; cache reads never manufacture a durable flush ACK.
 const require = createRequire(import.meta.url);
-const ts = require((process.env.READER_ETS_LOADER_ROOT ??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader') + '/node_modules/typescript');
+const ts = require((resolveEtsLoaderRoot()) + '/node_modules/typescript');
 const gatewayUrl = new URL('../entry/src/main/ets/features/reading/ReaderSettingsGateway.ts', import.meta.url);
 const source = readFileSync(gatewayUrl, 'utf8');
 const mangaKeys = ['mangaDirection', 'mangaFit', 'mangaBackground', 'mangaPageNumbers'];

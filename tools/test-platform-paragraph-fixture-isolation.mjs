@@ -9,9 +9,13 @@ import { join } from 'node:path';
 // installed project dependencies or build cache. Mutations remain local here.
 const root = mkdtempSync(join(tmpdir(), 'reader-paragraph-fixture-'));
 try {
-  const gate = join(root, 'test-reader-platform-paragraph-probe.mjs');
-  const fixture = join(root, 'fixtures/ReaderPlatformParagraphProbe.ts');
-  mkdirSync(join(root, 'fixtures'));
+  const gate = join(root, 'tools/test-reader-platform-paragraph-probe.mjs');
+  const fixture = join(root, 'tools/fixtures/ReaderPlatformParagraphProbe.ts');
+  mkdirSync(join(root, 'tools/fixtures'), { recursive: true });
+  mkdirSync(join(root, 'tools/lib')); mkdirSync(join(root, 'scripts/lib'), { recursive: true });
+  copyFileSync(new URL('./lib/tool-environment.mjs', import.meta.url), join(root, 'tools/lib/tool-environment.mjs'));
+  copyFileSync(new URL('../scripts/lib/harmony-toolchain.mjs', import.meta.url), join(root, 'scripts/lib/harmony-toolchain.mjs'));
+  copyFileSync(new URL('../scripts/lib/development-environment.mjs', import.meta.url), join(root, 'scripts/lib/development-environment.mjs'));
   copyFileSync(new URL('./test-reader-platform-paragraph-probe.mjs', import.meta.url), gate);
   const original = readFileSync(new URL('./fixtures/ReaderPlatformParagraphProbe.ts', import.meta.url));
   assert.equal(createHash('sha256').update(original).digest('hex'),
@@ -29,9 +33,9 @@ try {
   assert.notEqual(missing.status, 0);
   assert.match(missing.stderr, /ENOENT.*ReaderPlatformParagraphProbe/s);
   writeFileSync(fixture, original);
-  const wrongSdk = run({ ...process.env, OHOS_SDK_HOME: join(root, 'missing-sdk') });
+  const wrongSdk = run({ ...process.env, READER_ETS_LOADER_ROOT: undefined, READER_HARMONY_SDK_HOME: undefined, HARMONY_SDK_HOME: undefined, DEVECO_SDK_HOME: undefined, OHOS_SDK_HOME: join(root, 'missing-sdk') });
   assert.notEqual(wrongSdk.status, 0);
-  assert.match(wrongSdk.stderr, /ENOENT.*missing-sdk/s);
+  assert.match(wrongSdk.stderr, /missing-sdk|SDK was not found/s);
   const invalid = original.toString().replace('paragraph.layoutSync(widthPx)', 'paragraph.layoutSync("invalid-width")');
   assert.notEqual(invalid, original.toString());
   writeFileSync(fixture, invalid);

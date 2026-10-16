@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
@@ -49,7 +50,7 @@ const source=readFileSync(file('ReaderControlPanel.ets'),'utf8');
 function panelProbe(text) {
   // Child content is outside this layer test. Preserve the production root
   // Builder byte-for-byte and register empty child Builder bodies with the SDK.
-  const require=createRequire(import.meta.url),sdk=(process.env.READER_ETS_LOADER_ROOT ?? ((process.env.OHOS_SDK_HOME ?? '/Applications/DevEco-Studio.app/Contents/sdk/default') + '/openharmony/ets/build-tools/ets-loader'));
+  const require=createRequire(import.meta.url),sdk=(resolveEtsLoaderRoot());
   const ts=require(`${sdk}/node_modules/typescript`),syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
   syntax.componentCollection.customComponents.add('ReaderSessionLaunchStage');
   const tree=ts.createSourceFile('Panel.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS);

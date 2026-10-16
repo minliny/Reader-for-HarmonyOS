@@ -1,9 +1,10 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync,writeFileSync,mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const baseline='d6adb8833d530e19141dc3ff506dc055dc8feec7';
 const paths=['features/bookshelf/LocalImportDialog.ets','features/source/SourceSwitchWindow.ets','features/reading/SourceSwitchPanel.ets','features/reading/ReaderControlReplaceContent.ets','features/reading/ReaderTtsConfigOverlay.ets'];

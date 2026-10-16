@@ -1,15 +1,16 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const sdkRoot = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRoot = resolveEtsLoaderRoot();
 const ts = require(`${sdkRoot}/node_modules/typescript`);
 const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
 export const typographyProperties = ['fontFamily', 'fontWeight', 'fontSize', 'lineHeight', 'letterSpacing'];
 
 /** Parse actual ETS modifier chains, including Marquee/native-input carriers.
  * A Text inside a string/comment is never counted as a production consumer. */
-export function auditTypographyConsumers(source, file = '/tmp/TypographyConsumer.ets') {
+export function auditTypographyConsumers(source, file = virtualFilePath('TypographyConsumer.ets')) {
   const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(parsed.parseDiagnostics.length, 0, `${file}: real ETS parsing`);
   const groups = new Map();
@@ -123,7 +124,7 @@ export function typographyExpressionContext(source, file) {
 export function isSharedTypographyExpression(expression, context, owner) {
   if (expression === 'TYPE_SHELF_COVER_PLACEHOLDER.fontSizeFp * this.coverWidth / 96.96' ||
       expression === '(TYPE_SHELF_COVER_PLACEHOLDER.lineHeightFp as number) * this.coverWidth / 96.96') return true;
-  const parsed = ts.createSourceFile('/tmp/TypographyArgument.ts', `const value = (${expression});`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const parsed = ts.createSourceFile(virtualFilePath('TypographyArgument.ts'), `const value = (${expression});`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   if (parsed.parseDiagnostics.length) return false;
   const root = parsed.statements[0]?.declarationList?.declarations[0]?.initializer;
   const visit = node => {
@@ -170,7 +171,7 @@ export function isSharedTypographyExpression(expression, context, owner) {
 /** Collect every real named role import from the public typography module.
  * Business recovery work may add another import or merge named lists; the
  * migration gate must not depend on one header line remaining byte-identical. */
-export function typographyRoleImports(source, file = '/tmp/TypographyImports.ets') {
+export function typographyRoleImports(source, file = virtualFilePath('TypographyImports.ets')) {
   const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(parsed.parseDiagnostics.length, 0, `${file}: real ETS imports parse`);
   const roles = new Set();
@@ -186,7 +187,7 @@ export function typographyRoleImports(source, file = '/tmp/TypographyImports.ets
 /** Actual native text/control nodes, including carriers with no font calls.
  * An omitted font tuple means the framework owns rendering; it is not a fake
  * public role and cannot be discovered by a modifier-count-only gate. */
-export function auditNativeTextElements(source, file = '/tmp/NativeTypography.ets') {
+export function auditNativeTextElements(source, file = virtualFilePath('NativeTypography.ets')) {
   const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(parsed.parseDiagnostics.length, 0, `${file}: native element AST parsing`);
   const fonts = new Map(auditTypographyConsumers(source,file).map(node => [node.carrierStart,node.modifiers]));

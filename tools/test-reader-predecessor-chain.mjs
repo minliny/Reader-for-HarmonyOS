@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -9,14 +10,13 @@ import { pathToFileURL } from 'node:url';
 const sourceRoot=process.env.READER_PREDECESSOR_PROBE_ROOT===undefined?
   new URL('../',import.meta.url):pathToFileURL(`${resolve(process.env.READER_PREDECESSOR_PROBE_ROOT)}/`);
 const source=readFileSync(new URL('entry/src/main/ets/app/ReaderRuntimeOwner.ts',sourceRoot),'utf8');
-const require=createRequire(import.meta.url),sdk=process.env.READER_ETS_LOADER_ROOT??
-  '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const methods=new Set(['install','current','isCurrent','waitForPredecessorClose','start','startAfterPredecessor','close','closeDownloadsAndRuntime','closeRuntime']);
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const settle=async()=>{for(let i=0;i<12;i++)await new Promise(done=>setImmediate(done));};
 function loadRuntime(productionSource=source) {
-  const tree=ts.createSourceFile('/tmp/ReaderPredecessorChain.ts',productionSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
+  const tree=ts.createSourceFile(virtualFilePath('ReaderPredecessorChain.ts'),productionSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
   assert.equal(tree.parseDiagnostics.length,0);
   const declaration=tree.statements.find(node=>ts.isClassDeclaration(node)&&node.name?.getText(tree)==='ReaderRuntimeOwner');
   for(const name of methods)assert.ok(declaration.members.some(node=>node.name?.getText(tree)===name),`actual Runtime contract ${name}`);

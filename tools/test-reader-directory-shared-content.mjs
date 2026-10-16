@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -12,7 +13,7 @@ const toolbarSource = read('ReaderDirectoryToolbar');
 const rowSource = read('ReaderDirectoryChapterRow');
 const controlSource = read('ReaderControlDirectoryContent');
 const require = createRequire(import.meta.url);
-const sdk = process.env.READER_ETS_LOADER_ROOT ?? '/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 for (const [name, props] of [
   ['ReaderSearchField', ['variant', 'mode', 'text', 'placeholder', 'accessibilityLabel']],

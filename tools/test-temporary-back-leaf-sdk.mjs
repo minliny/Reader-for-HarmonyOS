@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
@@ -10,10 +11,10 @@ import * as readerWindowMetrics from '../entry/src/main/ets/features/common/Read
 const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}.ets`,import.meta.url),'utf8');
 const settingsSource=read('features/settings/SettingsPage'),sourceSource=read('features/source/SourceManagementPage'),shelfSource=read('features/bookshelf/BookshelfShell');
 const settingsOverlay=read('features/settings/SettingsSelectOverlay'),selectPanel=read('features/common/ReaderSelectPanel'),moreMenu=read('features/bookshelf/BookshelfMoreMenu');
-const require=createRequire(import.meta.url),sdkPath=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const require=createRequire(import.meta.url),sdkPath=resolveEtsLoaderRoot();
 const syntax=require(`${sdkPath}/lib/validate_ui_syntax.js`),ts=require(`${sdkPath}/node_modules/typescript`);
 function leafMembers(source){
-  const tree=ts.createSourceFile('/tmp/TemporaryBackLeaf.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdkPath}/lib/ets_checker.js`).compilerOptions);
+  const tree=ts.createSourceFile(virtualFilePath('TemporaryBackLeaf.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdkPath}/lib/ets_checker.js`).compilerOptions);
   const struct=tree.statements.find(n=>n.members&&n.members.some(m=>m.name?.getText(tree)==='build'));
   const methods=source.includes('export struct SettingsPage')?
     ['aboutToAppear','aboutToDisappear','consumeTemporaryBack','onSnapshotChanged','onCacheCleanupChanged','applyCacheCleanup','syncSnapshotValues','buildOverlay','currentValue','selectOptions','setSelectValue','toggleSelection','retireSelection','ownsSelection','commitSelection','dismissSelection']:

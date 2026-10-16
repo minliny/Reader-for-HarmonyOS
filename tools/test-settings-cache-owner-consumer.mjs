@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { formatDownloadStorageBytes } from '../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -24,7 +25,7 @@ async function until(predicate){for(let i=0;i<100;i++){if(predicate())return;awa
 const good=()=>({scope:'text',removedContentBytes:10,deletedBytes:20,deletedFiles:3});
 const typedPending=()=>new ReaderCoreRequestError({protocolVersion:1,requestId:1,type:'error',error:{code:'TRANSACTION_PENDING',message:'pre-execution gate',retryable:true,details:{transactionKind:'persistenceMutation',pendingHostOperationCount:0,retryAfterMillis:0}}});
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
-const sdkRequire=createRequire(import.meta.url),sdkRoot=process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader';
+const sdkRequire=createRequire(import.meta.url),sdkRoot=resolveEtsLoaderRoot();
 sdkRequire(sdkRoot+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('CategoryRow',new Set(['content']));
 function field(index,Host){const text=source('pages/Index.ets'),start=text.indexOf('  private settingsHost:'),end=text.indexOf('\n  );',start)+6;
  const expression=text.slice(start,end).split('=').slice(1).join('=').trim().replace(/;$/,'');
@@ -87,7 +88,7 @@ function fixture(mode='valid'){
  sdk.deps.CategoryRow=createReaderBuilderProbe(sdk.childSources.CategoryRow,boundedMembers(sdk.childSources.CategoryRow),sdk.deps,sdk.hooks).Component;
  const pageSource=source('features/settings/SettingsPage.ets');
  // Keep every declared field so the actual V1 @Prop/@Watch update contract is used.
- const ts=sdkRequire(sdkRoot+'/node_modules/typescript'),tree=ts.createSourceFile('/tmp/SettingsCacheConsumer.ets',pageSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,sdkRequire(sdkRoot+'/lib/ets_checker.js').compilerOptions);
+ const ts=sdkRequire(sdkRoot+'/node_modules/typescript'),tree=ts.createSourceFile(virtualFilePath('SettingsCacheConsumer.ets'),pageSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,sdkRequire(sdkRoot+'/lib/ets_checker.js').compilerOptions);
  assert.equal(tree.parseDiagnostics.length,0);
  const declaration=tree.statements.find(node=>node.members&&node.members.some(member=>member.name?.getText(tree)==='build'));
  const names=[...declaration.members.filter(node=>ts.isPropertyDeclaration(node)).map(node=>node.name.getText(tree)),

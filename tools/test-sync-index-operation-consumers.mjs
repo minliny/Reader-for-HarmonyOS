@@ -1,3 +1,4 @@
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import {foundationControls} from './lib/reader-foundation-control-probe.mjs';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
@@ -14,7 +15,7 @@ const clone=v=>structuredClone(v),methods=['isCurrentSyncOwner','isCurrentSyncPr
 let enabled=true, instanceIdentity=0;
 const deps={ReaderRuntimeOwner:f.ReaderRuntimeOwner,SyncOrchestrator:f.Orchestrator,isReaderProductSurfaceEnabled:()=>enabled,deviceInfo:{deviceType:'phone'}};
 const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),methods,deps);
-const syntax=createRequire(import.meta.url)((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/lib/validate_ui_syntax.js');
+const syntax=createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');
 for(const [name,path]of[['SyncPage','sync'],['ReaderRecoveryNotice','common'],['ReaderRecoveryAction','common']]){
   syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...f.source('features/'+path+'/'+name+'.ets').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 }

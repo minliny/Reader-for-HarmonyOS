@@ -1,8 +1,8 @@
+import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { runtimeOwnerIdentityProbe } from './reader-runtime-admission-probe.mjs';
-const require=createRequire(import.meta.url),ts=require((process.env.READER_ETS_LOADER_ROOT??'/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/ets/build-tools/ets-loader')+'/node_modules/typescript');
+const { ts } = installedEtsCompiler();
 const base=new URL('../../entry/src/main/ets/',import.meta.url);
 function compile(file,deps={}){const text=readFileSync(new URL(file,base),'utf8');const parsed=ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);assert.deepEqual(parsed.parseDiagnostics,[]);const emitted=ts.transpileModule(text,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(emitted.diagnostics,[]);const module={exports:{}};new Function('require','module','exports',emitted.outputText)(id=>{if(!(id in deps))throw Error(`Missing ${file}: ${id}`);return deps[id];},module,module.exports);return module.exports;}
 export const defaults={autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true,developerMode:false};

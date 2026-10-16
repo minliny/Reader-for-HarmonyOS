@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -22,9 +23,17 @@ export function assertBuildTools(directory = sharedTools()) {
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.argv.includes('--install')) {
-    const result = spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm',
-      ['install', '--prefix', sharedTools(), '--save-exact', '--ignore-scripts', '--no-fund', `pnpm@${REQUIRED_PNPM}`],
-      { stdio: 'inherit', shell: process.platform === 'win32' });
+    const configuredCli = process.env.READER_NPM_CLI || process.env.NPM_CLI_JS;
+    const candidates = [configuredCli,
+      resolve(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js'),
+      resolve(dirname(process.execPath), '../lib/node_modules/npm/bin/npm-cli.js')].filter(Boolean);
+    try { candidates.push(createRequire(import.meta.url).resolve('npm/bin/npm-cli.js')); } catch {}
+    const npmCli = candidates.find(candidate => existsSync(candidate));
+    if (configuredCli && !existsSync(configuredCli)) throw new Error('READER_NPM_CLI / NPM_CLI_JS must identify npm-cli.js');
+    if (!npmCli && process.platform === 'win32') throw new Error('npm-cli.js not found. Set READER_NPM_CLI to the Node installation npm/bin/npm-cli.js entry point.');
+    const result = spawnSync(npmCli ? process.execPath : 'npm',
+      [...(npmCli ? [resolve(npmCli)] : []), 'install', '--prefix', sharedTools(), '--save-exact', '--ignore-scripts', '--no-fund', `pnpm@${REQUIRED_PNPM}`],
+      { stdio: 'inherit', shell: false });
     if (result.status !== 0) process.exit(result.status || 1);
   }
   console.log(JSON.stringify({ status: 'PASS', ...assertBuildTools() }));

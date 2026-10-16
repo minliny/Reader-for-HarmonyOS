@@ -74,8 +74,8 @@ int main(){
 const scratch = mkdtempSync(path.join(tmpdir(), 'reader-automatic-bridge-'));
 try {
   writeFileSync(path.join(scratch, 'bridge.cpp'), cpp);
-  const binary = path.join(scratch, 'bridge');
-  const compiled = spawnSync('c++', ['-std=c++17', '-O2', '-Wall', '-Wextra', '-Werror', path.join(scratch, 'bridge.cpp'), '-o', binary], { encoding: 'utf8', timeout: 60000 });
+  const binary = path.join(scratch, process.platform === 'win32' ? 'bridge.exe' : 'bridge');
+  const compiled = spawnSync(process.env.CXX || (process.platform === 'win32' ? 'clang++' : 'c++'), ['-std=c++17', '-O2', '-Wall', '-Wextra', '-Werror', path.join(scratch, 'bridge.cpp'), '-o', binary], { encoding: 'utf8', timeout: 60000 });
   assert.equal(compiled.status, 0, compiled.stdout + compiled.stderr);
   const run = spawnSync(binary, [], { encoding: 'utf8', timeout: 10000 });
   assert.equal(run.status, 0, run.stdout + run.stderr);
