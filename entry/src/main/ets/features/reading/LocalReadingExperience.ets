@@ -2423,7 +2423,9 @@ export struct ReadingExperience {
       })
         // The control overlay, including its transparent outside-tap owner,
         // must sit above selectable reading Text nodes on every control route.
-        .zIndex(7)
+        // The persistent launch capsule also needs its parent above the raw
+        // page sibling; its own zIndex only orders children inside this host.
+        .zIndex(this.sessionLaunch !== undefined ? 8 : 7)
         // The selected demo replaces controls when the source drawer opens.
         // Retain the real control session/close animation without painting it
         // underneath the drawer's translucent scrim.

@@ -109,6 +109,9 @@ export struct ReaderSessionLaunchStage {
     .responseRegion({ x: 0, y: -10, width: '100%', height: this.sample.proxyHeight + 20 })
     .hitTestBehavior(this.interactionEnabled && this.sample.pauseOpacity > 0 ? HitTestMode.Block : HitTestMode.None)
     .accessibilityText(readerSessionCapsuleAccessibility(this.sample.type, this.sessionState, this.desiredPlaying))
+    // Transparent overlay ancestors also admit the page's raw touch owner.
+    // Consume the whole pointer stream here; the click recognizer still runs.
+    .onTouch((event: TouchEvent): void => event.stopPropagation())
     .onClick((): void => {
       if (this.interactionEnabled && this.sample.pauseOpacity > 0) this.onToggle();
     });

@@ -137,6 +137,9 @@ export struct ReaderSessionCapsule {
     .responseRegion({ x: 0, y: -10, width: '100%', height: 44 })
     .hitTestBehavior(this.interactionEnabled ? HitTestMode.Block : HitTestMode.None)
     .accessibilityText(readerSessionCapsuleAccessibility(this.type, this.sessionState, this.desiredPlaying))
+    // Keep capsule pointers out of the raw page handler, including UP/CANCEL
+    // after playback state changes. Click recognition remains independent.
+    .onTouch((event: TouchEvent): void => event.stopPropagation())
     .onClick((): void => { if (this.interactionEnabled) this.onToggle(); })
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
       this.onMeasured(this.numericLength(newValue.width), this.numericLength(newValue.height));
