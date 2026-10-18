@@ -319,11 +319,67 @@ export function validateMangaDirectoryWorktreeSuccessor(successor, readSource = 
 }
 validateMangaDirectoryWorktreeSuccessor(mangaDirectoryWorktreeSuccessor);
 
+export const directoryRecoveryTypographySuccessorPath = 'tools/fixtures/design/directory-recovery-typography-successor-20261016.json';
+export const directoryRecoveryTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/directory-recovery-typography-successor-20261016.json', import.meta.url), 'utf8'));
+const recoveryPaths = ['entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets',
+  'entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets'];
+const recoveryText = ["this.loadFailed ? '目录加载失败，已保留当前条目' : '正在加载目录'",
+  "this.snapshot.catalogState === 'failed' ? '目录加载失败，已保留当前条目' :\n        this.snapshot.catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整'"];
+export function validateDirectoryRecoveryTypographySuccessor(successor = directoryRecoveryTypographySuccessor, readSource = directoryReadSource) {
+  assert.equal(successor.schema, 1);
+  const fixturePaths = [mangaDirectoryTypographySuccessorPath, novelSourceSwitchSuccessor.historicalFixture];
+  assert.deepEqual(successor.previousFixtures.map(entry => entry.path), fixturePaths, 'directory recovery binds only its two immutable prior witnesses');
+  for (const fixture of successor.previousFixtures) assert.equal(directoryDigest(readSource(fixture.path)), fixture.sha256,
+    'directory recovery keeps historical typography witness byte immutable');
+  assert.deepEqual(successor.files.map(entry => entry.path), recoveryPaths, 'only the two exact directory recovery consumers');
+  for (const [index, entry] of successor.files.entries()) {
+    assert.equal(entry.previousFixture, fixturePaths[index]);
+    const previous = JSON.parse(readSource(entry.previousFixture)).files.find(file => file.path === entry.path);
+    assert.equal(entry.previousEntrySha256, directoryDigest(JSON.stringify(previous)), 'exact same-file directory recovery predecessor');
+    const expected = structuredClone(previous.carriers);
+    if (index === 0) {
+      assert.equal(expected.length, 1);
+      expected.unshift({ ...structuredClone(expected[0]), text: recoveryText[index] });
+    } else {
+      assert.equal(expected.length, 6);
+      for (const i of [1, 2]) assert.deepEqual(expected[i], { owner: 'ReaderControlDirectoryContent', method: 'listBody',
+        kind: 'Text', text: "'没有匹配的章节'", modifiers: { fontSize: { expression: 'TYPE_APP_INHERITED_BODY.fontSizeFp', extra: [] } } });
+      // Both old empty branches call one helper. The other retained body-role
+      // slot now gives the previously missing partial/loading/failure feedback.
+      expected[1] = { ...expected[1], method: 'catalogStatus', text: recoveryText[index] };
+      expected[2] = { ...expected[2], method: 'flatCatalog' };
+    }
+    assert.deepEqual(entry.carriers, expected, 'finite directory recovery typography preserves every unrelated carrier and exact body tuple');
+    for (const field of ['nativeDefaults', 'roles', 'fontFamilies']) assert.deepEqual(entry[field], previous[field],
+      'directory recovery retains public roles, physical fonts and every AUTO omission');
+    assert.equal(entry.architectureCounts, undefined, 'directory recovery cannot acquire a private style budget');
+    assert.deepEqual(entry.recoveryNativeActors, [{ method: index === 0 ? 'build' : 'catalogStatus', kind: 'Text', text: recoveryText[index],
+      attributes: index === 0 ? { fontSize: 'TYPE_APP_INHERITED_BODY.fontSizeFp', fontColor: "readerAppColor('TOK_READ_MUTED', this.appThemeScheme)", layoutWeight: '1' } :
+        { fontColor: "readerAppColor('TOK_READ_MUTED', this.appThemeScheme)", fontSize: 'TYPE_APP_INHERITED_BODY.fontSizeFp', layoutWeight: '1' } }],
+      'directory recovery uses only the existing body role and muted directory paint');
+  }
+  return successor;
+}
+validateDirectoryRecoveryTypographySuccessor();
+function validatesDirectoryRecoveryActors(source, entry) {
+  const actors = auditNativeTextElements(source, entry.path).filter(node => node.text === recoveryText[recoveryPaths.indexOf(entry.path)])
+    .map(node => ({ method: node.method, kind: node.kind, text: node.text, attributes: node.attributes }));
+  assert.deepEqual(actors, entry.recoveryNativeActors, 'exact directory recovery native font and muted paint');
+  if (entry.path !== recoveryPaths[1]) return;
+  const tree = ts.createSourceFile(entry.path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  const owner = tree.statements.find(node => node.name?.text === 'ReaderControlDirectoryContent');
+  for (const [from, to, count] of [['listBody', 'flatCatalog', 3], ['flatCatalog', 'catalogStatus', 1]]) {
+    const method = owner?.members.find(node => node.name?.text === from); let found = 0;
+    const visit = node => { if (ts.isCallExpression(node) && node.expression.getText(tree) === 'this.' + to) found++; ts.forEachChild(node, visit); };
+    assert.ok(method); visit(method); assert.equal(found, count, 'actual directory recovery helper edges retain all three fallback entry points');
+  }
+}
+
 export const typographyCarrierShape = node => JSON.parse(JSON.stringify({ owner: node.owner, method: node.method, kind: node.kind, text: node.text,
   modifiers: Object.fromEntries(Object.entries(node.modifiers).map(([property, value]) => [property, { expression: value.expression, extra: value.extra }])) }));
 export const approvedTypographyFile = file => {
   const fullPath = file.startsWith('entry/') ? file : 'entry/src/main/ets/' + (file.startsWith('features/') || file.startsWith('pages/') ? file : 'features/' + file);
-  return mangaDirectoryWorktreeSuccessor.files.find(entry => entry.path === fullPath) ?? sourceSwitchFrameSuccessor.files.find(entry => entry.path === fullPath) ?? unifiedActionSheetTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? sharedSourceSwitchTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
+  return directoryRecoveryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryWorktreeSuccessor.files.find(entry => entry.path === fullPath) ?? sourceSwitchFrameSuccessor.files.find(entry => entry.path === fullPath) ?? unifiedActionSheetTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? sharedSourceSwitchTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
 };
 /** A finite approved reference or selected demo contract, separate from shared roles.
  * Every concrete file/struct/method/native text carrier and all five authored
@@ -334,7 +390,10 @@ export const approvedTypographyFile = file => {
 export function approvedTypographyContract(source, file) {
   const entry = approvedTypographyFile(file);
   if (!entry) return { registered: false, has: () => false, count: 0 };
-  if (mangaDirectoryWorktreeSuccessor.files.includes(entry)) {
+  if (directoryRecoveryTypographySuccessor.files.includes(entry)) {
+    validateDirectoryRecoveryTypographySuccessor();
+    validatesDirectoryRecoveryActors(source, entry);
+  } else if (mangaDirectoryWorktreeSuccessor.files.includes(entry)) {
     validateMangaDirectoryWorktreeSuccessor(mangaDirectoryWorktreeSuccessor);
     if (entry.statusNativeActors) {
       const status = auditNativeTextElements(source, entry.path).filter(node => node.text === 'this.mangaStatusText(item.node)')
@@ -354,7 +413,7 @@ export function approvedTypographyContract(source, file) {
   assert.deepEqual(actual, entry.carriers, 'exact approved typography carrier/tuple changed: ' + entry.path);
   const imports = typographyRoleImports(source, entry.path);
   for (const [name, tuple] of Object.entries(entry.roles)) {
-    if (novelPaths.includes(entry.path)||entry.path===completionPath) assert.ok(imports.has(name), 'actual selected novel public role import: ' + name);
+    if (novelPaths.includes(entry.path)||entry.path===completionPath||directoryRecoveryTypographySuccessor.files.includes(entry)) assert.ok(imports.has(name), 'actual selected novel public role import: ' + name);
     assert.deepEqual(JSON.parse(JSON.stringify(readerTypographyRoles[name])), tuple, 'approved public role tuple changed: ' + name);
   }
   for (const [name, value] of Object.entries(entry.fontFamilies)) assert.equal(families[name], value, 'approved physical font binding changed: ' + name);

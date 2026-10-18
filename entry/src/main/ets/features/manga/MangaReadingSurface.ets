@@ -823,7 +823,8 @@ export struct MangaReadingSurface {
             this.onSaveFailure(error.message);
             return;
           }
-          if (this.mounted) this.error = error.message;
+          // Persistence failures belong to the save owner, not the chapter or
+          // image error slot. Keep its uncertain receipt without a load banner.
           this.onSaveFailure(error.message);
         }
       });

@@ -225,7 +225,7 @@ try {
     const actual=await durableFixture(true); actual.install(actual.runtime);
     const host=actual.offline;
     // Keep the original controlled progress transport seam; the actual Host,
-    // actual Index binding and existing feedback throttle execute unchanged.
+    // actual Index binding and task-state publication execute unchanged.
     const transport=new ProgressGateway(); transport.pendingClearOperation=async()=>undefined; transport.installClearAuthority=()=>{};
     host.dependencies.gateway=transport;
     const {idx:p}=actualDirectoryIndex(actual,{remote:true});
@@ -234,10 +234,19 @@ try {
     for(let i=0;i<100;i++){await new Promise(resolve=>setImmediate(resolve));if(p.offlineOperation!==undefined&&!host.busy())break;}
     assert.ok(p.offlineOperation,'actual Host published the captured operation');
     assert.equal(host.busy(),false,'controlled progress transport completed');
-    assert.equal(messages.filter(message => message.startsWith('正在下载')).length, 1);
-    assert.ok(messages.some(message => message.startsWith('正在下载：已完成 1/45')));
+    assert.equal(messages.filter(message => message.startsWith('正在下载')).length, 0,
+      'live task progress belongs to the published operation rather than periodic Toasts');
+    assert.equal(p.offlineOperation.progress.completedChapters, 1, 'silent presentation retains live completed counts');
+    assert.equal(p.offlineOperation.progress.totalChapters, 45);
+    assert.equal(messages.length, 1, 'the current completed operation has one terminal feedback');
+    assert.equal(messages[0], '全部 1 章下载完成',
+      'terminal feedback retains the existing result formatter for the single returned chapter');
+    const retired = p.offlineBinding(actual.runtime, p.remoteReadingSession);
+    p.remoteReadingSession = undefined;
+    retired.onProgress(p.offlineOperation.progress, true);
+    assert.equal(messages.length, 1, 'a retired final callback cannot display over a new page');
   } finally { Date.now = realNow; }
-  checks.push('processed-only updates cannot repeatedly toast unchanged zero/completion counts');
+  checks.push('live download counts remain published without periodic Toasts; one current terminal result and no retired final feedback');
 
   console.log(JSON.stringify({ pass: true, checks }, null, 2));
 } finally { for (const directory of directories) await fs.rm(directory, { recursive: true, force: true }); }

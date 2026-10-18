@@ -14,6 +14,7 @@ import { ReaderBookmarkRow } from './ReaderBookmarkRow';
 import { ReaderBookmarkEmptyState } from './ReaderBookmarkEmptyState';
 import { ReaderBookmarkLoadingState } from './ReaderBookmarkLoadingState';
 import { ReaderBookmarkErrorState } from './ReaderBookmarkErrorState';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderDirectoryToolbar } from './ReaderDirectoryToolbar';
 import { ReaderDirectoryChapterRow } from './ReaderDirectoryChapterRow';
 import { ReaderDirectoryNavigationSurface } from './ReaderDirectoryNavigationSurface';
@@ -67,6 +68,8 @@ export struct ReaderControlDirectoryContent {
 
   @Prop @Watch('refreshData') entries: LocalReadingTocEntry[] = [];
   @Prop @Watch('refreshData') catalogComplete: boolean = true;
+  @Prop @Watch('refreshData') catalogLoading: boolean = false;
+  @Prop @Watch('refreshData') catalogLoadFailed: boolean = false;
   @Prop @Watch('refreshData') catalogChapterCount: number = 0;
   @Prop @Watch('refreshData') catalogCurrentPosition: number = -1;
   @Prop @Watch('refreshData') catalogReadableChapterCount: number = 0;
@@ -140,6 +143,7 @@ export struct ReaderControlDirectoryContent {
     const next = readerControlDirectorySnapshot(this.entries, this.tab, this.query,
       this.ascending, this.currentChapterIndex, this.bookmarkIdentity, {
         complete: this.catalogComplete, chapterCount: this.catalogChapterCount,
+        loading: this.catalogLoading, loadFailed: this.catalogLoadFailed,
         currentPosition: this.catalogCurrentPosition, readableChapterCount: this.catalogReadableChapterCount,
         readablePosition: this.catalogReadablePosition }, this.mangaSearch);
     if (this.leadingKey !== undefined) {
@@ -390,17 +394,48 @@ export struct ReaderControlDirectoryContent {
   }
 
   @Builder
+  private catalogStatus() {
+    Row({ space: 6 }) {
+      Text(this.snapshot.catalogState === 'failed' ? '目录加载失败，已保留当前条目' :
+        this.snapshot.catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整')
+        .layoutWeight(1).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
+        .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+      if (this.snapshot.catalogState !== 'loading') {
+        ReaderRecoveryAction({ label: this.snapshot.catalogState === 'failed' ? '重试加载目录' : '加载完整目录',
+          actionEnabled: this.interactionEnabled,
+          onReconcile: (): void => this.onRequireCompleteCatalog() });
+      }
+    }.width('100%').padding({ left: 8, right: 8, top: 2, bottom: 2 });
+  }
+
+  @Builder
+  private flatCatalog() {
+    Column() {
+      if (this.tab === 'directory' && this.catalogComplete === false) this.catalogStatus();
+      Stack() {
+        if (this.snapshot.rows.length === 0) {
+          if (this.catalogComplete !== false) {
+            Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp);
+          }
+        } else {
+          this.flatList();
+        }
+      }.width('100%').layoutWeight(1);
+    }.width('100%').height('100%');
+  }
+
+  @Builder
   private listBody() {
     if (this.tab === 'bookmarks' && this.bookmarkLoadFailed) {
       ReaderBookmarkErrorState({ message: this.bookmarkLoadMessage,
         onRetry: (): void => this.onRetryBookmarkLoad() });
-    } else if (this.snapshot.loading) {
+    } else if (this.snapshot.loading && !(this.tab === 'directory' && this.catalogComplete === false)) {
       ReaderBookmarkLoadingState();
     } else if (this.snapshot.rows.length === 0 && this.tab === 'bookmarks') {
       ReaderBookmarkEmptyState({ onReturnToDirectory: (): void => this.onTabChange('directory') });
     } else if (this.snapshot.rows.length === 0 && !this.navigationActive &&
       !(this.tab === 'directory' && this.bookmarkIdentity !== undefined)) {
-      Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp);
+      this.flatCatalog();
     } else {
       if (this.tab === 'directory' && this.bookmarkIdentity !== undefined) {
         ReaderDirectoryNavigationSurface({
@@ -409,16 +444,11 @@ export struct ReaderControlDirectoryContent {
           interacted: this.navigationInteracted, rowHeight: this.rowHeight(),
           listPaddingX: this.rowPadding(), listPaddingY: 0,
           edgeEffectMode: EdgeEffect.Spring, interactionEnabled: this.interactionEnabled,
+          showLoadStatus: this.catalogComplete,
           chapterEntries: this.entries,
           chapterDownloadEnabled: this.chapterDownloadEnabled,
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
-          scroller: this.scroller, fallbackBuilder: (): void => {
-            if (this.snapshot.rows.length === 0) {
-              Text('没有匹配的章节').fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp);
-            } else {
-              this.flatList();
-            }
-          },
+          scroller: this.scroller, fallbackBuilder: (): void => { this.flatCatalog(); },
           onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void => {
             this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
           },
@@ -431,7 +461,7 @@ export struct ReaderControlDirectoryContent {
             this.onCreateChapterStartBookmark(request),
         });
       } else {
-        this.flatList();
+        this.flatCatalog();
       }
     }
   }

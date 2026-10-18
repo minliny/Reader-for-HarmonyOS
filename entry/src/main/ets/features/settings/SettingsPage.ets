@@ -215,8 +215,11 @@ export struct SettingsPage {
     const messages: string[] = [];
     if (this.recovery().visible) messages.push(this.recovery().message);
     else if (this.resetMessage.length > 0) messages.push(this.resetMessage);
-    if (this.cacheCleanup?.operation.canRetry || this.cacheCleanup?.confirmation === 'unknown')
-      messages.push(this.cacheCleanup.operation.message ?? '原清理结果尚未确认，请核对；已有正文仍可使用');
+    const cleanup = this.cacheCleanup;
+    const cleanupReport = cleanup?.operation.value;
+    if (cleanup !== undefined && (cleanup.operation.canRetry || cleanup.confirmation === 'unknown' ||
+      (cleanupReport?.scope === 'text' && cleanupReport.cleanupError !== undefined)))
+      messages.push(cleanup.operation.message ?? '原清理结果尚未确认，请核对；已有正文仍可使用');
     return messages.join('\n');
   }
   private recoveryActionIdentities(): string[] {
@@ -503,8 +506,8 @@ export struct SettingsPage {
       ReaderRuntimeOwner.isCurrent(this.themeOwner);
     if (!current() || this.cacheCleanupInFlight) return;
     if (this.cacheCleanup?.confirmation === 'unknown') {
-      try { this.getUIContext().getPromptAction().showToast({ message: this.cacheCleanup.operation.message ?? '清理结果尚未确认' }); }
-      catch (_notice) { /* No native notice failure may dispatch a second clear. */ }
+      // The existing inline result and reconciliation actions own this state.
+      // A second tap must neither repeat feedback nor dispatch another clear.
       return;
     }
     this.cacheCleanupInFlight = true;
@@ -526,7 +529,6 @@ export struct SettingsPage {
     if (this.cacheCleanup !== undefined) this.applyCacheCleanup(this.cacheCleanup);
   }
 
-  private cacheCleanupNoticeGeneration: number = -1;
   private applyCacheCleanup(snapshot: SettingsCacheCleanupSnapshot): void {
     this.cacheCleanupInFlight = snapshot.busy;
     const report = snapshot.operation.value;
@@ -534,12 +536,6 @@ export struct SettingsPage {
       report?.scope === 'text' && report.removedContentBytes === 0 && (report.deletedFiles ?? 0) === 0 ? '暂无缓存' : '已清理';
     this.cacheActionLabel = snapshot.busy ? '清理中' : snapshot.confirmation === 'confirmed' ? resultLabel :
       snapshot.confirmation === 'unknown' ? '结果未确认' : snapshot.confirmation === 'undispatched' ? '清理失败' : '清理文字缓存';
-    if (!snapshot.busy && this.mounted && snapshot.confirmation !== undefined && snapshot.operation.message !== undefined &&
-      snapshot.operation.generation !== undefined && this.cacheCleanupNoticeGeneration !== snapshot.operation.generation) {
-      this.cacheCleanupNoticeGeneration = snapshot.operation.generation;
-      try { this.getUIContext().getPromptAction().showToast({ message: snapshot.operation.message }); }
-      catch (_notice) { /* Native notices cannot change the storage receipt. */ }
-    }
   }
 
   @Builder

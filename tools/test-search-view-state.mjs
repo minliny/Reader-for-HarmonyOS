@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
 const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/SearchCandidatePolicy.ts');
-const { searchResultRelevance } = await import('../entry/src/main/ets/features/search/SearchResultRelevance.ts');
+const { searchResultRelevance, SearchResultRelevance } = await import('../entry/src/main/ets/features/search/SearchResultRelevance.ts');
 const authorMetadata = await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
 const mediaIdentity = await import('../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -215,6 +215,102 @@ p.shelfBooks = [book('shelf-other-source', '诡秘之主', '爱潜水的乌贼')
 p.presentation = { kind: 'results', keyword: '诡秘之主' }; p.selectedGroupName = '全部';
 assert.equal(p.groupResults(aliases)[0].inBookshelf, true);
 console.log('PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS');
+
+// The actual final50 appfreeze was a Detail→Search cold remount repeatedly
+// normalizing the same query in ICU. Count production calls instead of using
+// a host-speed deadline, and preserve the original locale/Unicode policy.
+{
+  const oracle = (title, author, keyword, proof, sourceVersion, locale) => {
+    const lower = value => originalLower.call(value, locale);
+    const query = lower(keyword.trim());
+    if (!query) return 0;
+    const name = lower(title.trim());
+    const by = authorMetadata.bookAuthorIdentity(author, proof, sourceVersion);
+    return name === query ? 0 : by === query ? 1 : name.startsWith(query) ? 2 :
+      name.includes(query) ? 3 : by.includes(query) ? 4 : 5;
+  };
+  const proof = {schemaVersion:1,sourceVersion:'v1',field:'search',raw:'@İPEK',label:'İPEK',rule:'author-nickname-at-v1'};
+  const cases = [
+    [' 三体 ', '刘慈欣', '三体'], ['ABC', '作者：某人', 'abc'],
+    ['I', '其他', 'ı'], ['İSTANBUL', '其他', 'istanbul'], ['I\u0307', '其他', 'i'],
+    ['ΟΣ', '其他', 'ος'], ['ΣΟΣ', '其他', 'σος'], ['𐐀𐐁', '其他', '𐐨'],
+    ['Straße', '其他', 'STRASSE'], ['前缀三体后缀', '其他', '三体'],
+    ['不同', '作者：关关公子', '关关公子'], ['不同', '@İPEK', 'i', proof, 'v1'],
+    ['不同', '@İPEK', 'i', proof, 'wrong-version'], ['不同', '作者', '\u2003 '],
+  ];
+  for (const locale of [undefined, 'tr', 'az', 'lt']) {
+    String.prototype.toLocaleLowerCase = function (...args) {
+      return originalLower.call(this, args[0] ?? locale);
+    };
+    try {
+      for (const [title, author, query, authorProof, version] of cases) {
+        const expected = oracle(title, author, query, authorProof, version, locale);
+        const scorer = new SearchResultRelevance(query);
+        assert.equal(scorer.score(title, author, authorProof, version), expected);
+        assert.equal(scorer.score(title, author, authorProof, version), expected, 'exact-title reuse preserves locale mapping');
+        assert.equal(searchResultRelevance(title, author, query, authorProof, version), expected, 'existing public function keeps all ranks');
+      }
+    } finally { String.prototype.toLocaleLowerCase = originalLower; }
+  }
+
+  const state = new SearchViewState(), shelf = [];
+  const results = Array.from({length:8000}, (_, i) => book(`cold-${i}`, `书${i % 400}`, '作者',
+    {groupKey:`cold-work-${i % 400}`,admittedOrder:i}));
+  let localeCalls = 0;
+  String.prototype.toLocaleLowerCase = function (...args) {
+    localeCalls++; return originalLower.apply(this, args);
+  };
+  try {
+    const projection = new SearchResultProjection();
+    const first = projection.update(results, shelf, '书', state);
+    assert.equal(localeCalls, 401, '8000 variants use one query and 400 exact-title locale normalizations');
+    const before = first.orderedKeys.map(key => first.rows.get(key));
+    const rowData = new SearchResultDataSource();
+    const groups = update => update.orderedKeys.map(key => {
+      const row = update.rows.get(key), group = new SearchBookGroup(row.variants[0], 1, row.inBookshelf);
+      for (const variant of row.variants.slice(1)) group.admit(variant, row.inBookshelf);
+      group.book = row.book; return group;
+    });
+    rowData.replace(groups(first));
+    const observed = rowData.getData(123);
+    state.anchorKey = before[123].key; state.anchorIndex = 123; state.anchorOffset = 15; state.anchorItemY = -27;
+    state.anchorNeighbors = [before[122].key, before[124].key];
+    const anchor = [state.anchorKey,state.anchorIndex,state.anchorOffset,state.anchorItemY,...state.anchorNeighbors];
+    localeCalls = 0;
+    const remount = new SearchResultProjection().update(results, shelf, '书', state);
+    assert.equal(localeCalls, 0, 'a new Page/projection over this retained query does zero ICU locale initialization');
+    assert.deepEqual(remount.orderedKeys, first.orderedKeys);
+    for (const [i,key] of remount.orderedKeys.entries()) {
+      const row = remount.rows.get(key);
+      assert.equal(row.book, before[i].book);
+      assert.equal(row.score, before[i].score); assert.equal(row.order, before[i].order);
+      assert.deepEqual(row.variants, before[i].variants, 'raw source variant identity and order stay intact');
+    }
+    rowData.replace(groups(remount));
+    assert.equal(rowData.getData(123), observed, 'actual data source keeps its retained observed row');
+    assert.deepEqual([state.anchorKey,state.anchorIndex,state.anchorOffset,state.anchorItemY,...state.anchorNeighbors],anchor);
+    const uniqueState = new SearchViewState();
+    const unique = Array.from({length:800}, (_,i) => book(`unique-${i}`, `独特标题${i}`, '作者', {admittedOrder:i}));
+    localeCalls = 0;
+    const uniqueBefore = new SearchResultProjection().update(unique, shelf, '独特', uniqueState);
+    assert.equal(localeCalls, 801, 'first admission of 800 distinct titles performs the required Unicode work once each');
+    localeCalls = 0;
+    const uniqueReturn = new SearchResultProjection().update(unique, shelf, '独特', uniqueState);
+    assert.equal(localeCalls, 0, 'cold return does zero locale work even without any repeated title');
+    assert.deepEqual(uniqueReturn.orderedKeys, uniqueBefore.orderedKeys);
+    localeCalls = 0;
+    const different = new SearchResultProjection().update(results, shelf, '书1', state);
+    assert.equal(localeCalls, 401, 'different query cannot reuse the old scorer');
+    assert.equal(different.rows.get(different.orderedKeys[0]).book.title, '书1');
+    state.reset('书1'); localeCalls = 0;
+    new SearchResultProjection().update(results, shelf, '书1', state);
+    assert.equal(localeCalls, 401, 'even same-keyword resubmit/reset discards all previous title normalization');
+    const separate = new SearchViewState(); localeCalls = 0;
+    new SearchResultProjection().update(results, shelf, '书1', separate);
+    assert.equal(localeCalls, 401, 'independent query owner cannot share normalization');
+  } finally { String.prototype.toLocaleLowerCase = originalLower; }
+}
+console.log('APPFREEZE regression: platform Unicode/default-tr-az-lt ranks; 8000 variants/400 titles=401 initial locale calls, retained-query cold remount=0; reset/query isolation, row identity and anchor PASS');
 
 // Same relevance/group: only current rule-version admission facts can promote a candidate.
 {

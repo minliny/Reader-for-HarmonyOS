@@ -1358,6 +1358,8 @@ export struct ReadingExperience {
   private bookTurnTextureContent: ComponentContent<BookTurnTextureBuildInput> | undefined = undefined;
   private bookTurnTextureBuildPage: ReaderPageTurnRenderPage | undefined = undefined;
   private bookTurnTextureCaptureGeneration: number = 0;
+  /** Distinguishes pending snapshots across EGL replacement, even on the same page. */
+  private bookTurnSurfaceCaptureEpoch: number = 0;
   private preferredPageTextureDirection: ReaderPageTurnDirection = 'next';
   private bookTurnTextureCaptureScheduled: boolean = false;
   /** Rare capability state; unlike MOVE geometry it must rebuild settings/stage semantics. */
@@ -1434,6 +1436,8 @@ export struct ReadingExperience {
   private entryCatalogNavigation: ReadingEntryNavigation | undefined = undefined;
   private resumeOnlyChapterIndex: number | undefined = undefined;
   private entryCatalogPending: boolean = false;
+  @State private entryCatalogLoading: boolean = false;
+  @State private entryCatalogLoadFailed: boolean = false;
   private readingReadyPage: PhysicalReadingPage | undefined = undefined;
   private readingReadySelection: number = -1;
   private entryCatalogHydration: Promise<void> | undefined = undefined;
@@ -1616,6 +1620,8 @@ export struct ReadingExperience {
     this.resumeOnlyChapterIndex = undefined;
     this.entryCatalogNavigation = undefined;
     this.entryCatalogPending = false;
+    this.entryCatalogLoading = false;
+    this.entryCatalogLoadFailed = false;
     this.readingReadyPage = undefined;
     this.readingReadySelection = -1;
     this.entryCatalogHydration = undefined;
@@ -2268,6 +2274,8 @@ export struct ReadingExperience {
         tocEntries: readerControlHostVisible(this.controlSession) || this.controlDirectoryDataRetained ?
           this.controlDirectoryEntries() : EMPTY_CONTROL_DIRECTORY_ENTRIES,
         catalogComplete: !this.entryCatalogPending,
+        catalogLoading: this.entryCatalogLoading,
+        catalogLoadFailed: this.entryCatalogLoadFailed,
         catalogChapterCount: this.entryCatalogNavigation?.chapterCount ?? this.tocEntries.length,
         catalogCurrentPosition: this.controlDirectoryCatalogPosition(),
         onRequireCompleteCatalog: (): void => this.requestCatalogForTurn(),
@@ -3032,6 +3040,8 @@ export struct ReadingExperience {
     if (!this.mounted) return;
     if (event.event === BOOK_TURN_EVENT_SURFACE_READY) {
       if (!this.shouldMountBookTurnSurface()) return;
+      this.bookTurnTextureCaptureGeneration += 1;
+      this.bookTurnSurfaceCaptureEpoch += 1;
       this.bookTurnSurfaceRecoveryPending = true;
       // A replacement EGL surface cannot inherit the previous generation's
       // input owner or retained slots. An old LOST may already be discarded
@@ -3240,6 +3250,7 @@ export struct ReadingExperience {
     }
     if (this.bookTurnCapturedIdentity(slot) === page.textureIdentity) return true;
     const pageGeneration = this.pageTurnGeneration;
+    const surfaceCaptureEpoch = this.bookTurnSurfaceCaptureEpoch;
     let published = false;
     let pixelMap = this.takeBookTurnPendingSnapshot(page.textureIdentity);
     let content: ComponentContent<BookTurnTextureBuildInput> | undefined = undefined;
@@ -3303,7 +3314,8 @@ export struct ReadingExperience {
       return false;
     } finally {
       if (pixelMap !== undefined) {
-        if (!published && pageGeneration === this.pageTurnGeneration && this.mounted && !this.exitRequested &&
+        if (!published && surfaceCaptureEpoch === this.bookTurnSurfaceCaptureEpoch &&
+          pageGeneration === this.pageTurnGeneration && this.mounted && !this.exitRequested &&
           this.usesBookTurnSimulation() && !this.bookTurnRuntimeFailed) {
           // Retain at most one completed bitmap while a newer finger owns
           // input. No upload or page turn is admitted by retaining CPU pixels.
@@ -3612,8 +3624,8 @@ export struct ReadingExperience {
           this.drainRapidPageTurn();
         }
       }).catch((): void => {
-        if (!this.mounted || this.exitRequested) return;
-        this.getUIContext().getPromptAction().showToast({ message: '阅读进度未保存，将在停止滚动或退出时重试' });
+        // The progress owner retains the failure and logs it through
+        // continuousProgressDependencies.failed. Automatic retries stay silent.
       });
   }
 
@@ -4279,6 +4291,8 @@ export struct ReadingExperience {
     const admissionRevision = this.remoteCatalogAdmissionRevision;
     const isCurrent = (): boolean => this.isSessionActive(lifecycleToken) && sourceId === this.sourceId && bookId === this.bookId &&
       admissionRevision === this.remoteCatalogAdmissionRevision;
+    this.entryCatalogLoading = true;
+    this.entryCatalogLoadFailed = false;
     const operation = this.activeGateway().loadToc(bookId, isCurrent).then((toc: LocalReadingToc): void => {
       if (!isCurrent()) return;
       const current = this.pageTurnPreparation?.origin.chapter ?? this.chapter;
@@ -4288,6 +4302,7 @@ export struct ReadingExperience {
       const retained = this.chapterWindow.retainedChapterIndexes().map((index: number): ReadingSessionChapter | undefined => this.chapterWindow.get(index));
       this.entryCatalogNavigation = undefined;
       this.entryCatalogPending = false;
+      this.entryCatalogLoadFailed = false;
       this.admitTocEntries(toc.entries);
       this.configureReadingChapterWindow();
       this.setCurrentReadingChapter(current);
@@ -4301,6 +4316,7 @@ export struct ReadingExperience {
     this.entryCatalogHydration = operation;
     try { await operation; }
     catch (error) {
+      if (isCurrent()) this.entryCatalogLoadFailed = true;
       if (isCurrent() && this.autoPageCoordinator.catalogLoadFailed()) {
         try {
           this.getUIContext().getPromptAction().showToast({ message: '目录加载失败，自动翻页已停止，请重试' });
@@ -4309,7 +4325,12 @@ export struct ReadingExperience {
       if (error instanceof Error) throw error;
       throw new Error(errorMessageOf(error));
     }
-    finally { if (this.entryCatalogHydration === operation) this.entryCatalogHydration = undefined; }
+    finally {
+      if (this.entryCatalogHydration === operation) {
+        this.entryCatalogHydration = undefined;
+        this.entryCatalogLoading = false;
+      }
+    }
     if (isCurrent()) {
       this.queuePageTurnPreparation('next');
       this.queuePageTurnPreparation('previous');
@@ -13121,7 +13142,6 @@ export struct ReadingExperience {
     if (succeeded === undefined) {
       this.activeGateway().handoffPendingProgress();
       this.releasePageTurnRecoveryInput();
-      this.showReaderRecovery('进度正在后台核对，原阅读位置已保留。', '', undefined, 'progress');
       return;
     }
     this.pageTurnCommitFinished = true;
@@ -13365,7 +13385,6 @@ export struct ReadingExperience {
     // absent native/ArkUI callback must not retain the whole input owner.
     this.activeGateway().handoffPendingProgress();
     this.releasePageTurnRecoveryInput();
-    this.showReaderRecovery('页面正在恢复，阅读位置已保留。', '', undefined, 'presentation');
   }
 
   private releasePageTurnRecoveryInput(): void {

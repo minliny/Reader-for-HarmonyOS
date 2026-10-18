@@ -125,7 +125,7 @@ for(const row of contracts.values()){
 // layout. Compile the actual public frame, header, fallback, and native List;
 // unrelated toolbar/rules payloads are explicit child seams. Native lazy-row
 // scheduling and the compositor remain outside this SDK closure proof.
-{
+async function proveNativeDirectoryFallback(navigationSource) {
  const read=file=>readFileSync(new URL('../entry/src/main/ets/features/'+file,import.meta.url),'utf8');
  const source=read('bookshelf/BookDirectoryPage.ets');proveNativeDefaultLayout(source);
  for(const[before,after]of[
@@ -150,7 +150,7 @@ for(const row of contracts.values()){
  for(const[name,file]of Object.entries({ReaderDirectoryToolbar:'reading/ReaderDirectoryToolbar.ets',ReaderDirectoryRules:'reading/ReaderDirectoryRules.ets',ReaderDirectoryRecoverySurface:'reading/ReaderDirectoryRecoverySurface.ets',ReaderDirectoryNavigationList:'reading/ReaderDirectoryNavigationList.ets'})){
   sdk.childSources[name]=read(file);sdk.deps[name]=Child;
  }
- for(const[name,file]of Object.entries({PageBackBar:'common/PageBackBar.ets',ReaderDirectoryNavigationSurface:'reading/ReaderDirectoryNavigationSurface.ets',ReaderDirectoryList:'reading/ReaderDirectoryList.ets'}))sdk.childSources[name]=read(file);
+ for(const[name,file]of Object.entries({PageBackBar:'common/PageBackBar.ets',ReaderDirectoryNavigationSurface:'reading/ReaderDirectoryNavigationSurface.ets',ReaderDirectoryList:'reading/ReaderDirectoryList.ets'}))sdk.childSources[name]=name==='ReaderDirectoryNavigationSurface'&&navigationSource!==undefined?navigationSource:read(file);
  const syntax=req(sdkRoot()+'/lib/validate_ui_syntax.js');
  syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
  syntax.builderParamObjectCollection.set('ReaderDirectoryNavigationSurface',new Set(['fallbackBuilder']));
@@ -180,17 +180,52 @@ for(const row of contracts.values()){
  assert.equal(list.contentStartOffset,162,'real public header measurement reaches the retained native List');
  assert.equal(nodes().filter(n=>n.type==='List').length,count,'header measurement preserves the original physical List actor');
  const navigation=sdk.walk(page).find(owner=>owner!==page&&owner.fallbackBuilder&&owner.chapterEntries);assert.ok(navigation);
- await Promise.resolve();await Promise.resolve();await Promise.resolve();sdk.properties.flush();
+ const retainedFlatList=()=>{
+  assert.equal(nodes().filter(n=>n.type==='List').length,count,'temporary tree failure/retry retains exactly the mounted native flat List');
+  assert.equal(nodes().find(n=>n.type==='List'),list,'temporary tree failure/retry retains the same physical List actor');
+  assert.equal(list.create.scroller,scroller,'temporary tree failure/retry preserves the native Scroller identity');
+  assert.equal(list.contentStartOffset,162,'temporary tree failure/retry preserves the measured header offset');
+ };
+ try {
+ await Promise.resolve();await Promise.resolve();await Promise.resolve();
  assert.equal(navigationRequests.length,1,'the actual mounted navigation lifecycle admits one scoped request');
  assert.equal(navigationRequests[0].command,'reading.directory.view.open.v2');
  assert.equal(navigationRequests[0].params.sourceId,'local');assert.equal(navigationRequests[0].params.bookId,'native-layout-book');
- assert.equal(navigation.settledFlat,true,'a missing tree retains the already mounted readable flat List');
+ assert.equal(navigation.settledFlat,false,'a temporary missing tree remains retryable instead of permanently settling the flat fallback');
+ assert.equal(navigation.loadPending,false,'the first unavailable response releases pending state');
+ assert.equal(navigation.loadFailed,true,'a missing navigation index exposes an explicit recoverable failure');
+ assert.equal(navigation.view,undefined,'a missing index cannot masquerade as a complete directory');
+ sdk.properties.flush();retainedFlatList();
+ navigation.retryOpen();
+ assert.equal(navigationRequests.length,2,'actual SDK retryOpen admits exactly one second directory request');
+ assert.equal(navigationRequests[1].command,'reading.directory.view.open.v2');
+ assert.deepEqual(navigationRequests[1].params,navigationRequests[0].params,'retry preserves the original scoped directory query');
+ assert.equal(navigation.loadPending,true,'retry owns an explicit pending state');
+ assert.equal(navigation.loadFailed,false,'retry clears the previous failure presentation');
+ // The SDK seam does not model native Retry-CTA removal. Verify the retained
+ // List during pending, then replay dependency delivery at the next error state;
+ // loading/error actors and the physical retry callback have their own SDK cases.
+ retainedFlatList();
+ await Promise.resolve();await Promise.resolve();await Promise.resolve();sdk.properties.flush();
+ assert.equal(navigationRequests.length,2,'a repeated unavailable response does not create an automatic request loop');
+ assert.equal(navigation.settledFlat,false,'a repeated temporary unavailable response stays retryable');
+ assert.equal(navigation.loadPending,false);assert.equal(navigation.loadFailed,true);
+ retainedFlatList();
  navigation.onSelectTarget(17,0);assert.deepEqual(selected,[17]);page.bookId='successor-book';navigation.onSelectTarget(17,0);assert.deepEqual(selected,[17],'retained old directory actor cannot target a successor book');
- navigation.aboutToDisappear();const generation=navigation.generation;
+ } finally { navigation.aboutToDisappear(); }
+ const generation=navigation.generation;
  readerDirectorySignalScrollIntent(readerDirectoryScopeKey('local','native-layout-book'));
  assert.equal(navigation.generation,generation,'the real scroll-intent subscription is released on disappearance');
  function sdkRoot(){return resolveEtsLoaderRoot();}
 }
+await proveNativeDirectoryFallback();
+const retryableDirectorySource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets',import.meta.url),'utf8');
+const permanentlyFlatDirectory=retryableDirectorySource.replace("this.settledFlat = unavailableReason === 'unsupported';",'this.settledFlat = true;');
+assert.notEqual(permanentlyFlatDirectory,retryableDirectorySource,'negative control reinstates the old permanent-flat unavailable behavior');
+await assert.rejects(()=>proveNativeDirectoryFallback(permanentlyFlatDirectory),/temporary missing tree remains retryable/,
+ 'the actual SDK native fallback contract rejects the old permanent-flat directory error');
+// Explicit unsupported-capability flat fallback remains covered by the existing
+// directory navigation production-method suite; no transient reason gains it.
 // Execute the real directory Builder→shared native level callback as well as
 // its exact AST mapping. Neither the opening guard nor canEdit is a test stub.
 {

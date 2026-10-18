@@ -3,7 +3,8 @@ import {approvedTypographyContract, approvedTypographyFile, approvedMangaTypogra
  sharedSourceSwitchTypographySuccessor, sharedSourceSwitchTypographySuccessorPath, validateSharedSourceSwitchTypographySuccessor,
  unifiedActionSheetTypographySuccessor, unifiedActionSheetTypographySuccessorPath, validateUnifiedActionSheetTypographySuccessor,
  sourceSwitchFrameSuccessor, sourceSwitchFrameSuccessorPath, validateSourceSwitchFrameSuccessor,
- mangaDirectoryWorktreeSuccessor, mangaDirectoryWorktreeSuccessorPath, validateMangaDirectoryWorktreeSuccessor} from './lib/approved-manga-typography-carriers.mjs';
+ mangaDirectoryWorktreeSuccessor, mangaDirectoryWorktreeSuccessorPath, validateMangaDirectoryWorktreeSuccessor,
+ directoryRecoveryTypographySuccessor, directoryRecoveryTypographySuccessorPath, validateDirectoryRecoveryTypographySuccessor} from './lib/approved-manga-typography-carriers.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
@@ -291,3 +292,38 @@ assert.throws(() => validateMangaDirectoryWorktreeSuccessor(inflatedStatus), /fi
 const recapturedDirectoryRead = path => path === mangaDirectoryWorktreeSuccessor.previousDirectoryFixture ? read(path) + '\n' : read(path);
 assert.throws(() => validateMangaDirectoryWorktreeSuccessor(mangaDirectoryWorktreeSuccessor, recapturedDirectoryRead), /cannot rewrite the f4 directory witness/, 'finite integration never rewrites original witness');
 console.log('PASS finite directory integration metadata successors: exact fonts, colors, counts and immutable prior witnesses; private overrides rejected');
+
+
+assert.equal(directoryRecoveryTypographySuccessorPath, 'tools/fixtures/design/directory-recovery-typography-successor-20261016.json');
+assert.equal(validateDirectoryRecoveryTypographySuccessor(), directoryRecoveryTypographySuccessor);
+for (const entry of directoryRecoveryTypographySuccessor.files) {
+ const source = read(entry.path);
+ assert.equal(approvedTypographyContract(source, entry.path).count, entry.carriers.length);
+ const actor = entry.recoveryNativeActors[0];
+ const start = source.indexOf('Text(' + actor.text + ')'), end = source.indexOf(';', start) + 1;
+ assert.ok(start >= 0 && end > start); const original = source.slice(start, end);
+ for (const [from, to] of [['.fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)', '.fontSize(99)'],
+   ["readerAppColor('TOK_READ_MUTED', this.appThemeScheme)", "'#ff0000'"],
+   ['.layoutWeight(1)', '.layoutWeight(2)']]) {
+  const changed = original.replace(from, to); assert.notEqual(changed, original);
+  assert.throws(() => approvedTypographyContract(source.slice(0, start) + changed + source.slice(end), entry.path),
+   /exact directory recovery native|exact approved typography/, 'recovery cannot admit private fonts, arbitrary paint or changed native layout');
+ }
+ assert.throws(() => approvedTypographyContract(source.slice(0, end) + original + source.slice(end), entry.path),
+  /exact directory recovery native|exact approved typography/, 'the new recovery carrier cannot be copied');
+}
+const recoveryWildcard = structuredClone(directoryRecoveryTypographySuccessor); recoveryWildcard.files[0].path = 'entry/src/main/ets/features/reading/*';
+assert.throws(() => validateDirectoryRecoveryTypographySuccessor(recoveryWildcard), /two exact directory recovery/);
+const recoveryBudget = structuredClone(directoryRecoveryTypographySuccessor); recoveryBudget.files[0].architectureCounts = {fontSize:1};
+assert.throws(() => validateDirectoryRecoveryTypographySuccessor(recoveryBudget), /cannot acquire a private style budget/);
+const recoveryLost = structuredClone(directoryRecoveryTypographySuccessor); recoveryLost.files[1].carriers.pop();
+assert.throws(() => validateDirectoryRecoveryTypographySuccessor(recoveryLost), /preserves every unrelated carrier/);
+const recoveryRetuple = structuredClone(directoryRecoveryTypographySuccessor); recoveryRetuple.files[0].carriers[0].modifiers.fontSize.expression = '99';
+assert.throws(() => validateDirectoryRecoveryTypographySuccessor(recoveryRetuple), /exact body tuple/);
+assert.throws(() => validateDirectoryRecoveryTypographySuccessor(directoryRecoveryTypographySuccessor,
+ path => read(path) + (path === directoryRecoveryTypographySuccessor.previousFixtures[0].path ? '\n' : '')),
+ /historical typography witness byte immutable/);
+const controlRecovery = directoryRecoveryTypographySuccessor.files[1];
+assert.throws(() => approvedTypographyContract(read(controlRecovery.path).replaceAll('this.flatCatalog();', 'this.detachedFlatCatalog();'), controlRecovery.path),
+ /actual directory recovery helper edges/);
+console.log('PASS finite directory recovery typography: exact 12fp inherited body, muted paint, preserved empty branches/roles/AUTO/history; private fonts/colors/copies/budgets and detached helpers rejected');

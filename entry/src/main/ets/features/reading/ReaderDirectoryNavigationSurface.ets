@@ -1,4 +1,5 @@
 import { TYPE_APP_INHERITED_BODY } from '../common/ReaderTypography';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderDirectoryTrace } from './ReaderDirectoryTrace';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -56,6 +57,7 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop edgeEffectMode: EdgeEffect = EdgeEffect.None;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop chapterEntries: LocalReadingTocEntry[] = [];
+  @Prop showLoadStatus: boolean = true;
   @Prop chapterDownloadEnabled: boolean = false;
   /** Manga uses existing markers to manage active/retained downloads. */
   @Prop chapterDownloadActionsEnabled: boolean = false;
@@ -74,6 +76,8 @@ export struct ReaderDirectoryNavigationSurface {
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
   @BuilderParam fallbackBuilder: () => void;
   @State private view: ReaderDirectoryNavigationReady | undefined = undefined;
+  @State private loadPending: boolean = false;
+  @State private loadFailed: boolean = false;
   @State private mangaFontsReady: boolean = false;
   private mangaFontGeneration: number = 0;
   private mangaFontTask: Promise<boolean> | undefined = undefined;
@@ -143,6 +147,8 @@ export struct ReaderDirectoryNavigationSurface {
     this.generation += 1;
     this.openingGeneration = -1;
     this.view = undefined;
+    this.loadPending = false;
+    this.loadFailed = false;
     this.onTreeStateChange(false);
     this.settledFlat = false;
     this.pendingRefresh = false;
@@ -197,6 +203,7 @@ export struct ReaderDirectoryNavigationSurface {
         this.pendingQueryRefresh = queryScheduled;
         this.generation += 1;
         this.openingGeneration = -1;
+        this.loadPending = false;
       }
       return;
     }
@@ -243,6 +250,7 @@ export struct ReaderDirectoryNavigationSurface {
       this.cancelQueryTimer();
       this.generation += 1;
       this.openingGeneration = -1;
+      this.loadPending = false;
       this.pendingRefresh = true;
       this.pendingQueryRefresh = false;
     }
@@ -256,6 +264,7 @@ export struct ReaderDirectoryNavigationSurface {
     this.cancelQueryTimer();
     this.generation += 1;
     this.openingGeneration = -1;
+    this.loadPending = false;
     if (this.view === undefined) {
       // A first-opening flat list has no tree scroll-stop callback. Keep its
       // user-chosen viewport stable for this opening.
@@ -314,6 +323,8 @@ export struct ReaderDirectoryNavigationSurface {
     const sourceId = this.sourceId;
     if (gateway === undefined || bookId.length === 0) return;
     const generation = ++this.generation;
+    this.loadPending = false;
+    this.loadFailed = false;
     if (!this.interactionEnabled) {
       // A Surface may mount inside the initial Quick/Full transition. Keep
       // its ready flat rows visible and admit the tree at the motion endpoint.
@@ -326,6 +337,7 @@ export struct ReaderDirectoryNavigationSurface {
     }
     const trace = pendingTrace ?? new ReaderDirectoryTrace(reason);
     this.openingGeneration = generation;
+    this.loadPending = true;
     const query = this.query, descending = !this.ascending;
     const explicitLocateCurrent = this.locateCurrentPending;
     // A fresh Quick opening starts at the current chapter, even when Full left
@@ -334,11 +346,15 @@ export struct ReaderDirectoryNavigationSurface {
       query.trim().length === 0 && this.currentChapterIndex >= 0;
     const anchorNodeId = locateCurrent ? undefined : readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, bookId))?.nodeId;
     const chapterIndex = this.currentChapterIndex >= 0 ? this.currentChapterIndex : undefined;
+    let unavailableReason = '';
     const open = (): Promise<ReaderDirectoryNavigationReady | undefined> => openReaderDirectoryNavigation(gateway,
       { sourceId, bookId, query, descending, chapterIndex, anchorNodeId, limit: 256, locateCurrent,
         collapsedNodeIds: this.mangaDisplay && this.mangaQuickDisplay && query.trim().length === 0 ? [] : undefined },
       (): boolean => this.mounted && generation === this.generation && this.bookId === bookId && this.sourceId === sourceId,
-      (reason: string): void => { if (this.sourceId === 'local') readerDirectoryNoteMissingNavigation(bookId, reason); });
+      (reason: string): void => {
+        unavailableReason = reason;
+        if (this.sourceId === 'local') readerDirectoryNoteMissingNavigation(bookId, reason);
+      });
     // The permanent tablet catalog can mount without a phone-sheet opening.
     // Admit neither its tree nor its fallback text before the same receipts.
     // Novel callers preserve their existing direct navigation task.
@@ -360,20 +376,22 @@ export struct ReaderDirectoryNavigationSurface {
         if (!this.mounted || generation !== this.generation || this.bookId !== bookId || this.sourceId !== sourceId) return;
         if (ready === undefined) {
           this.openingGeneration = -1;
-          if (first) {
-            this.settledFlat = true;
-            // The reading owner may repair old EPUBs after a readable first
-            // frame. The visible directory never starts archive parsing.
-          }
+          this.loadPending = false;
+          // Capability absence can use the complete flat catalog. A missing
+          // index or failed request remains a recoverable read for this view.
+          this.settledFlat = unavailableReason === 'unsupported';
+          this.loadFailed = !this.settledFlat;
           return;
         }
         if (this.settledFlat || (first && this.interacted)) {
           this.openingGeneration = -1;
+          this.loadPending = false;
           this.settledFlat = true;
           return;
         }
         if (!this.interactionEnabled) {
           this.openingGeneration = -1;
+          this.loadPending = false;
           this.pendingRefresh = true;
           this.pendingQueryRefresh = false;
           return;
@@ -381,6 +399,7 @@ export struct ReaderDirectoryNavigationSurface {
         ready.preparedPages = await this.prepareVisiblePages(gateway, bookId, ready, generation);
         if (!this.mounted || generation !== this.generation || this.bookId !== bookId || this.sourceId !== sourceId) return;
         this.openingGeneration = -1;
+        this.loadPending = false;
         if (this.settledFlat || (first && this.interacted)) {
           this.settledFlat = true;
           return;
@@ -395,6 +414,7 @@ export struct ReaderDirectoryNavigationSurface {
           ready.currentDisplaySmooth = explicitLocateCurrent;
         }
         this.view = ready;
+        this.loadFailed = false;
         this.locateCurrentPending = false;
         this.onTreeStateChange(true);
         trace.step('published');
@@ -409,8 +429,18 @@ export struct ReaderDirectoryNavigationSurface {
         trace.step('response', current ? 'failed' : 'cancelled');
         if (!current) return;
         this.openingGeneration = -1;
-        if (first) this.settledFlat = true;
+        this.loadPending = false;
+        this.loadFailed = true;
       });
+  }
+
+  private retryOpen(): void {
+    if (!this.mounted || !this.interactionEnabled || this.loadPending) return;
+    this.cancelQueryTimer();
+    this.pendingRefresh = false;
+    this.pendingQueryRefresh = false;
+    this.settledFlat = false;
+    this.openTree(false, 'retry');
   }
 
   private toggle(node: ReaderDirectoryNavigationNode): void {
@@ -426,58 +456,74 @@ export struct ReaderDirectoryNavigationSurface {
   private invalidate(): void {
     this.cancelQueryTimer();
     this.generation += 1;
-    this.view = undefined;
-    this.onTreeStateChange(false);
-    this.settledFlat = true;
+    this.openingGeneration = -1;
+    this.loadPending = false;
+    this.loadFailed = true;
+    this.settledFlat = false;
   }
 
   build() {
-    if (this.mangaDisplay && !this.mangaFontsReady) {
-      Blank().width('100%').height('100%');
-    } else if (this.view === undefined) {
-      this.fallbackBuilder();
-    } else {
-      Stack({ alignContent: this.mangaDisplay ? Alignment.TopStart : Alignment.Center }) {
-        ReaderDirectoryNavigationList({
-          view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
-          mangaDisplay: this.mangaDisplay, mangaRowMinHeight: this.mangaRowMinHeight, mangaScheme: this.mangaScheme,
-          mangaCatalogDisplay: this.mangaCatalogDisplay, mangaCatalogNarrow: this.mangaCatalogNarrow,
-          mangaInitialViewportWidth: this.mangaInitialViewportWidth,
-          mangaVisibleTopInset: this.mangaVisibleTopInset,
-          mangaQuickDisplay: this.mangaQuickDisplay,
-          mangaSearchActive: this.mangaDisplay && this.query.trim().length > 0,
-          currentChapterIndex: this.currentChapterIndex,
-          listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
-          listPaddingRight: this.listPaddingRight,
-          listPaddingTop: this.listPaddingTop, listPaddingBottom: this.listPaddingBottom,
-          contentStartInset: this.contentStartInset, contentEndInset: this.contentEndInset,
-          edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
-          chapterEntries: this.chapterEntries,
-          chapterDownloadEnabled: this.chapterDownloadEnabled,
-          chapterDownloadActionsEnabled: this.chapterDownloadActionsEnabled,
-          chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
-          scroller: this.scroller,
-          onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
-            this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
-          onToggleNode: (node: ReaderDirectoryNavigationNode): void => this.toggle(node),
-          onUserScrollIntent: (): void => this.onTreeUserScrollIntent(),
-          onScrollSettled: (): void => this.onTreeScrollSettled(),
-          onFirstLayout: (): void => this.onFirstLayout(),
-          onScrollOffset: (offset: number): void => this.onScrollOffset(offset),
-          onClearSearch: (): void => this.onClearSearch(),
-          onInvalidated: (): void => this.invalidate(),
-          onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
-          onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
-          onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
-            this.onCreateChapterStartBookmark(request),
-        });
-        if (this.view.visibleTotal === 0 && !this.mangaDisplay) {
-          Text('没有匹配的目录项')
-            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-            .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
-            .hitTestBehavior(HitTestMode.None);
+    Column() {
+      if (this.showLoadStatus && (this.loadPending || this.loadFailed)) {
+        Row({ space: 6 }) {
+          Text(this.loadFailed ? '目录加载失败，已保留当前条目' : '正在加载目录')
+            .layoutWeight(1).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+            .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp);
+          if (this.loadFailed) {
+            ReaderRecoveryAction({ label: '重试加载目录', actionEnabled: this.interactionEnabled,
+              onReconcile: (): void => this.retryOpen() });
+          }
+        }.width('100%').padding({ left: 8, right: 8, top: 2, bottom: 2 });
+      }
+      Stack() {
+        if (this.mangaDisplay && !this.mangaFontsReady) {
+          Blank().width('100%').height('100%');
+        } else if (this.view === undefined) {
+          this.fallbackBuilder();
+        } else {
+          Stack({ alignContent: this.mangaDisplay ? Alignment.TopStart : Alignment.Center }) {
+            ReaderDirectoryNavigationList({
+              view: this.view, sourceId: this.sourceId, bookId: this.bookId, rowHeight: this.rowHeight,
+              mangaDisplay: this.mangaDisplay, mangaRowMinHeight: this.mangaRowMinHeight, mangaScheme: this.mangaScheme,
+              mangaCatalogDisplay: this.mangaCatalogDisplay, mangaCatalogNarrow: this.mangaCatalogNarrow,
+              mangaInitialViewportWidth: this.mangaInitialViewportWidth,
+              mangaVisibleTopInset: this.mangaVisibleTopInset,
+              mangaQuickDisplay: this.mangaQuickDisplay,
+              mangaSearchActive: this.mangaDisplay && this.query.trim().length > 0,
+              currentChapterIndex: this.currentChapterIndex,
+              listPaddingX: this.listPaddingX, listPaddingY: this.listPaddingY,
+              listPaddingRight: this.listPaddingRight,
+              listPaddingTop: this.listPaddingTop, listPaddingBottom: this.listPaddingBottom,
+              contentStartInset: this.contentStartInset, contentEndInset: this.contentEndInset,
+              edgeEffectMode: this.edgeEffectMode, interactionEnabled: this.interactionEnabled,
+              chapterEntries: this.chapterEntries,
+              chapterDownloadEnabled: this.chapterDownloadEnabled,
+              chapterDownloadActionsEnabled: this.chapterDownloadActionsEnabled,
+              chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
+              scroller: this.scroller,
+              onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
+                this.onSelectTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
+              onToggleNode: (node: ReaderDirectoryNavigationNode): void => this.toggle(node),
+              onUserScrollIntent: (): void => this.onTreeUserScrollIntent(),
+              onScrollSettled: (): void => this.onTreeScrollSettled(),
+              onFirstLayout: (): void => this.onFirstLayout(),
+              onScrollOffset: (offset: number): void => this.onScrollOffset(offset),
+              onClearSearch: (): void => this.onClearSearch(),
+              onInvalidated: (): void => this.invalidate(),
+              onDeleteBookmarks: (times: number[]): void => this.onDeleteBookmarks(times),
+              onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
+              onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest): void =>
+                this.onCreateChapterStartBookmark(request),
+            });
+            if (this.view.visibleTotal === 0 && !this.mangaDisplay) {
+              Text('没有匹配的目录项')
+                .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
+                .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
+                .hitTestBehavior(HitTestMode.None);
+            }
+          }.width('100%').height('100%');
         }
-      }.width('100%').height('100%');
-    }
+      }.width('100%').layoutWeight(1);
+    }.width('100%').height('100%');
   }
 }

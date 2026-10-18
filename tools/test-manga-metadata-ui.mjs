@@ -150,8 +150,23 @@ for (const [mangaCatalogDisplay, mangaCatalogNarrow] of [[false, false], [true, 
   const child = [...owner.children.values()].find(child => child.nodes);
   assert.equal(child.params.mangaRowMinHeight, 50, 'actual native child retains the parent props');
   assert.equal(child.params.mangaCatalogDisplay, mangaCatalogDisplay); assert.equal(child.params.mangaCatalogNarrow, mangaCatalogNarrow);
-  const stack = [...owner.nodes.values()].find(node => node.type === 'Stack');
-  assert.equal(stack.create.alignContent, mangaDisplay ? 'Alignment.TopStart' : 'Alignment.Center');
+  const surfaceNodes = [...owner.nodes.values()];
+  const root = surfaceNodes.find(node => node.type === 'Column');
+  assert.ok(root, 'directory surface retains a full-height recovery/status host');
+  assert.deepEqual([root.width, root.height], ['100%', '100%']);
+  const stacks = surfaceNodes.filter(node => node.type === 'Stack');
+  assert.equal(stacks.length, 2, 'one remaining-height viewport wraps the actual list/empty-content alignment container');
+  const viewport = stacks[0];
+  assert.equal(viewport.width, '100%');
+  assert.equal(viewport.layoutWeight, 1, 'loading/error header leaves all remaining height to the directory viewport');
+  assert.equal(viewport.height, undefined, 'viewport weight must not compete with a fixed full-height allocation');
+  // Bind the assertion to the actual SDK child observer, rather than whichever
+  // Stack happened to be emitted first after a surface wrapper was introduced.
+  const content = stacks.filter(node => node.id < child.id).at(-1);
+  assert.equal(content, stacks[1], 'the native directory child belongs to the inner content container');
+  assert.ok(viewport.id < content.id && content.id < child.id);
+  assert.deepEqual([content.width, content.height], ['100%', '100%']);
+  assert.equal(content.create.alignContent, mangaDisplay ? 'Alignment.TopStart' : 'Alignment.Center');
   if (!mangaDisplay) {
     assert.ok([...owner.nodes.values()].some(node => node.create === '没有匹配的目录项'));
     assert.ok(![...child.nodes.values()].some(node => node.create === '清除搜索'), 'novel keeps its passive empty state');
