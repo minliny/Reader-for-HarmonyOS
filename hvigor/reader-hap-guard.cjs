@@ -9,7 +9,7 @@ function isPackageTask(name) {
 }
 
 function isBuildResourceTask(name) {
-  return isPackageTask(name) || /(?:^|[:@])(?:compileNative|ConfigureCmake|BuildNativeWithCmake|BuildNativeWithNinja|cleanNative|clean)$/i.test(name);
+  return isPackageTask(name) || /(?:^|[:@])(?:compileNative|ConfigureCmake|BuildNativeWithCmake|BuildNativeWithNinja|ProcessLibs|DoNativeStrip|CacheNativeLibs|cleanNative|clean)$/i.test(name);
 }
 
 // An accidental IDE Run must fail before deployment can uninstall the app.
@@ -51,7 +51,7 @@ function assertReaderHapInvocation(tasks, ide, cwd = process.cwd(), env = proces
 function verifyIdeOutput(ide, cwd = process.cwd()) {
   if (!ide) return;
   const artifact = ide.pipeline.verifyIdeSignedHap(
-    resolve(cwd, 'entry/build/default/outputs/default/entry-default-signed.hap'), ide.session);
+    resolve(cwd, 'entry/build/default/outputs/default/entry-default-signed.hap'), ide.session, buildLease?.env);
   console.log(`Reader DevEco signed HAP verified: ${artifact.sha256}`);
 }
 
@@ -60,9 +60,11 @@ module.exports = { assertCanonicalHapInvocation, isPackageTask, isBuildResourceT
 
 let buildLease, buildLeaseReady;
 async function beginIdeBuild(ide) {
-  if (!ide || buildLease) return;
+  if (!ide) return;
+  if (buildLease) return buildLease.env;
   if (!buildLeaseReady) buildLeaseReady = import('../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs').then(({ acquireBuildLease }) => { buildLease = acquireBuildLease(); });
   try { await buildLeaseReady; } catch (error) { buildLeaseReady = undefined; throw error; }
+  return buildLease.env;
 }
 function finishIdeBuild() { const lease = buildLease; buildLease = undefined; buildLeaseReady = undefined; lease?.release(); }
 module.exports.beginIdeBuild = beginIdeBuild;

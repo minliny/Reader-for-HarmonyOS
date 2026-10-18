@@ -5,7 +5,7 @@ const { configureIdeSigning, assertReaderHapInvocation, verifyIdeOutput, beginId
 
 type IdeSigningSession = {
   pipeline: {
-    preflightIdeNative(): void;
+    preflightIdeNative(env?: Record<string, string | undefined>): void;
   };
   session: unknown;
 };
@@ -56,8 +56,8 @@ hvigor.taskGraphResolved(async () => {
   const tasks = hvigor.getCommandEntryTask() || [];
   assertReaderHapInvocation(tasks, ideSigning);
   if (ideSigning && tasks.some((name: string) => isBuildResourceTask(name))) {
-    await beginIdeBuild(ideSigning);
-    try { ideSigning.pipeline.preflightIdeNative(); }
+    const buildEnv = await beginIdeBuild(ideSigning);
+    try { ideSigning.pipeline.preflightIdeNative(buildEnv); }
     catch (error) { finishIdeBuild(); throw error; }
   }
 });

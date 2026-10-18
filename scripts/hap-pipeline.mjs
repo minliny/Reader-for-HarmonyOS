@@ -20,7 +20,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { basename, dirname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
+import { basename, delimiter, dirname, isAbsolute, join, parse, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { portableSpawnSync, resolveHarmonyTool } from './lib/harmony-toolchain.mjs';
 import { assertPrivateFilePermissions } from './lib/private-file.cjs';
@@ -28,10 +28,11 @@ import { performance } from 'node:perf_hooks';
 import { readSigningAuthority, assertSigningMaterialAuthority, assertSigningCertificateAuthority } from '../tools/reader-signing-authority.mjs';
 import { assertBuildTools } from '../tools/reader-build-tools.mjs';
 import { contentSnapshot, coreBuildSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
-import { acquireBuildWorkspace } from '../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs';
+import { acquireBuildLease, acquireBuildWorkspace } from '../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs';
 import { assertWorkspaceLayout } from '../../Reader-Core-Native/scripts/lib/development-environment.mjs';
 import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate, verifyPublishedCoreGate, targetReadiness } from './lib/hap-delivery-evidence.mjs';
 import { hapStageReceipt } from './lib/hap-stage-receipt.mjs';
+import { reconcileIdeNativeCache } from './lib/ide-native-cache.mjs';
 import { contractTests, contractSelection, MAX_CONTRACT_TIMEOUT_MS } from '../tools/run-contract-tests.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -41,7 +42,6 @@ const CORE_ROOT = resolve(WORKSPACE_ROOT, 'Reader-Core-Native');
 const DEFAULT_ARTIFACT_ROOT = resolve(REPO_ROOT, '.reader-artifacts/hap');
 const DEFAULT_RETAIN_RUNS = 10;
 const LOCK_ROOT = resolve(process.env.READER_LOCK_DIR || tmpdir());
-const ARTIFACT_LOCK = join(LOCK_ROOT, 'reader-harmony-hap-build.lock');
 const DEFAULT_SIGNING_PROFILE = resolve(REPO_ROOT, '.reader-local/signing/build-profile.json5');
 const HDC_LEASE_SCRIPT = resolve(REPO_ROOT, 'tools/reader-hdc-lease.mjs');
 const HDC_SERVER = process.env.READER_HDC_SERVER_KEY ?? '::ffff:127.0.0.1:8710';
@@ -319,8 +319,8 @@ function applyLockedHapRetention(plan) {
 }
 
 function withArtifactLock(action) {
-  acquireLock(ARTIFACT_LOCK, { pid: process.pid, repo: REPO_ROOT, startedAt: new Date().toISOString() });
-  try { return action(); } finally { rmSync(ARTIFACT_LOCK, { recursive: true, force: true }); }
+  const lease = acquireBuildLease();
+  try { return action(lease.env); } finally { lease.release(); }
 }
 
 function gitRecord(repo) {
@@ -742,13 +742,19 @@ export function assertIdeSigningUnchanged(session) {
   }
 }
 
-export function verifyIdeSignedHap(path, session) {
-  assertIdeSigningUnchanged(session);
-  const artifact = inspectHap(path, 'signed', basename(path), requiredHapResources(REPO_ROOT));
-  if (artifact.signature.status !== 'signed' || artifact.signature.verified !== true) {
-    fail('DevEco build did not produce a verified signed HAP.');
-  }
-  return artifact;
+export function verifyIdeSignedHap(path, session, env = process.env) {
+  const lease = acquireBuildLease(env);
+  try {
+    assertIdeSigningUnchanged(session);
+    const artifact = inspectHap(path, 'signed', basename(path), requiredHapResources(REPO_ROOT));
+    if (artifact.signature.status !== 'signed' || artifact.signature.verified !== true) {
+      fail('DevEco build did not produce a verified signed HAP.');
+    }
+    // Verification must never refresh Native after packaging: a late source
+    // change or stale Hvigor output must fail against the actual embedded SO.
+    checkNativeInputs(lease.env, path);
+    return artifact;
+  } finally { lease.release(); }
 }
 
 function passwordMaterialTree(directory, destination) {
@@ -866,8 +872,8 @@ export function requireAcceptanceInputs(coreRoot = CORE_ROOT, env = process.env)
   return inputs;
 }
 
-function nativeProvenanceArguments() {
-  const inputs = requireAcceptanceInputs();
+function nativeProvenanceArguments(env = process.env) {
+  const inputs = requireAcceptanceInputs(CORE_ROOT, env);
   return [
     '--core-repo', CORE_ROOT, '--harmony-repo', REPO_ROOT,
     '--core-identity', inputs.identity, '--core-input-snapshot', inputs.inputSnapshot,
@@ -878,20 +884,92 @@ function nativeProvenanceArguments() {
   ];
 }
 
-export function preflightIdeNative() {
-  assertWorkspaceLayout(WORKSPACE_ROOT);
+function checkNativeInputs(env, hap) {
   const directory = mkdtempSync(join(tmpdir(), 'reader-ide-native-'));
   try {
     run(process.execPath, [resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs'),
-      ...nativeProvenanceArguments(), '--preflight', '--allow-dirty',
-      '--output', resolve(directory, 'preflight.json')]);
+      ...nativeProvenanceArguments(env), '--allow-dirty',
+      ...(hap ? ['--hap', hap, '--native-strip-tool', resolveHarmonyTool('objcopy', { env })] : ['--preflight']),
+      '--output', resolve(directory, 'preflight.json')], { env });
   } finally { rmSync(directory, { recursive: true, force: true }); }
+}
+
+export function prepareIdeNativeInputs({ check, rebuild, synchronize }) {
+  try { return check(); } catch (error) {
+    const diagnostic = error instanceof Error ? error.message : '';
+    const rebuildRequired = error?.code === 'READER_IDE_NATIVE_PACKAGE_MISSING' ||
+      /(?:^|\n)Error: (?:Core build identity does not match the Core worktree used for the manifest|Core build inputs changed; rebuild the Native\/SDK package)(?:\r?\n|$)/.test(diagnostic);
+    const syncRequired = error?.code === 'READER_IDE_NATIVE_HOST_MISSING' ||
+      /(?:^|\n)Error: Harmony (?:app native input does not match the NAPI package native library|vendored SDK does not match the NAPI package manifest)(?:\r?\n|$)/.test(diagnostic);
+    // Corruption, skipped smoke, unsafe file types and unknown errors remain
+    // hard failures. Only explicit missing/stale generated inputs are repaired.
+    if (!rebuildRequired && !syncRequired) throw error;
+    if (rebuildRequired) rebuild();
+    synchronize();
+    return check();
+  }
+}
+
+export function ideNativeBuildEnvironment(env = process.env) {
+  const pathKey = Object.keys(env).find(key => key.toUpperCase() === 'PATH') || 'PATH';
+  const search = (env[pathKey] || '').split(delimiter).filter(Boolean);
+  // GUI applications need not inherit a login shell. Respect its configured
+  // commands first, then the standard Cargo/Bun user installation locations.
+  for (const path of [dirname(process.execPath),
+    resolve(env.CARGO_HOME || join(homedir(), '.cargo'), 'bin'),
+    resolve(env.BUN_INSTALL || join(homedir(), '.bun'), 'bin')]) {
+    if (!search.includes(path)) search.push(path);
+  }
+  return { ...env, [pathKey]: search.join(delimiter), READER_NODE: env.READER_NODE || env.NODE || process.execPath };
+}
+
+export function ideNativeInputState(corePaths, appNativePath, sdkPath) {
+  let missing = false;
+  for (const path of corePaths) {
+    const stat = lstatSync(path, { throwIfNoEntry: false });
+    if (stat && !stat.isFile()) fail('Native build input must be a regular file; refusing automatic refresh');
+    if (!stat) missing = true;
+  }
+  const hostNative = lstatSync(appNativePath, { throwIfNoEntry: false });
+  const hostSdk = lstatSync(sdkPath, { throwIfNoEntry: false });
+  if ((hostNative && !hostNative.isFile()) || (hostSdk && !hostSdk.isDirectory())) {
+    fail('Host Native/SDK inputs must be a regular file and real directory; refusing automatic refresh');
+  }
+  return missing ? 'rebuild' : (!hostNative || !hostSdk ? 'synchronize' : 'current');
+}
+
+export function preflightIdeNative(env = process.env) {
+  assertWorkspaceLayout(WORKSPACE_ROOT);
+  const lease = acquireBuildLease(env);
+  const buildEnv = ideNativeBuildEnvironment(lease.env);
+  try {
+    const recovery = reconcileIdeNativeCache(REPO_ROOT);
+    if (recovery.removed.length) console.log(`Reader DevEco: recovered ${recovery.removed.length} identical numbered Native cache copies; receipt: ${join(recovery.recoveryDirectory, 'receipt.json')}`);
+    return prepareIdeNativeInputs({
+      check() {
+        const state = ideNativeInputState(Object.values(nativeInputPaths(CORE_ROOT, buildEnv)),
+          resolve(REPO_ROOT, 'entry/libs/arm64-v8a/libreader_core_napi.so'), resolve(REPO_ROOT, 'entry/vendor/core-harmony'));
+        if (state === 'rebuild') throw Object.assign(new Error('Reader DevEco Native package is missing'), { code: 'READER_IDE_NATIVE_PACKAGE_MISSING' });
+        if (state === 'synchronize') {
+          throw Object.assign(new Error('Reader DevEco Native/SDK inputs are missing'), { code: 'READER_IDE_NATIVE_HOST_MISSING' });
+        }
+        return checkNativeInputs(buildEnv);
+      },
+      rebuild() {
+        console.log('Reader DevEco: Core Native inputs changed; rebuilding the current local Core/SDK package.');
+        run('bash', [resolve(CORE_ROOT, 'scripts/build-harmony-napi.sh')], {
+          cwd: CORE_ROOT, stdio: 'inherit', env: { ...buildEnv, READER_NATIVE_BUILD_LOCKED: '1' },
+        });
+      },
+      synchronize() { syncNative(buildEnv); },
+    });
+  } finally { lease.release(); }
 }
 
 // Synchronize local build inputs through the same provenance checker used by
 // HAP builds. Never download a binary or silently accept an older package.
-function syncNative() {
-  const inputs = requireAcceptanceInputs();
+function syncNative(env = process.env) {
+  const inputs = requireAcceptanceInputs(CORE_ROOT, env);
   const packageRoot = resolve(dirname(inputs.packageManifest), 'package');
   const localRoot = resolve(REPO_ROOT, '.reader-local/native-sync');
   for (const path of [localRoot, resolve(REPO_ROOT, 'entry/vendor'), resolve(REPO_ROOT, 'entry/libs/arm64-v8a')]) {
@@ -914,11 +992,11 @@ function syncNative() {
     cpSync(packageRoot, stagedSdk, { recursive: true,
       filter: path => relative(packageRoot, path).split(sep)[0] !== 'libs' });
     copyFileSync(inputs.nativeSo, stagedNative);
-    const args = nativeProvenanceArguments();
+    const args = nativeProvenanceArguments(env);
     args[args.indexOf('--app-native-so') + 1] = stagedNative;
     args[args.indexOf('--harmony-vendor') + 1] = stagedSdk;
     run(process.execPath, [resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs'),
-      ...args, '--preflight', '--allow-dirty', '--output', join(stage, 'preflight.json')]);
+      ...args, '--preflight', '--allow-dirty', '--output', join(stage, 'preflight.json')], { env });
     // The package contains SDK source/data, not executable tools. Some local
     // build filesystems add executable bits; do not propagate those into Git.
     for (const path of readdirSync(stagedSdk, { recursive: true })) {

@@ -18,6 +18,10 @@ node Reader-for-HarmonyOS/scripts/deveco-build.mjs
 node Reader-for-HarmonyOS/scripts/hap-pipeline.mjs build --class iteration
 ```
 
+DevEco 原生 Build/Run 会先核对当前 Core 提交、dirty 状态、输入快照和 Native/SDK 配套。Core 提交或内容变化、或本地 Native 包缺失时，复用 Core 的构建入口按需重建并事务同步；仅 Host 配套落后时只同步，输入已匹配时直接复用。嵌套构建借用同一资源租约，失败仍停止，损坏证据和未知错误不会被自动放过。打包完成后再次核对实际 HAP 内的 Native 身份。首次刷新需要已安装的 Rust/Cargo、Bun 和对应宿主 SDK；GUI 的工具搜索保留已有 PATH 优先级，并补充标准 `CARGO_HOME/bin`、`BUN_INSTALL/bin` 位置。
+
+在 Hvigor 计算任务输入快照之前，IDE preflight 还会检查生成的 CMake、收集库和裁剪库目录。已知 Native 库的编号副本（如 `libreader_bookturn_napi 2.so`）只有与同目录规范库字节完全一致时，才备份到 `.reader-local/native-cache-recovery/` 并移出构建目录，恢复记录保留原路径及哈希。未知库、不同内容、缺失规范库或符号链接仍停止构建；不处理 `entry/libs` 等源码输入，也不放宽最终 HAP 的 Native 集合校验。
+
 ## 工具配置
 
 优先使用单项工具环境变量，再使用显式安装目录、项目 `local.properties` 中的 `sdk.dir` / `hwsdk.dir`、平台常见安装位置和 `PATH`。显式设置无效会直接报错，不会静默切换 SDK。SDK 可指向 `openharmony`、包含 `openharmony` 的目录、含 `default/openharmony` 的 SDK 安装目录，或版本化 SDK 目录。
@@ -48,3 +52,9 @@ SDK priority is `READER_HARMONY_SDK_HOME` → `HARMONY_SDK_HOME` → `DEVECO_SDK
 Acceptance builds also require `--core-gate-receipt <receipt.json>` from a complete current Core gate; the pipeline copies and validates its stage logs. HAP resources include an explicit font/license list whose bytes are checked inside each package. Failed build attempts retain redacted stage logs under `.reader-artifacts/hap-attempts/`.
 
 For VM inspect/install, supply `--vm-log <current-emulator.log>` from the operator-confirmed current instance. Before any Bundle Manager operation the pipeline requires completed boot, a current Guest OS boot marker and stable SceneBoard across observations. Physical targets use the boot/SceneBoard checks without an emulator log. These checks do not imply interaction acceptance.
+
+For physical user-build phones that explicitly deny the kernel boot-ID read,
+the controller checks Toybox's UTC boot time and all six init boot milestones
+across a real two-second observation, with advancing guest time and stable
+SceneBoard. The receipt identifies this as `physical-boot-milestones-v1`, not
+a kernel UUID. Missing, malformed or changing observations stop deployment.
