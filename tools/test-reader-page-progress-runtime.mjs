@@ -8,7 +8,8 @@ const Owner=productionMotionMethods(new URL('../entry/src/main/ets/features/read
 for(const outcome of ['written-lost-reply','origin','unavailable','foreign']){
  const prepared={context:{chapter:{chapterIndex:2,chapterTitle:'two'},layoutMap:{scalarCount:()=>100}},page:{startScalar:40}};let writes=0,reads=0,dialog,finished=0,handoffs=0;
  const origin={startScalar:10};
- const owner=readerPageRecoveryPorts(Object.assign(new Owner(),{bookId:'b',mounted:true,lifecycleToken:1,phase:'ready',
+ const retainedNotice=Object.freeze({message:'用户主动操作尚未完成',visible:true,canRetry:true,generation:8});
+ const owner=readerPageRecoveryPorts(Object.assign(new Owner(),{readerRecoveryView:retainedNotice,bookId:'b',mounted:true,lifecycleToken:1,phase:'ready',
   pageTurnSettlementGeneration:5,bookTurnSurfaceGeneration:5,pageTurnRenderRevision:1,pageTurnSettlingPrepared:prepared,
   pageTurnInputOwned:true,pageTurnSettlementActive:true,visiblePage:origin,
   cancelPageTurnSettlementDeadline(){},lastCommittedProgress:{chapterIndex:1,chapterOffset:10,updatedAt:1},isPreparedPageTurnFresh:()=>true,isMountedToken:()=>true,coreLayout:()=>({}),errorMessage:e=>e.message,finishPreparedPageTurnSettlement(){finished++;},getUIContext:()=>({showAlertDialog:d=>{dialog=d;}}),activeGateway:()=>({handoffPendingProgress(){handoffs++;},hasPendingSourceSwitch:()=>false,runProgressCommitSerial:fn=>fn(),persistPresentedProgress:async()=>{writes++;throw Error('reply lost');},loadProgress:async()=>{reads++;if(outcome==='unavailable')throw Error('offline');return {kind:'restored',progress:{bookId:'b',chapterIndex:outcome==='written-lost-reply'?2:1,chapterOffset:outcome==='written-lost-reply'?40:outcome==='foreign'?77:10,chapterProgress:.4,updatedAt:1}};}})}));
@@ -16,7 +17,7 @@ for(const outcome of ['written-lost-reply','origin','unavailable','foreign']){
  owner.admitPageTurnPersistenceOutcome(prepared,1,5,result);
  if(result===undefined){
   assert.equal(finished,0);assert.equal(dialog,undefined);assert.equal(handoffs,1);
-  assert.equal(owner.readerRecoveryView.visible,true);assert.equal(owner.readerRecoveryView.canRetry,false);
+  assert.equal(owner.readerRecoveryView,retainedNotice,'background handoff preserves existing user-operation feedback');
   assert.equal(owner.pageTurnInputOwned,false);assert.equal(owner.pageTurnSettlementActive,false);
   assert.equal(owner.visiblePage,origin,'unknown persistence cannot promote a candidate or erase the materialized origin');
   assert.equal(owner.pageTurnPersistenceState,'idle');

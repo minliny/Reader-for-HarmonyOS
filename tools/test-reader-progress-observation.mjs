@@ -23,7 +23,8 @@ let completeWrite, completed = 0, dialogs = 0, handoffs = 0;
 const write = new Promise(resolve => { completeWrite = resolve; });
 const prepared={context:{chapter:{chapterIndex:2,chapterTitle:'two'},layoutMap:{scalarCount:()=>100}},page:{startScalar:40}};
 const origin={startScalar:10};
-const page = readerPageRecoveryPorts(Object.assign(new Page(), { mounted:true,lifecycleToken:1,chapterSelectionToken:1,pageTurnSettlementGeneration: 7, pageTurnCommitStarted: false,
+const retainedNotice=Object.freeze({message:'用户主动操作尚未完成',visible:true,canRetry:true,generation:8});
+const page = readerPageRecoveryPorts(Object.assign(new Page(), { readerRecoveryView:retainedNotice,mounted:true,lifecycleToken:1,chapterSelectionToken:1,pageTurnSettlementGeneration: 7, pageTurnCommitStarted: false,
   bookTurnSurfaceGeneration:7,pageTurnRenderRevision:1,pageTurnSettlingPrepared:prepared,pageTurnInputOwned:true,
   pageTurnSettlementActive:true,visiblePage:origin,phase:'ready',bookId:'b',coreLayout:()=>({}),isPreparedPageTurnFresh:()=>true,
   activeGateway:()=>({canPersistPresentedProgress:()=>false,hasPendingSourceSwitch:()=>false,
@@ -34,7 +35,7 @@ page.beginPreparedPageTurnPersistence(prepared, 1, 7);
 await new Promise(r => setTimeout(r, 12));
 assert.equal(page.pageTurnPersistenceState, 'idle'); assert.equal(dialogs, 0); assert.equal(completed, 0);
 assert.equal(handoffs,1);assert.equal(page.pageTurnInputOwned,false);assert.equal(page.visiblePage,origin);
-assert.equal(page.readerRecoveryView.visible,true);
+assert.equal(page.readerRecoveryView,retainedNotice,'background receipt observation preserves user-operation feedback');
 page.commitInFlight=true;page.progressCommitGeneration++;
 completeWrite({bookId:'b',chapterIndex:2,chapterOffset:40}); await new Promise(r => setImmediate(r));
 assert.equal(completed, 0,'the actual late write cannot promote its retired candidate');

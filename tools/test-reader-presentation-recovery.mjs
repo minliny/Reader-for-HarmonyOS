@@ -44,7 +44,8 @@ const Recovery = productionMotionMethods(file, ['requestBookTurn2DFallback', 'co
 });
 function recovery(ready) {
   const calls = [];
-  const value = readerPageRecoveryPorts(Object.assign(new Recovery(), { mounted: true, exitRequested: false, pageTurnSettlementActive: true,
+  const retainedNotice=Object.freeze({message:'用户主动操作尚未完成',visible:true,canRetry:true,generation:8});
+  const value = readerPageRecoveryPorts(Object.assign(new Recovery(), { readerRecoveryView:retainedNotice,mounted: true, exitRequested: false, pageTurnSettlementActive: true,
     pageTurnSettlementGeneration: 4, bookTurnSurfaceGeneration: 4, pageTurnRenderRevision: 9,
     bookTurnArkUIReadyRevision: ready ? 9 : 8, bookTurnSurfaceOpacity: 1, bookTurnAwaitingSlotCommit: true,
     pageTurnCommitSucceeded: true, pageTurnSettlingPrepared: undefined,
@@ -55,7 +56,7 @@ function recovery(ready) {
     finishSuccessfulPageTurnPresentation() { calls.push('durable-2d'); this.pageTurnSettlementActive = false; },
     finishPageTurnRollback() { calls.push('rollback'); }, getUIContext: () => ({ showAlertDialog: () => calls.push('retry-ui') }) }),
     ()=>calls.push('input-resumed'));
-  return { value, calls };
+  return { value, calls, retainedNotice };
 }
 {
   const h = recovery(true); h.value.armPageTurnSettlementDeadline(4); deadline();
@@ -66,7 +67,7 @@ function recovery(ready) {
   const h = recovery(false); h.value.armPageTurnSettlementDeadline(4); deadline();
   assert.deepEqual(h.calls, ['background','input-resumed']); assert.equal(h.value.bookTurnSurfaceOpacity, 0);
   assert.equal(h.value.pageTurnSettlementActive,false);assert.equal(h.value.pageTurnInputOwned,false);
-  assert.equal(h.value.bookTurnRuntimeFailed,true);assert.equal(h.value.readerRecoveryView.visible,true);
+  assert.equal(h.value.bookTurnRuntimeFailed,true);assert.equal(h.value.readerRecoveryView,h.retainedNotice,'automatic render recovery cannot replace user-operation feedback');
   assert.equal(h.value.pageTurnRenderRevision, 10);
   h.value.onBookTurnArkUIContentReady(9); assert.deepEqual(h.calls, ['background','input-resumed']);
   h.value.onBookTurnArkUIContentReady(10); assert.deepEqual(h.calls, ['background','input-resumed'],
