@@ -8,7 +8,8 @@ import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { syncIndexFixture } from './lib/sync-index-real-fixture.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createReaderBuilderProbe, readerBuilderChildProperties, readerBuilderChildPropertyCacheStats } from './lib/reader-control-builder-probe.mjs';
+import { pureModuleProbe, pureModuleProbeStats } from './lib/ets-pure-module-probe.mjs';
 import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 
@@ -18,6 +19,57 @@ const common='entry/src/main/ets/features/common/',category='entry/src/main/ets/
 const before=golden.sources[common+'ReaderCard.ets'].source;
 const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
+// Repeated child metadata lookup still parses changed inputs with the actual
+// SDK. Only immutable names are shared; callers cannot mutate the next Set.
+{
+ const source="@Component struct CardChildPropertyCacheControl { @Prop label: string = ''; @Prop actionEnabled: boolean = true; build() { Column() {} } }";
+ const before=readerBuilderChildPropertyCacheStats(),first=readerBuilderChildProperties(source,'CardChildPropertyCacheControl');
+ const second=readerBuilderChildProperties(source,'CardChildPropertyCacheControl');
+ assert.deepEqual([...first],['label','actionEnabled']);assert.deepEqual([...second],[...first]);assert.notEqual(first,second);
+ assert.equal(readerBuilderChildPropertyCacheStats().parses,before.parses+1);assert.equal(readerBuilderChildPropertyCacheStats().hits,before.hits+1);
+ first.delete('label');first.add('privateAppearance');
+ assert.deepEqual([...readerBuilderChildProperties(source,'CardChildPropertyCacheControl')],['label','actionEnabled'],'returned Set changes cannot pollute later SDK registration');
+ const changed=source.replace('actionEnabled: boolean','isBusy: boolean'),beforeChanged=readerBuilderChildPropertyCacheStats();
+ assert.deepEqual([...readerBuilderChildProperties(changed,'CardChildPropertyCacheControl')],['label','isBusy'],'same field count with different source cannot borrow the preceding metadata');
+ assert.equal(readerBuilderChildPropertyCacheStats().parses,beforeChanged.parses+1);
+ const beforeName=readerBuilderChildPropertyCacheStats();readerBuilderChildProperties(source,undefined);
+ assert.equal(readerBuilderChildPropertyCacheStats().parses,beforeName.parses+1,'component selection is an explicit cache input');
+ const hadStrict=Object.hasOwn(options,'strict'),strict=options.strict,beforeOptions=readerBuilderChildPropertyCacheStats();
+ try {
+  options.strict=!strict;
+  assert.deepEqual([...readerBuilderChildProperties(source,'CardChildPropertyCacheControl')],['label','actionEnabled']);
+  assert.equal(readerBuilderChildPropertyCacheStats().parses,beforeOptions.parses+1,'changed actual parse options enter the installed SDK instead of borrowing a hit');
+ }finally{if(hadStrict)options.strict=strict;else delete options.strict;}
+ const restored=readerBuilderChildPropertyCacheStats();readerBuilderChildProperties(source,'CardChildPropertyCacheControl');
+ assert.equal(readerBuilderChildPropertyCacheStats().hits,restored.hits+1,'restoring the exact actual options permits only the original metadata hit');
+ const malformed=source.replace("label: string = ''",'label: string = ;'),beforeFailure=readerBuilderChildPropertyCacheStats();
+ for(let attempt=0;attempt<2;attempt++)assert.throws(()=>readerBuilderChildProperties(malformed,'CardChildPropertyCacheControl'),/actual shared child ETS parses/);
+ assert.equal(readerBuilderChildPropertyCacheStats().parses,beforeFailure.parses+2,'failed SDK diagnostics are not memoized');
+ assert.equal(readerBuilderChildPropertyCacheStats().entries,beforeFailure.entries,'a failed parse never enters the metadata cache');
+}
+// Sharing compilation cannot share business state, dependency closures or a
+// mutation's validation result. All variants still use the installed SDK.
+{
+ const source='export class State { value = input; bump() { this.value++; onChange(this.value); } }';
+ const before=pureModuleProbeStats(); let left=0,right=0;
+ const a=pureModuleProbe(source,'CardCacheControl.ets',{input:2,onChange:value=>left=value},['State']);
+ const b=pureModuleProbe(source,'CardCacheControl.ets',{input:7,onChange:value=>right=value},['State']);
+ assert.equal(pureModuleProbeStats().compiles,before.compiles+1);
+ assert.equal(pureModuleProbeStats().hits,before.hits+1);
+ assert.notEqual(a.State,b.State,'factory creates independent classes and dependency closures');
+ const first=new a.State(),second=new b.State(); first.bump();
+ assert.deepEqual([first.value,second.value,left,right],[3,7,3,0]); second.bump();
+ assert.deepEqual([first.value,second.value,left,right],[3,8,3,8]);
+ const changed=pureModuleProbe(source.replace('= input','= input + 10'),'CardCacheControl.ets',{input:2,onChange(){}},['State']);
+ assert.equal(new changed.State().value,12,'changed full source cannot reuse old emit');
+ pureModuleProbe(source,'CardCacheOther.ets',{input:2,onChange(){}},['State']);
+ pureModuleProbe(source,'CardCacheControl.ets',{onChange(){},input:2},['State']);
+ pureModuleProbe(source,'CardCacheControl.ets',{input:2,onChange(){}},['State'],{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.None});
+ pureModuleProbe(source,'CardCacheControl.ets',{input:2,onChange(){}},[]);
+ assert.equal(pureModuleProbeStats().compiles,before.compiles+6,'source/path/parameter order/options/exports each bind output');
+ assert.throws(()=>pureModuleProbe('export class State { value = ; }','CardCacheControl.ets',{input:2,onChange(){}},['State']),/actual pure module parses/);
+ assert.equal(pureModuleProbeStats().compiles,before.compiles+6,'failed SDK diagnostics are never cached');
+}
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const layout=JSON.parse(read('tools/fixtures/reader-card-page-layout-successor-20261014.json'));
 assert.equal(layout.schema,1);assert.equal(layout.page,sync);
@@ -115,6 +167,7 @@ function parent({legacy=false,method='build',scheme='day',width=352,specSource=o
 }
 const physical=node=>Object.fromEntries(['width','constraintSize','backgroundColor','border','borderRadius'].map(key=>[key,node[key]]));
 let comparisons=0;
+const metadataBeforeComparisons=readerBuilderChildPropertyCacheStats();
 for(const method of ['build',...methods])for(const scheme of ['day','night'])for(const width of [0,152,352,800]){
  const old=parent({legacy:true,method,scheme,width}),current=parent({method,scheme,width});
  assert.deepEqual(physical(current.outer()),physical(old.outer()),`${method}/${scheme}/${width} exact original native Card tuple`);
@@ -128,6 +181,8 @@ for(const method of ['build',...methods])for(const scheme of ['day','night'])for
  }
  comparisons++;
 }
+assert.ok(readerBuilderChildPropertyCacheStats().hits>metadataBeforeComparisons.hits,'real Card comparisons reuse identical child metadata');
+assert.ok(readerBuilderChildPropertyCacheStats().entries<=256,'child metadata storage stays bounded');
 // The new owner is a real SDK page composition, not a normalization of the
 // old Stack into another local layout. Current page slots mount the original
 // four Card sections inside one shared Scroll. Native height/host-width

@@ -1,6 +1,4 @@
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
-import { virtualFilePath } from './tool-environment.mjs';
-import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
@@ -8,27 +6,21 @@ import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/
 import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
-const { root: sdk, require, ts, options } = installedEtsCompiler();
+import { pureModuleProbe } from './ets-pure-module-probe.mjs';
+const { root: sdk, require } = installedEtsCompiler();
 const file=name=>new URL('../../entry/src/main/ets/features/common/'+name+'.ets',import.meta.url);
 export const buttonSource=readFileSync(file('ReaderButton'),'utf8'),fieldSource=readFileSync(file('ReaderFormField'),'utf8');
 const tokenSource=readFileSync(file('ReaderTokens'),'utf8'),tokenNames=[...tokenSource.matchAll(/^export const (\w+)/gm)].map(m=>m[1]);
 export const readerFoundationTokens=new Function('readerAppColor','readerThemeDefinition',stripTypeScriptTypes(tokenSource).replace(/^import[^;]+;\s*/gm,'').replace(/^export /gm,'')+';return{'+tokenNames.join(',')+'};')(readerAppColor,readerThemeDefinition);
-function withoutImports(source) {
- const tree=ts.createSourceFile(virtualFilePath('Foundation.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
- assert.equal(tree.parseDiagnostics.length,0,'actual foundation source parses');
- for(const n of tree.statements.filter(ts.isImportDeclaration).reverse())source=source.slice(0,n.getStart(tree))+source.slice(n.end);
- return source.replace(/^export /gm,'');
-}
-function executable(source){return ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;}
 export function foundationSpecs(roles=readerTypographyRoles,source=readFileSync(file('ReaderControlSpecs'),'utf8')) {
  const values={...readerFoundationTokens,...roles};
- return new Function(...Object.keys(values),executable(withoutImports(source))+';return {resolveReaderButtonSpec,resolveReaderFormFieldSpec};')(...Object.values(values));
+ return pureModuleProbe(source,'ReaderControlSpecs.ets',values,['resolveReaderButtonSpec','resolveReaderFormFieldSpec']);
 }
 export function foundationModifiers(specs=foundationSpecs(),ColorMetrics,sourceOverrides={}) {
  const feedback=productionReaderPressFeedback({ColorMetrics});
  const common={...readerFoundationTokens,...specs,readerAppColor,ReaderPressFeedback:feedback,TextAlign:{Center:'TextAlign.Center'},TextOverflow:{Ellipsis:'TextOverflow.Ellipsis'},VerticalAlign:{Center:'VerticalAlign.Center'},Color:{Transparent:'Color.Transparent'}};
- const load=(source,names)=>new Function(...Object.keys(common),executable(withoutImports(source.slice(0,source.indexOf('@Component'))))+';return {'+names.join(',')+'};')(...Object.values(common));
- return {...load(sourceOverrides.buttonSource??buttonSource,['ReaderButtonLabelModifier','ReaderButtonFrameModifier','ReaderButtonTextModifier']),...load(sourceOverrides.fieldSource??fieldSource,['ReaderFormFieldModifier','ReaderFormAreaModifier'])};
+ const load=(source,fileName,names)=>pureModuleProbe(source.slice(0,source.indexOf('@Component')),fileName,common,names);
+ return {...load(sourceOverrides.buttonSource??buttonSource,'ReaderButton.ets',['ReaderButtonLabelModifier','ReaderButtonFrameModifier','ReaderButtonTextModifier']),...load(sourceOverrides.fieldSource??fieldSource,'ReaderFormField.ets',['ReaderFormFieldModifier','ReaderFormAreaModifier'])};
 }
 export function foundationControls({specs=foundationSpecs(),ColorMetrics,buttonSource:buttonDefinition=buttonSource,fieldSource:fieldDefinition=fieldSource,windowMetrics=()=>({systemFontScale:1})}={}) {
  const properties=createArkUIPropertyRuntimeProbe(),creationOrder=new WeakMap();let creationSequence=0;

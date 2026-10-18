@@ -4456,8 +4456,6 @@ struct Index {
     const identity = this.directoryOperationBindingId();
     const current = (): boolean => this.isCurrentDirectoryOperationBinding(identity, owner) &&
       this.remoteReadingSession === session;
-    let lastFeedbackAt = Date.now();
-    let lastFeedbackKey = '0:0:0';
     return { session, current, currentEntries: (): LocalReadingTocEntry[] => this.detailToc,
       emitEntries: (entries: LocalReadingTocEntry[]): void => this.applyOwnedDirectoryEntries(entries),
       emitOperation: (operation: ReadingOfflineOperation): void => {
@@ -4469,11 +4467,10 @@ struct Index {
         this.offlineOperationActive = operation.materialization === 'running';
       },
       onProgress: (progress: ReadingOfflineBookProgress, finished: boolean): void => {
-        const key = `${progress.completedChapters}:${progress.cachedChapters}:${progress.failedChapters}`;
-        if (finished || (Date.now() - lastFeedbackAt >= 5000 && progress.processedChapters < progress.totalChapters && key !== lastFeedbackKey)) {
-          lastFeedbackAt = Date.now(); lastFeedbackKey = key;
-          this.showOfflineDownloadFeedback(this.offlineDownloadFeedback(session, progress, finished));
-        }
+        // emitOperation already publishes live progress to the existing
+        // directory/download state. Only the current terminal result is brief feedback.
+        if (!finished || !current()) return;
+        this.showOfflineDownloadFeedback(this.offlineDownloadFeedback(session, progress, true));
       },
       failed: (error: Error): void => {
         if (!current()) return;

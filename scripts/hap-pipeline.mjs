@@ -1047,15 +1047,15 @@ export function buildContractScope(options, root = REPO_ROOT) {
   const buildClass = option(options, '--class', 'iteration');
   if (!['iteration', 'acceptance'].includes(buildClass)) fail('--class must be iteration or acceptance', 2);
   const scope = options.has('--contracts-scope') ? requiredOption(options, '--contracts-scope') : undefined;
-  if (scope !== undefined && (buildClass !== 'iteration' || scope !== 'manga-image-cache')) {
-    fail('--contracts-scope manga-image-cache is only supported for iteration builds', 2);
+  if (scope !== undefined && (buildClass !== 'iteration' || !['manga-image-cache', 'search-return-runtime'].includes(scope))) {
+    fail('--contracts-scope manga-image-cache|search-return-runtime is only supported for iteration builds', 2);
   }
   contractTests(root, 'full', scope);
   return scope;
 }
 
-export function remainingContractBudget(started, reserveMs = 0) {
-  const remaining = Math.floor(MAX_CONTRACT_TIMEOUT_MS - (performance.now() - started) - reserveMs);
+export function remainingContractBudget(started, reserveMs = 0, deadlineMs = MAX_CONTRACT_TIMEOUT_MS) {
+  const remaining = Math.floor(deadlineMs - (performance.now() - started) - reserveMs);
   if (remaining <= 0) fail('scope total deadline exceeded');
   return remaining;
 }
@@ -1109,6 +1109,7 @@ function buildImpl(options) {
   const sandboxRoot = buildLease.path;
   let unpublishedRunDir = null;
   let contractGateState = null;
+  let contractsDispatched = false;
   try {
     run(process.execPath, [resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs'),
       ...nativeProvenanceArguments(), '--preflight', '--output', resolve(sandboxRoot, 'native-preflight.json'),
@@ -1132,28 +1133,34 @@ function buildImpl(options) {
     if (sourceGitBefore.commit !== harmonyGit.commit || coreGitBefore.commit !== coreGit.commit) {
       fail('repository HEAD changed before the build snapshot was captured');
     }
+    const contractScopeBudget = contractTests(REPO_ROOT, 'full', contractsScope).scopePolicy?.timeoutMs;
     contractGateState = { started: performance.now(), scope: contractsScope ?? 'full' };
+    const contractBudget = (reserveMs = 0) => remainingContractBudget(contractGateState.started, reserveMs, contractScopeBudget);
     console.log(JSON.stringify({ stage: 'harmonyContracts', event: 'start', scope: contractGateState.scope,
-      deadlineMs: contractsScope === undefined ? null : MAX_CONTRACT_TIMEOUT_MS, startedAt: new Date().toISOString() }));
+      deadlineMs: contractScopeBudget ?? null, startedAt: new Date().toISOString() }));
     run(process.execPath, [resolve(WORKSPACE_ROOT, 'scripts/check-hap-build-system.mjs')], {
       cwd: WORKSPACE_ROOT,
       stdio: 'inherit',
-      timeoutMs: contractsScope === undefined ? undefined : remainingContractBudget(contractGateState.started),
+      env: buildLease.env,
+      timeoutMs: contractsScope === undefined ? undefined : contractBudget(),
     });
     const contractsResultPath = resolve(sandboxRoot, 'contracts-results.json');
-    const contractEnvironment = { ...process.env, READER_CONTRACT_RESULTS_FILE: contractsResultPath,
+    const contractEnvironment = { ...buildLease.env, READER_CONTRACT_RESULTS_FILE: contractsResultPath,
       READER_CONTRACT_TEST_TIMEOUT_MS: String(MAX_CONTRACT_TIMEOUT_MS) };
     if (contractsScope === undefined) {
+      contractsDispatched = true;
       run(process.execPath, [resolve(REPO_ROOT, 'scripts/check-local.mjs')], { cwd: REPO_ROOT, stdio: 'inherit', env: contractEnvironment });
     } else {
       run(process.execPath, ['tools/generate-theme-registry.mjs', '--check'], { cwd: REPO_ROOT, stdio: 'inherit',
-        timeoutMs: remainingContractBudget(contractGateState.started) });
+        env: buildLease.env,
+        timeoutMs: contractBudget() });
       // Leave time for TERM/KILL cleanup and the input fences within the same
-      // pipeline budget. The standalone scoped CLI still starts with 110s.
-      contractEnvironment.READER_CONTRACT_SCOPE_TIMEOUT_MS = String(remainingContractBudget(contractGateState.started, 2_000));
+      // declared scope budget. The standalone CLI uses the same policy limit.
+      contractEnvironment.READER_CONTRACT_SCOPE_TIMEOUT_MS = String(contractBudget(2_000));
+      contractsDispatched = true;
       run(process.execPath, ['tools/run-contract-tests.mjs', '--scope', contractsScope],
         { cwd: REPO_ROOT, stdio: 'inherit', env: contractEnvironment,
-          timeoutMs: remainingContractBudget(contractGateState.started) });
+          timeoutMs: contractBudget() });
     }
     const contractResults = JSON.parse(readFileSync(contractsResultPath, 'utf8'));
     assertSnapshotUnchanged(sourceBefore, sourceSnapshot(REPO_ROOT), 'source inputs during contracts');
@@ -1173,7 +1180,7 @@ function buildImpl(options) {
       console.log(JSON.stringify({ stage: 'liveBookSources', event: 'start', deadlineMs: MAX_CONTRACT_TIMEOUT_MS }));
       try {
         run(process.execPath, ['tools/verify-bundled-test-book-sources-live.mjs'], {
-          cwd: REPO_ROOT, stdio: 'inherit', timeoutMs: MAX_CONTRACT_TIMEOUT_MS,
+          cwd: REPO_ROOT, stdio: 'inherit', env: buildLease.env, timeoutMs: MAX_CONTRACT_TIMEOUT_MS,
         });
         console.log(JSON.stringify({ stage: 'liveBookSources', event: 'end', status: 'PASS', milliseconds: Math.ceil(performance.now() - liveStarted) }));
       } catch (error) {
@@ -1418,7 +1425,7 @@ function buildImpl(options) {
       scope: contractGateState.scope, status: 'FAIL', milliseconds: Math.ceil(performance.now() - contractGateState.started) }));
     try {
       if (unpublishedRunDir !== null) rmSync(unpublishedRunDir, { recursive: true, force: true });
-    } finally { buildLease.release(); }
+    } finally { releaseContractBuildWorkspace(buildLease, resolve(sandboxRoot, 'contracts-results.json'), { dispatched: contractsDispatched }); }
   }
 }
 
@@ -1436,19 +1443,45 @@ export function snapshotDescriptor(snapshot, name) {
   return { fingerprint: snapshot.fingerprint, fileCount: snapshot.fileCount, snapshot: name };
 }
 
+// A nested dispatcher cannot release its canonical parent's lease. Preserve
+// that owner's lock and private sandbox if any owned process group is still
+// live; an error must not admit the next build on top of surviving compilers.
+export function releaseContractBuildWorkspace(lease, resultsPath, { dispatched = false } = {}) {
+  if (dispatched && !existsSync(resultsPath)) {
+    console.error(JSON.stringify({ stage: 'contractResourceHold', status: 'BLOCKED', results: resultsPath,
+      reason: 'Dispatcher started without a final settlement receipt; build lease and sandbox retained' }));
+    return false;
+  }
+  if (existsSync(resultsPath)) {
+    const report = JSON.parse(readFileSync(resultsPath, 'utf8'));
+    if (report.treeSettled === false || report.treeRecoveryBlocked === true) {
+      console.error(JSON.stringify({ stage: 'contractResourceHold', status: 'BLOCKED', results: resultsPath,
+        reason: 'Owned contract process groups have not settled; build lease and sandbox retained' }));
+      return false;
+    }
+  }
+  lease.release();
+  return true;
+}
+
 function checkContractResults(report, selection, scope) {
+  const scopeBudget = selection.scopePolicy?.timeoutMs ?? MAX_CONTRACT_TIMEOUT_MS;
+  if (selection.scopePolicy?.layers && (report.failFast !== selection.scopePolicy.failFast || report.failureStopped !== false ||
+      report.selectedStatus !== 'PASS' || report.harmonyContracts !== 'PARTIAL' || report.fullSuite !== 'NOT_RUN' || report.acceptanceEligible !== false ||
+      JSON.stringify(report.evidenceLayers) !== JSON.stringify(selection.scopePolicy.layers))) fail('contract evidence scope policy is inconsistent');
   if (report.schemaVersion !== 1 || report.name !== 'reader-harmony-contract-results' || report.tier !== 'full' ||
       report.scope !== (scope ?? 'full') || !Number.isInteger(report.workers) || report.workers < 1 || report.workers > 4 ||
       !Number.isInteger(report.timeoutMs) || report.timeoutMs <= 0 || report.timeoutMs > MAX_CONTRACT_TIMEOUT_MS ||
       !Number.isInteger(report.killGraceMs) || report.killGraceMs <= 0 || report.killGraceMs > 1_000) {
     fail('contract evidence execution policy is invalid');
   }
-  if (report.scopeExpired !== false || !Array.isArray(report.unrun) || report.unrun.length !== 0 ||
+  if (report.cancelled === true || report.treeSettled === false || report.treeRecoveryBlocked === true ||
+      report.scopeExpired !== false || !Array.isArray(report.unrun) || report.unrun.length !== 0 ||
       !Number.isInteger(report.millisecondsTotal) || report.millisecondsTotal < 0 ||
       !Number.isInteger(report.pipelineGateMilliseconds) || report.pipelineGateMilliseconds < report.millisecondsTotal ||
       (scope === undefined ? report.scopeTimeoutMs !== null :
-        !Number.isInteger(report.scopeTimeoutMs) || report.scopeTimeoutMs <= 0 || report.scopeTimeoutMs > MAX_CONTRACT_TIMEOUT_MS ||
-        report.millisecondsTotal > report.scopeTimeoutMs || report.pipelineGateMilliseconds > MAX_CONTRACT_TIMEOUT_MS)) {
+        !Number.isInteger(report.scopeTimeoutMs) || report.scopeTimeoutMs <= 0 || report.scopeTimeoutMs > scopeBudget ||
+        report.millisecondsTotal > report.scopeTimeoutMs || report.pipelineGateMilliseconds > scopeBudget)) {
     fail('contract evidence total deadline or settlement is invalid');
   }
   for (const key of ['selected', 'omitted', 'inventory']) {
@@ -1459,7 +1492,7 @@ function checkContractResults(report, selection, scope) {
     fail('contract evidence must contain every selected result exactly once');
   }
   for (const row of report.results) {
-    if (row.status !== 0 || row.signal !== null || row.error != null || row.timedOut !== false || row.scopeTimedOut !== false ||
+    if (row.treeSettled === false || row.status !== 0 || row.signal !== null || row.error != null || row.timedOut !== false || row.scopeTimedOut !== false ||
         !Array.isArray(row.termination) || row.termination.length !== 0 ||
         !Number.isInteger(row.milliseconds) || row.milliseconds < 0 || row.milliseconds > report.millisecondsTotal || !Number.isFinite(row.wallMilliseconds)) {
       fail(`contract evidence contains an unsuccessful result: ${row.name}`);
@@ -1480,7 +1513,10 @@ export function publishContractEvidence(runDir, report, scope, inputs, root = RE
     copyFileSync(row.log, path);
     return { name: row.name, status: row.status, signal: row.signal, error: row.error ?? null,
       timedOut: row.timedOut, scopeTimedOut: row.scopeTimedOut, termination: row.termination, milliseconds: row.milliseconds,
-      wallMilliseconds: row.wallMilliseconds, log: fileRecord(path, name) };
+      wallMilliseconds: row.wallMilliseconds,
+      ...(row.treeSettled !== undefined ? { treeSettled: row.treeSettled, processGroupId: row.processGroupId,
+        orphanDescendants: row.orphanDescendants, ownedProcessGroups: row.ownedProcessGroups,
+        treeCapability: row.treeCapability, directChildSettled: row.directChildSettled } : {}), log: fileRecord(path, name) };
   });
   const receiptPath = resolve(directory, 'results.json');
   writeJson(receiptPath, { ...report, inputs, selection: fileRecord(selectionPath, 'contracts/selection.json'), results });
@@ -1519,12 +1555,12 @@ export function verifyContractEvidence(directory, manifest) {
     return;
   }
   if (!receiptRequired) fail('contract receipt is not bound to its controller policy');
-  if (!['full', 'manga-image-cache'].includes(contracts.scope) ||
+  if (!['full', 'manga-image-cache', 'search-return-runtime'].includes(contracts.scope) ||
       !['iteration', 'acceptance'].includes(manifest.buildClass) || manifest.acceptanceEligible !== (manifest.buildClass === 'acceptance')) {
     fail('contract evidence build class is inconsistent');
   }
   const scope = contracts.scope === 'full' ? undefined : contracts.scope;
-  if (scope !== undefined && (scope !== 'manga-image-cache' || manifest.buildClass !== 'iteration' || manifest.acceptanceEligible !== false)) {
+  if (scope !== undefined && (manifest.buildClass !== 'iteration' || manifest.acceptanceEligible !== false)) {
     fail('scoped contracts cannot be acceptance evidence');
   }
   if (contracts.selectedStatus !== 'PASS' || contracts.fullSuite !== (scope === undefined ? 'PASS' : 'NOT_RUN') ||
@@ -1872,7 +1908,7 @@ function installDeployment(options) {
 
 function usage() {
   console.error(`Usage:
-  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--contracts-scope manga-image-cache] [--signing auto|local|unsigned] [--live-sources] [--keep-runs 10] [--core-gate-receipt <receipt.json>]
+  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--contracts-scope manga-image-cache|search-return-runtime] [--signing auto|local|unsigned] [--live-sources] [--keep-runs 10] [--core-gate-receipt <receipt.json>]
   node scripts/hap-pipeline.mjs prune [--artifact-root <directory>] [--keep-runs 10] [--apply]
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
   node scripts/hap-pipeline.mjs sync-native [sync-core alias]

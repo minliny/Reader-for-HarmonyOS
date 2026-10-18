@@ -13,6 +13,8 @@ import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import {fixture as generalSettingsFixture} from './lib/general-settings-persistence-probe.mjs';
 const file=name=>new URL('../entry/src/main/ets/'+name,import.meta.url),source=name=>readFileSync(file(name),'utf8');
+const CacheFeedback=productionMotionMethods(file('features/settings/SettingsPage.ets'),['feedbackMessage']);
+const inlineMessage=snapshot=>Object.assign(new CacheFeedback(),{cacheCleanup:snapshot,resetMessage:'',recovery:()=>({visible:false})}).feedbackMessage();
 const ordinary=text=>stripTypeScriptTypes(text.replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
 const load=(name,className,deps)=>new Function(...Object.keys(deps),ordinary(source(name))+`;return ${className};`)(...Object.values(deps));
 let installed;const Runtime=runtimeOwnerIdentityProbe(()=>installed);
@@ -108,11 +110,23 @@ function fixture(mode='valid'){
  const f=fixture(),p=f.page();assert.equal(p.owner.cacheActionLabel,'清理文字缓存');p.row().onClick();p.row().onClick();await until(()=>f.snapshot()?.confirmation==='confirmed');p.update();
  assert.equal(f.calls.length,1);assert.equal(p.owner.cacheActionLabel,'已清理');assert.equal(p.label(),'已清理');assert.equal(f.snapshot().operation.value.removedContentBytes,10);
  assert.equal(f.snapshot().operation.fact,'current');assert.equal(f.snapshot().operation.canRetry,false);
+ assert.deepEqual(f.notices,[],'the visible cleanup result does not also produce a Toast');
+ p.update();assert.deepEqual(f.notices,[],'replaying the same result stays silent');
+}
+{
+ const f=fixture(),p=f.page();f.report({...good(),cleanupError:'file still in use'});
+ p.row().onClick();await until(()=>f.snapshot()?.confirmation==='confirmed');p.update();
+ assert.equal(p.owner.cacheActionLabel,'部分清理');assert.equal(p.label(),'部分清理');
+ assert.equal(f.snapshot().operation.canRetry,false,'a partial confirmed cleanup need not have an uncertain receipt');
+ assert.match(inlineMessage(f.snapshot()),/部分清理未完成/,'the original inline feedback retains the partial-result explanation');
+ assert.deepEqual(f.notices,[]);
 }
 for(const mode of ['lost-before','lost-after','message-only']){
  const f=fixture(mode),p=f.page();p.row().onClick();await until(()=>f.snapshot()?.confirmation==='unknown');p.update();
  assert.equal(p.owner.cacheActionLabel,'结果未确认');assert.equal(p.label(),'结果未确认');if(mode==='lost-after')assert.equal(f.remainingEntries(),0);if(mode==='lost-before')assert.equal(f.remainingEntries(),10);assert.equal(f.snapshot().operation.fact,'blocked');assert.equal(f.snapshot().operation.canRetry,true);
- p.row().onClick();await tick();assert.equal(f.calls.length,1);assert.match(f.notices[0],/尚未确认/);
+ assert.deepEqual(f.notices,[],'unknown outcome is already projected in the original page');
+ assert.match(inlineMessage(f.snapshot()),/尚未确认/);
+ p.row().onClick();await tick();assert.equal(f.calls.length,1);assert.deepEqual(f.notices,[],'repeat tap cannot replay cleanup or repeat its notice');
  p.owner.mounted=false;f.index.route='bookshelf';f.index.openSettings();const reopened=f.page('settings-back:next');
  assert.equal(reopened.owner.cacheActionLabel,'清理中','reopen projects exact read reconciliation as busy');reopened.row().onClick();await tick();assert.equal(f.calls.length,1,'reopen cannot blind replay an uncertain clear');
  await until(()=>f.snapshot()?.busy===false);reopened.update();

@@ -3,6 +3,7 @@ import * as directoryVisual from '../../entry/src/main/ets/features/manga/MangaD
 import * as directoryGeometry from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
@@ -21,6 +22,49 @@ import { readerPageBuilderSlots } from './reader-page-builder-slots.mjs';
 const sdkRoot = resolveEtsLoaderRoot();
 export const readerBuilderSdkAvailable = existsSync(`${sdkRoot}/lib/process_component_class.js`);
 let pageFrameworkProperties;
+// Cache only installed-SDK emitted code. Each use still constructs new real
+// dependency/property/native recording owners; no UI state or callback is shared.
+const sdkLoweringCache = new Map();
+let sdkLoweringCompiles = 0, sdkLoweringHits = 0;
+export const readerBuilderCompilationCacheStats = () => ({ compiles: sdkLoweringCompiles, hits: sdkLoweringHits, entries: sdkLoweringCache.size });
+const digest = value => createHash('sha256').update(value).digest('hex');
+const childPropertyMetadata = new Map();
+let childPropertyParses = 0, childPropertyHits = 0;
+export const readerBuilderChildPropertyCacheStats = () => ({ parses: childPropertyParses, hits: childPropertyHits, entries: childPropertyMetadata.size });
+function selectComponentDeclaration(tree, name, ts) {
+  const declarations = tree.statements.filter(node => node.members && node.name &&
+    node.members.some(member => member.name?.getText(tree) === 'build'));
+  const exact = name === undefined ? undefined : declarations.find(node => node.name.getText(tree) === name);
+  if (exact !== undefined) return exact;
+  const exported = declarations.filter(node => node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword));
+  assert.ok(exported.length === 1 || declarations.length === 1,
+    'multi-component production ETS requires an explicit componentName or one exported component');
+  return exported[0] ?? declarations[0];
+}
+/** Share only successful immutable child Prop metadata before the existing
+ * lowering cache. SDK registration receives a fresh Set on every invocation;
+ * component classes, dependencies, windows and property runtimes stay fresh. */
+export function readerBuilderChildProperties(definition, name) {
+  const require = createRequire(import.meta.url), ts = require(`${sdkRoot}/node_modules/typescript`);
+  const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
+  const file = virtualFilePath('ReaderBuilderProbe.ets');
+  const key = JSON.stringify([sdkRoot, ts.version, file, ts.ScriptTarget.Latest, ts.ScriptKind.ETS, options, name ?? null, definition]);
+  let names = childPropertyMetadata.get(key);
+  if (names === undefined) {
+    childPropertyParses++;
+    const tree = ts.createSourceFile(file, definition, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+    assert.equal(tree.parseDiagnostics.length, 0, 'actual shared child ETS parses');
+    const declaration = selectComponentDeclaration(tree, name, ts);
+    names = Object.freeze((declaration?.members ?? []).filter(member => ts.isPropertyDeclaration(member) &&
+      ts.getAllDecorators(member).some(decorator => {
+        const expression = decorator.expression;
+        return (ts.isCallExpression(expression) ? expression.expression : expression).getText(tree) === 'Prop';
+      })).map(member => member.name.getText(tree)));
+    // A full cache follows the original parse path without adding entries.
+    if (childPropertyMetadata.size < 256) childPropertyMetadata.set(key, names);
+  } else childPropertyHits++;
+  return new Set(names);
+}
 
 /** Run the actual SDK-emitted observer closures, mounting each Builder once.
  * This models closure lifetime, not ArkUI's dependency scheduling/native layout.
@@ -36,26 +80,8 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
   const parse = text => ts.createSourceFile(virtualFilePath('ReaderBuilderProbe.ets'), text,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-  const componentDeclaration = (tree, name) => {
-    const declarations = tree.statements.filter(node => node.members && node.name &&
-      node.members.some(member => member.name?.getText(tree) === 'build'));
-    const exact = name === undefined ? undefined : declarations.find(node => node.name.getText(tree) === name);
-    if (exact !== undefined) return exact;
-    const exported = declarations.filter(node => node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword));
-    assert.ok(exported.length === 1 || declarations.length === 1,
-      'multi-component production ETS requires an explicit componentName or one exported component');
-    return exported[0] ?? declarations[0];
-  };
-  const childProps = (definition, name) => {
-    const tree = parse(definition);
-    assert.equal(tree.parseDiagnostics.length, 0, 'actual shared child ETS parses');
-    const declaration = componentDeclaration(tree, name);
-    return new Set((declaration?.members ?? []).filter(member => ts.isPropertyDeclaration(member) &&
-      ts.getAllDecorators(member).some(decorator => {
-        const expression = decorator.expression;
-        return (ts.isCallExpression(expression) ? expression.expression : expression).getText(tree) === 'Prop';
-      })).map(member => member.name.getText(tree)));
-  };
+  const componentDeclaration = (tree, name) => selectComponentDeclaration(tree, name, ts);
+  const childProps = readerBuilderChildProperties;
   const original = parse(source);
   assert.equal(original.parseDiagnostics.length, 0, 'production ETS parses');
   const struct = componentDeclaration(original, hooks.componentName);
@@ -329,20 +355,33 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     ts.getAllDecorators(node).length === 0).map(node => node.name.getText(file))));
   syntax.componentCollection.currentClassName = 'ReaderBuilderProbe';
   require(`${sdkRoot}/lib/process_ui_syntax.js`).transformLog.sourceFile = file;
-  const diagnostics = [];
-  let transformed;
-  const result = ts.transform(file, [context => node => {
-    require(`${sdkRoot}/lib/process_ui_syntax.js`).contextGlobal = context;
-    transformed = compiler.processComponentClass(node.statements[0], context, diagnostics, false);
-    // The normal emitter visits the returned class after the component pass;
-    // this removes omitted lifecycle statements for undecorated fields.
-    const visit = child => ts.visitEachChild(child, visit, context);
-    transformed = ts.visitNode(transformed, visit);
-    return node;
-  }]);
-  result.dispose();
-  assert.deepEqual(diagnostics, [], 'real SDK Builder/member transform has no diagnostics');
-  const output = ts.createPrinter().printNode(ts.EmitHint.Unspecified, transformed, file);
+  const calledNames = new Set();
+  const collectCalls = node => { if ((ts.isCallExpression(node) || ts.isEtsComponentExpression?.(node)) &&
+    ts.isIdentifier(node.expression)) calledNames.add(node.expression.text); ts.forEachChild(node, collectCalls); };
+  collectCalls(file);
+  const schema = [...calledNames].sort().map(name => [name, syntax.componentCollection.customComponents.has(name),
+    ...['propCollection','builderParamObjectCollection','regularCollection','propertyCollection'].map(key => [...(syntax[key]?.get(name) ?? [])].sort())]);
+  const childSources = Object.entries(hooks.childSources ?? {}).sort(([a],[b])=>a.localeCompare(b)).map(([name,text])=>[name,digest(text)]);
+  const cacheKey = digest(JSON.stringify([sdkRoot, ts.version, file.text, schema, childSources, hooks.allowEmptyBranchAdmission === true]));
+  let lowered = sdkLoweringCache.get(cacheKey), output;
+  if (lowered === undefined) {
+    const diagnostics = [];
+    let transformed;
+    const result = ts.transform(file, [context => node => {
+      require(`${sdkRoot}/lib/process_ui_syntax.js`).contextGlobal = context;
+      transformed = compiler.processComponentClass(node.statements[0], context, diagnostics, false);
+      const visit = child => ts.visitEachChild(child, visit, context);
+      transformed = ts.visitNode(transformed, visit);
+      return node;
+    }]);
+    result.dispose();
+    assert.deepEqual(diagnostics, [], 'real SDK Builder/member transform has no diagnostics');
+    output = ts.createPrinter().printNode(ts.EmitHint.Unspecified, transformed, file);
+    sdkLoweringCompiles++;
+    if (sdkLoweringCache.size >= 256) sdkLoweringCache.delete(sdkLoweringCache.keys().next().value);
+    lowered = { output, javascript: stripTypeScriptTypes(output) };
+    sdkLoweringCache.set(cacheKey, lowered);
+  } else { sdkLoweringHits++; output = lowered.output; }
   assert.match(output, /observeComponentCreation2/, 'exercise real SDK observer closures');
   let activeOwner, activeId;
   // The SDK lowers a component .animation modifier to Context start/reset
@@ -469,6 +508,6 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });
   globals.MangaDirectoryPressFeedback ??= productionMangaDirectoryPressFeedback(undefined,
     { LengthMetrics: globals.LengthMetrics, ColorMetrics: globals.ColorMetrics });
-  const Component = new Function(...Object.keys(globals), `${stripTypeScriptTypes(output)}; return ReaderBuilderProbe;`)(...Object.values(globals));
+  const Component = new Function(...Object.keys(globals), `${lowered.javascript}; return ReaderBuilderProbe;`)(...Object.values(globals));
   return { owner: new Component(undefined, hooks.initialParams ?? {}), Component, output };
 }

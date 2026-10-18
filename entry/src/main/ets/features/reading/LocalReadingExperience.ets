@@ -3659,8 +3659,8 @@ export struct ReadingExperience {
           this.drainRapidPageTurn();
         }
       }).catch((): void => {
-        if (!this.mounted || this.exitRequested) return;
-        this.getUIContext().getPromptAction().showToast({ message: '阅读进度未保存，将在停止滚动或退出时重试' });
+        // The progress owner retains the failure and logs it through
+        // continuousProgressDependencies.failed. Automatic retries stay silent.
       });
   }
 
@@ -13425,7 +13425,6 @@ export struct ReadingExperience {
     if (succeeded === undefined) {
       this.activeGateway().handoffPendingProgress();
       this.releasePageTurnRecoveryInput();
-      this.showReaderRecovery('进度正在后台核对，原阅读位置已保留。', '', undefined, 'progress');
       return;
     }
     this.pageTurnCommitFinished = true;
@@ -13669,7 +13668,6 @@ export struct ReadingExperience {
     // absent native/ArkUI callback must not retain the whole input owner.
     this.activeGateway().handoffPendingProgress();
     this.releasePageTurnRecoveryInput();
-    this.showReaderRecovery('页面正在恢复，阅读位置已保留。', '', undefined, 'presentation');
   }
 
   private releasePageTurnRecoveryInput(): void {

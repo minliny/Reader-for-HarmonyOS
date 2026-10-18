@@ -9,7 +9,7 @@ function isPackageTask(name) {
 }
 
 function isBuildResourceTask(name) {
-  return isPackageTask(name) || /(?:^|[:@])(?:compileNative|ConfigureCmake|BuildNativeWithCmake|BuildNativeWithNinja|ProcessLibs|DoNativeStrip|CacheNativeLibs|cleanNative|clean)$/i.test(name);
+  return isPackageTask(name) || /(?:^|[:@])(?:compileArkTS|compileTS|compileJS|compileNative|ConfigureCmake|BuildNativeWithCmake|BuildNativeWithNinja|ProcessLibs|DoNativeStrip|CacheNativeLibs|cleanNative|clean)$/i.test(name);
 }
 
 // An accidental IDE Run must fail before deployment can uninstall the app.
@@ -45,7 +45,7 @@ function assertReaderHapInvocation(tasks, ide, cwd = process.cwd(), env = proces
   if (env.READER_HAP_PIPELINE_ROOT || env.READER_HAP_PIPELINE_TOKEN || !ide) {
     return assertCanonicalHapInvocation(tasks, cwd, env);
   }
-  ide.pipeline.assertIdeSigningUnchanged(ide.session);
+  ide.pipeline.assertIdeSigningUnchanged(ide.session, buildLease?.env);
 }
 
 function verifyIdeOutput(ide, cwd = process.cwd()) {
@@ -58,14 +58,40 @@ function verifyIdeOutput(ide, cwd = process.cwd()) {
 module.exports = { assertCanonicalHapInvocation, isPackageTask, isBuildResourceTask, configureIdeSigning,
   assertReaderHapInvocation, verifyIdeOutput };
 
-let buildLease, buildLeaseReady;
+let buildLease, buildLeaseReady, buildEnvironmentBefore, buildGeneration = 0;
 async function beginIdeBuild(ide) {
   if (!ide) return;
   if (buildLease) return buildLease.env;
-  if (!buildLeaseReady) buildLeaseReady = import('../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs').then(({ acquireBuildLease }) => { buildLease = acquireBuildLease(); });
-  try { await buildLeaseReady; } catch (error) { buildLeaseReady = undefined; throw error; }
+  if (!buildLeaseReady) {
+    const admittedGeneration = buildGeneration;
+    buildLeaseReady = import('../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs').then(({ acquireBuildLease }) => {
+    if (admittedGeneration !== buildGeneration) throw new Error('Reader IDE build ended before resource admission');
+    buildLease = acquireBuildLease();
+    buildEnvironmentBefore = new Map();
+    for (const [key, value] of Object.entries(buildLease.env)) {
+      if (process.env[key] === value) continue;
+      buildEnvironmentBefore.set(key, { before: process.env[key], applied: value });
+      process.env[key] = value;
+    }
+    });
+  }
+  const pending = buildLeaseReady;
+  try { await pending; }
+  catch (error) { if (buildLeaseReady === pending) buildLeaseReady = undefined; throw error; }
   return buildLease.env;
 }
-function finishIdeBuild() { const lease = buildLease; buildLease = undefined; buildLeaseReady = undefined; lease?.release(); }
+function finishIdeBuild() {
+  const lease = buildLease, previous = buildEnvironmentBefore;
+  buildGeneration++;
+  buildLease = undefined; buildLeaseReady = undefined; buildEnvironmentBefore = undefined;
+  try { lease?.release(); }
+  finally {
+    for (const [key, { before, applied }] of previous ?? []) {
+      if (process.env[key] !== applied) continue;
+      if (before === undefined) delete process.env[key];
+      else process.env[key] = before;
+    }
+  }
+}
 module.exports.beginIdeBuild = beginIdeBuild;
 module.exports.finishIdeBuild = finishIdeBuild;

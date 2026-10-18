@@ -3,7 +3,7 @@ import { readerMediaIdentity } from '../source/ReaderSourceCategory';
 import type { SearchBook, SearchResultDelta } from './SearchGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { SearchViewState } from './SearchViewState';
-import { searchResultRelevance } from './SearchResultRelevance';
+import { SearchResultRelevance } from './SearchResultRelevance';
 import { searchCandidateRank } from './SearchCandidatePolicy';
 import { bookshelfWorkKey } from '../bookshelf/BookshelfBookIdentity';
 
@@ -62,6 +62,10 @@ export class SearchResultProjection {
     }
     const changed: SearchBook[] = [];
     const removed: string[] = [];
+    // Bind lazily, so unchanged publications do no locale work. The existing
+    // query-owned navigation state retains it across a Detail round trip;
+    // reset/different query must acquire a fresh scorer.
+    let relevance: SearchResultRelevance | undefined = undefined;
     if (this.input !== results || reset) {
       if (!reset && delta !== undefined && delta.baseRevision === this.revision) {
         changed.push(...delta.upserted); removed.push(...delta.removedKeys);
@@ -83,9 +87,15 @@ export class SearchResultProjection {
           previous.authorIdentity === book.authorIdentity && previous.sourceRuleVersion === book.sourceRuleVersion && previous.category === book.category
           ? (previousFact as SearchProjectionFact).titleKey : readerMediaIdentity(book.category === 'comic', this.titleKey(book.title, book.author, book.authorIdentity, book.sourceRuleVersion));
         const groupKey = book.sourceId === 'local' ? `local:${book.bookId}` : `online:${book.groupKey ?? titleKey}`;
-        const score = previous !== undefined && previous.title === book.title && previous.author === book.author &&
-          previous.authorIdentity === book.authorIdentity && previous.sourceRuleVersion === book.sourceRuleVersion
-          ? (previousFact as SearchProjectionFact).score : searchResultRelevance(book.title, book.author, keyword, book.authorIdentity, book.sourceRuleVersion);
+        let score: number;
+        if (previous !== undefined && previous.title === book.title && previous.author === book.author &&
+          previous.authorIdentity === book.authorIdentity && previous.sourceRuleVersion === book.sourceRuleVersion) {
+          score = (previousFact as SearchProjectionFact).score;
+        } else {
+          if (relevance === undefined) relevance = navigation.relevanceFor(keyword,
+            (): SearchResultRelevance => new SearchResultRelevance(keyword));
+          score = relevance.score(book.title, book.author, book.authorIdentity, book.sourceRuleVersion);
+        }
         this.unlink(key, affected);
         this.books.set(key, book); this.facts.set(key, { groupKey, titleKey, score });
         let members = this.members.get(groupKey);

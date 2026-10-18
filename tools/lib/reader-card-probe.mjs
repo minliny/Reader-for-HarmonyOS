@@ -1,19 +1,15 @@
+import { pureModuleProbe } from './ets-pure-module-probe.mjs';
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
-import { virtualFilePath } from './tool-environment.mjs';
 import { readFileSync } from 'node:fs';
-import assert from 'node:assert/strict';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { boundedMembers } from './bounded-surface-sdk-probe.mjs';
 import { foundationControls, readerFoundationTokens } from './reader-foundation-control-probe.mjs';
 import { readerAppColor } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 
 const read=name=>readFileSync(new URL('../../entry/src/main/ets/features/common/'+name+'.ets',import.meta.url),'utf8');
-const { root: sdk, require, ts, options } = installedEtsCompiler();
+const { root: sdk, require } = installedEtsCompiler();
 export function compileCardSpecs(source=read('ReaderCardSpecs')) {
- const tree=ts.createSourceFile(virtualFilePath('ReaderCardSpecs.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.equal(tree.parseDiagnostics.length,0);
- for(const node of tree.statements.filter(ts.isImportDeclaration).reverse())source=source.slice(0,node.getStart(tree))+source.slice(node.end);
- const js=ts.transpileModule(source.replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
- return new Function(...Object.keys(readerFoundationTokens),js+';return resolveReaderCardSpec;')(...Object.values(readerFoundationTokens));
+ return pureModuleProbe(source,'ReaderCardSpecs.ets',readerFoundationTokens,['resolveReaderCardSpec']).resolveReaderCardSpec;
 }
 /** The actual installed SDK emits the complete shipping Card and real body
  * Builders. Only ArkUI native properties/layout and fonts use platform seams. */

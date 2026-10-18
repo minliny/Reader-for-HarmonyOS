@@ -18,7 +18,30 @@ const physical=new Set(['fontFamily','fontWeight','fontSize','lineHeight','lette
 const callerPhysical=new Set([...physical,'minFontScale','maxFontScale']);
 const appearance=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin','minFontScale','maxFontScale']);
 const print=(node,file)=>ts.createPrinter().printNode(ts.EmitHint.Unspecified,node,file);
+const artifactCaches=Object.fromEntries(['shape','argument','edge'].map(kind=>[kind,{values:new Map(),hits:0,misses:0}]));
+const registrationParses={parses:0,hits:0};
+export const architectureRegistrationParseStats=()=>({...registrationParses});
+export const architectureProducerCacheStats=()=>Object.fromEntries(Object.entries(artifactCaches)
+ .map(([kind,cache])=>[kind,{hits:cache.hits,misses:cache.misses,entries:cache.values.size}]));
+function freezeArtifact(value){
+ if(value!==null&&typeof value==='object'){for(const child of Object.values(value))freezeArtifact(child);Object.freeze(value);}
+ return value;
+}
+/** Only successful official-parser products are shared. Every registration
+ * assertion still runs against the current inventory, baseline and source.
+ * Include complete bytes/options so same-count mutants cannot borrow a hit;
+ * return fresh data so a caller cannot contaminate another negative control. */
+function cachedArtifact(kind,source,file,context,produce){
+ const cache=artifactCaches[kind],key=JSON.stringify([sdk,ts.version,options,file,source,context]);
+ if(cache.values.has(key)){cache.hits++;return structuredClone(cache.values.get(key));}
+ cache.misses++;
+ const value=produce();
+ if(cache.values.size>=256)cache.values.delete(cache.values.keys().next().value);
+ cache.values.set(key,freezeArtifact(value));
+ return structuredClone(value);
+}
 export function sharedProducerShape(source,file){
+ return cachedArtifact('shape',source,file,[ts.ScriptTarget.Latest,ts.ScriptKind.ETS],()=>{
  const tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.equal(tree.parseDiagnostics.length,0,file+' SDK AST');
  const types=[],declarations=[],styles=[];
  for(const node of tree.statements){
@@ -37,13 +60,17 @@ export function sharedProducerShape(source,file){
  // type.fontSizeFp alone cannot prove that `type` still selects public roles.
  const implementation=ts.createPrinter({removeComments:true}).printFile(tree);
  return{types,declarations,styles,implementation};
+ });
 }
 const fontProperties=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing']);
 const argumentKey=(method,property,expression)=>JSON.stringify([method,property,expression]);
-function canonicalArgument(expression){
- const tree=ts.createSourceFile(virtualFilePath('SharedTypographyArgument.ts'),'const value = '+expression+';',ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
+function canonicalArgument(expression,file){
+ const source='const value = '+expression+';',parsePath=virtualFilePath('SharedTypographyArgument.ts');
+ return cachedArtifact('argument',source,file,[parsePath,ts.ScriptTarget.Latest,ts.ScriptKind.TS],()=>{
+ const tree=ts.createSourceFile(parsePath,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
  assert.equal(tree.parseDiagnostics.length,0,'actual producer Typography argument');
  return print(tree.statements[0].declarationList.declarations[0].initializer,tree);
+ });
 }
 /** Aliases are accepted only inside a registered, exact finite producer.
  * Neither a local name `type` nor a common-directory location is a contract. */
@@ -54,11 +81,13 @@ export function registeredProducerTypographySlots(source,file,contract){
  assert.deepEqual(shape,producer.shape,'finite shared physical inputs/role bindings changed: '+file);
  const slots=new Set(shape.styles.filter(s=>fontProperties.has(s.property)&&s.args.length)
    .map(s=>argumentKey(s.method,s.property,s.args[0])));
- return{size:slots.size,has:(method,property,expression)=>slots.has(argumentKey(method,property,canonicalArgument(expression)))};
+ return{size:slots.size,has:(method,property,expression)=>slots.has(argumentKey(method,property,canonicalArgument(expression,file)))};
 }
 const relative=file=>file.replace(/^entry\/src\/main\/ets\//,'');
 function edge(element,row){
- const tree=ts.createSourceFile(virtualFilePath('SharedConsumer.ts'),'const props = '+(element.args[0]??'{}')+';',ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
+ const source='const props = '+(element.args[0]??'{}')+';',parsePath=virtualFilePath('SharedConsumer.ts');
+ return cachedArtifact('edge',source,row.file,[parsePath,ts.ScriptTarget.Latest,ts.ScriptKind.TS,element.method,element.kind,element.line],()=>{
+ const tree=ts.createSourceFile(parsePath,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
  const obj=tree.statements[0]?.declarationList?.declarations[0]?.initializer;
  assert.ok(ts.isObjectLiteralExpression(obj),'actual shared props object: '+row.file+':'+element.line);
  const keys=obj.properties.map(p=>p.name?.getText(tree)??'spread');
@@ -73,6 +102,7 @@ function edge(element,row){
   return{...base,variant:variant?.initializer?print(variant.initializer,tree):null};
  }
  return base;
+ });
 }
 export function producerConsumerEdges(inventory,name){return inventory.rows.flatMap(row=>row.elements.filter(e=>e.kind===name&&e.customTarget?.endsWith('#'+name+'#build')).map(e=>edge(e,row)));}
 /** Exact inputs to existing shared controls from one approved recovery slot.
@@ -80,7 +110,7 @@ export function producerConsumerEdges(inventory,name){return inventory.rows.flat
 export function retainedSharedConsumerInputs(inventory,name,file){
  return inventory.rows.filter(row=>row.file===relative(file)).flatMap(row=>row.elements
   .filter(e=>e.kind===name&&e.customTarget?.endsWith('#'+name+'#build'))
-  .map(e=>({...edge(e,row),input:canonicalArgument(e.args[0]??'{}')})));
+  .map(e=>({...edge(e,row),input:canonicalArgument(e.args[0]??'{}',row.file)})));
 }
 function legacyBudgetOriginFacts(baseline,contract,readSource){
  const origin=contract.legacyBusinessBudgetOrigins;
@@ -112,10 +142,22 @@ function legacyBudgetOriginFacts(baseline,contract,readSource){
  return{historicalBudgetRows:historical.length,transferredBudgetRows:migrated.size};
 }
 export function verifyArchitectureRegistration(inventory,baseline,contract,root,readSource=file=>readFileSync(path.join(root,file),'utf8')){
+ // One verification inspects the same current Index through both layout
+ // witnesses and the native/font audit. Share only that call's parsed AST;
+ // every later negative control starts a new map and really parses its bytes.
+ const trees=new Map();
+ const parseCurrent=(source,file)=>{
+  const previous=trees.get(file);
+  if(previous?.source===source){registrationParses.hits++;return previous.tree;}
+  registrationParses.parses++;
+  const tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+  assert.deepEqual(tree.parseDiagnostics,[],file+' current registration AST');
+  trees.set(file,{source,tree});return tree;
+ };
  const origins=legacyBudgetOriginFacts(baseline,contract,readSource);
  assert.deepEqual(contract.pageLayoutSuccessors,[fullDirectoryLayoutSuccessorPath,indexSyncColdLayoutSuccessorPath],'only the exact full-directory and unready-sync frame successions are admitted');
- verifyFullDirectoryLayoutSuccession(baseline,readSource,sharedProducerShape);
- verifyIndexSyncColdLayoutSuccession(baseline,readSource);
+ verifyFullDirectoryLayoutSuccession(baseline,readSource,sharedProducerShape,parseCurrent);
+ verifyIndexSyncColdLayoutSuccession(baseline,readSource,parseCurrent);
  assert.equal(createHash('sha256').update(JSON.stringify(baseline.rows)).digest('hex'),contract.legacyBusinessRowsSha256,'legacy100 private budgets cannot be silently raised');
  const producerFiles=new Set(contract.producers.map(p=>p.file));
  const boundedSpecs=contract.boundedSpecs??[];

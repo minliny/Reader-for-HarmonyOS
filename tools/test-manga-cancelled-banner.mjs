@@ -39,6 +39,18 @@ assert.deepEqual(failures, ['MANGA_SESSION_CANCELLED'], 'uncertain old CAS still
 controller.savePosition = async () => { throw new Error('MANGA_SESSION_CANCELLED'); };
 await surface.saveVisible();
 assert.deepEqual(failures, ['MANGA_SESSION_CANCELLED', 'MANGA_SESSION_CANCELLED'], 'current uncertain progress write must still notify the owner');
+assert.equal(surface.error, '', 'a current pending position save is not a chapter loading error');
+
+surface.error = 'READING_IMAGE_HTTP_FAILED';
+controller.savePosition = async () => { throw new Error('POSITION_WRITE_PENDING'); };
+await surface.saveVisible();
+assert.equal(surface.error, 'READING_IMAGE_HTTP_FAILED', 'a failed save cannot replace the current image error');
+assert.equal(failures.at(-1), 'POSITION_WRITE_PENDING', 'the persistence owner still receives the pending failure');
+const failuresBeforeInvisible = failures.length;
+controller.savePosition = async () => { throw new Error('MANGA_POSITION_NOT_VISIBLE'); };
+await surface.saveVisible();
+assert.equal(failures.length, failuresBeforeInvisible, 'unadmitted geometry is not a failed persistence receipt');
+assert.equal(surface.error, 'READING_IMAGE_HTTP_FAILED');
 surface.error = '';
 
 controller.setVisible = async () => { throw new Error('MANGA_SESSION_CANCELLED'); };

@@ -32,7 +32,12 @@ import {
 import { runContractsBounded } from './run-contract-tests.mjs';
 import { contentSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
 
-const { assertCanonicalHapInvocation, assertReaderHapInvocation, isPackageTask } = createRequire(import.meta.url)('../hvigor/reader-hap-guard.cjs');
+const { assertCanonicalHapInvocation, assertReaderHapInvocation, isPackageTask, isBuildResourceTask } = createRequire(import.meta.url)('../hvigor/reader-hap-guard.cjs');
+for (const task of ['entry:default@CompileArkTS', 'entry:default@CompileTS', 'entry:default@CompileJS',
+  'entry:default@compileNative', 'entry:default@BuildNativeWithNinja', 'assembleHap']) {
+  assert.equal(isBuildResourceTask(task), true, `${task} must use the shared build resource`);
+}
+for (const task of ['entry:default@GenerateMetadata', 'help', 'tasks']) assert.equal(isBuildResourceTask(task), false);
 const baseline = { app: { products: [{ name: 'default', compileSdkVersion: 'current-sdk' }] }, modules: [{ name: 'entry' }] };
 const local = { app: { products: [{ name: 'default', signingConfig: 'fixture', compileSdkVersion: 'stale-sdk' }],
   signingConfigs: [{ name: 'fixture', material: Object.fromEntries(
@@ -289,20 +294,25 @@ try {
     error => error.code === 'ETIMEDOUT', 'actual synchronous stage child is killed at its remaining budget');
   for (const name of ['test-selected.mjs', 'test-omitted.mjs']) writeFileSync(join(scoped, 'tools', name), 'console.log("actual child PASS");');
   const classification = { schemaVersion: 1, source: ['test-selected.mjs'], integration: ['test-omitted.mjs'],
-    scopes: { 'manga-image-cache': ['test-selected.mjs'] } };
+    scopes: { 'manga-image-cache': ['test-selected.mjs'], 'search-return-runtime': ['test-selected.mjs'] },
+    scopePolicies: { 'search-return-runtime': { timeoutMs: 120000, failFast: true, layers: [{ id: 'fixture', tests: ['test-selected.mjs'],
+      proves: 'Runs the real selected runtime-policy fixture.', doesNotProve: 'No native ICU responsiveness or full-suite acceptance.' }] } } };
   writeFileSync(join(scoped, 'tools/contract-test-tiers.json'), JSON.stringify(classification));
   mkdirSync(join(scoped, 'scripts'));
   copyFileSync(new URL('../scripts/hap-pipeline.mjs', import.meta.url), join(scoped, 'scripts/hap-pipeline.mjs'));
   copyFileSync(new URL('./hap-contract-evidence-policy.json', import.meta.url), join(scoped, 'tools/hap-contract-evidence-policy.json'));
   assert.equal(buildContractScope(new Map(), scoped), undefined);
   assert.equal(buildContractScope(new Map([['--contracts-scope', 'manga-image-cache']]), scoped), 'manga-image-cache');
+  assert.equal(buildContractScope(new Map([['--contracts-scope', 'search-return-runtime']]), scoped), 'search-return-runtime');
   for (const options of [new Map([['--class', 'acceptance'], ['--contracts-scope', 'manga-image-cache']]),
-    new Map([['--contracts-scope', 'unknown']]), new Map([['--contracts-scope', '']]), new Map([['--resume', 'old']])]) {
+    new Map([['--class', 'acceptance'], ['--contracts-scope', 'search-return-runtime']]),
+    new Map([['--contracts-scope', 'unknown']]), new Map([['--contracts-scope', 'search-message-ui']]), new Map([['--contracts-scope', '']]), new Map([['--resume', 'old']])]) {
     assert.throws(() => buildContractScope(options, scoped), /contracts-scope|unknown build argument|missing/);
   }
   // Actual canonical argv rejects before signing, Native admission or any build.
   for (const argv of [['--class', 'acceptance', '--contracts-scope', 'manga-image-cache'],
-    ['--contracts-scope', 'unknown'], ['--resume', 'old'], ['--contracts-scope', '--signing', 'unsigned'],
+    ['--class', 'acceptance', '--contracts-scope', 'search-return-runtime'],
+    ['--contracts-scope', 'unknown'], ['--contracts-scope', 'search-message-ui'], ['--resume', 'old'], ['--contracts-scope', '--signing', 'unsigned'],
     ['--class', 'iteration', '--class', 'acceptance']]) {
     let rejected;
     try { execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/hap-pipeline.mjs', import.meta.url)), 'build', ...argv],
@@ -320,6 +330,10 @@ try {
   }));
   const actual = await runContractsBounded(scoped, 'full', 1, { scope: 'manga-image-cache', timeoutMs: 2000 });
   actual.pipelineGateMilliseconds = actual.millisecondsTotal;
+  for (const state of [{ cancelled: true }, { treeSettled: false }, { treeRecoveryBlocked: true }]) {
+    assert.throws(() => publishContractEvidence(run, { ...actual, ...state }, 'manga-image-cache', inputs, scoped),
+      /deadline or settlement/, 'cancelled or unreclaimed execution cannot publish passing evidence');
+  }
   const contracts = publishContractEvidence(run, actual, 'manga-image-cache', inputs, scoped);
   const manifest = { buildClass: 'iteration', acceptanceEligible: false, source: { buildInputs: inputs.source }, gates: {
     harmonyContracts: 'PARTIAL', contracts, controllerInputs: inputs.controller,
@@ -405,8 +419,38 @@ try {
   const fullContracts = publishContractEvidence(fullRun, fullReport, undefined, inputs, scoped);
   const fullManifest = structuredClone(manifest); fullManifest.gates.harmonyContracts = 'PASS'; fullManifest.gates.contracts = fullContracts;
   verifyContractEvidence(fullRun, fullManifest); assert.equal(fullContracts.selected.length, 2); assert.deepEqual(fullContracts.omitted, []);
+  for (const change of [value => { value.results.reverse(); }, value => { value.selected.reverse(); }]) {
+    const invalid = structuredClone(fullReport); change(invalid);
+    assert.throws(() => publishContractEvidence(fullRun, invalid, undefined, inputs, scoped), /contract evidence/,
+      'the same deterministic selection/result order is required for a generic complete fixture receipt');
+  }
+
   const failedReport = structuredClone(actual); failedReport.results[0].timedOut = true;
   assert.throws(() => publishContractEvidence(join(scoped, 'failed'), failedReport, 'manga-image-cache', inputs, scoped), /unsuccessful/);
+
+  const returnRun=join(scoped,'return-runtime-run');mkdirSync(returnRun);
+  for(const[key,snapshot]of Object.entries(snapshots))writeFileSync(join(returnRun,names[key]),JSON.stringify(snapshot));
+  const returnReport=await runContractsBounded(scoped,'full',1,{scope:'search-return-runtime',timeoutMs:2000});
+  returnReport.pipelineGateMilliseconds=returnReport.millisecondsTotal;
+  assert.equal(returnReport.scopeTimeoutMs,120000);assert.equal(returnReport.failFast,true);
+  assert.deepEqual(returnReport.selected,['test-selected.mjs']);assert.deepEqual(returnReport.omitted,['test-omitted.mjs']);
+  assert.deepEqual(returnReport.inventory,['test-omitted.mjs','test-selected.mjs']);
+  assert.equal(returnReport.fullSuite,'NOT_RUN');assert.equal(returnReport.acceptanceEligible,false);
+  const returnContracts=publishContractEvidence(returnRun,returnReport,'search-return-runtime',inputs,scoped);
+  const returnManifest=structuredClone(manifest);returnManifest.gates.contracts=returnContracts;
+  verifyContractEvidence(returnRun,returnManifest);
+  for(const change of[
+    value=>{value.failFast=false;},value=>{value.failureStopped=true;},value=>{value.fullSuite='PASS';},
+    value=>{value.acceptanceEligible=true;},value=>{value.selected.push('test-omitted.mjs');},value=>{value.omitted=[];},
+    value=>{value.inventory=[];},value=>{value.unrun=['test-selected.mjs'];},value=>{value.results[0].timedOut=true;},
+    value=>{value.evidenceLayers[0].doesNotProve='native accepted';},
+    value=>{value.scopeTimeoutMs=120001;},value=>{value.pipelineGateMilliseconds=120001;},
+  ]){const invalid=structuredClone(returnReport);change(invalid);assert.throws(()=>publishContractEvidence(returnRun,invalid,'search-return-runtime',inputs,scoped),/contract evidence/);}
+  const returnAcceptance=structuredClone(returnManifest);returnAcceptance.buildClass='acceptance';returnAcceptance.acceptanceEligible=true;
+  assert.throws(()=>verifyContractEvidence(returnRun,returnAcceptance),/scoped contracts cannot be acceptance evidence/);
+  const returnUnknown=structuredClone(returnManifest);returnUnknown.gates.contracts.scope='search-return-runtime-unknown';
+  assert.throws(()=>verifyContractEvidence(returnRun,returnUnknown),/contract evidence build class is inconsistent/);
+  console.log('PASS separate search-return-runtime immutable receipt: exact subset/omissions, 120s policy, fail-fast/PARTIAL and deadline/selection/settlement/log-input policy tamper rejection; no production build');
 
   writeFileSync(join(scoped, 'entry/src/App.ets'), 'changed during contracts');
   assert.throws(() => assertSnapshotUnchanged(snapshots.source, sourceSnapshot(scoped), 'source inputs during contracts'), /changed/);
