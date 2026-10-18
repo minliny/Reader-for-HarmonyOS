@@ -93,7 +93,7 @@ export struct ReaderSettingsFullPanel {
           this.controlSection();
         }
         .width(this.viewportWidth())
-        .height(742);
+        .height(780);
       }
       .width(this.viewportWidth())
       .height(this.viewportHeight())
@@ -214,15 +214,16 @@ export struct ReaderSettingsFullPanel {
     Stack({ alignContent: Alignment.TopStart }) {
       this.sectionTitle('导航状态栏', true);
       Stack({ alignContent: Alignment.TopStart }) {
-        this.toggleRow('隐藏导航栏', 'hideNavigationBar', 0);
-        this.toggleRow('拓展到刘海（灵动岛）', 'extendIntoCutout', 1);
+        this.toggleRow('隐藏状态栏', 'hideStatusBar', 0);
+        this.toggleRow('隐藏底部导航栏', 'hideNavigationBar', 1);
+        this.toggleRow('拓展到刘海（灵动岛）', 'extendIntoCutout', 2);
       }
       .width(this.sectionWidth())
-      .height(76)
+      .height(114)
       .position({ x: 0, y: 43 });
     }
     .width(this.sectionWidth())
-    .height(131)
+    .height(169)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .position({ x: 14, y: 262 });
   }
@@ -242,7 +243,7 @@ export struct ReaderSettingsFullPanel {
     .width(this.sectionWidth())
     .height(131)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-    .position({ x: 14, y: 393 });
+    .position({ x: 14, y: 431 });
   }
 
   @Builder
@@ -261,7 +262,7 @@ export struct ReaderSettingsFullPanel {
     .width(this.sectionWidth())
     .height(169)
     .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-    .position({ x: 14, y: 524 });
+    .position({ x: 14, y: 562 });
   }
 
   @Builder
@@ -482,6 +483,9 @@ export struct ReaderSettingsFullPanel {
   }
 
   private toggleValue(key: ReaderSettingsToggleKey): boolean {
+    if (key === 'hideStatusBar') {
+      return this.snapshot.hideStatusBar;
+    }
     if (key === 'hideNavigationBar') {
       return this.snapshot.hideNavigationBar;
     }

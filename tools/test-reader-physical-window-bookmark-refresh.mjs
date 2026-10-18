@@ -7,11 +7,13 @@ import { performance } from 'node:perf_hooks';
 import { setInterval as intervals, setTimeout as delay } from 'node:timers/promises';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { measureReaderPageChromeText, readerPageChromeTopTextStyle } from './lib/reader-page-chrome-measurement-probe.mjs';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderWindowMetricsSnapshot:M}=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
-const {resolveReaderReadingLayout,resolveReaderControlLayout}=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
-const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements}=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const readingGeometry=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const {resolveReaderReadingLayout,resolveReaderControlLayout}=readingGeometry;
+const {resolveReaderPageChromeLayout,ReaderPageChromeMeasurements,READER_PAGE_CHROME_BOOKMARK_SIZE}=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
 const file=n=>new URL('../entry/src/main/ets/'+n,import.meta.url);
 const coordinatorSource=readFileSync(file('app/ReaderWindowCoordinator.ts'),'utf8');
 assert.match(coordinatorSource,/const statusMeasurementKey = `\$\{density\}:\$\{displayInfo\.id\}:\$\{displayInfo\.rotation\}`/,
@@ -59,32 +61,80 @@ for(const extended of [false,true])for(const scale of [1,1.5]){
  const control=resolveReaderControlLayout(390,844,false,metrics);assert.ok(control.topBarTop>=48);
 }
 const source=readFileSync(lre,'utf8');
+// Exercise the production LRE budget, including its settings-sensitive cache.
+// Only the platform text resource/measurement and Window metrics are ports.
+const Geometry=productionMotionMethods(lre,['readingLayout','effectiveViewportWidth','effectiveViewportHeight','bookmarkFeedbackTopBoundary'],
+ {...readingGeometry,measureReaderPageChromeText,readerPageChromeTopTextStyle,READER_PAGE_CHROME_BOOKMARK_SIZE,
+ ReaderWindowCoordinator:{metrics:()=>metrics}});
+const geometryContext={px2vp:v=>v/3,fp2px:v=>v*3,px2fp:v=>v/3,
+ getHostContext:()=>({resourceManager:{getNumber:()=>48}}),
+ getMeasureUtils:()=>({measureText:({textContent})=>textContent.length*21.6,
+ measureTextSize:({textContent})=>({width:textContent.length*21.6,height:60})})};
+function actualReadingGeometry(settings){return Object.assign(new Geometry(),{
+ viewportWidth:390,viewportHeight:844,isTablet:false,bookTitle:'Book',pageChromeClockText:'12:30',
+ readerSettingsSnapshot:{extendIntoCutout:false,navigationMode:'paged',...settings},getUIContext:()=>geometryContext});}
+const geometryOwner=actualReadingGeometry({hideStatusBar:true});
+const hiddenGeometry=geometryOwner.readingLayout();
+assert.equal(hiddenGeometry.contentTop,resolveReaderReadingLayout(390,844,false,metrics,false).contentTop,
+ 'explicit immersion preserves the existing measured body budget');
+geometryOwner.readerSettingsSnapshot={...geometryOwner.readerSettingsSnapshot,hideStatusBar:false};
+const visibleGeometry=geometryOwner.readingLayout();
+const bookmarkBoundary=Math.max(0,hiddenGeometry.pageChromeVisualSafeTop+hiddenGeometry.pageChromeTopRegionHeight,
+ metrics.statusBarRect.top+metrics.statusBarRect.height,
+ metrics.statusBarCutoutRect.top+metrics.statusBarCutoutRect.height);
+assert.equal(visibleGeometry.contentTop,Math.max(hiddenGeometry.contentTop,bookmarkBoundary+READER_PAGE_CHROME_BOOKMARK_SIZE),
+ 'visible status reserves one complete 24vp bookmark below the actual status/cutout boundary');
+assert.notEqual(visibleGeometry,hiddenGeometry,'status preference invalidates the production layout cache without a metric revision');
+assert.equal(geometryOwner.readingLayout(),visibleGeometry,'unchanged visible geometry still reuses the cache');
+assert.equal(actualReadingGeometry({}).readingLayout().contentTop,visibleGeometry.contentTop,
+ 'an unspecified legacy preference uses the default-visible bookmark budget');
+geometryOwner.readerSettingsSnapshot={...geometryOwner.readerSettingsSnapshot,hideStatusBar:true};
+assert.equal(geometryOwner.readingLayout().contentTop,hiddenGeometry.contentTop,
+ 'returning to explicit immersion restores the original body budget');
+geometryOwner.readerSettingsSnapshot={...geometryOwner.readerSettingsSnapshot,hideStatusBar:false,navigationMode:'continuous'};
+const continuousGeometry=geometryOwner.readingLayout();
+assert.equal(continuousGeometry.contentTop,hiddenGeometry.contentTop,
+ 'normal continuous mode retains its original top budget without the paged bookmark reservation');
+geometryOwner.readerSettingsSnapshot={...geometryOwner.readerSettingsSnapshot,navigationMode:'paged'};
+const pagedGeometry=geometryOwner.readingLayout();
+assert.notEqual(pagedGeometry,continuousGeometry,'navigation mode invalidates the production cache without a metric revision');
+assert.equal(pagedGeometry.contentTop,visibleGeometry.contentTop,'returning to paged mode restores the complete bookmark reservation');
 const require=createRequire(import.meta.url);
 const syntax=require(((resolveEtsLoaderRoot()) + '/lib/validate_ui_syntax.js'));
 const paperSource=readFileSync(file('features/reading/ReaderStatusBarPaper.ets'),'utf8');
 syntax.componentCollection.customComponents.add('ReaderStatusBarPaper');
 syntax.propCollection.set('ReaderStatusBarPaper',new Set([...paperSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 class PaperChild{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
-for(const [extended,controls,active,visible]of [[true,false,true,false],[true,true,true,true],[false,false,true,false],[false,true,true,true],[false,true,false,false]]){
+// System status visibility is independent from cutout extension and active
+// controls: the explicit hide preference only applies while controls are closed.
+for(const hideStatusBar of [false,true])for(const extended of [false,true])
+for(const controls of [false,true])for(const active of [false,true]){
+ const visible=active&&(controls||!hideStatusBar);
+ const label=JSON.stringify({hideStatusBar,extended,controls,active});
+ const reading=actualReadingGeometry({extendIntoCutout:extended,hideStatusBar}).readingLayout();
  const {owner:b}=createReaderBuilderProbe(source,['readerStatusBarUnderlay','readerStatusBarMetrics'],{ReaderWindowCoordinator:{metrics:()=>metrics},
  readerAppearanceThemeStyle:()=>({paperStart:'#FFE8D8B9'}),ReaderStatusBarPaper:PaperChild});
- Object.assign(b,{windowChromeActive:active,readerSettingsSnapshot:{extendIntoCutout:extended},controlsPresentedForWindow:()=>controls,
- windowControlsPresented:controls,appearanceSnapshot:{activeTheme:'paper'},readingLayout:()=>({viewportWidth:390,viewportHeight:844,widthClass:'compact'})});b.readerStatusBarUnderlay();
- const rows=[...b.nodes.values()].filter(n=>n.id==='reader-status-bar-underlay');assert.equal(rows.length,visible?1:0,JSON.stringify([...b.nodes.values()]));
- assert.equal(b.children.size,visible?1:0);
+ Object.assign(b,{windowChromeActive:active,readerSettingsSnapshot:{extendIntoCutout:extended,hideStatusBar},controlsPresentedForWindow:()=>controls,
+ windowControlsPresented:controls,appearanceSnapshot:{activeTheme:'paper'},readingLayout:()=>reading});b.readerStatusBarUnderlay();
+ const rows=[...b.nodes.values()].filter(n=>n.id==='reader-status-bar-underlay');assert.equal(rows.length,visible?1:0,label);
+ assert.equal(b.children.size,visible?1:0,label);
  if(visible){const props=[...b.children.values()][0].params;
   assert.equal(props.theme,'paper');assert.equal(props.fallbackColor,'#FFE8D8B9');assert.equal(props.statusRect.height,48);
+  assert.deepEqual(props.statusRect,metrics.statusBarRect,'paper must use the actual measured status rectangle');
   assert.equal(props.viewportWidth,390);assert.equal(props.viewportHeight,844);assert.equal(props.expanded,false);assert.equal(rows[0].zIndex,10);}
 }
-const B=productionMotionMethods(lre,['bookmarkMatchesCurrentChapter','currentPageBookmarkStatus','toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','pageBookmarkFeedbackFilled','reconcilePageBookmarkFeedback','canStartReaderBookmarkGesture'],{LOCAL_READING_SOURCE_ID:'local'});
+const B=productionMotionMethods(lre,['bookmarkMatchesCurrentChapter','currentPageBookmarkStatus','toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','pageBookmarkFeedbackFilled','reconcilePageBookmarkFeedback','canStartReaderBookmarkGesture','bookmarkFeedbackOwnerKey'],{LOCAL_READING_SOURCE_ID:'local'});
 let entries=[{index:0,title:'C',bookmarks:[]}],requests=[];
 const b=Object.assign(new B(),{sourceId:'local',bookId:'b',mounted:true,visiblePage:{startScalar:10,endScalar:20},bookmarkPendingTarget:'',bookmarkMutationGeneration:0,
- bookmarkPreviewChanged:false,currentChapterIndex:()=>0,controlDirectoryEntries:()=>entries,currentPageBookmarkText:()=> 'original',onTogglePageBookmark:r=>requests.push(r),canTurnPage:()=>true});
+ bookmarkPreviewChanged:false,currentChapterIndex:()=>0,controlDirectoryEntries:()=>entries,currentPageBookmarkText:()=> 'original',onTogglePageBookmark:r=>requests.push(r),canTurnPage:()=>true,
+ isReaderPageInteractionEnabled:()=>true,pageTurnTapOnlyInput:()=>false});
+assert.equal(b.canStartReaderBookmarkGesture(),true);
 assert.equal(b.pageBookmarkFeedbackFilled(),false);b.bookmarkPreviewChanged=true;assert.equal(b.pageBookmarkFeedbackFilled(),true);
 b.toggleCurrentPageBookmark();b.bookmarkPreviewChanged=false;assert.equal(b.pageBookmarkFeedbackFilled(),true);assert.equal(b.canStartReaderBookmarkGesture(),false);
 b.toggleCurrentPageBookmark();assert.equal(requests.length,1,'pending write cannot be repeated');
 requests[0].onSettled(true);assert.equal(b.pageBookmarkFeedbackFilled(),true,'ACK before reactive projection keeps armed fill');
 entries=[{index:0,title:'C',bookmarks:[{time:1,chapterOffset:10}]}];b.reconcilePageBookmarkFeedback();assert.equal(b.bookmarkPendingTarget,'');assert.equal(b.pageBookmarkFeedbackFilled(),true);
+assert.equal(b.canStartReaderBookmarkGesture(),true);
 b.bookmarkPreviewChanged=true;assert.equal(b.pageBookmarkFeedbackFilled(),false,'existing bookmark reverses to hollow');
 b.toggleCurrentPageBookmark();b.bookmarkPreviewChanged=false;assert.equal(b.pageBookmarkFeedbackFilled(),false);
 requests[1].onSettled(false);assert.equal(b.pageBookmarkFeedbackFilled(),true,'uncertain/failed deletion must not falsely remove confirmed marker');
@@ -173,12 +223,14 @@ console.log('PASS PH57 actual Window position/display listeners, equality dedup,
 
 let unavailable=[{index:0,title:'C',bookmarks:[]}],confirmedCallback;
 const confirmed=Object.assign(new B(),{sourceId:'local',bookId:'confirmed',mounted:true,visiblePage:{startScalar:10,endScalar:20},bookmarkPendingTarget:'',bookmarkMutationGeneration:0,
- bookmarkPreviewChanged:false,currentChapterIndex:()=>0,controlDirectoryEntries:()=>unavailable,currentPageBookmarkText:()=> 'original',onTogglePageBookmark:r=>confirmedCallback=r.onSettled,canTurnPage:()=>true});
+ bookmarkPreviewChanged:false,currentChapterIndex:()=>0,controlDirectoryEntries:()=>unavailable,currentPageBookmarkText:()=> 'original',onTogglePageBookmark:r=>confirmedCallback=r.onSettled,canTurnPage:()=>true,
+ isReaderPageInteractionEnabled:()=>true,pageTurnTapOnlyInput:()=>false});
 confirmed.toggleCurrentPageBookmark();unavailable=[{index:0,title:'C',bookmarks:undefined}];confirmed.reconcilePageBookmarkFeedback();confirmedCallback(true);
 assert.equal(confirmed.pageBookmarkFeedbackFilled(),true);assert.equal(confirmed.canStartReaderBookmarkGesture(),false,'confirmed write + failed projection retains marker but cannot repeat mutation');
-const {owner:confirmedView}=createReaderBuilderProbe(source,['bookmarkCornerFeedback','pageBookmarkFeedbackFilled','pageBookmarkFeedbackAnchor'],{});
+const {owner:confirmedView}=createReaderBuilderProbe(source,['bookmarkCornerFeedback','pageBookmarkFeedbackFilled','pageBookmarkFeedbackMode','pageBookmarkFeedbackAnchor','bookmarkFeedbackOwnerKey'],{});
 Object.assign(confirmedView,confirmed,{controlVisible:()=>false,controlObscured:false,bookmarkPageOffsetY:0,readerAppScheme:'day',viewportWidth:390,
  bookmarkCornerLayout:()=>({topAccessoryX:341,topAccessoryY:12,topAccessoryWidth:24,topAccessoryHeight:24}),
  bookmarkFeedbackLabel:()=> 'bookmark',currentPageBookmarkStatus:()=> 'unknown',readingLayout:()=>({pageChromeVisualSafeTop:0,pageChromeTopRegionHeight:48})});
+confirmedView.bookmarkFeedbackHintLabel=()=> '';
 confirmedView.bookmarkCornerFeedback();const painted=[...confirmedView.nodes.values()].filter(n=>n.type==='Image');assert.equal(painted.length,1);assert.match(painted[0].create,/reader_page_bookmark_filled/);
 console.log('PASS PH59 confirmed Core write with unavailable projection retains actual filled Builder and locks repeat writes');

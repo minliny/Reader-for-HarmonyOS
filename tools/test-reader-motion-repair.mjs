@@ -103,6 +103,11 @@ for(const reduceMotion of [false,true]){
   controlVisible:()=>false,isContinuousScrollerAtStart:()=>false,isContinuousScrollerAtEnd:()=>false,
   continuousScroller:{scrollPage:p=>requests.push(p)},getUIContext:()=>UI,bookmarkRollbackGeneration:0,
   bookmarkPageOffsetY:30,bookmarkPreviewChanged:true,pageTurnGestureState:{owner:'bookmark',phase:'settling'},
+  // This motion-only probe starts after the page/segment admission covered by
+  // test-reader-bookmark-top-info; keep that admitted context explicit.
+  bookmarkGestureAnchor:'reader:motion',bookmarkPendingTarget:'',
+  isReaderBookmarkGestureCurrent:()=>true,bookmarkFeedbackOwnerKey:()=> 'reader:motion',
+  bookmarkPreviewStatus:'empty',currentPageBookmarkStatus:()=> 'empty',
   flushDeferredPageChromeState:()=>{},drainPageTurnPreparationQueue:()=>{}});
  assert.equal(host.performContinuousPageTurn('next').kind,'started');
  assert.equal(requests[0].animation,!reduceMotion);

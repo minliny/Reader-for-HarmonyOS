@@ -432,6 +432,7 @@ struct Index {
   private remoteSessionGeneration: number = 0;
   private readingEntryHost: ReadingEntryHost | undefined;
   private readingEntryScopeId: number = -1;
+  private readingPresentedScopeId: number = -1;
   /** Raw Host references identify actual detail changes before ArkUI wraps
    * them. A membership publication must not reset book/TOC @State objects. */
   private readingEntryPublishedSnapshot: ReadingEntrySnapshot | undefined = undefined;
@@ -4125,6 +4126,7 @@ struct Index {
     const host = this.readingEntryHost;
     if (host !== undefined && host.snapshot().scopeId === this.readingEntryScopeId) host.retire();
     this.readingEntryScopeId = -1;
+    this.readingPresentedScopeId = -1;
     this.readingEntryPublishedSnapshot = undefined;
     this.pendingRemoteDirectoryProjection = undefined;
     this.pendingLocalDirectoryProjection = undefined;
@@ -5179,12 +5181,20 @@ struct Index {
     this.shelfEntryTraceStartedAt = -1;
     this.shelfReadingPreparation = false;
     this.route = this.preparedReaderRoute;
+    const firstPresentation = this.readingPresentedScopeId !== this.readingEntryScopeId;
+    this.readingPresentedScopeId = this.readingEntryScopeId;
     const projectDirectory = this.pendingRemoteDirectoryProjection;
     this.pendingRemoteDirectoryProjection = undefined;
     projectDirectory?.();
     const projectLocalDirectory = this.pendingLocalDirectoryProjection;
     this.pendingLocalDirectoryProjection = undefined;
     projectLocalDirectory?.();
+    // A validated quick entry can already carry a catalog without its marker
+    // projection. Admit that optional read once, after the first visible page.
+    if (firstPresentation && projectDirectory === undefined && projectLocalDirectory === undefined &&
+      this.detailToc.some((entry: LocalReadingTocEntry): boolean => entry.bookmarks === undefined)) {
+      this.getReadingEntryHost()?.deferredDirectoryProjection()?.();
+    }
   }
 
   private returnToReadingOrigin(): void {
@@ -6173,7 +6183,11 @@ struct Index {
     if (!host.readerSessionReady(session, refreshDirectoryDisplay)) return;
     if (this.directoryCurrentChapterIndex >= 0 && this.isRemoteCatalogNearEnd(session, this.directoryCurrentChapterIndex))
       this.refreshRemoteCatalogNearEnd(session);
-    this.pendingRemoteDirectoryProjection = host.deferredDirectoryProjection();
+    const projectDirectory = host.deferredDirectoryProjection();
+    if (this.readingPresentedScopeId === this.readingEntryScopeId) {
+      this.pendingRemoteDirectoryProjection = undefined;
+      projectDirectory?.();
+    } else this.pendingRemoteDirectoryProjection = projectDirectory;
   }
 
   private installRemoteReadingSession(session: RemoteReadingSession | undefined,
@@ -6667,12 +6681,18 @@ struct Index {
       projected.set(entry.index, entry);
     }
     const book = this.detailBook;
-    if (book?.sourceId === LOCAL_SOURCE_ID && this.detailToc.length === 0 && entries.length > 0) {
+    if (book !== undefined && this.detailToc.length === 0 && entries.length > 0) {
       this.detailToc = entries;
       this.detailLoadingMessage = '';
       const host = this.getReadingEntryHost();
       host?.replaceDirectory(this.readingEntryScopeId, entries);
-      this.pendingLocalDirectoryProjection = host?.deferredDirectoryProjection();
+      const projectDirectory = host?.deferredDirectoryProjection();
+      // A persisted entry publishes its catalog after the first visible page.
+      // That reader-ready boundary has already passed; do not wait for another
+      // page or an explicit directory open to resolve canonical bookmarks.
+      if (this.readingPresentedScopeId === this.readingEntryScopeId) projectDirectory?.();
+      else if (book.sourceId === LOCAL_SOURCE_ID) this.pendingLocalDirectoryProjection = projectDirectory;
+      else this.pendingRemoteDirectoryProjection = projectDirectory;
       return;
     }
     if (entries.length !== this.detailToc.length) return;

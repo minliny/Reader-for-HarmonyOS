@@ -12,7 +12,8 @@ import * as style from '../entry/src/main/ets/features/reading/ReaderAppearanceR
 import { READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { readerControlHostVisible } from '../entry/src/main/ets/features/reading/ReaderControlHostSession.ts';
 import { createReaderControlSessionState } from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import { readerWidthClass } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
+import { readerWidthClass, resolveReaderReadingLayout } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
+import { ReaderWindowMetricsSnapshot, ReaderRectVp } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 const require = createRequire(import.meta.url);
 const ts = require(((resolveEtsLoaderRoot()) + '/node_modules/typescript'));
@@ -43,31 +44,54 @@ function ordinary(file, names, deps = {}) {
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function settled() { for (let i = 0; i < 5; i++) await tick(); }
 
-await check('PH108: real SDK If observes the control visibility edge with extension enabled', () => {
+await check('PH108: real SDK If observes independent status preference and control visibility', () => {
   const source = readFileSync(lre, 'utf8');
-  const stack = [], reads = new Map();
-  const { owner } = createReaderBuilderProbe(source,
-    ['readerStatusBarUnderlay', 'readerStatusBarMetrics', 'controlsPresentedForWindow'], {
-      ...style, readerControlHostVisible, ReaderStatusBarPaper: StatusPaper,
-      ReaderWindowCoordinator: { metrics: () => ({ statusBarRect: { left: 0, top: 0, width: 390 }, statusBarHeight: 48 }) },
-    }, {
-      onObserverEnter: (_owner, id) => { stack.push(id); reads.set(id, new Set()); },
-      onObserverExit: (_owner, id) => assert.equal(stack.pop(), id),
-    });
-  for (const [key, value] of Object.entries({ windowChromeActive: true,
-    readerSettingsSnapshot: { extendIntoCutout: true }, sessionLaunch: undefined,
-    windowControlsPresented: false, controlSession: {}, appearanceSnapshot: { activeTheme: 'greenNight' },
-    readerWindowMetricsRevision: 1 })) {
-    Object.defineProperty(owner, key, { get() {
-      if (stack.length) reads.get(stack.at(-1)).add(key);
-      return value;
-    } });
+  const metrics = new ReaderWindowMetricsSnapshot();
+  Object.assign(metrics, { ready: true, windowRect: new ReaderRectVp(0, 0, 390, 844),
+    statusBarRect: new ReaderRectVp(0, 0, 390, 48), statusBarHeight: 48 });
+  for (const hideStatusBar of [false, true]) for (const controls of [false, true])
+  for (const extendIntoCutout of [false, true]) {
+    const stack = [], reads = new Map();
+    const label = JSON.stringify({ hideStatusBar, controls, extendIntoCutout });
+    const reading = resolveReaderReadingLayout(390, 844, false, metrics, extendIntoCutout);
+    const { owner } = createReaderBuilderProbe(source,
+      ['readerStatusBarUnderlay', 'readerStatusBarMetrics', 'controlsPresentedForWindow'], {
+        ...style, readerControlHostVisible, ReaderStatusBarPaper: StatusPaper,
+        ReaderWindowCoordinator: { metrics: () => metrics },
+      }, {
+        onObserverEnter: (_owner, id) => { stack.push(id); reads.set(id, new Set()); },
+        onObserverExit: (_owner, id) => assert.equal(stack.pop(), id),
+      });
+    for (const [key, value] of Object.entries({ windowChromeActive: true,
+      readerSettingsSnapshot: { extendIntoCutout, hideStatusBar }, sessionLaunch: undefined,
+      windowControlsPresented: controls, controlSession: {}, appearanceSnapshot: { activeTheme: 'greenNight' },
+      readerWindowMetricsRevision: 1 })) {
+      Object.defineProperty(owner, key, { get() {
+        if (stack.length) reads.get(stack.at(-1)).add(key);
+        return value;
+      } });
+    }
+    owner.readingLayout = () => reading;
+    owner.latestControlVisualSession = createReaderControlSessionState();
+    // The old helper reads a deliberately non-observed visual cache.
+    owner.readerStatusBarUnderlay();
+    assert.ok([...reads.values()].some(keys => keys.has('windowControlsPresented') || keys.has('controlSession')),
+      label + ': opening controls must invalidate the native If even when metrics and theme remain equal');
+    if (!controls) assert.ok([...reads.values()].some(keys => keys.has('readerSettingsSnapshot')),
+      label + ': changing the status preference must invalidate the native If while controls are closed');
+    const visible = controls || !hideStatusBar;
+    const rows = [...owner.nodes.values()].filter(node => node.id === 'reader-status-bar-underlay');
+    assert.equal(rows.length, visible ? 1 : 0, label);
+    assert.equal(owner.children.size, visible ? 1 : 0, label);
+    if (visible) {
+      const props = [...owner.children.values()][0].params;
+      assert.deepEqual(props.statusRect, metrics.statusBarRect, label);
+      assert.equal(props.viewportWidth, reading.viewportWidth, label);
+      assert.equal(props.viewportHeight, reading.viewportHeight, label);
+      assert.equal(props.expanded, reading.widthClass === 'expanded', label);
+      assert.equal(rows[0].zIndex, 10, label);
+    }
   }
-  owner.latestControlVisualSession = createReaderControlSessionState();
-  // The old helper reads a deliberately non-observed visual cache.
-  owner.readerStatusBarUnderlay();
-  assert.ok([...reads.values()].some(keys => keys.has('windowControlsPresented') || keys.has('controlSession')),
-    'opening controls must invalidate the native If even when metrics and theme remain equal');
 });
 
 await check('PH108: every theme-only change invalidates page textures without repagination', () => {

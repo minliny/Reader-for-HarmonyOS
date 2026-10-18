@@ -142,20 +142,20 @@ for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 
   statusGeometry(status(updated), metrics.statusBarRect, [760, 960]);
 }
 
-for (const extend of [false, true]) for (const controls of [false, true]) {
+for (const extend of [false, true]) for (const controls of [false, true]) for (const hideStatusBar of [false, true]) {
   const owner = createReaderBuilderProbe(lreSource, ['readerStatusBarUnderlay', 'readerStatusBarMetrics'], {
     ReaderStatusBarPaper: Child, readerAppearanceThemeStyle,
     ReaderWindowCoordinator: { metrics: () => ({ statusBarRect: new ReaderRectVp(0, 0, 390, 48) }) },
   }).owner;
-  Object.assign(owner, { windowChromeActive: true, readerSettingsSnapshot: { extendIntoCutout: extend },
+  Object.assign(owner, { windowChromeActive: true, readerSettingsSnapshot: { extendIntoCutout: extend, hideStatusBar },
     windowControlsPresented: controls, readerWindowMetricsRevision: 1, appearanceSnapshot: { activeTheme: 'paper' },
     readingLayout: () => ({ viewportWidth: 390, viewportHeight: 844, widthClass: 'compact' }) });
   owner.readerStatusBarUnderlay();
-  assert.equal(owner.children.size, controls ? 1 : 0,
-    'both extension modes leave the full moving page exposed when controls are closed');
+  assert.equal(owner.children.size, controls || !hideStatusBar ? 1 : 0,
+    'both extension modes cover page information exactly when the native status bar is visible');
   if (owner.children.size) {
     const wrapper = [...owner.nodes.values()].find(n => n.id === 'reader-status-bar-underlay');
-    assert.equal(wrapper.zIndex, 10, 'only the presented control overlay owns stationary status paper');
+    assert.equal(wrapper.zIndex, 10, 'visible native status owns stationary paper above page information');
     statusGeometry(status([...owner.children.values()][0].params), new ReaderRectVp(0, 0, 390, 48), [390, 844]);
   }
 }

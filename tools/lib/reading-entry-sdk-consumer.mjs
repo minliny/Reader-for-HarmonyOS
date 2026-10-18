@@ -54,7 +54,7 @@ export function makeIndex(f,{route='search',mount=1,indexSource=read('pages/Inde
    CustomDialogController:class{constructor(options){this.options=options;f.removalDialog=options;}open(){}close(){}},DialogAlignment:{Center:'Center'}});
  Object.assign(idx,{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:mount,navigationGeneration:0,
    route,readingOriginRoute:'detail',readingSessionActive:false,sourceSwitchVisible:false,sourceSwitchScopeId:0,
-   readingEntryScopeId:-1,remoteSessionGeneration:0,offlineMutationGeneration:0,offlineMutationActiveKey:'',
+   readingEntryScopeId:-1,readingPresentedScopeId:-1,remoteSessionGeneration:0,offlineMutationGeneration:0,offlineMutationActiveKey:'',
    shelfOperation:{generation:0,action:'remove',removalKey:'',busy:false,cleanupWarning:''},readableAdmissions:[],shelfBooks:[],searchDetailCandidates:[],detailToc:[],detailInBookshelf:false,
    shelfReadingFilter:'all',shelfSourceFilter:'all',shelfContentFilter:'all',bookRemovalPresentation:0,bookRemovalDialogOpen:false,
    shelfReadingPreparation:false,shelfProjectionRevision:'r1',searchAppForeground:true,applicationSettingsSnapshot:{},

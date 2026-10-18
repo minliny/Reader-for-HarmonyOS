@@ -102,7 +102,8 @@ pageCase.page.aboutToDisappear(); pageCase.drain();
 assert.equal(pageCase.stats.outputs.length, beforeDisappear, 'queued work cannot survive owner teardown');
 
 let uploads = 0, accepted = true;
-const Session = productionMotionMethods(source('BookTurnPresentationSession'), ['setDynamicHighlights', 'configure', 'onNativeEvent'],
+const Session = productionMotionMethods(source('BookTurnPresentationSession'),
+  ['setDynamicHighlights', 'configure', 'onNativeEvent', 'clearCapturedTextures', 'releasePendingSnapshot'],
   { ...marks, bookTurnNative: { setDynamicHighlights: () => { uploads++; return accepted; }, configure: () => true },
     BOOK_TURN_EVENT_SURFACE_READY: 1, BOOK_TURN_EVENT_SURFACE_LOST: 5, BOOK_TURN_EVENT_RENDER_FAILURE: 6, BOOK_TURN_EVENT_SLOTS_COMMITTED: 7,
     BookTurnNativeEvent: class { constructor(event) { this.event = event; } } });

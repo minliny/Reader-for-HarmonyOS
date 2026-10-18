@@ -1,0 +1,220 @@
+{
+  "schema": 1,
+  "implementationEvidence": "tools/test-reader-directory-navigation-ui.mjs",
+  "boundary": "Only two explicit partial/loading/error directory status carriers and one existing empty-state helper relocation. Historical approvals, unrelated typography, public roles, AUTO omissions and private architecture budgets remain immutable. Production-method/SDK evidence is separate from device and user acceptance.",
+  "previousFixtures": [
+    {
+      "path": "tools/fixtures/design/manga-directory-typography-successor-20261006.json",
+      "sha256": "30e243b894f58f3d0be5d26d6a9be687ed7be1e3d041249b9cfd202acc6b58e9"
+    },
+    {
+      "path": "tools/fixtures/design/approved-manga-typography-carriers-20261005.json",
+      "sha256": "87f72cffa795b3565acd03e67cc8a9ae89517dc8975a1a2270f100ab9cf9ca82"
+    }
+  ],
+  "files": [
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets",
+      "previousFixture": "tools/fixtures/design/manga-directory-typography-successor-20261006.json",
+      "previousEntrySha256": "83280418ef2b48a25b86e00cd9a9db7fed869116ab8016e1a71a53b1baf67bd0",
+      "carriers": [
+        {
+          "owner": "ReaderDirectoryNavigationSurface",
+          "method": "build",
+          "kind": "Text",
+          "text": "this.loadFailed ? '目录加载失败，已保留当前条目' : '正在加载目录'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "TYPE_APP_INHERITED_BODY.fontSizeFp",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "ReaderDirectoryNavigationSurface",
+          "method": "build",
+          "kind": "Text",
+          "text": "'没有匹配的目录项'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "TYPE_APP_INHERITED_BODY.fontSizeFp",
+              "extra": []
+            }
+          }
+        }
+      ],
+      "nativeDefaults": [],
+      "roles": {
+        "TYPE_APP_INHERITED_BODY": {
+          "fontSizeFp": 12,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        }
+      },
+      "fontFamilies": {
+        "READER_FONT_NOTO_SANS_SC_UI_REGULAR": "ReaderNotoSansSCUIRegular"
+      },
+      "recoveryNativeActors": [
+        {
+          "method": "build",
+          "kind": "Text",
+          "text": "this.loadFailed ? '目录加载失败，已保留当前条目' : '正在加载目录'",
+          "attributes": {
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp",
+            "fontColor": "readerAppColor('TOK_READ_MUTED', this.appThemeScheme)",
+            "layoutWeight": "1"
+          }
+        }
+      ]
+    },
+    {
+      "path": "entry/src/main/ets/features/reading/ReaderControlDirectoryContent.ets",
+      "previousFixture": "tools/fixtures/design/approved-manga-typography-carriers-20261005.json",
+      "previousEntrySha256": "a4ddc2e30371d44d0d9e67d9422b10e45472cf3ecfc46cd8c83ad1fdbe6991f2",
+      "carriers": [
+        {
+          "owner": "ReaderControlDirectoryContent",
+          "method": "tabButton",
+          "kind": "Text",
+          "text": "title",
+          "modifiers": {
+            "lineHeight": {
+              "expression": "TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number",
+              "extra": []
+            },
+            "fontSize": {
+              "expression": "TYPE_READER_DIRECTORY_TAB_COMPACT.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_READER_DIRECTORY_TAB_COMPACT.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_READER_DIRECTORY_TAB_COMPACT.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "ReaderControlDirectoryContent",
+          "method": "catalogStatus",
+          "kind": "Text",
+          "text": "this.snapshot.catalogState === 'failed' ? '目录加载失败，已保留当前条目' :\n        this.snapshot.catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "TYPE_APP_INHERITED_BODY.fontSizeFp",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "ReaderControlDirectoryContent",
+          "method": "flatCatalog",
+          "kind": "Text",
+          "text": "'没有匹配的章节'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "TYPE_APP_INHERITED_BODY.fontSizeFp",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "ReaderControlDirectoryContent",
+          "method": "build",
+          "kind": "Text",
+          "text": "'当前章节'",
+          "modifiers": {
+            "fontSize": {
+              "expression": "TYPE_READER_DIRECTORY_POSITION.fontSizeFp",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_READER_DIRECTORY_POSITION.fontFamily as string",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "ReaderControlDirectoryContent",
+          "method": "build",
+          "kind": "Text",
+          "text": "this.snapshot.currentTitle",
+          "modifiers": {
+            "fontSize": {
+              "expression": "TYPE_READER_DIRECTORY_CURRENT_TITLE.fontSizeFp",
+              "extra": []
+            },
+            "fontWeight": {
+              "expression": "TYPE_READER_DIRECTORY_CURRENT_TITLE.fontWeight",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_READER_DIRECTORY_CURRENT_TITLE.fontFamily",
+              "extra": []
+            }
+          }
+        },
+        {
+          "owner": "ReaderControlDirectoryContent",
+          "method": "build",
+          "kind": "Text",
+          "text": "this.snapshot.currentPosition",
+          "modifiers": {
+            "fontSize": {
+              "expression": "TYPE_READER_DIRECTORY_POSITION.fontSizeFp",
+              "extra": []
+            },
+            "fontFamily": {
+              "expression": "TYPE_READER_DIRECTORY_POSITION.fontFamily as string",
+              "extra": []
+            }
+          }
+        }
+      ],
+      "nativeDefaults": [],
+      "roles": {
+        "TYPE_READER_DIRECTORY_TAB_COMPACT": {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 500,
+          "fontSizeFp": 11,
+          "lineHeightFp": 16,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_APP_INHERITED_BODY": {
+          "fontSizeFp": 12,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_READER_DIRECTORY_POSITION": {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontSizeFp": 9,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        },
+        "TYPE_READER_DIRECTORY_CURRENT_TITLE": {
+          "fontFamily": "ReaderNotoSansSC",
+          "fontWeight": 700,
+          "fontSizeFp": 11,
+          "scalePolicy": "system",
+          "source": "appBaseline"
+        }
+      },
+      "fontFamilies": {},
+      "recoveryNativeActors": [
+        {
+          "method": "catalogStatus",
+          "kind": "Text",
+          "text": "this.snapshot.catalogState === 'failed' ? '目录加载失败，已保留当前条目' :\n        this.snapshot.catalogState === 'loading' ? '正在加载完整目录' : '目录尚未加载完整'",
+          "attributes": {
+            "fontColor": "readerAppColor('TOK_READ_MUTED', this.appThemeScheme)",
+            "fontSize": "TYPE_APP_INHERITED_BODY.fontSizeFp",
+            "layoutWeight": "1"
+          }
+        }
+      ]
+    }
+  ]
+}

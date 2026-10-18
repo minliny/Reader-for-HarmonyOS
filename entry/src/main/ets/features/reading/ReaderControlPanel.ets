@@ -250,6 +250,8 @@ export struct ReaderControlPanel {
   @Prop @Watch('onLayoutChanged') layout: ReaderControlLayoutSnapshot = createDefaultReaderControlLayout();
   @Prop tocEntries: LocalReadingTocEntry[] = [];
   @Prop catalogComplete: boolean = true;
+  @Prop catalogLoading: boolean = false;
+  @Prop catalogLoadFailed: boolean = false;
   @Prop catalogChapterCount: number = 0;
   @Prop catalogCurrentPosition: number = -1;
   onRequireCompleteCatalog: () => void = (): void => {};
@@ -1209,6 +1211,7 @@ export struct ReaderControlPanel {
         ReaderControlDirectoryContent({
           entries: this.tocEntries, currentChapterIndex: this.currentChapterIndex,
           catalogComplete: this.catalogComplete, catalogChapterCount: this.catalogChapterCount,
+          catalogLoading: this.catalogLoading, catalogLoadFailed: this.catalogLoadFailed,
           catalogCurrentPosition: this.catalogCurrentPosition,
           catalogReadableChapterCount: this.totalChapters, catalogReadablePosition: this.readableChapterPosition,
           onRequireCompleteCatalog: (): void => this.onRequireCompleteCatalog(),

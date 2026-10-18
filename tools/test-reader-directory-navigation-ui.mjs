@@ -26,8 +26,11 @@ assert.match(controlSource,
   /else if \(this\.snapshot\.rows\.length === 0 && !this\.navigationActive &&\s*!\(this\.tab === 'directory' && this\.bookmarkIdentity !== undefined\)\)/,
   'local group-only search mounts the Core tree even when flat chapter matches are empty');
 assert.match(controlSource,
-  /fallbackBuilder: \(\): void => \{\s*if \(this\.snapshot\.rows\.length === 0\) \{\s*Text\('没有匹配的章节'\)[\s\S]*?\} else \{\s*this\.flatList\(\)/,
-  'missing navigation still shows the original empty state while tree request is pending');
+  /fallbackBuilder: \(\): void => \{\s*this\.flatCatalog\(\);\s*\}/,
+  'missing navigation uses the same explicitly partial/error-aware chapter fallback');
+assert.match(controlSource,
+  /private flatCatalog\(\)[\s\S]*?this\.catalogComplete === false\) this\.catalogStatus\(\)/,
+  'a narrow entry catalog cannot silently present itself as a complete ready list');
 assert.match(controlSource, /if \(!this\.mounted \|\| this\.navigationActive\) return;[\s\S]*?const ticket = this\.placement\.ticket\(\)/,
   'control flat positioning is disabled when Core tree rank owns the list');
 const QuickActions = productionMotionMethods(controlPath,
@@ -166,10 +169,12 @@ let timerId = 0;
 let visibleAnchorNodeId;
 const Surface = productionMotionMethods(surfacePath,
   ['openTree', 'onViewInputsChanged', 'onInteractionChanged', 'scheduleQueryOpen', 'cancelQueryTimer',
-    'onTreeUserScrollIntent', 'onProgrammaticScrollIntent', 'onTreeScrollSettled', 'prepareVisiblePages'], {
+    'onTreeUserScrollIntent', 'onProgrammaticScrollIntent', 'onTreeScrollSettled', 'prepareVisiblePages',
+    'retryOpen', 'onIdentityChanged'], {
   cacheReaderDirectoryNavigationPage: (_view, _offset, page) => page,
-  openReaderDirectoryNavigation: (_gateway, query) => new Promise(resolve => pending.push({ query, resolve })),
+  openReaderDirectoryNavigation: (_gateway, query) => new Promise((resolve, reject) => pending.push({ query, resolve, reject })),
   readerDirectoryNoteMissingNavigation: () => {},
+  readerDirectoryObserveScrollIntent: () => () => {},
   ReaderDirectoryTrace, readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`,
   readerDirectoryViewportAnchor: () => visibleAnchorNodeId === undefined ? undefined :
     { nodeId: visibleAnchorNodeId, navigationRevision: 'r', viewId: 'old-visible', visibleIndex: 6000 },
@@ -177,6 +182,100 @@ const Surface = productionMotionMethods(surfacePath,
   setTimeout: (action, delay) => { assert.equal(delay, 150); const id = ++timerId; timers.set(id, action); return id; },
   clearTimeout: id => { timers.delete(id); },
 });
+
+const flushSurface = async () => { for (let turn = 0; turn < 12; turn += 1) await Promise.resolve(); };
+function retrySurface(view) {
+  return Object.assign(new Surface(), { mounted: true, gateway: {
+    page: async (_book, viewId, offset) => ({ viewId, visibleTotal: 948,
+      nodes: Array.from({ length: Math.min(256, 948 - offset) }, (_, index) => ({ nodeId: `chapter-${offset + index}` })) }),
+  }, bookId: 'local:sha256', sourceId: 'local', query: '', ascending: true,
+  currentChapterIndex: 95, generation: 0, openingGeneration: -1,
+  settledFlat: false, interacted: false, interactionEnabled: true,
+  pendingRefresh: false, pendingQueryRefresh: false, loadPending: false, loadFailed: false,
+  queryTimer: -1, lastQuery: '', lastAscending: true, lastChapterIndex: 95,
+  view, onTreeStateChange() {} });
+}
+function readyCatalog(viewId) {
+  return { viewId, navigationRevision: 'catalog-948', visibleTotal: 948, currentVisibleIndex: 95,
+    nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `chapter-${index}` })) };
+}
+{
+  const start = pending.length, surface = retrySurface();
+  surface.openTree(true);
+  assert.equal(surface.loadPending, true, 'first directory request owns an explicit pending state');
+  pending[start].reject(new Error('BUSY runtime result reservation contract failed; drain and recreate'));
+  await flushSurface();
+  assert.equal(surface.settledFlat, false, 'transport failure cannot permanently admit the narrow flat fallback');
+  assert.equal(surface.loadPending, false);
+  assert.equal(surface.loadFailed, true, 'failed Core directory request remains visible and retryable');
+  assert.equal(surface.view, undefined);
+  surface.retryOpen();
+  assert.equal(pending.length, start + 2, 'explicit retry issues exactly one new production directory request');
+  assert.equal(surface.loadPending, true);
+  assert.equal(surface.loadFailed, false, 'retry clears only the previous failure presentation');
+  pending[start + 1].resolve(readyCatalog('retry-ready-948'));
+  await flushSurface();
+  assert.equal(surface.view.viewId, 'retry-ready-948');
+  assert.equal(surface.view.visibleTotal, 948, 'successful retry admits the actual full catalog, not the entry neighbours');
+  assert.equal(surface.loadPending, false);
+  assert.equal(surface.loadFailed, false);
+}
+{
+  const start = pending.length, surface = retrySurface();
+  surface.openTree(true);
+  pending[start].reject(new Error('temporary directory failure'));
+  await flushSurface();
+  surface.query = '婚约'; surface.onViewInputsChanged();
+  assert.equal(timers.size, 1, 'search after failure remains an admitted retry trigger');
+  const action = [...timers.values()][0]; timers.clear(); action();
+  assert.equal(pending.length, start + 2);
+  assert.equal(pending[start + 1].query.query, '婚约');
+  pending[start + 1].resolve(readyCatalog('search-ready-948'));
+  await flushSurface();
+  assert.equal(surface.view.viewId, 'search-ready-948');
+  assert.equal(surface.loadFailed, false);
+}
+{
+  const start = pending.length, surface = retrySurface();
+  surface.openTree(true);
+  surface.bookId = 'new-book'; surface.onIdentityChanged();
+  assert.equal(pending.length, start + 2, 'new identity opens its own independent directory request');
+  pending[start].reject(new Error('late error from old book'));
+  await flushSurface();
+  assert.equal(surface.loadPending, true, 'old failure cannot settle the current identity request');
+  assert.equal(surface.loadFailed, false, 'old failure cannot poison the replacement identity');
+  pending[start + 1].resolve(readyCatalog('new-book-ready'));
+  await flushSurface();
+  assert.equal(surface.view.viewId, 'new-book-ready');
+  assert.equal(surface.loadFailed, false);
+}
+{
+  const start = pending.length, old = readyCatalog('previous-ready'), surface = retrySurface(old);
+  surface.openTree(false);
+  pending[start].reject(new Error('temporary refresh failure'));
+  await flushSurface();
+  assert.equal(surface.view, old, 'failed refresh preserves the already admitted complete view');
+  assert.equal(surface.loadFailed, true);
+  assert.equal(surface.settledFlat, false);
+  surface.retryOpen();
+  assert.equal(surface.view, old, 'retry keeps the prior complete view until replacement pages are ready');
+  pending[start + 1].resolve(readyCatalog('refreshed-ready'));
+  await flushSurface();
+  assert.equal(surface.view.viewId, 'refreshed-ready');
+  assert.equal(surface.loadFailed, false);
+}
+{
+  const start = pending.length, surface = retrySurface();
+  surface.openTree(true);
+  surface.mounted = false; surface.generation += 1;
+  pending[start].reject(new Error('late retired directory failure'));
+  await flushSurface();
+  assert.equal(surface.loadFailed, false, 'a retired opening cannot publish an error into another page');
+  assert.equal(surface.view, undefined);
+}
+console.log('PASS directory failure recovery: actual Surface BUSY, explicit retry to 948 chapters, query retry, identity/cancel fencing and previous-view preservation');
+pending.length = 0;
+timers.clear();
 {
   const states = [];
   const surface = Object.assign(new Surface(), { mounted: true, gateway: {}, bookId: 'book', query: 'old',
@@ -461,7 +560,8 @@ console.log('PASS directory disclosure actual SDK Builder: fold/unfold arrow, ac
   const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
   syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationSurface');
   for (const name of ['ReaderBookmarkErrorState','ReaderBookmarkLoadingState','ReaderBookmarkEmptyState']) syntax.componentCollection.customComponents.add(name);
-  require(`${sdkRoot}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add('flatList');
+  for (const name of ['flatList', 'flatCatalog'])
+    require(`${sdkRoot}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(name);
   syntax.propCollection.set('ReaderDirectoryNavigationSurface', new Set(
     [...surfaceSource.matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(match=>match[1])));
   function queryPublication(source, reactive) {
@@ -509,6 +609,7 @@ console.log('PASS directory search actual SDK State dispatch: submit/miss/clear 
   const sdk = resolveEtsLoaderRoot();
   const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
   syntax.componentCollection.customComponents.add('ReaderDirectoryNavigationList');
+  syntax.componentCollection.customComponents.add('ReaderRecoveryAction');
   class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
   for (const total of [0, 1]) {
     const { owner } = createReaderBuilderProbe(surfaceSource, ['fallbackBuilder', 'build'], { ReaderDirectoryNavigationList: Child });
@@ -520,8 +621,31 @@ console.log('PASS directory search actual SDK State dispatch: submit/miss/clear 
     const messages = [...owner.nodes.values()].filter(node => node.type === 'Text' && node.create === '没有匹配的目录项');
     assert.equal(messages.length, total === 0 ? 1 : 0, 'ready empty navigation shows an explicit empty result');
   }
+  class Recovery { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+  for (const [failed, pending, showStatus] of [[true, false, true], [false, true, true], [true, false, false]]) {
+    let fallbackCalls = 0, retryCalls = 0;
+    const { owner } = createReaderBuilderProbe(surfaceSource, ['fallbackBuilder', 'build'],
+      { ReaderDirectoryNavigationList: Child, ReaderRecoveryAction: Recovery });
+    Object.assign(owner, { appThemeScheme: 'day', view: undefined, mangaDisplay: false,
+      sourceId: 'local', bookId: 'fixture', loadFailed: failed, loadPending: pending,
+      showLoadStatus: showStatus, interactionEnabled: true,
+      fallbackBuilder: () => fallbackCalls++, retryOpen: () => retryCalls++ });
+    owner.initialRender();
+    assert.equal(fallbackCalls, 1, 'status presentation preserves the existing chapter fallback');
+    const messages = [...owner.nodes.values()].filter(node => node.type === 'Text' &&
+      ['目录加载失败，已保留当前条目', '正在加载目录'].includes(node.create));
+    assert.equal(messages.length, showStatus ? 1 : 0,
+      'current request state is explicit and the partial-catalog owner may suppress duplicate status');
+    const recovery = [...owner.children.values()].find(child => child instanceof Recovery);
+    assert.equal(recovery !== undefined, failed && showStatus, 'only a failed visible request offers the retry action');
+    if (recovery !== undefined) {
+      assert.equal(recovery.params.label, '重试加载目录');
+      recovery.params.onReconcile();
+      assert.equal(retryCalls, 1, 'actual SDK retry callback reaches the Surface recovery method');
+    }
+  }
 }
-console.log('PASS actual SDK directory empty-result presentation without replacing list lifecycle');
+console.log('PASS actual SDK directory empty-result, inline loading/error/retry callback and preserved fallback/list lifecycle');
 
 // Rejections after disposal are cancellation evidence, not live query failures.
 {
@@ -542,7 +666,8 @@ console.log('PASS actual SDK directory empty-result presentation without replaci
     rejectOpen(new Error('cancelled-or-failed'));
     for (let tick = 0; tick < 5; tick++) await Promise.resolve();
     assert.deepEqual(traces, [['response', current ? 'failed' : 'cancelled']]);
-    assert.equal(owner.settledFlat === true, current, 'only current first-open failure settles the flat fallback');
+    assert.equal(owner.settledFlat === true, false, 'neither retired nor current transport failure permanently settles fallback');
+    assert.equal(owner.loadFailed === true, current, 'only the current opening may publish a retryable error');
   }
 }
 console.log('PASS directory diagnostics separate disposed query cancellation from active failure');

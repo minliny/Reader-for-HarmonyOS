@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import * as layoutPolicy from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
+import { READER_PAGE_CHROME_BOOKMARK_SIZE } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
 import {
   ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot,
 } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
@@ -95,14 +96,14 @@ function productionMethod(name) {
 }
 const layoutMethods = ['effectiveViewportWidth', 'effectiveViewportHeight', 'readingLayout',
   'controlLayout', 'windowMetricsLayoutKey', 'onWindowMetricsRevisionChanged',
-  'reflowAfterWindowGeometryChange'].map(productionMethod).join('\n');
+  'reflowAfterWindowGeometryChange', 'bookmarkFeedbackTopBoundary'].map(productionMethod).join('\n');
 const makeMetrics = keyboardBottom => new ReaderWindowMetricsSnapshot(
   new ReaderRectVp(0, 0, 1320 / 3.5, 816), new ReaderRectVp(0, 0, 1320 / 3.5, 816),
   new ReaderInsetsVp(), new ReaderInsetsVp(), new ReaderInsetsVp(),
   new ReaderInsetsVp(0, 0, 0, 28), new ReaderInsetsVp(0, 0, 0, keyboardBottom),
   3.5, 1, keyboardBottom > 0 ? 1 : 2, true);
 let currentMetrics = makeMetrics(314);
-const deps = { ...layoutPolicy, ReaderWindowCoordinator: { metrics: () => currentMetrics } };
+const deps = { ...layoutPolicy, READER_PAGE_CHROME_BOOKMARK_SIZE, ReaderWindowCoordinator: { metrics: () => currentMetrics } };
 const LayoutHost = new Function(...Object.keys(deps),
   `${stripTypeScriptTypes(`class LayoutHost { ${layoutMethods} }`)}; return LayoutHost;`)(...Object.values(deps));
 const panelStart = source.indexOf('      ReaderControlPanel({');
@@ -113,7 +114,7 @@ const readBinding = new Function(`return function() { return ${binding[1]}; };`)
 const layoutHost = new LayoutHost();
 Object.assign(layoutHost, {
   mounted: true, viewportWidth: 1320 / 3.5, viewportHeight: 816, isTablet: false,
-  readerSettingsSnapshot: { extendIntoCutout: false }, pageTurnSettlementLayout: undefined,
+  readerSettingsSnapshot: { extendIntoCutout: false, navigationMode: 'paged', hideStatusBar: false }, pageTurnSettlementLayout: undefined,
   pageTurnInputPhase: () => 'idle', chromeCalls: 0,
   applyWindowChrome() { this.chromeCalls++; },
   invalidatePageTurnRuntime() { assert.fail('keyboard-only change must not repaginate reading text'); },

@@ -72,7 +72,7 @@ export struct ReaderControlSettingsContent {
   private p(): number { return readerControlUnit(this.motionProgress); }
   private fullInput(): boolean { return this.interactionEnabled && this.p() === 1; }
   private scrollContentHeight(): number {
-    return Math.max(readerControlLerp(190, 694, this.p()), this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion));
+    return Math.max(readerControlLerp(190, 732, this.p()), this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion));
   }
   private onMotionChanged(): void { this.syncMorphScroll(); }
   private syncMorphScroll(): void {
@@ -253,8 +253,9 @@ export struct ReaderControlSettingsContent {
         .opacity(this.child('title', 0).opacity)
         .position({ x: this.child('title', 0).x, y: this.child('title', 0).y });
       if (group === 'status') {
-        this.toggleRow('隐藏导航栏', 'hideNavigationBar', 0);
-        this.toggleRow('拓展到刘海（灵动岛）', 'extendIntoCutout', 1);
+        this.toggleRow('隐藏状态栏', 'hideStatusBar', 0);
+        this.toggleRow('隐藏底部导航栏', 'hideNavigationBar', 1);
+        this.toggleRow('拓展到刘海（灵动岛）', 'extendIntoCutout', 2);
       } else if (group === 'typography') {
         this.justifyToggleRow();
         this.toggleRow('底部对齐', 'alignPageBottom', 1);
@@ -418,6 +419,9 @@ export struct ReaderControlSettingsContent {
   }
 
   private toggleValue(key: ReaderSettingsToggleKey): boolean {
+    if (key === 'hideStatusBar') {
+      return this.snapshot.hideStatusBar;
+    }
     if (key === 'hideNavigationBar') {
       return this.snapshot.hideNavigationBar;
     }

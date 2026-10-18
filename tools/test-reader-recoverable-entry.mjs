@@ -260,14 +260,14 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
 // The real window methods may run after a source remount. A superseded reader
 // still disposes its own resources, but cannot repaint the new owner's chrome.
 {
-  const calls=[];
+  const calls=[], topInfoWrites=[];
   const WindowReader=productionMotionMethods(source,['applyWindowChrome','applyWindowPolicyForChromeOwner',
     'applyReaderWindowPolicy','isSessionActive','isMountedToken','aboutToDisappear'],{
     ReaderWindowCoordinator:{requestAppChrome:()=>calls.push('app-chrome'),requestReaderChrome:()=>calls.push('reader-chrome'),
       requestOverlayChrome:()=>calls.push('overlay-chrome'),requestAppWindowPolicy:async()=>{calls.push('app-policy');},
       requestReaderWindowPolicy:async()=>{calls.push('reader-policy');}},
     ReaderWindowChromeStyle:class{},readerAppearanceThemeStyle:()=>({paperStart:'#fff',ink:'#000'}),
-    readerAppearanceChromeTone:()=> 'dark',AppStorage:{setOrCreate:()=>calls.push('global-top-info')},
+    readerAppearanceChromeTone:()=> 'dark',AppStorage:{setOrCreate:(key,value)=>{calls.push('global-top-info');if(key==='readerTopInfoSuppressed')topInfoWrites.push(value);}},
     invalidateReaderAutoPageState:s=>s,
   });
   for(const current of [false,true])for(const chromeActive of [false,true]) {
@@ -286,9 +286,16 @@ for(const local of [false,true])for(const switchFailure of [false,true]) {
       'cancelPageTurnPreparationRetry'])owner[name]=()=>{};
     calls.length=0;assert.equal(owner.isSessionActive(1),current);
     owner.applyWindowChrome();assert.deepEqual(calls,current?[chromeActive?'reader-chrome':'app-chrome']:[]);
-    calls.length=0;await owner.applyReaderWindowPolicy({});assert.deepEqual(calls,current&&chromeActive?['reader-policy']:[]);
-    calls.length=0;owner.applyWindowPolicyForChromeOwner();await settle();
-    assert.deepEqual(calls,current?['volume-policy','global-top-info',chromeActive?'reader-policy':'app-policy']:[]);
+    calls.length=0;topInfoWrites.length=0;await owner.applyReaderWindowPolicy({hideStatusBar:false});
+    assert.deepEqual(calls,current&&chromeActive?['global-top-info','reader-policy']:[]);
+    assert.deepEqual(topInfoWrites,current&&chromeActive?[true]:[],
+      'only the current active reader may suppress page information for its visible system status bar');
+    calls.length=0;topInfoWrites.length=0;owner.applyWindowPolicyForChromeOwner();await settle();
+    assert.deepEqual(calls.filter(value=>value!=='global-top-info'),current?['volume-policy',chromeActive?'reader-policy':'app-policy']:[]);
+    if(current){assert.ok(topInfoWrites.length>0);assert.ok(topInfoWrites.every(value=>value===chromeActive),
+      'active status visibility suppresses page information; application ownership releases it');}
+    else {assert.deepEqual(calls,[],'a retired reader cannot write any global state or native policy');
+      assert.deepEqual(topInfoWrites,[],'a retired reader cannot publish global information state');}
     calls.length=0;owner.aboutToDisappear();await settle();
     assert.equal(owner.mounted,false);assert.equal(owner.lifecycleToken,2);
     assert.ok(calls.includes('dispose-turn')&&calls.includes('dispose-window')&&calls.includes('dispose-screen')&&calls.includes('dispose-events'));

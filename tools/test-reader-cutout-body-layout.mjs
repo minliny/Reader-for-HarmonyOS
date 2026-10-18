@@ -5,7 +5,7 @@ import { measureReaderPageChromeText, readerPageChromeTopTextStyle } from './lib
 import { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import * as geometry from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
 import { createReadingPaginationLayoutSignature } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
-import { ReaderPageChromeMeasurements, resolveReaderPageChromeLayout } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
+import { ReaderPageChromeMeasurements, resolveReaderPageChromeLayout, READER_PAGE_CHROME_BOOKMARK_SIZE } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
 import { READER_PAGE_CHROME_TOP_ROW_PADDING_VP } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
 
 registerHooks({ resolve(specifier, context, nextResolve) {
@@ -120,9 +120,9 @@ for (const [width, height, tablet] of forms) for (const ready of [false, true]) 
 let currentMetrics = metrics(390, 844, 24);
 const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const Reader = productionMotionMethods(file, ['readingLayout', 'effectiveViewportWidth', 'effectiveViewportHeight',
-  'windowMetricsLayoutKey', 'paginationLayoutSignature', 'reflowAfterWindowGeometryChange'], {
+  'windowMetricsLayoutKey', 'paginationLayoutSignature', 'reflowAfterWindowGeometryChange', 'bookmarkFeedbackTopBoundary'], {
   ...geometry, ReaderWindowCoordinator: { metrics: () => currentMetrics }, createReadingPaginationLayoutSignature,
-  measureReaderPageChromeText, readerPageChromeTopTextStyle,
+  measureReaderPageChromeText, readerPageChromeTopTextStyle, READER_PAGE_CHROME_BOOKMARK_SIZE,
   readerRegisteredFontFamily: (_font, family) => family, readerAppearanceSnapshotFontFamily: () => 'test-font', FIGMA_BODY_FONT_WEIGHT: 'Regular',
   readerAppearanceFontScale: () => 1, readerAppearanceLineHeight: () => 1.5,
   readerAppearanceParagraphIndent: () => 0, READING_WRITING_MODE: 'horizontal-tb',
@@ -135,7 +135,7 @@ const context = {
 };
 const reader = Object.assign(new Reader(), { viewportWidth: 390, viewportHeight: 844, isTablet: false,
   bookTitle: '实际正文预算', pageChromeClockText: '12:30', getUIContext: () => context,
-  readerSettingsSnapshot: { extendIntoCutout: false }, pageTurnFrozenRevision: -1, pageTurnRenderRevision: 1,
+  readerSettingsSnapshot: { extendIntoCutout: false, navigationMode: 'paged', hideStatusBar: false }, pageTurnFrozenRevision: -1, pageTurnRenderRevision: 1,
   sourceId: 'source', bookId: 'book', lifecycleToken: 7, phase: 'ready', desiredChapterOffset: 123,
   appearanceSnapshot: { fontSize: 20, paragraphSpacing: 8, indent: 0, letterSpacing: 0, alignment: 'start' },
   pageTurnInputPhase: () => 'idle', invalidatePageTurnRuntime: () => {}, resetPaginationDraft: () => {},
@@ -144,12 +144,15 @@ const reader = Object.assign(new Reader(), { viewportWidth: 390, viewportHeight:
   beginMeasurement: token => measured.push(token),
 });
 const before = reader.readingLayout(), signatureBefore = reader.paginationLayoutSignature();
-assert.equal(before.contentTop, 64, 'actual owner reserves the complete measured information lane once');
+assert.equal(before.contentTop, 80, 'default-visible owner reserves its measured 56vp information boundary plus the complete 24vp bookmark');
+const hiddenReader=Object.assign(new Reader(),{...reader,readingLayoutCache:undefined,
+  readerSettingsSnapshot:{...reader.readerSettingsSnapshot,hideStatusBar:true}});
+assert.equal(hiddenReader.readingLayout().contentTop,64,'explicit immersion retains the original measured information lane and 8vp gap');
 reader.lastWindowMetricsLayoutKey = reader.windowMetricsLayoutKey();
 reader.readerSettingsSnapshot.extendIntoCutout = true;
 reader.reflowAfterWindowGeometryChange();
 assert.notEqual(reader.readingLayout(), before, 'the actual layout cache includes the cutout preference');
-assert.equal(reader.readingLayout().contentTop, 64, 'actual owner preserves the whole measured row when extended');
+assert.equal(reader.readingLayout().contentTop, before.contentTop, 'cutout extension preserves the measured row and current visible-status bookmark budget');
 assert.equal(reader.paginationLayoutSignature(), signatureBefore, 'cutout preference preserves the same measured information and body geometry');
 assert.deepEqual(invalidated, [['source', 'book']]);
 assert.deepEqual(measured, [7]);

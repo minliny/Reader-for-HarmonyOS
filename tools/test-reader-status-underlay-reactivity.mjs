@@ -20,11 +20,13 @@ const members = ['readerStatusBarUnderlay'];
 // its geometry helper. Both are extracted from the actual production source.
 if (/private readerStatusBarMetrics\(/.test(source)) members.push('readerStatusBarMetrics');
 
-function fixture(rect = new ReaderRectVp(), theme = 'warmNight') {
+function fixture(rect = new ReaderRectVp(), theme = 'warmNight',
+  { controlsPresented = true, hideStatusBar = false, active = true } = {}) {
   let metrics = { statusBarRect: rect, statusBarHeight: rect.height };
   const state = {
-    windowChromeActive: true,
-    readerSettingsSnapshot: { extendIntoCutout: false },
+    windowChromeActive: active,
+    windowControlsPresented: controlsPresented,
+    readerSettingsSnapshot: { extendIntoCutout: false, hideStatusBar },
     appearanceSnapshot: { activeTheme: theme },
     readerWindowMetricsRevision: 1,
   };
@@ -52,7 +54,6 @@ function fixture(rect = new ReaderRectVp(), theme = 'warmNight') {
       },
     });
   }
-  owner.windowControlsPresented = true;
   owner.readingLayout = () => ({ viewportWidth: 390, viewportHeight: 844, widthClass: 'compact' });
   owner.readerStatusBarUnderlay();
   const initialObserverCount = owner.observers.length;
@@ -70,6 +71,7 @@ function fixture(rect = new ReaderRectVp(), theme = 'warmNight') {
   }
   return {
     row,
+    rows: () => [...owner.nodes.values()].filter(node => node.id === 'reader-status-bar-underlay'),
     props: () => [...owner.children.values()][0].params,
     geometry: () => { const rect = [...owner.children.values()][0].params.statusRect;
       return {width:rect.width,height:rect.height,position:{x:rect.left,y:rect.top}}; },
@@ -117,6 +119,28 @@ check('all eight reading palettes remain unchanged in the retained underlay', ()
     assert.equal(f.props().theme, theme.id);
     assert.deepEqual(f.geometry(), { width: 384, height: 50, position: { x: 3, y: 1 } });
     assert.equal(f.row().zIndex, 10);
+  }
+});
+
+check('status preference off keeps the measured system band without opening controls', () => {
+  const f = fixture(new ReaderRectVp(2, 0, 386, 48), 'green', { controlsPresented: false });
+  assert.equal(f.rows().length, 1);
+  f.updateMetrics(new ReaderRectVp(4, 2, 382, 46));
+  assert.deepEqual(f.geometry(), { width: 382, height: 46, position: { x: 4, y: 2 } });
+  assert.equal(f.row().hitTestBehavior, 'HitTestMode.None');
+});
+
+check('status preference on hides its band only when controls are closed', () => {
+  assert.equal(fixture(new ReaderRectVp(0, 0, 390, 48), 'green',
+    { controlsPresented: false, hideStatusBar: true }).rows().length, 0);
+  assert.equal(fixture(new ReaderRectVp(0, 0, 390, 48), 'green',
+    { controlsPresented: true, hideStatusBar: true }).rows().length, 1);
+});
+
+check('a retained inactive reader never paints a system status band', () => {
+  for (const hideStatusBar of [false, true]) {
+    assert.equal(fixture(new ReaderRectVp(0, 0, 390, 48), 'green',
+      { controlsPresented: true, hideStatusBar, active: false }).rows().length, 0);
   }
 });
 

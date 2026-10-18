@@ -225,6 +225,7 @@ const ChromeOwner = productionMotionMethods(
   ['bookTurnTextureIdentity', 'admitPageChromeClock']);
 const clockOwner = Object.assign(new ChromeOwner(), {
   sourceId: 'local', bookId: 'test', appearanceSnapshot: { activeTheme: 'paper' },
+  readerSettingsSnapshot: { hideStatusBar: false },
   pageChromeClockText: '12:30', pageTurnRenderRevision: 4, refreshes: 0,
   scheduleBookTurnTextureRefresh() { this.refreshes++; },
 });
@@ -233,6 +234,12 @@ const chrome = { topStartText: 'Book', topEndText: '12:30', bottomStartText: 'ç¬
 const identity = data => clockOwner.bookTurnTextureIdentity(1, 100, 'v1', 'layout', 0, data);
 assert.notEqual(identity(chrome), identity({ ...chrome, topEndText: '12:31' }));
 assert.notEqual(identity(chrome), identity({ ...chrome, sessionVisible: true, sessionWidth: 80, sessionHeight: 24 }));
+const statusVisibleIdentity = identity(chrome);
+clockOwner.readerSettingsSnapshot.hideStatusBar = true;
+assert.notEqual(identity(chrome), statusVisibleIdentity,
+  'enabling immersive status hiding cannot reuse a texture with the information row suppressed');
+clockOwner.readerSettingsSnapshot.hideStatusBar = false;
+assert.equal(identity(chrome), statusVisibleIdentity, 'restoring visible status restores the same presentation identity');
 clockOwner.admitPageChromeClock('12:30');
 assert.equal(clockOwner.refreshes, 0, 'unchanged minute does not recapture');
 clockOwner.admitPageChromeClock('12:31');

@@ -13,6 +13,7 @@ export interface ReaderControlDirectoryRow {
 export interface ReaderControlDirectorySnapshot {
   rows: ReaderControlDirectoryRow[];
   loading: boolean;
+  catalogState: 'ready' | 'partial' | 'loading' | 'failed';
   currentTitle: string;
   currentPosition: string;
   targetRow: number;
@@ -24,6 +25,8 @@ export interface ReaderControlDirectoryCatalog {
   currentPosition: number;
   readableChapterCount?: number;
   readablePosition?: number;
+  loading?: boolean;
+  loadFailed?: boolean;
 }
 
 export function readerControlDirectorySnapshot(entries: LocalReadingTocEntry[], tab: string,
@@ -55,7 +58,9 @@ export function readerControlDirectorySnapshot(entries: LocalReadingTocEntry[], 
   const position = catalog?.complete === false ? catalog.readablePosition : readableOrdinal;
   const currentPosition = count !== undefined && position !== undefined && position >= 0 && position < count ?
     `${position + 1} / ${count}` : '';
-  return { rows: rows, loading: entries.length === 0 ||
+  const catalogState = catalog?.complete === false ?
+    (catalog.loading === true ? 'loading' : catalog.loadFailed === true ? 'failed' : 'partial') : 'ready';
+  return { rows: rows, catalogState, loading: entries.length === 0 ||
     (tab === 'bookmarks' && readerBookmarkLoadState(entries) === 'loading'), targetRow: targetRow,
     currentTitle: currentOrdinal < 0 ? '' : entries[currentOrdinal].title,
     currentPosition };

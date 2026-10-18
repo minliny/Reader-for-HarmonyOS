@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 import {
@@ -19,12 +20,14 @@ import {
 } from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
 
 const initial = createDefaultReaderSettingsSnapshot();
+assert.equal(initial.hideStatusBar, false, 'status hiding is an independent opt-in preference');
 assert.deepEqual(initial, {
   version: 5,
   screenDirection: 'system',
   navigationMode: 'paged',
   pageTransition: 'slide',
   screenTimeout: 'system',
+  hideStatusBar: false,
   hideNavigationBar: false,
   extendIntoCutout: false,
   justifyText: false,
@@ -52,7 +55,7 @@ const normalized = normalizeReaderSettingsSnapshot({
 assert.equal(normalized.screenDirection, 'landscape');
 assert.equal(readerPageTurnStyle(normalized), 'cover');
 assert.equal(normalized.screenTimeout, 'alwaysOn');
-assert.equal('hideStatusBar' in normalized, false, 'V5 only persists the single cutout switch');
+assert.equal(normalized.hideStatusBar, false, 'status and cutout preferences remain independent');
 assert.equal(normalized.hideNavigationBar, true);
 assert.equal(normalized.extendIntoCutout, true);
 assert.equal(normalized.volumeKeysTurnPage, true);
@@ -112,6 +115,22 @@ assert.equal(migratedV3.version, 5);
 assert.equal(migratedV3.longPressSelectText, true,
   'the old disabled-by-default V3 value must migrate to enabled once');
 
+const oldV5 = { ...initial }; delete oldV5.hideStatusBar;
+assert.equal(normalizeReaderSettingsSnapshot(oldV5).hideStatusBar, false);
+assert.equal(normalizeReaderSettingsSnapshot({ ...initial, hideStatusBar: 'true' }).hideStatusBar, false);
+for (const version of [3, 4, 5]) for (const hideStatusBar of [false, true]) {
+  assert.equal(normalizeReaderSettingsSnapshot({ ...initial, version, hideStatusBar }).hideStatusBar, hideStatusBar);
+}
+const independent = { ...initial, hideStatusBar: true, hideNavigationBar: true, extendIntoCutout: false,
+  mangaDirection: 'horizontal', mangaFit: 'contain', mangaBackground: 'ink', mangaPageNumbers: false };
+assert.deepEqual(copyReaderSettingsSnapshot(independent), independent);
+for (const changed of [setReaderPageTurnStyle(independent, 'scroll'), setReaderScreenDirection(independent, 'portrait'),
+  setReaderScreenTimeout(independent, 'oneMinute'), setReaderSettingsToggle(independent, 'alignPageBottom', true)]) {
+  assert.equal(changed.hideStatusBar, true);
+  assert.equal(changed.hideNavigationBar, true); assert.equal(changed.extendIntoCutout, false);
+  for (const key of ['mangaDirection','mangaFit','mangaBackground','mangaPageNumbers']) assert.equal(changed[key], independent[key]);
+}
+
 assert.notStrictEqual(copyReaderSettingsSnapshot(initial), initial);
 const noAnimation = setReaderPageTurnStyle(initial, 'none');
 assert.equal(readerPageTurnStyle(noAnimation), 'none');
@@ -129,7 +148,8 @@ assert.equal(setReaderSettingsToggle(initial, 'alignPageBottom', true).alignPage
 assert.equal(setReaderSettingsToggle(initial, 'longPressSelectText', true).longPressSelectText, true);
 assert.equal(setReaderSettingsToggle(initial, 'volumeKeysTurnPage', true).volumeKeysTurnPage, true);
 assert.equal(setReaderSettingsToggle(initial, 'stopTtsOnScreenOff', true).stopTtsOnScreenOff, true);
-assert.throws(() => setReaderSettingsToggle(initial, 'hideStatusBar', false), /unavailable Reader Host/);
+assert.equal(setReaderSettingsToggle(initial, 'hideStatusBar', true).hideStatusBar, true);
+assert.equal(setReaderSettingsToggle(setReaderSettingsToggle(initial, 'hideStatusBar', true), 'hideStatusBar', false).hideStatusBar, false);
 assert.equal(setReaderSettingsToggle(initial, 'hideNavigationBar', true).hideNavigationBar, true);
 assert.equal(setReaderSettingsToggle(initial, 'extendIntoCutout', true).extendIntoCutout, true);
 assert.equal(setReaderScreenDirection(initial, 'portrait').screenDirection, 'portrait');
@@ -147,7 +167,7 @@ assert.equal(isReaderPageTurnStyleAvailable('scroll'), true);
 assert.equal(isReaderScreenTimeoutAvailable('system'), true);
 assert.equal(isReaderScreenTimeoutAvailable('alwaysOn'), true);
 assert.equal(isReaderScreenTimeoutAvailable('fiveMinutes'), true);
-assert.equal(isReaderSettingsToggleAvailable('hideStatusBar'), false);
+assert.equal(isReaderSettingsToggleAvailable('hideStatusBar'), true);
 assert.equal(isReaderSettingsToggleAvailable('hideNavigationBar'), true);
 assert.equal(isReaderSettingsToggleAvailable('extendIntoCutout'), true);
 assert.equal(isReaderSettingsToggleAvailable('justifyText'), false);
@@ -197,7 +217,7 @@ assert.match(fullPanel, /this\.sectionTitle\('屏幕样式', false\)/);
 assert.match(fullPanel, /this\.sectionTitle\('导航状态栏', true\)/);
 assert.match(fullPanel, /this\.sectionTitle\('排版', true\)/);
 assert.match(fullPanel, /this\.sectionTitle\('控制', true\)/);
-for (const label of ['隐藏导航栏', '拓展到刘海（灵动岛）', '文字两端对齐',
+for (const label of ['隐藏状态栏', '隐藏底部导航栏', '拓展到刘海（灵动岛）', '文字两端对齐',
   '底部对齐', '音量键翻页', '息屏终止朗读', '长按选择文本']) {
   assert.ok(fullPanel.includes(label), `missing Figma settings row: ${label}`);
 }
@@ -234,7 +254,7 @@ assert.match(settingsBinding, /onAppearanceAlignmentRequest\(this\.appearanceSna
 for (const callback of ['onPageTurnStyleChange', 'onScreenDirectionChange', 'onScreenTimeoutChange', 'onSettingsToggleChange']) {
   assert.ok(settingsBinding.includes(`this.${callback}(`), `actual Settings business callback lost: ${callback}`);
 }
-for (const label of ['隐藏导航栏', '拓展到刘海（灵动岛）', '文字两端对齐',
+for (const label of ['隐藏状态栏', '隐藏底部导航栏', '拓展到刘海（灵动岛）', '文字两端对齐',
   '底部对齐', '音量键翻页', '息屏终止朗读', '长按选择文本']) {
   assert.ok(sharedContent.includes(label), `active Settings row lost: ${label}`);
 }
@@ -282,7 +302,7 @@ assert.match(experience,
   });
   function fixture(load) {
     let current = true, controls = false;
-    const snapshot = { ...createDefaultReaderSettingsSnapshot(), extendIntoCutout: true };
+    const snapshot = { ...createDefaultReaderSettingsSnapshot(), hideStatusBar: true, extendIntoCutout: true };
     const owner = Object.assign(new Owner(), {
       isReaderIdentityCurrent: () => current, windowChromeActive: false, mounted: true, exitRequested: false,
       readerSettingsLoaded: false, readerSettingsMutationGeneration: 0, readerSettingsSnapshot: snapshot, lifecycleToken: 1,
@@ -375,8 +395,8 @@ assert.match(experience,
     for (const controls of [false, true, false]) {
       active.controls(controls); active.owner.applyWindowPolicyForChromeOwner(); await settle();
     }
-    assert.deepEqual(calls, [{ owner: 'reader', hideStatusBar: true }, { owner: 'reader', hideStatusBar: false },
-      { owner: 'reader', hideStatusBar: true }], `${name}: immersion/controls/immersion must not depend on cutout or legacy hide flags`);
+    assert.deepEqual(calls, [{ owner: 'reader', hideStatusBar: snapshot.hideStatusBar }, { owner: 'reader', hideStatusBar: false },
+      { owner: 'reader', hideStatusBar: snapshot.hideStatusBar }], `${name}: only the independent hide choice may hide status while controls are closed`);
     assert.equal(active.owner.readerSettingsSnapshot.extendIntoCutout, snapshot.extendIntoCutout,
       `${name}: content cutout geometry remains the user's normalized preference`);
     assert.equal(JSON.stringify(raw), original, `${name}: status policy cannot rewrite persisted preferences`);
@@ -386,7 +406,7 @@ assert.match(experience,
 }
 assert.match(experience,
   /safeWindowSettingsFallback\([\s\S]*?version: 5[\s\S]*?extendIntoCutout: false/,
-  'a Host failure must keep the requested immersive status-bar default');
+  'a Host failure keeps safe cutout geometry independently of the status preference');
 assert.match(experience, /ReaderScreenAwakeLease/);
 assert.match(experience, /this\.screenAwakeLease\?\.configure\(snapshot\.screenTimeout, this\.appForeground\)/);
 assert.match(experience, /this\.screenAwakeLease\?\.rearm\(\)/);
@@ -401,11 +421,83 @@ console.log('reader settings pure/static contract: PASS');
 
 for (const version of [1,2,3,4,5]) for (const hide of [false,true]) for (const extend of [false,true]) {
   const migrated=normalizeReaderSettingsSnapshot({...initial,version,hideStatusBar:hide,extendIntoCutout:extend});
-  assert.equal(migrated.extendIntoCutout,extend);assert.equal('hideStatusBar' in migrated,false);
+  assert.equal(migrated.extendIntoCutout,extend);assert.equal(migrated.hideStatusBar,version>=3?hide:false);
 }
 for (const version of [1,2,3,4]) for (const hide of [false,true]) {
   const raw={...initial,version,hideStatusBar:hide};delete raw.extendIntoCutout;
   assert.equal(normalizeReaderSettingsSnapshot(raw).extendIntoCutout,version>=3?hide:false);
 }
-assert.doesNotMatch(sharedContent,/隐藏状态栏|snapshot\.hideStatusBar/);
-assert.doesNotMatch(fullPanel,/隐藏状态栏|snapshot\.hideStatusBar/);
+assert.match(sharedContent,/toggleRow\('隐藏状态栏', 'hideStatusBar', 0\)/);
+assert.match(fullPanel,/toggleRow\('隐藏状态栏', 'hideStatusBar', 0\)/);
+assert.match(experience,/snapshot\.hideStatusBar(?: === true)? && !forceStatusBarVisible/);
+
+// Execute the existing Preferences Gateway, with a fresh class/static state
+// for each cold process. Only get/put/flush and Runtime ownership are seams.
+function settingsStoreFixture(seed, inherited) {
+  const durable = inherited ?? new Map(seed === undefined ? [] : [['snapshot', JSON.stringify(seed)]]);
+  const cache = new Map(durable); let failFlush = false;
+  const events = [], runtime = { getUIAbilityContext: () => ({}) };
+  const preferences = { getPreferences: async () => ({
+    get: async (key, fallback) => cache.get(key) ?? fallback,
+    put: async (key, value) => { events.push(['put', JSON.parse(value)]); cache.set(key, value); },
+    flush: async () => {
+      if (failFlush) { failFlush = false; throw new Error('controlled flush failure'); }
+      for (const [key, value] of cache) durable.set(key, value);
+      events.push(['flush']);
+    },
+  }) };
+  const dependencies = { copyReaderSettingsSnapshot, createDefaultReaderSettingsSnapshot, normalizeReaderSettingsSnapshot,
+    preferences, ReaderRuntimeOwner: { current: () => runtime, isCurrent: owner => owner === runtime },
+    ReaderThemeHost: { prepareUserChange: async () => {} } };
+  const body = stripTypeScriptTypes(gateway.replace(/^import[\s\S]*?;\n/gm, '')).replace('export class ', 'class ');
+  const Gateway = new Function(...Object.keys(dependencies), body + ';return ReaderSettingsGateway;')(...Object.values(dependencies));
+  return { owner: new Gateway(runtime), durable, events, fail: () => { failFlush = true; } };
+}
+for (const seed of [undefined, oldV5, independent, { ...independent, version: 3 }, { ...independent, version: 4 }]) {
+  const f = settingsStoreFixture(seed), loaded = await f.owner.load();
+  assert.deepEqual(loaded, normalizeReaderSettingsSnapshot(seed));
+  const enabled = setReaderSettingsToggle(loaded, 'hideStatusBar', true);
+  await f.owner.update(enabled);
+  const afterEnable = settingsStoreFixture(undefined, f.durable);
+  assert.equal((await afterEnable.owner.load()).hideStatusBar, true);
+  await afterEnable.owner.update(setReaderSettingsToggle(enabled, 'hideStatusBar', false));
+  assert.equal((await settingsStoreFixture(undefined, f.durable).owner.load()).hideStatusBar, false);
+  assert.deepEqual(JSON.parse(f.durable.get('snapshot')), { ...enabled, hideStatusBar: false });
+}
+{
+  const f = settingsStoreFixture(independent); await f.owner.load();
+  f.fail(); const changed = setReaderSettingsToggle(independent, 'hideStatusBar', false);
+  await assert.rejects(f.owner.update(changed), /flush failure/);
+  assert.equal(f.owner.current().hideStatusBar, false);
+  assert.equal(f.owner.writeFacts().pendingReconciliation, true);
+  assert.equal(JSON.parse(f.durable.get('snapshot')).hideStatusBar, true);
+  await f.owner.retryAccepted();
+  assert.equal(f.owner.writeFacts().pendingReconciliation, false);
+  assert.deepEqual(JSON.parse(f.durable.get('snapshot')), changed);
+}
+console.log('reader status settings actual Preferences Gateway: PASS (V3/V4 preservation, old V5 default, true/false cold reload, manga retention, flush retry)');
+
+// Both production row Builders read the live independent flag and send the
+// same stable key through their real onClick/handleToggle callback chain.
+{
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  for (const [name, source, members] of [
+    ['shared Quick/Full', sharedContent, ['toggleRow','toggleValue','toggleAccessibilityText','handleToggle']],
+    ['standalone Full', fullPanel, ['toggleRow','toggleTrack','toggleValue','toggleAccessibilityText']],
+  ]) {
+    const changes = [];
+    const { owner } = createReaderBuilderProbe(source, members, { isReaderSettingsToggleAvailable });
+    Object.assign(owner, { snapshot: createDefaultReaderSettingsSnapshot(), interactionEnabled: true,
+      p: () => 1, child: () => ({ x: 0, y: 0, width: 308, height: 38, opacity: 1 }),
+      sectionWidth: () => 308, onToggleChange: (key, value) => {
+        changes.push([key, value]); owner.snapshot = setReaderSettingsToggle(owner.snapshot, key, value);
+      } });
+    owner.toggleRow('隐藏状态栏', 'hideStatusBar', 0);
+    const row = [...owner.nodes.values()].find(node => node.accessibilityText === '隐藏状态栏，已关闭');
+    assert.ok(row?.enabled, name); row.onClick(); owner.replay();
+    assert.equal(row.accessibilityText, '隐藏状态栏，已开启', name); row.onClick();
+    assert.deepEqual(changes, [['hideStatusBar', true], ['hideStatusBar', false]], name);
+    assert.equal(owner.snapshot.hideNavigationBar, false); assert.equal(owner.snapshot.extendIntoCutout, false);
+  }
+}
+console.log('reader status settings actual SDK Quick/Full rows: PASS (live on/off value and independent callback key)');

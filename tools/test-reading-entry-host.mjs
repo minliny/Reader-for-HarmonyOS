@@ -25,6 +25,33 @@ function mangaFixture(){
  return{...f,manga,chapter,released,setImageGate:g=>imageGate=g,failImage:()=>fail=true};
 }
 
+{
+ const f=fixture(),entries=[{index:0,title:'Persisted chapter',downloadState:'unknown'}];
+ f.host.bindReader(book(),undefined,entries,false,f.lease);
+ await f.host.projectDirectory(f.host.snapshot().scopeId);
+ assert.equal(f.calls.filter(call=>call.method==='bookmark.list').length,1,'persisted remote reading lists canonical bookmarks without a remote session');
+ assert.equal(f.calls.some(call=>['cache.book.status','book.detail','book.toc','chapter.content'].includes(call.method)),false,
+  'remote offline/acquisition gates remain closed without an admitted session');
+ assert.deepEqual(f.host.snapshot().toc[0].bookmarks,[]);f.close();
+ checkpoints.push('actual-persisted-remote-canonical-bookmarks-without-session-or-offline-IO');
+}
+for(const replacement of ['scope','session-version','offline-generation','runtime']){
+ const f=fixture(),entries=[{index:0,title:'Persisted chapter',downloadState:'unknown'}],gate=deferred();
+ f.gates.set('bookmark.list:'+f.key('local',undefined),gate);
+ f.host.bindReader(book(),undefined,entries,false,f.lease);
+ const work=f.host.projectDirectory(f.host.snapshot().scopeId);
+ await until(()=>f.calls.some(call=>call.method==='bookmark.list'));
+ assert.equal(f.host.snapshot().toc[0].bookmarks,undefined,'an in-flight read cannot infer that bookmarks are empty');
+ if(replacement==='scope')f.host.bindReader(book('successor'),undefined,entries,false,f.lease);
+ if(replacement==='session-version')f.host.readerSessionReady(session('book','s1','new-catalog'));
+ if(replacement==='offline-generation')f.control.offline+=1;
+ if(replacement==='runtime'){f.runtime.closed=true;setRuntime(undefined);}
+ const changes=f.changes.length,latest=f.host.snapshot().toc;
+ gate.resolve();await work;await f.settle();
+ assert.equal(f.changes.length,changes,'old canonical completion cannot publish into '+replacement);
+ assert.equal(f.host.snapshot().toc,latest);assert.equal(latest[0].bookmarks,undefined);
+ f.close();checkpoints.push('actual-cold-bookmark-read-rejects-late-'+replacement);
+}
 
 {
  const f=fixture();await f.host.openLocal(book('local-book','local'),f.lease,true);assert.equal(f.calls.length,0,'shelf resume performs no detail IO');

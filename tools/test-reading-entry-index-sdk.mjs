@@ -23,6 +23,75 @@ const Runtime={current:()=>{throw Error('consumer must use captured mounted Runt
 const emptyAdmission={key:'',generation:0,adding:false,cancelling:false,message:'',confirmation:'none'};
 const checks=[];
 {
+ const f=fixture(),cached=await f.coordinator.acquireBook(seed()),x=makeIndex(f,{route:'bookshelf'});
+ f.calls.length=0;x.idx.readingOriginRoute='bookshelf';
+ x.idx.openRemoteBookDetail(seed(),'Source',book(),true,[],[],undefined,cached);
+ assert.equal(x.idx.detailToc.length,3);assert.ok(x.idx.detailToc.every(entry=>entry.bookmarks===undefined));
+ assert.equal(f.calls.filter(call=>call.method==='bookmark.list').length,0);
+ x.idx.presentPreparedReading(0);await tick();await f.settle();
+ assert.equal(f.calls.filter(call=>call.method==='bookmark.list').length,1,'validated catalog quick entry also resolves canonical bookmarks on its first visible page');
+ assert.ok(x.idx.detailToc.every(entry=>entry.bookmarks!==undefined));
+ x.idx.presentPreparedReading(1);await tick();await f.settle();
+ assert.equal(f.calls.filter(call=>call.method==='bookmark.list').length,1,'preloaded catalog does not reload on every ready page');
+ f.close();checks.push('actual-cold-validated-remote-catalog-first-ready-bookmarks-once');
+}
+{
+ const failures=[];
+ for(const sourceId of ['local','s1'])for(const order of ['catalog-before-ready','ready-before-catalog']){
+  const f=fixture(),x=makeIndex(f,{route:'bookshelf'}),bookId=sourceId==='local'?'local-book':'book';
+  try{
+   x.idx.readingOriginRoute='bookshelf';
+   if(sourceId==='local')x.idx.openLocalBookDetail(book(bookId,sourceId),true);
+   else x.idx.openRemoteBookDetail(seed(bookId,sourceId),'Source',book(bookId,sourceId),true);
+   const scope=x.owner().snapshot().scopeId;
+   const entries=[0,1,2].map(index=>({index,title:`Persisted chapter ${index}`,navigable:true,downloadState:'unknown'}));
+   assert.equal(x.idx.remoteReadingSession,undefined,'persisted reading does not need remote acquisition');
+   assert.equal(f.calls.filter(c=>c.method==='bookmark.list').length,0,'first frame is never blocked by bookmark IO');
+   if(order==='ready-before-catalog')x.idx.presentPreparedReading(0);
+   x.idx.applyReaderDirectoryProjection(entries);
+   assert.equal(x.idx.detailToc[0]?.bookmarks,undefined,'unknown is retained until the canonical list returns');
+   if(order==='catalog-before-ready'){
+    assert.equal(f.calls.filter(c=>c.method==='bookmark.list').length,0,'catalog alone cannot delay first presentation');
+    x.idx.presentPreparedReading(0);
+   }
+   await tick();await f.settle();
+   assert.equal(f.calls.filter(c=>c.method==='bookmark.list').length,1,`${sourceId} ${order} reads once without another page or opening controls`);
+   assert.deepEqual(x.idx.detailToc.map(entry=>entry.bookmarks),[[],[],[]],'canonical read makes all admitted chapters known');
+   assert.equal(x.owner().snapshot().scopeId,scope,'bookmark readiness never remounts the reader');
+   x.idx.presentPreparedReading(0);x.idx.presentPreparedReading(1);
+   x.idx.applyReaderDirectoryProjection(entries);await tick();await f.settle();
+   assert.equal(f.calls.filter(c=>c.method==='bookmark.list').length,1,'duplicate ready/catalog callbacks cannot read every page');
+   if(sourceId!=='local')assert.equal(f.calls.some(c=>['cache.book.status','book.detail','book.toc','chapter.content'].includes(c.method)),false,
+    'cached remote bookmark readiness neither starts offline projection nor acquires a network session');
+   checks.push(`actual-cold-${sourceId}-${order}-canonical-bookmarks-once`);
+  }catch(error){failures.push(`${sourceId} ${order}: ${error.message}`);}
+  finally{f.close();}
+ }
+ assert.deepEqual(failures,[],'cold reader canonical bookmark projection');
+}
+{
+ const f=fixture(),x=makeIndex(f,{route:'bookshelf'}),entries=[{index:0,title:'Persisted chapter',downloadState:'unknown'}];
+ x.idx.readingOriginRoute='bookshelf';x.idx.openLocalBookDetail(book('old','local'),true);
+ x.idx.applyReaderDirectoryProjection(entries);const old=x.idx.pendingLocalDirectoryProjection;
+ assert.equal(typeof old,'function');
+ x.idx.openLocalBookDetail(book('successor','local'),true);old();await tick();await f.settle();
+ assert.equal(f.calls.filter(call=>call.method==='bookmark.list').length,0,'retired ready work cannot borrow the successor book');
+ x.idx.presentPreparedReading(0);x.idx.applyReaderDirectoryProjection(entries);await tick();await f.settle();
+ assert.equal(x.idx.detailBook.bookId,'successor');assert.deepEqual(x.idx.detailToc[0].bookmarks,[]);
+ assert.equal(f.calls.filter(call=>call.method==='bookmark.list').length,1,'successor late catalog still resolves once');
+ f.close();checks.push('actual-cold-directory-old-owner-rejected-successor-late-catalog-resolves');
+}
+{
+ const f=fixture(),x=makeIndex(f,{route:'bookshelf'});
+ x.idx.readingOriginRoute='bookshelf';x.idx.openRemoteBookDetail(seed(),'Source',book(),true);
+ x.idx.presentPreparedReading(0);x.idx.onRemoteSessionReady(session());await tick();await f.settle();
+ assert.equal(f.calls.filter(call=>call.method==='bookmark.list').length,1,'session admitted after first presentation resolves its new catalog immediately');
+ assert.ok(x.idx.detailToc.every(entry=>entry.bookmarks!==undefined));
+ x.idx.presentPreparedReading(1);await tick();await f.settle();
+ assert.equal(f.calls.filter(call=>call.method==='bookmark.list').length,1);
+ f.close();checks.push('actual-remote-session-after-first-ready-canonical-read-without-next-page');
+}
+{
  const f=fixture(),x=makeIndex(f,{route:'bookshelf'});x.idx.readingOriginRoute='bookshelf';
  x.idx.openRemoteBookDetail(seed(),'Source',book(),true);
  assert.equal(x.idx.route,'reading');assert.equal(x.idx.readingSessionActive,true);assert.equal(x.idx.detailBook.bookId,'book');

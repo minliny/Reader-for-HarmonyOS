@@ -8,6 +8,7 @@ import * as state from '../entry/src/main/ets/features/reading/ReaderSettingsSta
 import { resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
 import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { measureReaderPageChromeText, readerPageChromeTopTextStyle } from './lib/reader-page-chrome-measurement-probe.mjs';
+import { READER_PAGE_CHROME_BOOKMARK_SIZE } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
 
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return {promise,resolve,reject}; };
 const settle = async () => { for (let i=0;i<10;i++) await new Promise(resolve => setImmediate(resolve)); };
@@ -20,15 +21,17 @@ assert.deepEqual(emitted.diagnostics,[],'whole actual ReaderSettings Gateway com
 const facts = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0,0,390,844),new ReaderRectVp(0,0,390,844),
   new ReaderInsetsVp(0,48),new ReaderInsetsVp(0,32),undefined,undefined,undefined,3,1,1,true,48);
 const Owner = productionMotionMethods(file, ['commitReaderWindowSettings', 'readingLayout', 'windowMetricsLayoutKey',
+  'bookmarkFeedbackTopBoundary',
   'reflowAfterWindowGeometryChange', 'onWindowMetricsRevisionChanged','captureReaderSettingsAdmission',
   'notifyReaderSettingsSavePending','retryPendingReaderSettings','retryReaderPreferenceNotice','isSessionActive'], {
-  resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP,
+  resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP, READER_PAGE_CHROME_BOOKMARK_SIZE,
   ReaderWindowCoordinator: { metrics: () => facts },
   measureReaderPageChromeText, readerPageChromeTopTextStyle,
 });
 async function fixture(extended=false, controls=false) {
   const policies=[], writes=[], measurements=[], failures=[], cache=new Map(),durable=new Map();
   const initial=state.setReaderSettingsToggle(state.createDefaultReaderSettingsSnapshot(),'extendIntoCutout',extended);
+  assert.equal(initial.hideStatusBar,false,'cutout changes retain the current default-visible status preference');
   const runtime={getUIAbilityContext:()=>({})};let active=runtime,flushGate,readGate,flushFailure,windowGate,windowRefusal=false;
   const Runtime=runtimeOwnerIdentityProbe(()=>active);
   const store={async get(key,fallback){if(readGate){const g=readGate;readGate=undefined;await g.promise;}return cache.get(key)??fallback;},

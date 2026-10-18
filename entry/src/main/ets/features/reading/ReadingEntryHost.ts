@@ -442,12 +442,14 @@ export class ReadingEntryHost {
   async projectDirectory(scope: number): Promise<void> {
     const lease = this.lease, book = this.state.book, session = this.state.session;
     if (lease === undefined || book === undefined) return;
-    if (book.sourceId !== LOCAL_SOURCE_ID && session === undefined) return;
     const generation = this.state.sessionGeneration, offline = lease.offlineGeneration();
     const current = (): boolean => this.current(scope, lease)() && generation === this.state.sessionGeneration &&
       offline === lease.offlineGeneration() && (session === undefined || sameRemoteSessionEvidence(this.state.session, session));
     if (!current()) return;
-    try {
+    // Cached remote reading can own a complete durable catalog without a
+    // network-capable session. Only offline projection needs that session;
+    // the shared canonical bookmark list is source-independent.
+    if (book.sourceId === LOCAL_SOURCE_ID || session !== undefined) try {
       let entries = session === undefined ? await new LocalReadingFlowGateway(this.runtime).loadDownloadProjection(
         book.bookId, lease.currentDirectory(), current) :
         await new ReadingOfflineGateway(this.runtime).loadDirectoryProjection(session, current);

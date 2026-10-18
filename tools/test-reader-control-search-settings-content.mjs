@@ -153,12 +153,15 @@ for (const p of points) {
       near(choice.height, track(settingsMotion, id, 'height', p)[0]);
     }
   }
+  // Restoring the independent status switch adds one 38vp row. The source
+  // actor tracks stay unchanged; following groups move by that row height.
   for (const [name, groupId, start, baseY, count] of [
     ['status', '1692:3952', 3953, 263, 3],
-    ['typography', '1692:3997', 3998, 394, 2],
-    ['control', '1692:4032', 4033, 525, 3],
+    ['typography', '1692:3997', 3998, 432, 2],
+    ['control', '1692:4032', 4033, 563, 3],
   ]) {
     const group = readerControlSettingsAddedGroup(name, p, width);
+    assert.equal(group.height, name === 'typography' ? 131 : 169);
     near(group.y, baseY + track(settingsMotion, groupId, 'translate', p)[1]);
     near(group.opacity, track(settingsMotion, groupId, 'opacity', p)[0]);
     for (let c = 0; c < count + 2; c++) {
@@ -175,6 +178,11 @@ for (const p of points) {
         track(settingsMotion, id, 'translate', p)[1], 'both ancestor translations retained');
     }
   }
+}
+for (const p of points) {
+  const groups = sampleReaderControlSettings(p, 286 + 52 * p).groups;
+  for (let i = 1; i < groups.length; i++) assert.ok(groups[i].y >= groups[i - 1].y + groups[i - 1].height,
+    'all three status rows fit before following sections throughout Quick/Full motion');
 }
 assert.equal(seen.size, 43, '6 Search source actors incl shell + all 37 Settings content actors');
 // Shared Stage owns the 7 remaining Settings root/shell/viewport/brightness/nav

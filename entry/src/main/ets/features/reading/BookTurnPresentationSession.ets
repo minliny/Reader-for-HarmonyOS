@@ -73,6 +73,9 @@ export class BookTurnPresentationSession {
   }
 
   private onNativeEvent(event: number, generation: number, detail: number): void {
+    // A new EGL surface has no resident textures. Its predecessor's LOST may
+    // already be filtered from the JS queue; READY must revoke old uploads too.
+    if (event === BOOK_TURN_EVENT_SURFACE_READY) this.clearCapturedTextures();
     if (event === BOOK_TURN_EVENT_SURFACE_READY || event === BOOK_TURN_EVENT_SURFACE_LOST ||
       event === BOOK_TURN_EVENT_RENDER_FAILURE) this.highlightIdentity = '';
     if (event === BOOK_TURN_EVENT_SLOTS_COMMITTED && generation === this.pendingSlotGeneration) {

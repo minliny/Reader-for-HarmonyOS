@@ -61,16 +61,52 @@ assert.match(coordinator,
   'policy equality must cover all five semantic fields');
 // Callers must keep awaiting the deduped promise (persistence continues).
 {
-  let writes = 0;
+  let writes = 0, expectedSuppression = true;
   const policy = {}, pending = new Promise(() => {});
+  const storage = new Map(), storageWrites = [];
   const Owner = productionMotionMethods(new URL('features/reading/LocalReadingExperience.ets', appRoot),
-    ['applyReaderWindowPolicy'], { ReaderWindowCoordinator: { requestReaderWindowPolicy(value) {
-      assert.equal(value, policy); writes++; return pending;
+    ['applyReaderWindowPolicy'], { AppStorage: {
+      get(key) { return storage.get(key); },
+      setOrCreate(key, value) { storage.set(key, value); storageWrites.push([key, value]); },
+    }, ReaderWindowCoordinator: { requestReaderWindowPolicy(value) {
+      assert.equal(value, policy);
+      assert.equal(storage.get('readerTopInfoSuppressed'), expectedSuppression,
+        'page-info suppression must be current when the native policy request is forwarded');
+      writes++; return pending;
     } } });
-  const owner = Object.assign(new Owner(), { windowChromeActive: true, windowPolicyFor: () => policy, controlsPresentedForWindow: () => false });
+  const owner = Object.assign(new Owner(), { windowChromeActive: true, isReaderIdentityCurrent: () => true,
+    windowPolicyFor: () => policy, controlsPresentedForWindow: () => false });
   assert.equal(owner.applyReaderWindowPolicy({}), pending,
     'the settings commit path must return the coordinator promise without releasing its persistence barrier');
   assert.equal(writes, 1, 'each settings application forwards exactly one coordinator request');
+  assert.equal(storage.get('readerTopInfoSuppressed'), true,
+    'the default visible status bar suppresses page-owned information before forwarding its policy');
+  for (const hideStatusBar of [false, true]) for (const controls of [false, true]) {
+    const before = writes, beforeStorage = storageWrites.length;
+    owner.controlsPresentedForWindow = () => controls;
+    expectedSuppression = controls || !hideStatusBar;
+    assert.equal(owner.applyReaderWindowPolicy({ hideStatusBar }), pending,
+      'every current settings application retains the original coordinator promise');
+    assert.equal(writes, before + 1, 'one settings application forwards exactly one policy request');
+    assert.equal(storageWrites.length, beforeStorage + 1);
+    assert.deepEqual(storageWrites.at(-1), ['readerTopInfoSuppressed', controls || !hideStatusBar],
+      'current policy suppression follows the independent status preference and controls visibility');
+    assert.equal(storage.get('readerTopInfoSuppressed'), controls || !hideStatusBar);
+  }
+  for (const [active, current] of [[false, true], [true, false], [false, false]]) {
+    owner.windowChromeActive = active;
+    owner.isReaderIdentityCurrent = () => current;
+    storage.set('readerTopInfoSuppressed', false);
+    storage.set('unrelated-visible-owner', 'retained');
+    const before = writes, beforeStorage = storageWrites.length, beforeValues = new Map(storage);
+    const ignored = owner.applyReaderWindowPolicy({ hideStatusBar: false }, true);
+    assert.equal(writes, before, 'offstage or retired readers must not enqueue native policies');
+    assert.equal(storageWrites.length, beforeStorage,
+      'offstage or retired readers must not publish any global storage key');
+    assert.deepEqual(storage, beforeValues,
+      'a retained reader must preserve the visible owner\'s complete global storage state');
+    await ignored;
+  }
 }
 
 // Fix 2: a refresh-only shelf read that transiently reports empty must not

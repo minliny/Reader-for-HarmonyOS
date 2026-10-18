@@ -146,7 +146,7 @@ for(let revision=0;revision<160;revision++) {
   assert.ok(hydration.bookmarkExcerptCache.size<=128);
 }
 // Original page text uses the existing UTF-16/scalar map, preserving emoji/CRLF.
-const Bookmark=productionMotionMethods(file('LocalReadingExperience.ets'),['bookmarkMatchesCurrentChapter','currentPageBookmarkText','currentPageBookmarkStatus','toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','reconcilePageBookmarkFeedback'],{LOCAL_READING_SOURCE_ID:'local'});
+const Bookmark=productionMotionMethods(file('LocalReadingExperience.ets'),['bookmarkMatchesCurrentChapter','currentPageBookmarkText','currentPageBookmarkStatus','toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','reconcilePageBookmarkFeedback','bookmarkFeedbackOwnerKey'],{LOCAL_READING_SOURCE_ID:'local'});
 const chapterText='A\ud83d\ude42\r\nBC\u4e2dD',map=new ReadingSurfaceLayoutMap(chapterText);
 let requests=[];let entries=[{index:0,title:'C',bookmarks:[]}];
 const bookmark=Object.assign(new Bookmark(),{sourceId:'local',bookmarkPendingTarget:'',bookmarkMutationGeneration:0,mounted:true,chapter:{chapterIndex:0,content:chapterText},chapterLayoutMap:map,
@@ -163,6 +163,7 @@ for(const [status,offset,preview,expectVisible] of [['empty',24,true,true],['boo
  ['empty',24,false,true],['empty',0,false,false],['bookmarked',0,false,true],['unknown',0,false,false]]) {
   const {owner}=createReaderBuilderProbe(feedbackSource,['bookmarkCornerFeedback','pageBookmarkFeedbackFilled'],{FlexAlign:{End:'end'}});
   Object.assign(owner,{bookmarkPendingTarget:'',controlVisible:()=>false,controlObscured:false,currentPageBookmarkStatus:()=>status,
+    bookmarkPreviewStatus:status,bookmarkPreviewOwner:'fixture',bookmarkFeedbackOwnerKey:()=> 'fixture',bookmarkFeedbackHintLabel:()=> '',
     bookmarkPageOffsetY:offset,bookmarkPreviewChanged:preview,readerAppScheme:'day',viewportWidth:390,
     bookmarkCornerLayout:()=>({topAccessoryX:341,topAccessoryY:4,topAccessoryWidth:24,topAccessoryHeight:24}),
     bookmarkFeedbackLabel:()=> 'bookmark',

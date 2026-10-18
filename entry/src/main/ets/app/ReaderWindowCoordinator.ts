@@ -290,12 +290,19 @@ export class ReaderWindowCoordinator {
 
   /** Reapply the latest semantic policy after foreground/window restoration. */
   static reapplyWindowPolicy(): void {
-    if (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader') {
-      void ReaderWindowCoordinator.requestReaderWindowPolicy(
-        ReaderWindowCoordinator.desiredReaderWindowPolicy);
-      return;
-    }
-    void ReaderWindowCoordinator.requestAppWindowPolicy();
+    // Native state may have changed while the Ability was in the background.
+    // Revoke only the applied receipt; the ordinary request path still owns
+    // serialization and supersedes this restore when a newer intent arrives.
+    ReaderWindowCoordinator.appliedPolicyRevision = -1;
+    const restore = ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' ?
+      ReaderWindowCoordinator.requestReaderWindowPolicy(ReaderWindowCoordinator.desiredReaderWindowPolicy) :
+      ReaderWindowCoordinator.requestAppWindowPolicy();
+    void restore.catch((error: Error): void => {
+      // A failed restore stays unapplied for the next explicit admission.
+      // Foreground recovery owns this rejection and never starts a retry loop.
+      hilog.warn(0x5244, 'Reader', 'Window policy restore failed: %{public}s',
+        ReaderWindowCoordinator.chromeErrorCode(error as BusinessError));
+    });
   }
 
   static reapplyChrome(): void {

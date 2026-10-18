@@ -40,11 +40,12 @@ async function confirmedSettingsGateway(initial,saved){
 }
 function fixture(){
  const app=new Map();globalThis.AppStorage={setOrCreate:(k,v)=>app.set(k,v)};
+ const warnings=[];
  const displayInfo={id:0,rotation:0,densityPixels:1,scaledDensity:1};
  const kit={window:{Orientation:{UNSPECIFIED:0,PORTRAIT:1,LANDSCAPE:2,AUTO_ROTATION_UNSPECIFIED:3},
    AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1,TYPE_SYSTEM_GESTURE:2,TYPE_NAVIGATION_INDICATOR:3,TYPE_KEYBOARD:4}},
    display:{getDefaultDisplaySync:()=>displayInfo,on(){},off(){}}};
- const deps={'@kit.ArkUI':kit,'@kit.PerformanceAnalysisKit':{hilog:{info(){},warn(){}}},
+ const deps={'@kit.ArkUI':kit,'@kit.PerformanceAnalysisKit':{hilog:{info(){},warn(...args){warnings.push(args);}}},
    '../features/common/ReaderThemeRegistry':{findReaderTheme},
    './ReaderBrightnessWriter':{ReaderBrightnessWriter},'./ReaderStatusBarMeasurement':{ReaderStatusBarMeasurement},
    '../features/common/ReaderWindowMetrics':metrics};
@@ -53,9 +54,10 @@ function fixture(){
  const module={exports:{}};new Function('require','module','exports',out)(id=>{assert.ok(id in deps,id);return deps[id];},module,module.exports);
  const {ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P}=module.exports;
  const E=productionMotionMethods(new URL('features/reading/LocalReadingExperience.ets',base),
-   ['applyWindowChrome','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor','captureReaderSettingsAdmission','notifyReaderSettingsSavePending',
+   ['applyWindowChrome','changeReaderSetting','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor','captureReaderSettingsAdmission','notifyReaderSettingsSavePending',
     'persistReaderSettingsSnapshot','settleReaderPreferenceNotice','setReaderPreferenceNotice'],{
-   ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P,readerAppearanceThemeStyle,readerAppearanceChromeTone});
+   ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P,readerAppearanceThemeStyle,readerAppearanceChromeTone,
+   setReaderSettingsToggle:readerSettingsState.setReaderSettingsToggle});
  function windowPort(options={}){
    const zero={left:0,top:0,width:0,height:0};
    const win={calls:[],properties:{},barEnabled:{status:true,navigation:true,navigationIndicator:true},nextColor:undefined,
@@ -76,7 +78,7 @@ function fixture(){
  }
  function theme(id,overlay=true){const e=Object.assign(new E(),{windowChromeActive:true,windowChromeOverlayActive:overlay,appearanceSnapshot:{activeTheme:id}});e.applyWindowChrome();}
  const colors=w=>w.calls.filter(x=>x[0]==='color');
- return{C,S,P,E,windowPort,theme,colors,displayInfo,app};
+ return{C,S,P,E,windowPort,theme,colors,displayInfo,app,warnings};
 }
 const cases=[];
 async function check(name,run){try{await run();cases.push({name,status:'PASS'});}catch(e){cases.push({name,status:'FAIL',error:e.stack});}}
@@ -558,11 +560,11 @@ await check('showing controls retries a failed color even when visible-bar polic
  assert.equal(w.properties.navigationBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='paper').paperStart,'visible controls must not keep stale app color');
  assert.equal(w.calls.slice(before).filter(c=>c[0]==='visible').length,0,'unchanged visibility remains deduplicated');f.C.detach();
 });
-await check('actual cutout setting true to false preserves immersion and measured band across control reveal in all eight themes',async()=>{
+await check('actual cutout setting true to false preserves explicitly selected immersion and measured band across control reveal in all eight themes',async()=>{
  for(const t of READER_THEME_DEFINITIONS)for(const initiallyOpen of [false,true]){
    const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
    let controls=initiallyOpen;const saved=[];
-   const initial={...createDefaultReaderSettingsSnapshot(),extendIntoCutout:true,hideNavigationBar:false,screenDirection:'system'};
+   const initial={...createDefaultReaderSettingsSnapshot(),extendIntoCutout:true,hideStatusBar:true,hideNavigationBar:false,screenDirection:'system'};
    const gateway=await confirmedSettingsGateway(initial,saved);
    const e=Object.assign(new f.E(),{windowChromeActive:true,windowChromeOverlayActive:false,appearanceSnapshot:{activeTheme:t.id},
      readerSettingsSnapshot:initial,readerSettingsMutationGeneration:0,
@@ -597,22 +599,27 @@ await check('actual cutout setting true to false preserves immersion and measure
    f.C.detach();
  }
 });
-await check('actual novel SDK ownership and control sessions hide/show/hide independent of cutout, navigation and page mode',async()=>{
- for(const extend of[false,true])for(const hideNavigationBar of[false,true])for(const mode of['none','slide','cover','simulation','continuous']){
+await check('actual novel SDK status preference and controls stay independent of cutout bottom navigation and page mode',async()=>{
+ for(const hideStatusBar of[false,true])for(const extend of[false,true])for(const hideNavigationBar of[false,true])for(const mode of['none','slide','cover','simulation','continuous']){
   const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
   const n=novelSdkFixture(f,'paper',extend);
-  n.owner.readerSettingsSnapshot={...n.owner.readerSettingsSnapshot,hideNavigationBar,
+  n.owner.readerSettingsSnapshot={...n.owner.readerSettingsSnapshot,hideStatusBar,hideNavigationBar,
    navigationMode:mode==='continuous'?'continuous':'paged',pageTransition:mode==='continuous'?'none':mode};
   await n.controls(false);
-  assert.equal(w.barEnabled.status,false,'the real immersive owner always hides the native status bar');
+  assert.equal(w.barEnabled.status,!hideStatusBar,'only the explicit status preference may hide the native top bar');
   assert.equal(w.barEnabled.navigation,!hideNavigationBar,'navigation preference stays independent');
-  assert.equal(n.owner.windowControlsPresented,false);assert.equal(f.app.get('readerTopInfoSuppressed'),false);
+  assert.equal(w.barEnabled.navigationIndicator,!hideNavigationBar,'bottom gesture indicator has its own independent preference');
+  assert.equal(n.owner.windowControlsPresented,false);assert.equal(f.app.get('readerTopInfoSuppressed'),!hideStatusBar);
   await n.controls(true);
   assert.equal(w.barEnabled.status,true,'the real control session exposes the native status bar');
+  assert.equal(w.barEnabled.navigation,!hideNavigationBar,'opening controls cannot change the bottom preference');
+  assert.equal(w.barEnabled.navigationIndicator,!hideNavigationBar);
   assert.equal(n.owner.windowControlsPresented,true);assert.equal(f.app.get('readerTopInfoSuppressed'),true);
   await n.controls(false);
-  assert.equal(w.barEnabled.status,false,'the real close session restores immersive status');
-  assert.equal(n.owner.windowControlsPresented,false);assert.equal(f.app.get('readerTopInfoSuppressed'),false);
+  assert.equal(w.barEnabled.status,!hideStatusBar,'closing controls restores the explicit top-bar choice');
+  assert.equal(w.barEnabled.navigation,!hideNavigationBar);
+  assert.equal(w.barEnabled.navigationIndicator,!hideNavigationBar);
+  assert.equal(n.owner.windowControlsPresented,false);assert.equal(f.app.get('readerTopInfoSuppressed'),!hideStatusBar);
   await n.props({windowChromeActive:false});
   assert.equal(w.barEnabled.status,true,'actual inactive @Prop/@Watch returns the native bar to App');
   n.setIdentity(false);w.calls.length=0;await n.controls(false);
@@ -620,13 +627,80 @@ await check('actual novel SDK ownership and control sessions hide/show/hide inde
   f.C.detach();
  }
 });
+await check('actual LRE status toggle false to true to false persists while controls and bottom preferences remain independent',async()=>{
+ for(const hideNavigationBar of [false,true])for(const controlsPresented of [false,true]){
+  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+  const initial={...createDefaultReaderSettingsSnapshot(),hideNavigationBar},saved=[],reflows=[];
+  assert.equal(initial.hideStatusBar,false,'new and legacy-unspecified settings expose the native status bar by default');
+  const gateway=await confirmedSettingsGateway(initial,saved);
+  const e=Object.assign(new f.E(),{windowChromeActive:true,windowChromeOverlayActive:false,
+   readerSettingsSnapshot:initial,readerSettingsMutationGeneration:0,lifecycleToken:1,pageTurnRenderRevision:0,
+   screenAwakeKeepScreenOn:false,ttsKeepScreenOn:false,controlsPresentedForWindow:()=>controlsPresented,
+   configureReaderScreenAwakeLease(){},applyReaderSystemEventPolicy(){},isSessionActive:()=>true,
+   readerSettingsGateway:gateway,reflowAfterWindowGeometryChange(){reflows.push(this.readerSettingsSnapshot.hideStatusBar);},
+   showReaderSettingsFailure(){assert.fail('unexpected status setting failure');}});
+  await e.applyReaderWindowPolicy(initial);await settle();assert.equal(w.barEnabled.status,true);
+  for(const hideStatusBar of [true,false]){
+   e.changeReaderSetting('hideStatusBar',hideStatusBar);await settle();
+   assert.equal(e.readerSettingsSnapshot.hideStatusBar,hideStatusBar);
+   assert.equal(w.barEnabled.status,controlsPresented||!hideStatusBar,
+    'native status follows preference while controls always reveal it');
+   assert.equal(w.barEnabled.navigation,!hideNavigationBar);
+   assert.equal(w.barEnabled.navigationIndicator,!hideNavigationBar);
+   assert.equal(gateway.writeFacts().pendingReconciliation,false);
+   assert.equal(gateway.writeFacts().saved.hideStatusBar,hideStatusBar);
+   assert.equal(gateway.writeFacts().saved.hideNavigationBar,hideNavigationBar);
+  }
+  assert.deepEqual(saved.map(snapshot=>snapshot.hideStatusBar),[true,false],
+   'the actual settings Gateway durably acknowledges both explicit choices');
+  assert.deepEqual(reflows,[true,false],
+   'each status choice reflows the bookmark body budget even when controls keep the native bar visible');
+  assert.equal(e.pageTurnRenderRevision,2,
+   'each status choice separately invalidates page chrome when the reflow boundary itself has no changed geometry');
+  f.C.detach();
+ }
+});
+await check('failed status preference requests reflow after restoring the original setting',async()=>{
+ const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const initial=createDefaultReaderSettingsSnapshot(),saved=[],reflows=[],failures=[];
+ const gateway=await confirmedSettingsGateway(initial,saved);
+ const e=Object.assign(new f.E(),{windowChromeActive:true,windowChromeOverlayActive:false,
+  readerSettingsSnapshot:initial,readerSettingsMutationGeneration:0,lifecycleToken:1,pageTurnRenderRevision:0,
+  screenAwakeKeepScreenOn:false,ttsKeepScreenOn:false,controlsPresentedForWindow:()=>false,
+  configureReaderScreenAwakeLease(){},applyReaderSystemEventPolicy(){},isSessionActive:()=>true,
+  readerSettingsGateway:gateway,reflowAfterWindowGeometryChange(){reflows.push(this.readerSettingsSnapshot.hideStatusBar);},
+  showReaderSettingsFailure(message,error){failures.push({message,error});}});
+ await e.applyReaderWindowPolicy(initial);await settle();
+ const gate=deferred();w.nextStatus=gate;e.changeReaderSetting('hideStatusBar',true);await settle();
+ assert.equal(e.readerSettingsSnapshot.hideStatusBar,true,'the pending accepted choice is observable before native ACK');
+ assert.deepEqual(reflows,[],'a pending native request cannot publish a successful reflow');
+ gate.reject(Object.assign(Error('controlled status setting failure'),{code:1300003}));await settle();
+ assert.equal(e.readerSettingsSnapshot.hideStatusBar,false);
+ assert.deepEqual(reflows,[false],'rollback explicitly restores the visible-status bookmark budget');
+ assert.equal(e.pageTurnRenderRevision,1,'native rejection separately invalidates the restored status chrome');
+ assert.equal(w.barEnabled.status,true);assert.equal(failures.length,1);
+ assert.equal(saved.length,0,'a rejected native setting cannot persist the failed choice');
+ assert.equal(gateway.writeFacts().saved.hideStatusBar,false);
+ f.C.detach();
+});
 await check('old cutout-dependent novel policy is rejected by the actual SDK immersive regression',async()=>{
- const broken=novelSource.replace('!forceStatusBarVisible,','forceStatusBarVisible ? false : snapshot.extendIntoCutout,');
+ const broken=novelSource.replace('snapshot.hideStatusBar === true && !forceStatusBarVisible,','forceStatusBarVisible ? false : snapshot.extendIntoCutout,');
  assert.notEqual(broken,novelSource,'negative control restores the actual historical production policy');
  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
- const n=novelSdkFixture(f,'paper',false,broken);await n.controls(false);
+ const n=novelSdkFixture(f,'paper',false,broken);
+ n.owner.readerSettingsSnapshot={...n.owner.readerSettingsSnapshot,hideStatusBar:true};await n.controls(false);
  assert.throws(()=>assert.equal(w.barEnabled.status,false,'immersive status bar must be hidden'),/immersive status bar must be hidden/,
   'the original setting-dependent bug must fail the same native observation');
+ f.C.detach();
+});
+await check('old unconditional immersive status policy is rejected by the actual SDK default-visible regression',async()=>{
+ const broken=novelSource.replace('snapshot.hideStatusBar === true && !forceStatusBarVisible,','!forceStatusBarVisible,');
+ assert.notEqual(broken,novelSource,'negative control removes only the production preference guard');
+ const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const n=novelSdkFixture(f,'paper',false,broken);await n.controls(false);
+ assert.equal(n.owner.readerSettingsSnapshot.hideStatusBar,false);
+ assert.throws(()=>assert.equal(w.barEnabled.status,true,'default status bar must remain visible'),/default status bar must remain visible/,
+  'the original always-hidden behavior must fail the same native observation');
  f.C.detach();
 });
 await check('pending status reveal never borrows another window geometry or replacement window measurement',async()=>{
@@ -652,6 +726,76 @@ await check('early positive event cannot end pending reveal before ACK; repeated
  w.avoidTop={left:0,top:0,width:390,height:46};w.events.get('avoidAreaChange')({});assert.equal(f.C.metrics().statusBarHeight,46);
  w.avoidTop={left:0,top:0,width:0,height:0};w.events.get('avoidAreaChange')({});assert.equal(f.C.metrics().statusBarHeight,0);
  f.C.detach();
+});
+await check('explicit reader policy reapply repairs native drift for independent status and navigation choices',async()=>{
+ for(const hideStatus of [false,true])for(const hideNavigation of [false,true]){
+  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+  const policy=new f.P('portrait',true,hideStatus,hideNavigation,false);
+  await f.C.requestReaderWindowPolicy(policy);
+  // OS/window restoration can change native state without a Host setting edit.
+  w.orientation=2;w.keepScreenOn=false;
+  w.barEnabled={status:hideStatus,navigation:hideNavigation,navigationIndicator:hideNavigation};
+  const before=w.calls.length;
+  f.C.reapplyWindowPolicy();await settle();
+  assert.deepEqual(w.calls.slice(before).filter(call=>call[0]==='visible'),[
+   ['visible','status',!hideStatus,false],['visible','navigation',!hideNavigation,false],
+   ['visible','navigationIndicator',!hideNavigation,false]],'explicit reapply must bypass same-policy dedupe');
+  assert.equal(w.orientation,1);assert.equal(w.keepScreenOn,true);
+  assert.deepEqual(w.barEnabled,{status:!hideStatus,navigation:!hideNavigation,navigationIndicator:!hideNavigation});
+  const applied=w.calls.length;await f.C.requestReaderWindowPolicy(policy);
+  assert.equal(w.calls.length,applied,'ordinary same-value requests retain their native-write dedupe');
+  f.C.detach();
+ }
+});
+await check('explicit App policy reapply restores captured orientation awake and visible system bars',async()=>{
+ const f=fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
+ await f.C.requestReaderWindowPolicy(new f.P('portrait',false,true,true,false));
+ await f.C.requestAppWindowPolicy();
+ w.orientation=1;w.keepScreenOn=false;w.barEnabled={status:false,navigation:false,navigationIndicator:false};
+ const before=w.calls.length;f.C.reapplyWindowPolicy();await settle();
+ assert.deepEqual(w.calls.slice(before).filter(call=>call[0]==='visible'),[
+  ['visible','status',true,false],['visible','navigation',true,false],['visible','navigationIndicator',true,false]]);
+ assert.equal(w.orientation,2);assert.equal(w.keepScreenOn,true);
+ assert.deepEqual(w.barEnabled,{status:true,navigation:true,navigationIndicator:true});
+ const applied=w.calls.length;await f.C.requestAppWindowPolicy();
+ assert.equal(w.calls.length,applied,'ordinary App policy requests remain deduplicated');f.C.detach();
+});
+await check('native policy reapply rejection is handled without looping and a later explicit retry converges',async()=>{
+ for(const owner of ['reader','app']){
+  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+  if(owner==='reader')await f.C.requestReaderWindowPolicy(new f.P('system',false,true,true,false));
+  else await f.C.requestAppWindowPolicy();
+  const gate=deferred();w.nextStatus=gate;const before=w.calls.length;
+  f.C.reapplyWindowPolicy();await settle();
+  assert.equal(w.calls.slice(before).filter(call=>call[0]==='visible').length,1,'forced reapply reaches the native pending request');
+  gate.reject(Object.assign(Error('controlled native reapply failure'),{code:1300003}));await settle();
+  assert.equal(f.warnings.length,1,'void foreground recovery handles and diagnoses its native rejection');
+  assert.equal(w.calls.slice(before).filter(call=>call[0]==='visible').length,1,'native rejection cannot start a retry loop');
+  f.C.reapplyWindowPolicy();await settle();
+  assert.deepEqual(w.barEnabled,{status:owner==='app',navigation:owner==='app',navigationIndicator:owner==='app'});
+  assert.equal(w.calls.slice(before).filter(call=>call[0]==='visible').length,4,'later explicit retry reapplies all three bars');
+  f.C.detach();
+ }
+});
+await check('forced reapply joins pending rapid owner requests and preserves the latest complete policy',async()=>{
+ for(const finalOwner of ['reader','app']){
+  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+  await f.C.requestReaderWindowPolicy(new f.P('system',false,true,true,false));
+  const gate=deferred();w.nextStatus=gate;f.C.reapplyWindowPolicy();await settle();
+  assert.equal(w.nextStatus,undefined,'reapply is already executing when the newer owner requests arrive');
+  const app=f.C.requestAppWindowPolicy();
+  f.C.reapplyWindowPolicy();
+  const reader=f.C.requestReaderWindowPolicy(new f.P('portrait',true,true,false,false));
+  const final=finalOwner==='app'?f.C.requestAppWindowPolicy():reader;
+  gate.resolve();await Promise.all([app,reader,final]);await settle();
+  assert.deepEqual(w.barEnabled,{status:finalOwner==='app',navigation:true,navigationIndicator:true});
+  assert.equal(w.orientation,finalOwner==='app'?0:1);
+  assert.equal(w.keepScreenOn,finalOwner==='reader');
+  assert.equal(f.warnings.length,0);
+  assert.deepEqual(w.calls.filter(call=>call[0]==='visible').slice(-3),[
+   ['visible','status',finalOwner==='app',false],['visible','navigation',true,false],['visible','navigationIndicator',true,false]]);
+  f.C.detach();
+ }
 });
 await check('show superseded by hide converges and same-size rotation does not reuse the pending band',async()=>{
  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
