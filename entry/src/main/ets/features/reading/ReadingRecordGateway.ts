@@ -1,5 +1,6 @@
 import preferences from '@ohos.data.preferences';
 import util from '@ohos.util';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { ReadingRecordIntent, ReadingRecordRecoveryError, type ReadingRecord, type ReadingRecordReceipt, type ReadingRecordRecoveryState } from './ReaderReadingRecordState';
@@ -12,6 +13,8 @@ export type { ReadingRecord } from './ReaderReadingRecordState';
 const READING_RECORD_JOURNAL_KEY = 'delta-journal-v1';
 const READING_RECORD_OUTBOX_KEY = 'delta-outbox-v2';
 const READING_RECORD_OUTBOX_LIMIT = 128;
+const READING_RECORD_OUTBOX_BYTES = 1048576;
+type ReadingRecordErrorMetadata = { name?: string; code?: string | number; event?: { error?: { code?: string } }; };
 type ReadingRecordOutbox = { version: number; active?: ReadingRecordIntent; tail: ReadingRecordIntent[]; };
 type ReadingRecordJournal = {
   phase: 'pending' | 'confirmed'; acceptanceId: string; deviceId: string; bookName: string;
@@ -30,10 +33,12 @@ export class ReadingRecordGateway {
   // Native ACK. A slow old receipt cannot prevent newly elapsed time staging.
   private static storeTail: Promise<void> = Promise.resolve();
   private static retiredMemory: ReadingRecordIntent[] = [];
+  private static currentReceiver: ReadingRecordGateway | undefined;
   private outboxLane: Promise<void> = Promise.resolve();
   private outboxLoaded: boolean = false;
   private outboxActive: ReadingRecordIntent | undefined;
   private outboxTail: ReadingRecordIntent[] = [];
+  private readonly acceptedObjects: WeakSet<ReadingRecordIntent> = new WeakSet<ReadingRecordIntent>();
   private readonly inbox: Map<string, ReadingRecordIntent> = new Map<string, ReadingRecordIntent>();
   private backgroundTask: Promise<void> | undefined;
   private retryTimer: number = -1;
@@ -43,15 +48,40 @@ export class ReadingRecordGateway {
   private lastError: string = '';
   private lastConfirmedReadAt: number = 0;
 
-  constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) { this.runtimeOwner = runtimeOwner; }
+  constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
+    this.runtimeOwner = runtimeOwner;
+    if (ReaderRuntimeOwner.isCurrent(runtimeOwner)) ReadingRecordGateway.currentReceiver = this;
+  }
 
   /** Called by the UI clock. Ownership moves now; persistence and exact Core
    * acknowledgement happen in the Runtime lane after this UI turn returns. */
   handoff(intent: ReadingRecordIntent): void {
+    if (this.acceptedObjects.has(intent)) return;
+    if (!this.stopped && ReaderRuntimeOwner.isCurrent(this.runtimeOwner) &&
+      ReadingRecordGateway.retiredMemory.includes(intent)) {
+      // This exact object already transferred via the predecessor carry lane.
+      // Wake adoption rather than admitting a second copy before load finishes.
+      this.acceptedObjects.add(intent);
+      void this.recover();
+      return;
+    }
     this.checkUnassignedIntent(intent);
+    if (this.stopped || !ReaderRuntimeOwner.isCurrent(this.runtimeOwner)) {
+      // Component retirement can follow Runtime close. Transfer synchronously
+      // to an already-running successor (which also wakes its existing drain),
+      // or retain it for the next owner's normal v1/v2 recovery. Never enqueue
+      // new work on the stopped Native runtime or clear elapsed time ownerless.
+      const receiver = ReadingRecordGateway.currentReceiver;
+      if (receiver !== undefined && receiver !== this && !receiver.stopped &&
+        ReaderRuntimeOwner.isCurrent(receiver.runtimeOwner)) receiver.handoff(intent);
+      else ReadingRecordGateway.retiredMemory.push(intent);
+      this.acceptedObjects.add(intent);
+      return;
+    }
     const existing = this.inbox.get(intent.bookName);
     if (existing === undefined) this.inbox.set(intent.bookName, intent);
     else this.inbox.set(intent.bookName, this.mergeElapsed(existing, intent));
+    this.acceptedObjects.add(intent);
     this.dirty = true;
     // Stage even while a previous Native request is still waiting for its ACK.
     void this.stagePending().catch((error: Error): void => this.noteFailure(error));
@@ -91,7 +121,9 @@ export class ReadingRecordGateway {
   /** Keep failed IO work across an in-process Runtime successor as well as on
    * disk. No component retirement calls this; only Runtime teardown does. */
   stopBackground(): void {
+    if (this.stopped) return;
     this.stopped = true;
+    if (ReadingRecordGateway.currentReceiver === this) ReadingRecordGateway.currentReceiver = undefined;
     if (this.retryTimer >= 0) clearTimeout(this.retryTimer);
     this.retryTimer = -1;
     const retained = [...this.outboxTail, ...Array.from(this.inbox.values())];
@@ -103,9 +135,39 @@ export class ReadingRecordGateway {
   }
 
   private noteFailure(error: Error): void {
-    this.lastError = error.message || String(error);
+    const diagnostic = this.diagnosticError('recovery', error).diagnostic;
+    if (diagnostic !== this.lastError) {
+      try { hilog.warn(0x5244, 'Reader', 'Reading duration recovery: %{public}s', diagnostic); } catch (_logError) {}
+    }
+    this.lastError = diagnostic;
     this.dirty = true;
   }
+
+  /** Only finite metadata crosses this boundary; never retain payloads,
+   * arbitrary names/codes, original messages or stacks in background status. */
+  private diagnosticError(stage: string, error: unknown): ReadingRecordRecoveryError {
+    if (error instanceof ReadingRecordRecoveryError && error.diagnostic.length > 0) return error;
+    const raw = typeof error === 'object' && error !== null ? error as ReadingRecordErrorMetadata : undefined;
+    const names = ['Error', 'TypeError', 'RangeError', 'SyntaxError', 'BusinessError', 'ReaderCoreRequestError'];
+    const name = raw?.name !== undefined && names.includes(raw.name) ? raw.name : 'Other';
+    const candidate = raw?.event?.error?.code ?? raw?.code;
+    const codes = ['UNKNOWN_METHOD', 'INVALID_PARAMS', 'INVALID_PROTOCOL_VERSION', 'CANCELLED',
+      'TIMEOUT', 'INVALID_MESSAGE', 'INTERNAL', 'TRANSACTION_PENDING', 'BUSY', 'RESOURCE_EXHAUSTED'];
+    let code = typeof candidate === 'number' && Number.isSafeInteger(candidate) ? String(candidate) :
+      typeof candidate === 'string' && codes.includes(candidate) ? candidate : 'UNCLASSIFIED';
+    // The SDK timeout has no structured code. Recognize only its complete
+    // fixed grammar; never retain its request ID or arbitrary error text.
+    if (error instanceof Error && /^Reader-Core request timed out: [0-9]+$/.test(error.message)) code = 'TIMEOUT';
+    if (error instanceof Error && error.message ===
+      'Reader-Core command was not admitted: runtime result reservation contract failed; drain and recreate')
+      code = 'RESERVATION_CONTRACT_FAULT';
+    const kind = error instanceof ReadingRecordRecoveryError ? error.kind : 'pending';
+    const diagnostic = `stage=${stage};kind=${kind};name=${name};code=${code}`;
+    return new ReadingRecordRecoveryError(kind, error instanceof ReadingRecordRecoveryError ? error.message :
+      '阅读时长等待后台核对，待核对记录已保留。', diagnostic);
+  }
+
+  private utf8Bytes(value: string): number { return new util.TextEncoder().encodeInto(value).byteLength; }
 
   private async drainOutbox(): Promise<void> {
     await this.stagePending();
@@ -118,12 +180,14 @@ export class ReadingRecordGateway {
         let release: () => void = (): void => {};
         ReadingRecordGateway.writeTail = new Promise<void>((resolve): void => { release = resolve; });
         await prior;
+        let stage = 'store.open';
         try {
           this.assertCurrent();
           const store = await this.ensureStore();
+          stage = 'journal.read';
           const journal = await this.readJournal(store);
           if (journal !== undefined) await this.settleJournal(store, journal);
-        } finally { release(); }
+        } catch (error) { throw this.diagnosticError(stage, error); } finally { release(); }
         return;
       }
       await this.accumulate(intent);
@@ -141,20 +205,30 @@ export class ReadingRecordGateway {
 
   private mutateOutbox(mutation: () => void): Promise<void> {
     const work = this.outboxLane.then(async (): Promise<void> => {
-      this.assertCurrent();
-      const store = await this.ensureStore();
-      if (!this.outboxLoaded) await this.loadOutbox(store);
-      this.assertCurrent();
-      mutation();
-      this.dirty = true;
-      const snapshot: ReadingRecordOutbox = { version: 2, active: this.outboxActive, tail: this.outboxTail };
-      const encoded = JSON.stringify(snapshot);
-      await this.serializedStore(async (): Promise<void> => {
+      let stage = 'outbox.owner';
+      try {
         this.assertCurrent();
-        await store.put(READING_RECORD_OUTBOX_KEY, encoded);
-        await store.flush();
-      });
-      this.dirty = false;
+        stage = 'store.open';
+        const store = await this.ensureStore();
+        stage = 'outbox.load';
+        if (!this.outboxLoaded) await this.loadOutbox(store);
+        this.assertCurrent();
+        mutation();
+        this.dirty = true;
+        const snapshot: ReadingRecordOutbox = { version: 2, active: this.outboxActive, tail: this.outboxTail };
+        stage = 'outbox.encode';
+        const encoded = JSON.stringify(snapshot);
+        if (this.utf8Bytes(encoded) > READING_RECORD_OUTBOX_BYTES)
+          throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存超过容量，原记录与内存时长已保留。');
+        await this.serializedStore(async (): Promise<void> => {
+          this.assertCurrent();
+          stage = 'outbox.put';
+          await store.put(READING_RECORD_OUTBOX_KEY, encoded);
+          stage = 'outbox.flush';
+          await store.flush();
+        });
+        this.dirty = false;
+      } catch (error) { throw this.diagnosticError(stage, error); }
     });
     this.outboxLane = work.then((): void => {}, (): void => {});
     return work;
@@ -180,7 +254,7 @@ export class ReadingRecordGateway {
     if (typeof raw !== 'string') throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存格式无效，原记录已保留。');
     const restored: ReadingRecordIntent[] = [];
     if (raw.length > 0) {
-      if (raw.length > 1048576) throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存超过容量，原记录已保留。');
+      if (this.utf8Bytes(raw) > READING_RECORD_OUTBOX_BYTES) throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存超过容量，原记录已保留。');
       const value = JSON.parse(raw) as ReadingRecordOutbox;
       if (value.version !== 2 || !Array.isArray(value.tail) || value.tail.length + (value.active === undefined ? 0 : 1) > READING_RECORD_OUTBOX_LIMIT)
         throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存格式无效，原记录已保留。');
@@ -218,12 +292,13 @@ export class ReadingRecordGateway {
       this.inbox.set(extra.bookName, previous === undefined ? extra : this.mergeElapsed(previous, extra));
     }
     this.outboxLoaded = true;
+    for (const intent of carried) this.acceptedObjects.add(intent);
     ReadingRecordGateway.retiredMemory = [];
   }
 
   private checkUnassignedIntent(intent: ReadingRecordIntent): void {
     if (typeof intent.acceptanceId !== 'string' || intent.acceptanceId.length === 0 || intent.acceptanceId.length > 256 ||
-      typeof intent.bookName !== 'string' || intent.bookName.trim().length === 0 || intent.bookName.length > 4096 ||
+      typeof intent.bookName !== 'string' || intent.bookName.trim().length === 0 || this.utf8Bytes(intent.bookName) > 4096 ||
       !Number.isSafeInteger(intent.elapsedMillis) || intent.elapsedMillis <= 0 || !Number.isSafeInteger(intent.readAt) || intent.readAt < 0 ||
       intent.operationId !== undefined || intent.sequence !== undefined || intent.deviceId !== undefined)
       throw new ReadingRecordRecoveryError('blocked', '阅读时长暂存身份无效，未覆盖原记录。');
@@ -255,7 +330,7 @@ export class ReadingRecordGateway {
 
   createIntent(bookName: string, elapsedMillis: number, readAt: number): ReadingRecordIntent {
     const normalized = bookName.trim();
-    if (normalized.length === 0 || normalized.length > 4096 || !Number.isSafeInteger(elapsedMillis) || elapsedMillis <= 0 ||
+    if (normalized.length === 0 || this.utf8Bytes(normalized) > 4096 || !Number.isSafeInteger(elapsedMillis) || elapsedMillis <= 0 ||
       !Number.isSafeInteger(readAt) || readAt < 0) throw new Error('read-record delta requires valid identity/time');
     return new ReadingRecordIntent(util.generateRandomUUID(), normalized, elapsedMillis, readAt);
   }
@@ -266,9 +341,12 @@ export class ReadingRecordGateway {
     const tail = new Promise<void>((resolve: () => void): void => { release = resolve; });
     ReadingRecordGateway.writeTail = tail;
     await prior;
+    let stage = 'accumulate.owner';
     try {
       this.assertCurrent();
+      stage = 'store.open';
       const store = await this.ensureStore();
+      stage = 'journal.read';
       let journal = await this.readJournal(store);
       if (journal !== undefined) {
         // A competing caller can never overwrite a durable pending delta.
@@ -280,7 +358,9 @@ export class ReadingRecordGateway {
           return record;
         }
       }
+      stage = 'receipt.read';
       const head = await this.readHead();
+      stage = 'receipt.check';
       if (intent.sequence !== undefined || intent.operationId !== undefined || intent.deviceId !== undefined) {
         // A put may reject before its side effect, or a lost flush ACK may
         // leave no journal on read-back. Keep the complete originally assigned
@@ -301,6 +381,7 @@ export class ReadingRecordGateway {
       if (!Number.isSafeInteger(watermark) || watermark >= Number.MAX_SAFE_INTEGER)
         throw new ReadingRecordRecoveryError('blocked', '阅读时长流水号已达到上限，不能重置或继续累计。');
       const sequence = watermark + 1;
+      stage = 'device.identity';
       const deviceId = await this.deviceId();
       journal = { phase: 'pending', acceptanceId: intent.acceptanceId, deviceId, bookName: intent.bookName,
         elapsedMillis: intent.elapsedMillis, readAt: intent.readAt, operationId: `${deviceId}/${sequence}`, sequence };
@@ -310,55 +391,64 @@ export class ReadingRecordGateway {
       await this.writeJournal(store, journal);
       return await this.settleJournal(store, journal);
     } catch (error) {
-      if (error instanceof ReadingRecordRecoveryError) throw error;
-      throw new ReadingRecordRecoveryError('pending', `阅读时长等待后台核对：${error instanceof Error ? error.message : String(error)}`);
+      throw this.diagnosticError(stage, error);
     } finally { release(); }
   }
 
   private async settleJournal(store: preferences.Preferences, journal: ReadingRecordJournal): Promise<ReadingRecord> {
-    this.assertCurrent();
-    // Even a cached pending/confirmed row is never a durable flush receipt.
-    // Retry the same idempotent snapshot and require its actual flush ACK.
-    await this.writeJournal(store, journal);
-    const head = await this.readHead();
-    if (head !== undefined && head.sequence > journal.sequence && journal.phase === 'pending') {
-      throw new ReadingRecordRecoveryError('blocked', '当前流水已越过这段待核对时长，最新回执无法证明它是否已累计。请继续阅读并保留记录，不能按总时长推断或重写。');
-    }
-    if (journal.phase === 'confirmed') {
-      // This phase was written only after an actual Core ACK/exact receipt.
-      // It is retained until this flush ACK, before admitting the next delta.
-      if (head === undefined || head.sequence < journal.sequence) throw new ReadingRecordRecoveryError('blocked', '阅读时长水位已被重置，无法安全继续。');
-      if (head.sequence === journal.sequence) { this.checkReceipt(head, journal); return head.record; }
-      // An already-confirmed historical delta needs no new native write. Its
-      // current caller cannot claim the latest receipt is that old operation.
-      if (journal.receipt === undefined) throw new ReadingRecordRecoveryError('blocked', '已确认时长缺少精确回执，已停止覆盖。');
-      this.checkReceipt(journal.receipt, journal);
-      return journal.receipt.record;
-    }
-    let receipt: ReadingRecordReceipt;
-    if (head?.sequence === journal.sequence) {
-      this.checkReceipt(head, journal);
-      receipt = head;
-    } else {
+    let stage = 'journal.owner';
+    try {
       this.assertCurrent();
-      const result = await this.runtimeOwner.request('read-record.accumulate', {
-        operationId: journal.operationId, sequence: journal.sequence, deviceId: journal.deviceId,
-        bookName: journal.bookName, elapsedMillis: journal.elapsedMillis, readAt: journal.readAt,
-      }, { timeoutMs: 15000 });
-      receipt = this.decodeReceipt(result.data['receipt']);
-      this.checkReceipt(receipt, journal);
-    }
-    this.assertCurrent();
-    journal.phase = 'confirmed';
-    journal.receipt = receipt;
-    await this.writeJournal(store, journal);
-    return receipt.record;
+      // Even a cached pending/confirmed row is never a durable flush receipt.
+      // Retry the same idempotent snapshot and require its actual flush ACK.
+      await this.writeJournal(store, journal);
+      const head = await this.readHead();
+      stage = 'receipt.check';
+      if (head !== undefined && head.sequence > journal.sequence && journal.phase === 'pending') {
+        throw new ReadingRecordRecoveryError('blocked', '当前流水已越过这段待核对时长，最新回执无法证明它是否已累计。请继续阅读并保留记录，不能按总时长推断或重写。');
+      }
+      if (journal.phase === 'confirmed') {
+        // This phase was written only after an actual Core ACK/exact receipt.
+        // It is retained until this flush ACK, before admitting the next delta.
+        if (head === undefined || head.sequence < journal.sequence) throw new ReadingRecordRecoveryError('blocked', '阅读时长水位已被重置，无法安全继续。');
+        if (head.sequence === journal.sequence) { this.checkReceipt(head, journal); return head.record; }
+        // An already-confirmed historical delta needs no new native write. Its
+        // current caller cannot claim the latest receipt is that old operation.
+        if (journal.receipt === undefined) throw new ReadingRecordRecoveryError('blocked', '已确认时长缺少精确回执，已停止覆盖。');
+        this.checkReceipt(journal.receipt, journal);
+        return journal.receipt.record;
+      }
+      let receipt: ReadingRecordReceipt;
+      if (head?.sequence === journal.sequence) {
+        this.checkReceipt(head, journal);
+        receipt = head;
+      } else {
+        this.assertCurrent();
+        stage = 'core.accumulate';
+        const result = await this.runtimeOwner.request('read-record.accumulate', {
+          operationId: journal.operationId, sequence: journal.sequence, deviceId: journal.deviceId,
+          bookName: journal.bookName, elapsedMillis: journal.elapsedMillis, readAt: journal.readAt,
+        }, { timeoutMs: 15000 });
+        stage = 'receipt.decode';
+        receipt = this.decodeReceipt(result.data['receipt']);
+        this.checkReceipt(receipt, journal);
+      }
+      this.assertCurrent();
+      journal.phase = 'confirmed';
+      journal.receipt = receipt;
+      await this.writeJournal(store, journal);
+      return receipt.record;
+    } catch (error) { throw this.diagnosticError(stage, error); }
   }
 
   private async readHead(): Promise<ReadingRecordReceipt | undefined> {
-    this.assertCurrent();
-    const result = await this.runtimeOwner.request('read-record.accumulate-receipt', {}, { timeoutMs: 15000 });
-    return result.data['receipt'] === null ? undefined : this.decodeReceipt(result.data['receipt']);
+    let stage = 'receipt.read';
+    try {
+      this.assertCurrent();
+      const result = await this.runtimeOwner.request('read-record.accumulate-receipt', {}, { timeoutMs: 15000 });
+      stage = 'receipt.decode';
+      return result.data['receipt'] === null ? undefined : this.decodeReceipt(result.data['receipt']);
+    } catch (error) { throw this.diagnosticError(stage, error); }
   }
 
   private assertCurrent(): void {
@@ -400,7 +490,7 @@ export class ReadingRecordGateway {
       throw new ReadingRecordRecoveryError('blocked', '阅读时长待核对记录格式不合法，已保留并停止覆盖。');
     const value = parsed as ReadingRecordJournal;
     if ((value.phase !== 'pending' && value.phase !== 'confirmed') || typeof value.acceptanceId !== 'string' || value.acceptanceId.length === 0 || value.acceptanceId.length > 256 ||
-      typeof value.deviceId !== 'string' || value.deviceId.length === 0 || value.deviceId.length > 128 || typeof value.bookName !== 'string' || value.bookName.trim().length === 0 || value.bookName.length > 4096 ||
+      typeof value.deviceId !== 'string' || value.deviceId.length === 0 || value.deviceId.length > 128 || typeof value.bookName !== 'string' || value.bookName.trim().length === 0 || this.utf8Bytes(value.bookName) > 4096 ||
       !Number.isSafeInteger(value.sequence) || value.sequence <= 0 || value.operationId !== `${value.deviceId}/${value.sequence}` ||
       !Number.isSafeInteger(value.elapsedMillis) || value.elapsedMillis <= 0 || !Number.isSafeInteger(value.readAt) || value.readAt < 0)
       throw new ReadingRecordRecoveryError('blocked', '阅读时长待核对记录格式不合法，已保留并停止覆盖。');
@@ -412,13 +502,18 @@ export class ReadingRecordGateway {
   }
 
   private async writeJournal(store: preferences.Preferences, journal: ReadingRecordJournal): Promise<void> {
-    this.assertCurrent();
-    const encoded = JSON.stringify(journal);
-    await this.serializedStore(async (): Promise<void> => {
+    let stage = 'journal.encode';
+    try {
       this.assertCurrent();
-      await store.put(READING_RECORD_JOURNAL_KEY, encoded);
-      await store.flush();
-    });
+      const encoded = JSON.stringify(journal);
+      await this.serializedStore(async (): Promise<void> => {
+        this.assertCurrent();
+        stage = 'journal.put';
+        await store.put(READING_RECORD_JOURNAL_KEY, encoded);
+        stage = 'journal.flush';
+        await store.flush();
+      });
+    } catch (error) { throw this.diagnosticError(stage, error); }
   }
 
   private decodeReceipt(value: unknown): ReadingRecordReceipt {

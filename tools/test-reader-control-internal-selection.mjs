@@ -238,8 +238,8 @@ for (const deferred of [false, true]) {
   host.seekControlProgress(40); commit(host, host.pendingControlSelection.targetChapterIndex, 0);
   assert.equal(host.hideCalls, 0, 'a third continuous adjustment remains available');
 }
-assert.match(method('showControlSelectionFailure'), /retry\.controlOwnerRevision, retry\.closeControlOnCommit/,
-  'a failed scrub retry preserves its no-close policy and recoverable selection owner');
+assert.doesNotMatch(method('showControlSelectionFailure'), /showReaderAlert|showAlertDialog|selectChapterAnchor|hideControl/,
+  'failure feedback neither replays a selection nor closes its control owner');
 {
   const host = owner();
   host.pageTurnSettlementActive = true;
@@ -252,9 +252,10 @@ assert.match(method('showControlSelectionFailure'), /retry\.controlOwnerRevision
     'deferred user choice reuses the origin owner instead of capturing a new opening');
   commit(host, 3, 70); assert.equal(host.hideCalls, 0);
 }
-assert.match(method('showControlSelectionFailure'),
-  /retry\.stopTts, retry\.requestedProgress, retry\.controlOwnerRevision/,
-  'explicit retry also preserves the original selection owner');
+assert.match(method('showControlSelectionFailure'), /showReaderBackgroundNotice/,
+  'failure retains optional nonblocking feedback');
+assert.match(method('showControlSelectionFailure'), /this\.failureCode = this\.errorMessage\(error\)/,
+  'removing the modal preserves the failure diagnostic');
 // An already committed directory chapter uses the existing safe no-load close.
 {
   const host = owner();

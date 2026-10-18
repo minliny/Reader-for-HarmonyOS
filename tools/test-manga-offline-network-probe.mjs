@@ -372,6 +372,7 @@ want.parameters?.readerOpenSourcePilot,want.parameters?.readerEventLoopProbe,wan
 declare const MangaChapterPreparationCoordinator: {forRuntime(owner:object):{close():Promise<void>}};
 class RuntimeSeam {
 private state:'new'|'starting'|'ready'|'closing'|'closed'='ready';
+private reservationQuarantineDiagnosticLogged:boolean=false;
 private mangaImageTail:Promise<void>=Promise.resolve();
 private downloadStorageGateway:{waitForActiveMutation():Promise<void>}|undefined;
 private mangaDisplaySessions:Map<number,{current:()=>boolean}>=new Map();

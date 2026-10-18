@@ -12,9 +12,11 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const dir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const gatewaySource = readFileSync(new URL('ReadingRecordGateway.ts', dir), 'utf8');
 let activeRuntime, storeFactory, ids = 0;
-const loadGateway = source => new Function('preferences', 'util', 'ReaderRuntimeOwner', 'ReadingRecordIntent', 'ReadingRecordRecoveryError',
+const diagnosticLogs=[];
+const loadGateway = source => new Function('preferences', 'util', 'hilog', 'ReaderRuntimeOwner', 'ReadingRecordIntent', 'ReadingRecordRecoveryError',
   `${stripTypeScriptTypes(source.replace(/^import[^\n]*\n/gm, '')).replace('export class ', 'class ')}; return ReadingRecordGateway;`)
-  ({ getPreferences: () => storeFactory() }, { generateRandomUUID: () => `actual-intent-${++ids}` },
+  ({ getPreferences: () => storeFactory() }, { generateRandomUUID: () => `actual-intent-${++ids}`, TextEncoder: class { encodeInto(value){return new TextEncoder().encode(value);} } },
+    {warn(...args){diagnosticLogs.push(args.at(-1));}},
     { isCurrent: owner => owner === activeRuntime }, ReadingRecordIntent, ReadingRecordRecoveryError);
 const Gateway = loadGateway(gatewaySource);
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return {promise,resolve,reject}; };
@@ -197,7 +199,7 @@ for(const failure of ['native','pending','confirmed']) {
 {
   const f=fixture(), host=new ReaderReadingRecordHost(f.gateway,()=> 'book',()=>{});
   host.pendingMillis=100;f.lostWrite();await host.flushForExit();await settle();
-  assert.match(f.gateway.recoveryState().lastError,/lost native write ACK/,'original failure remains queryable');
+  assert.match(f.gateway.recoveryState().lastError,/stage=core.accumulate;kind=pending;name=Error;code=UNCLASSIFIED/,'bounded failure metadata remains queryable');
   const assigned={...f.writes[0]};f.gateway.stopBackground();
   // Simulate process death: only persisted v2 outbox/v1 journal survive.
   Gateway.retiredMemory=[];
@@ -212,7 +214,8 @@ for(const failure of ['native','pending','confirmed']) {
   assert.equal(host.pendingMillis,0,'Runtime accepted ownership even when persistence is unavailable');
   assert.equal(f.writes.length,0,'no Core mutation before durable outbox staging');
   assert.equal(f.gateway.recoveryState().pendingMillis,90);assert.equal(f.gateway.recoveryState().durable,false);
-  assert.match(f.gateway.recoveryState().lastError,/ENOSPC/);
+  assert.match(f.gateway.recoveryState().lastError,/stage=outbox.flush/);
+  assert.doesNotMatch(f.gateway.recoveryState().lastError,/ENOSPC|Preferences unavailable/);
   f.diskUnavailable(false);await f.gateway.recover();
   assert.equal(f.writes.length,1);assert.equal(f.writes[0].elapsedMillis,90);
   assert.equal(f.gateway.recoveryState().pendingMillis,0);assert.equal(f.gateway.recoveryState().lastError,'');
@@ -273,4 +276,140 @@ for(const malformed of [false,'null','{"version":2,"tail":[{"acceptanceId":"x"}]
   host.retire();gate.resolve();await f.gateway.recover();assert.equal(f.journal().phase,'confirmed');
   f.gateway.stopBackground();
 }
-console.log('PASS actual duration Host/Gateway: exact v1 receipt identity, independent bounded durable outbox, cold/legacy recovery, unknown ACK, nonblocking exit/retirement, merged tail, disk failure recovery and explicit capacity overflow.');
+// These additional lifecycle assertions cover the merged duration owner;
+// the main reading-progress journal and TTS recovery remain independently tested.
+{
+  const owner=readFileSync(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),'utf8');
+  assert.match(owner,/private readingRecordGateway: ReadingRecordGateway \| undefined/);
+  const method=owner.match(/  getReadingRecordGateway\(\): ReadingRecordGateway \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(method,'Runtime owns a single lazy duration Gateway');
+  let created=0;
+  const Owner=new Function('ReadingRecordGateway',stripTypeScriptTypes(
+    `class Owner { ${method} }`)+'; return Owner;')(class {constructor(owner){this.owner=owner;created++;}});
+  const runtime=new Owner();assert.equal(runtime.getReadingRecordGateway(),runtime.getReadingRecordGateway());
+  assert.equal(created,1,'multiple route consumers share one outbox');
+  assert.match(owner,/this\.runtime = runtime;\s*this\.state = 'ready';\s*void this\.getReadingRecordGateway\(\)\.recover\(\)/,
+    'cold recovery starts only after publishing the ready Native runtime');
+  assert.match(owner,/if \(foreground && this\.state === 'ready'\) \{\s*void this\.getReadingRecordGateway\(\)\.recover\(\)/,
+    'foreground wakes duration recovery without awaiting it');
+  assert.match(owner,/async close\(\): Promise<void> \{\s*this\.readingRecordGateway\?\.stopBackground\(\)/,
+    'close transfers in-process pending work before Runtime teardown');
+}
+
+// Execute the real Owner close and real component clock/retirement methods.
+// UI teardown may happen before or after the successor has loaded its outbox.
+for(const successorAlreadyLoaded of [false,true]) {
+  const f=fixture();let now=100,oldNativeCalls=0;
+  const request=f.runtime.request;
+  f.runtime.request=async function(...args){if(this===f.runtime) oldNativeCalls++;return request(...args);};
+  const host=new ReaderReadingRecordHost(f.gateway,()=> 'late-retire',()=>{},()=>now,()=>1,()=>{});
+  host.begin(()=>true);now=200;
+  const source=readFileSync(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url),'utf8');
+  const close=source.match(/  async close\(\): Promise<void> \{[\s\S]*?\n  \}/)?.[0];assert.ok(close);
+  const Owner=new Function('ReadingBodyImageHost',stripTypeScriptTypes(`class Owner { ${close} }`)+';return Owner;')
+    ({instance:{setMangaMetadataInspector(){}}});
+  const owner=Object.assign(new Owner(),{readingRecordGateway:f.gateway,state:'ready',
+    closeDownloadsAndRuntime:async()=>{}});
+  await owner.close();
+  let next;
+  if(successorAlreadyLoaded) {next=f.remount();await next.recover();}
+  host.retire();host.retire();
+  assert.equal(host.pendingMillis,0,'late component time has transferred ownership');
+  if(!next) {assert.equal(Gateway.retiredMemory.reduce((sum,x)=>sum+x.elapsedMillis,0),100);next=f.remount();await next.recover();}
+  await settle();
+  assert.equal(f.writes.reduce((sum,x)=>sum+x.elapsedMillis,0),100,
+    'late retirement is automatically recovered even by an already-loaded successor');
+  const repeated=f.gateway.createIntent('same-late-object',50,201);
+  f.gateway.handoff(repeated);f.gateway.handoff(repeated);next.handoff(repeated);
+  await settle();assert.equal(f.writes.reduce((sum,x)=>sum+x.elapsedMillis,0),150);
+  await owner.close();
+  assert.equal(Gateway.currentReceiver,next,'a repeated predecessor close cannot clear the new receiver');
+  host.pendingMillis=25;host.retire();await settle();
+  assert.equal(f.writes.reduce((sum,x)=>sum+x.elapsedMillis,0),175);
+  assert.equal(oldNativeCalls,0,'late handoff never starts a request on the closed runtime');
+  assert.equal(next.recoveryState().pendingMillis,0);
+  next.stopBackground();assert.equal(Gateway.currentReceiver,undefined);
+}
+
+{
+  const f=fixture();f.gateway.stopBackground();
+  const intent=f.gateway.createIntent('carried-same-object',100,1);f.gateway.handoff(intent);
+  const next=f.remount();next.handoff(intent);next.handoff(intent);
+  await next.recover();next.handoff(intent);await settle();
+  assert.equal(f.writes.length,1);assert.equal(f.writes[0].elapsedMillis,100,
+    'same object cannot enter both the predecessor carry lane and successor inbox');
+  next.stopBackground();
+}
+
+// Weak object identity only: this is not a claim about replaying a cloned
+// intent or arbitrary cold-start acceptance IDs.
+{
+  const f=fixture(),intent=f.gateway.createIntent('same-object',100,10);
+  f.gateway.handoff(intent);f.gateway.handoff(intent);await f.gateway.recover();
+  f.gateway.handoff(intent);await f.gateway.recover();
+  assert.equal(f.writes.length,1);assert.equal(f.writes[0].elapsedMillis,100);
+  f.gateway.stopBackground();
+}
+{
+  const f=fixture();
+  assert.equal(new TextEncoder().encode(f.gateway.createIntent('汉'.repeat(1365)+'a',1,1).bookName).length,4096);
+  assert.throws(()=>f.gateway.createIntent('汉'.repeat(1366),1,1));
+  assert.throws(()=>f.gateway.handoff(new ReadingRecordIntent('long','汉'.repeat(1366),1,1)));
+  const invalid={phase:'pending',acceptanceId:'old',deviceId:'harmony-device',bookName:'汉'.repeat(1366),
+    elapsedMillis:1,readAt:1,operationId:'harmony-device/1',sequence:1};
+  const encoded=JSON.stringify(invalid);f.cache.set('delta-journal-v1',encoded);
+  await assert.rejects(f.gateway.accumulate(f.gateway.createIntent('new',1,2)),e=>e.kind==='blocked');
+  assert.equal(f.cache.get('delta-journal-v1'),encoded);assert.equal(f.writes.length,0);
+  f.gateway.stopBackground();
+}
+{
+  const f=fixture();await f.gateway.recover();
+  const prior=f.cache.get('delta-outbox-v2');
+  // Valid 4096-byte names whose JSON control escaping exceeds the snapshot
+  // limit. Admission keeps all elapsed values in process and preserves disk.
+  for(let i=0;i<50;i++) f.gateway.handoff(f.gateway.createIntent('\u0001'.repeat(4090)+String(i),1,i));
+  await f.gateway.recover();await settle();
+  assert.equal(f.cache.get('delta-outbox-v2'),prior,'oversized serialization never overwrites prior readable snapshot');
+  assert.equal(f.writes.length,0);assert.equal(f.gateway.recoveryState().pendingMillis,50);
+  assert.equal(f.gateway.recoveryState().durable,false);
+  assert.match(f.gateway.recoveryState().lastError,/stage=outbox.encode;kind=blocked/);
+  f.gateway.stopBackground();Gateway.retiredMemory=[];
+}
+for(const raw of [' '.repeat(1048577), '汉'.repeat(350000), JSON.stringify({version:2,tail:[
+  {acceptanceId:'v2-invalid-name',bookName:'汉'.repeat(1366),elapsedMillis:1,readAt:1}]})]) {
+  const f=fixture();f.cache.set('delta-outbox-v2',raw);
+  await f.gateway.recover();assert.equal(f.cache.get('delta-outbox-v2'),raw);
+  assert.match(f.gateway.recoveryState().lastError,/stage=outbox.load;kind=blocked/);
+  assert.equal(f.writes.length,0);
+  f.gateway.stopBackground();Gateway.retiredMemory=[];
+}
+
+for(const metadata of [{name:'ReaderCoreRequestError',event:{error:{code:'TIMEOUT'}}},
+  {name:'BusinessError',code:15500019},{name:'SECRET_NAME',code:'SECRET_CODE'}]) {
+  const f=fixture();f.runtime.request=async()=>{throw Object.assign(Error('SECRET_BOOK_TOKEN'.repeat(200)),metadata);};
+  f.gateway.handoff(f.gateway.createIntent('SECRET_BOOK_TOKEN',1,1));await f.gateway.recover();
+  const diagnostic=f.gateway.recoveryState().lastError;
+  assert.match(diagnostic,/stage=receipt.read;kind=pending/);assert.ok(diagnostic.length<200);
+  assert.doesNotMatch(diagnostic,/SECRET|stack|message/);
+  assert.match(diagnostic,metadata.name==='ReaderCoreRequestError'?/name=ReaderCoreRequestError;code=TIMEOUT/:
+    metadata.name==='BusinessError'?/name=BusinessError;code=15500019/:/name=Other;code=UNCLASSIFIED/);
+  f.gateway.stopBackground();Gateway.retiredMemory=[];
+}
+for(const [message,structuredCode,expected] of [
+  ['Reader-Core request timed out: 123456',undefined,'TIMEOUT'],
+  ['Reader-Core request timed out: 123456 SECRET',undefined,'UNCLASSIFIED'],
+  ['prefix Reader-Core request timed out: 123456',undefined,'UNCLASSIFIED'],
+  ['Reader-Core command was not admitted','BUSY','BUSY'],
+  ['Reader-Core command was not admitted','RESOURCE_EXHAUSTED','RESOURCE_EXHAUSTED'],
+  ['Reader-Core command was not admitted: runtime result reservation contract failed; drain and recreate','BUSY','RESERVATION_CONTRACT_FAULT'],
+  ['SECRET runtime result reservation contract failed; drain and recreate',undefined,'UNCLASSIFIED']]) {
+  const f=fixture();f.runtime.request=async()=>{throw Object.assign(Error(message),{code:structuredCode});};
+  f.gateway.handoff(f.gateway.createIntent('secret-book',1,1));await f.gateway.recover();
+  const diagnostic=f.gateway.recoveryState().lastError;
+  assert.equal(diagnostic,`stage=receipt.read;kind=pending;name=Error;code=${expected}`);
+  assert.doesNotMatch(diagnostic,/123456|SECRET|secret-book/);
+  f.gateway.stopBackground();Gateway.retiredMemory=[];
+}
+assert.ok(diagnosticLogs.length>0);assert.ok(diagnosticLogs.every(line=>line.length<200&&!/SECRET_BOOK_TOKEN|SECRET_NAME|SECRET_CODE/.test(line)));
+
+console.log('PASS actual duration Host/Gateway: exact v1 receipt identity, independent bounded durable outbox, cold/legacy recovery, unknown ACK, nonblocking exit/retirement, merged tail, disk failure recovery, explicit capacity overflow, bounded private diagnostics, UTF-8/snapshot limits, same-object handoff deduplication and late component retirement after Runtime close.');
