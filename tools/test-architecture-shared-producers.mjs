@@ -1,10 +1,16 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { verifyArchitectureRegistration, registeredProducerTypographySlots } from './lib/architecture-shared-producer-contract.mjs';
+import { createRequire } from 'node:module';
+import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
+import { verifyArchitectureRegistration, registeredProducerTypographySlots, sharedProducerShape,
+ producerConsumerEdges, architectureProducerCacheStats, architectureRegistrationParseStats } from './lib/architecture-shared-producer-contract.mjs';
+import { auditNativeTextElements, auditTypographyConsumers } from './lib/reader-typography-consumer-audit.mjs';
 const root=process.cwd(),baseline=JSON.parse(readFileSync('tools/architecture-consumer-baseline.json','utf8')),contract=JSON.parse(readFileSync('tools/fixtures/architecture-shared-producers.json','utf8'));
 const inventory=JSON.parse(execFileSync(process.execPath,['tools/audit-architecture-consumers.mjs','--stdout=json'],{cwd:root,encoding:'utf8',maxBuffer:16*1024*1024,stdio:['ignore','pipe','ignore']}));
-const result=verifyArchitectureRegistration(inventory,baseline,contract,root);
+const parseBefore=architectureRegistrationParseStats(),result=verifyArchitectureRegistration(inventory,baseline,contract,root);
+assert.equal(architectureRegistrationParseStats().parses-parseBefore.parses,2,'one call parses current Directory and Index once each');
+assert.equal(architectureRegistrationParseStats().hits-parseBefore.hits,1,'the second layout witness reuses that call\'s exact Index AST');
 for(const novelFile of ['entry/src/main/ets/features/source/SourceSwitchWindow.ets','entry/src/main/ets/features/source/SourceSwitchProgress.ets']){
  const source=readFileSync(novelFile,'utf8'),role=novelFile.endsWith('/SourceSwitchWindow.ets')?'TOK_PRIMARY_SOFT':'TOK_SS_PROGRESS_BG';
  const changed=source.replace(`readerAppColor('${role}', this.appThemeScheme)`,"readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme)");assert.notEqual(changed,source);
@@ -238,3 +244,77 @@ assert.deepEqual(statusPolicy.directoryIntegrationPriorCounts, { fontSize: 13, b
 assert.deepEqual(statusPolicy.counts, { fontSize: 15, backgroundColor: 4 });
 const raisedDirectoryStatus = structuredClone(baseline); raisedDirectoryStatus.uiPolicies.find(row => row.file === directoryStatusPath).counts.fontSize++;
 assert.throws(() => verifyArchitectureRegistration(inventory, raisedDirectoryStatus, contract, root), /finite outside100 directory state counts/, 'status successor cannot silently inflate historical budget');
+
+// Cache counterfactuals execute the real installed parser. Only successful
+// derived artifacts may be reused; all registration/negative controls above
+// still run, and no caller can mutate a later case through a cached object.
+{
+ const file='entry/src/main/ets/features/common/ReaderBoundedSurfaceHeader.ets';
+ const source=readFileSync(file,'utf8')+'\n// architecture cache counterfactual\n';
+ const before=architectureProducerCacheStats().shape,first=sharedProducerShape(source,file),expected=structuredClone(first);
+ assert.equal(architectureProducerCacheStats().shape.misses,before.misses+1);
+ assert.deepEqual(sharedProducerShape(source,file),expected);
+ assert.equal(architectureProducerCacheStats().shape.hits,before.hits+1);
+ first.styles[0].args.push('private-cache-poison');
+ assert.deepEqual(sharedProducerShape(source,file),expected,'returned shape mutation cannot contaminate a later case');
+ const changed=source.replace('.fontSize(type.fontSizeFp)','.fontSize(99)');assert.notEqual(changed,source);
+ let misses=architectureProducerCacheStats().shape.misses;
+ assert.notDeepEqual(sharedProducerShape(changed,file),expected,'same-count source mutant gets its own official shape');
+ assert.equal(architectureProducerCacheStats().shape.misses,misses+1);
+ misses=architectureProducerCacheStats().shape.misses;
+ assert.deepEqual(sharedProducerShape(source+'// different exact bytes\n',file),expected);
+ assert.equal(architectureProducerCacheStats().shape.misses,misses+1,'complete source bytes, including comments, are cache inputs');
+ misses=architectureProducerCacheStats().shape.misses;
+ sharedProducerShape(source,file.replace('ReaderBoundedSurfaceHeader','CacheCounterfactualHeader'));
+ assert.equal(architectureProducerCacheStats().shape.misses,misses+1,'path-specific scale policy cannot borrow another path');
+ const compilerOptions=createRequire(import.meta.url)(resolveEtsLoaderRoot()+'/lib/ets_checker.js').compilerOptions;
+ const hadOption=Object.hasOwn(compilerOptions,'strictNullChecks'),previousOption=compilerOptions.strictNullChecks;
+ try {
+  compilerOptions.strictNullChecks=!previousOption;misses=architectureProducerCacheStats().shape.misses;
+  assert.deepEqual(sharedProducerShape(source,file),expected);
+  assert.equal(architectureProducerCacheStats().shape.misses,misses+1,'current full SDK compiler options are cache inputs');
+ } finally {if(hadOption)compilerOptions.strictNullChecks=previousOption;else delete compilerOptions.strictNullChecks;}
+ const entries=architectureProducerCacheStats().shape.entries;
+ for(let attempt=0;attempt<2;attempt++)assert.throws(()=>sharedProducerShape('@Component struct {',file),/SDK AST/);
+ assert.equal(architectureProducerCacheStats().shape.entries,entries,'parser diagnostics never enter the successful-artifact cache');
+ const slots=registeredProducerTypographySlots(source,file,{producers:[{file,shape:expected}]});
+ const argument='987654321 /* architecture argument cache counterfactual */',argumentBefore=architectureProducerCacheStats().argument;
+ assert.equal(slots.has('applyNormalAttribute','fontSize',argument),false);
+ assert.equal(slots.has('applyNormalAttribute','fontSize',argument),false);
+ assert.equal(architectureProducerCacheStats().argument.misses,argumentBefore.misses+1);
+ assert.equal(architectureProducerCacheStats().argument.hits,argumentBefore.hits+1);
+ for(let attempt=0;attempt<2;attempt++)assert.throws(()=>slots.has('applyNormalAttribute','fontSize','('),/Typography argument/);
+ const row={file:'features/common/CacheCounterfactual.ets',elements:[{kind:'ReaderCard',customTarget:'actual#ReaderCard#build',
+  method:'build',line:1,args:["{ specId: 'cache-counterfactual' }"]}]},input={rows:[row]},edgeBefore=architectureProducerCacheStats().edge;
+ const firstEdges=producerConsumerEdges(input,'ReaderCard'),expectedEdges=structuredClone(firstEdges);
+ assert.deepEqual(producerConsumerEdges(input,'ReaderCard'),expectedEdges);
+ assert.equal(architectureProducerCacheStats().edge.misses,edgeBefore.misses+1);
+ assert.equal(architectureProducerCacheStats().edge.hits,edgeBefore.hits+1);
+ firstEdges[0].keys.push('private-cache-poison');
+ assert.deepEqual(producerConsumerEdges(input,'ReaderCard'),expectedEdges);
+ row.elements[0].args[0]="{ specId: 'cache-counterfactual', radius: 99 }";
+ assert.ok(producerConsumerEdges(input,'ReaderCard')[0].keys.includes('radius'),'same-count input mutant remains visible to every registration assertion');
+ row.elements[0].method='changedBuilder';
+ assert.equal(producerConsumerEdges(input,'ReaderCard')[0].method,'changedBuilder','consumer identity is part of the cached edge input');
+}
+console.log('PASS official architecture artifact cache: exact source/path/options misses, real parser diagnostics, consumer mutants and caller-mutation isolation.');
+
+// Shared ASTs never reuse facts or accept another path/source. The ordinary
+// parser still sees each mutant; the next global verification has no AST map
+// from any preceding negative control.
+{
+ const sdk=resolveEtsLoaderRoot(),require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
+ const file='ArchitectureAstReuseControl.ets',source="@Component struct ArchitectureAstReuseControl { build() { Text('first').fontSize(13); } }";
+ const tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);
+ const first=auditNativeTextElements(source,file,tree),expected=structuredClone(first);
+ assert.deepEqual(auditNativeTextElements(source,file),expected,'reused AST and fresh official parse produce the same native facts');
+ first[0].attributes.fontSize='private-poison';
+ assert.deepEqual(auditNativeTextElements(source,file,tree),expected,'each traversal returns new native/font facts');
+ const mutant=source.replace("'first'","'second'");assert.notEqual(mutant,source);
+ assert.throws(()=>auditNativeTextElements(mutant,file,tree),/AST bytes match current source/);
+ assert.throws(()=>auditTypographyConsumers(mutant,file,tree),/AST bytes match current source/);
+ assert.throws(()=>auditNativeTextElements(source,'OtherArchitectureAst.ets',tree),/AST path matches current source/);
+ assert.equal(auditNativeTextElements(mutant,file)[0].text,"'second'",'same-count source mutant executes a real new official parse');
+ assert.ok(architectureRegistrationParseStats().parses>2,'later global negative controls each started a new parse session');
+}
+console.log('PASS per-verification Index/Directory AST reuse: exact path/full bytes, fresh native/font facts, wrong-source rejection and real same-count mutant parse; no cross-verification AST or PASS reuse.');

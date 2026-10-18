@@ -1,14 +1,19 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, copyFileSync, symlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { performance } from 'node:perf_hooks';
 import { runContracts, runContractsBounded, contractTests, MAX_CONTRACT_TIMEOUT_MS, MAX_CONTRACT_KILL_GRACE_MS } from './run-contract-tests.mjs';
 
+export async function runContractTierFixtures() {
 contractTests(fileURLToPath(new URL('..', import.meta.url)), 'full');
 
-const root = mkdtempSync(join(tmpdir(), 'reader-contract-gate-'));
+const workspace = mkdtempSync(join(tmpdir(), 'reader-contract-gate-'));
+const root = join(workspace, 'Reader-for-HarmonyOS');
+mkdirSync(root);
+symlinkSync(fileURLToPath(new URL('../../Reader-Core-Native', import.meta.url)), join(workspace, 'Reader-Core-Native'), 'junction');
 try {
   mkdirSync(join(root, 'tools'));
   const manifest = { schemaVersion: 1, source: ['test-pass.mjs'], integration: ['test-fail.mjs'] };
@@ -256,4 +261,235 @@ try {
   assert.ok(cleanRows.find(row => row.timedOut).temporaryStorageRemoved === false, 'expired exit0 cannot trigger successful scratch cleanup');
   assert.ok(ignoredRows.find(row => row.timedOut).temporaryStorageRemoved === false);
   console.log('PASS: complete inventory and explicit scope CLI, finite deadline, failed/unclassified/duplicate/empty tiers, timeout cleanup exit0, TERM ignore/KILL, actual concurrency bound and every selected settlement');
-} finally { rmSync(root, { recursive: true, force: true }); }
+} finally { rmSync(workspace, { recursive: true, force: true }); }
+}
+
+// Importable independently: these are real, tiny Node process groups. They do
+// not acquire a build lease or invoke SDK, Cargo, HDC or the full contract CLI.
+export async function runProcessTreeCleanupFixtures() {
+  if (process.platform === 'win32') {
+    console.log('NOT_RUN: POSIX process-tree fixtures; Windows retains direct-child capability without descendant proof');
+    return;
+  }
+  const fixture = mkdtempSync(join(tmpdir(), 'reader-contract-process-tree-'));
+  const ownedGroups = new Set(), reports = [];
+  let passed = false;
+  try {
+    for (const mode of ['clean', 'timeout', 'orphan-exit0', 'orphan-exit7', 'cancelled', 'unreclaimed']) {
+      const directory = join(fixture, mode), tools = join(directory, 'tools'), pidFile = join(directory, 'grandchild.pid');
+      const parentPidFile = join(directory, 'parent.pid'), sentinel = join(directory, 'must-not-run');
+      mkdirSync(tools, { recursive: true });
+      writeFileSync(join(tools, 'contract-test-tiers.json'), JSON.stringify({ schemaVersion: 1,
+        source: ['cancelled', 'unreclaimed'].includes(mode) ? ['test-a-tree.mjs', 'test-z-sentinel.mjs'] : ['test-a-tree.mjs'], integration: [] }));
+      const grandchild = `const {writeFileSync}=require('node:fs');` +
+        `process.on('SIGTERM',()=>{});setInterval(()=>{},1000);` +
+        `writeFileSync(${JSON.stringify(pidFile)},String(process.pid));process.send('ready');`;
+      const parent = mode === 'clean' ? 'process.exit(0);' :
+        `import {spawn} from 'node:child_process';import {writeFileSync} from 'node:fs';` +
+        `writeFileSync(${JSON.stringify(parentPidFile)},String(process.pid));process.on('SIGTERM',()=>{});` +
+        `const child=spawn(process.execPath,['-e',${JSON.stringify(grandchild)}],` +
+        `{stdio:['ignore','ignore','ignore','ipc']});` +
+        `child.once('message',()=>{${['timeout', 'cancelled', 'unreclaimed'].includes(mode) ? '' : `process.exit(${mode === 'orphan-exit7' ? 7 : 0});`}});`;
+      writeFileSync(join(tools, 'test-a-tree.mjs'), parent);
+      writeFileSync(join(tools, 'test-z-sentinel.mjs'), `import {writeFileSync} from 'node:fs';writeFileSync(${JSON.stringify(sentinel)},'unexpected');`);
+      if (!['cancelled', 'unreclaimed'].includes(mode)) rmSync(join(tools, 'test-z-sentinel.mjs'));
+      let report, failure;
+      const realKill = process.kill;
+      const cancellation = new AbortController();
+      try {
+        if (mode === 'unreclaimed') process.kill = (pid, requestedSignal = 'SIGTERM') => {
+          // Refuse termination only for this real, fixture-owned process group.
+          // Observation still goes to the OS; no invented PID or host load.
+          if (requestedSignal !== 0 && existsSync(parentPidFile) && pid === -Number(readFileSync(parentPidFile, 'utf8'))) {
+            throw Object.assign(new Error('fixture signal refusal'), { code: 'EPERM' });
+          }
+          return realKill(pid, requestedSignal);
+        };
+        const pending = runContractsBounded(directory, 'full', 1, { timeoutMs: 1000,
+          killGraceMs: mode === 'unreclaimed' ? 200 : 1000, signal: cancellation.signal })
+          .then(value => ({ report: value }), error => ({ failure: error, report: error.report }));
+        if (mode === 'cancelled') {
+          const readyDeadline = performance.now() + 1000;
+          while (!existsSync(pidFile)) {
+            assert.ok(performance.now() < readyDeadline, 'actual grandchild must be ready before cancellation');
+            await new Promise(resolveWait => setTimeout(resolveWait, 10));
+          }
+          cancellation.abort();
+        }
+        ({ report, failure } = await pending);
+      } finally { process.kill = realKill; }
+      assert.ok(report, failure?.stack);
+      reports.push(report);
+      const [row] = report.results;
+      ownedGroups.add(row.processGroupId);
+      if (mode === 'unreclaimed') {
+        assert.ok(failure); assert.equal(failure.treeSettled, false);
+        assert.equal(row.treeSettled, false); assert.equal(report.treeSettled, false);
+        assert.equal(report.treeRecoveryBlocked, true); assert.equal(report.results.length, 1);
+        assert.deepEqual(report.unrun, ['test-z-sentinel.mjs']); assert.equal(existsSync(sentinel), false);
+        assert.match(failure.message, /could not be reclaimed/);
+        process.kill(-row.processGroupId, 'SIGKILL');
+        const cleanupDeadline = performance.now() + 1000;
+        while (true) {
+          try { process.kill(-row.processGroupId, 0); }
+          catch (error) {
+            if (error.code === 'ESRCH') break;
+            // Teardown of the deliberately unreclaimed fixture is complete
+            // only on ESRCH. A transient EPERM after real KILL is not proof
+            // of settlement; keep waiting within the same bounded teardown.
+            if (error.code !== 'EPERM') throw error;
+          }
+          assert.ok(performance.now() < cleanupDeadline, 'fixture must reclaim its real group after restoring OS signals');
+          await new Promise(resolveWait => setTimeout(resolveWait, 10));
+        }
+        ownedGroups.delete(row.processGroupId);
+        continue;
+      }
+      assert.equal(row.treeSettled, true, `${mode}: every owned group must be gone before the result returns`);
+      assert.equal(report.treeSettled, true);
+      assert.throws(() => process.kill(-row.processGroupId, 0), error => error.code === 'ESRCH');
+      ownedGroups.delete(row.processGroupId);
+      if (mode === 'clean') {
+        assert.equal(failure, undefined); assert.equal(row.status, 0);
+        assert.equal(row.orphanDescendants, false); assert.deepEqual(row.termination, []);
+      } else {
+        assert.ok(failure, `${mode}: cleanup must not turn a timeout or orphan into PASS`);
+        const pid = Number(readFileSync(pidFile, 'utf8'));
+        assert.throws(() => process.kill(pid, 0), error => error.code === 'ESRCH', `${mode}: grandchild must not survive`);
+        assert.ok(row.termination.some(entry => entry.signal === 'SIGKILL' && entry.sent));
+        assert.equal(row.temporaryStorageRemoved, false);
+        if (mode === 'cancelled') {
+          assert.equal(report.cancelled, true); assert.equal(row.timedOut, false);
+          assert.deepEqual(report.unrun, ['test-z-sentinel.mjs']); assert.equal(existsSync(sentinel), false);
+          assert.match(failure.message, /contract run cancelled/);
+        } else if (mode === 'timeout') {
+          assert.equal(row.timedOut, true); assert.equal(row.orphanDescendants, false);
+          assert.match(failure.message, /timeout 1000ms/);
+        } else {
+          assert.equal(row.timedOut, false); assert.equal(row.orphanDescendants, true);
+          assert.equal(row.status, mode === 'orphan-exit7' ? 7 : 0);
+          assert.match(failure.message, /orphan descendants remained/);
+        }
+      }
+    }
+    for (const mode of ['nested-cancelled', 'nested-timeout']) {
+      const directory = join(fixture, mode), tools = join(directory, 'tools');
+      const inner = join(directory, 'inner'), innerTools = join(inner, 'tools');
+      const leafPidFile = join(directory, 'leaf.pid'), grandchildPidFile = join(directory, 'grandchild.pid');
+      mkdirSync(tools, { recursive: true }); mkdirSync(innerTools, { recursive: true });
+      writeFileSync(join(tools, 'contract-test-tiers.json'), JSON.stringify({ schemaVersion: 1,
+        source: ['test-nested.mjs'], integration: [] }));
+      writeFileSync(join(innerTools, 'contract-test-tiers.json'), JSON.stringify({ schemaVersion: 1,
+        source: ['test-leaf.mjs'], integration: [] }));
+      const grandchild = `const {writeFileSync}=require('node:fs');process.on('SIGTERM',()=>{});` +
+        `setInterval(()=>{},1000);writeFileSync(${JSON.stringify(grandchildPidFile)},String(process.pid));process.send('ready');`;
+      writeFileSync(join(innerTools, 'test-leaf.mjs'),
+        `import {spawn} from 'node:child_process';import {writeFileSync} from 'node:fs';` +
+        `writeFileSync(${JSON.stringify(leafPidFile)},String(process.pid));process.on('SIGTERM',()=>{});` +
+        `const child=spawn(process.execPath,['-e',${JSON.stringify(grandchild)}],{stdio:['ignore','ignore','ignore','ipc']});` +
+        `child.once('message',()=>{});`);
+      writeFileSync(join(tools, 'test-nested.mjs'),
+        `import {runContractsBounded} from ${JSON.stringify(new URL('./run-contract-tests.mjs', import.meta.url).href)};` +
+        `try{await runContractsBounded(${JSON.stringify(inner)},'full',1,{timeoutMs:5000,killGraceMs:1000});}` +
+        `catch{process.exitCode=1;}`);
+      const cancellation = new AbortController();
+      const pending = runContractsBounded(directory, 'full', 1, { timeoutMs: 1000, killGraceMs: 1000, signal: cancellation.signal })
+        .then(report => ({ report }), failure => ({ report: failure.report, failure }));
+      if (mode === 'nested-cancelled') {
+        const readyDeadline = performance.now() + 1000;
+        while (!existsSync(grandchildPidFile)) {
+          assert.ok(performance.now() < readyDeadline, 'real nested grandchild must be ready before outer cancellation');
+          await new Promise(resolveWait => setTimeout(resolveWait, 10));
+        }
+        cancellation.abort();
+      }
+      const { report, failure } = await pending;
+      assert.ok(report, failure?.stack); reports.push(report);
+      const [row] = report.results;
+      for (const pid of row.ownedProcessGroups) ownedGroups.add(pid);
+      const leafPid = Number(readFileSync(leafPidFile, 'utf8'));
+      const grandchildPid = Number(readFileSync(grandchildPidFile, 'utf8'));
+      assert.ok(failure); assert.equal(report.treeSettled, true);
+      assert.equal(row.treeSettled, true); assert.equal(row.treeCapability, 'posix-process-group');
+      assert.ok(row.ownedProcessGroups.includes(leafPid), 'outer receipt must own the real inner PGID received through private IPC');
+      assert.ok(row.ownedProcessGroups.includes(row.processGroupId));
+      for (const pid of row.ownedProcessGroups) {
+        assert.throws(() => process.kill(-pid, 0), error => error.code === 'ESRCH', 'every registered real group must disappear');
+        ownedGroups.delete(pid);
+      }
+      assert.throws(() => process.kill(grandchildPid, 0), error => error.code === 'ESRCH', 'nested grandchild must not remain after outer result');
+      assert.equal(report.cancelled, mode === 'nested-cancelled');
+      assert.equal(row.timedOut, mode === 'nested-timeout');
+    }
+    for (const denyRemoval of [false, true]) {
+      const directory = join(fixture, denyRemoval ? 'nested-removal-denied' : 'nested-parallel-removal');
+      const tools = join(directory, 'tools'), inner = join(directory, 'inner'), innerTools = join(inner, 'tools');
+      const fastPidFile = join(directory, 'fast.pid'), slowPidFile = join(directory, 'slow.pid');
+      const release = join(directory, 'release'), done = join(directory, 'done');
+      mkdirSync(tools, { recursive: true }); mkdirSync(innerTools, { recursive: true });
+      writeFileSync(join(tools, 'contract-test-tiers.json'), JSON.stringify({ schemaVersion: 1,
+        source: ['test-controller.mjs'], integration: [] }));
+      writeFileSync(join(innerTools, 'contract-test-tiers.json'), JSON.stringify({ schemaVersion: 1,
+        source: ['test-fast.mjs', 'test-slow.mjs'], integration: [] }));
+      writeFileSync(join(innerTools, 'test-fast.mjs'),
+        `import {writeFileSync,existsSync} from 'node:fs';writeFileSync(${JSON.stringify(fastPidFile)},String(process.pid));` +
+        `setInterval(()=>{if(existsSync(${JSON.stringify(slowPidFile)}))process.exit(0)},5);`);
+      writeFileSync(join(innerTools, 'test-slow.mjs'),
+        `import {writeFileSync,existsSync} from 'node:fs';writeFileSync(${JSON.stringify(slowPidFile)},String(process.pid));` +
+        `setInterval(()=>{if(existsSync(${JSON.stringify(release)})){writeFileSync(${JSON.stringify(done)},'done');process.exit(0)}},5);`);
+      writeFileSync(join(tools, 'test-controller.mjs'),
+        `import {runContractsBounded} from ${JSON.stringify(new URL('./run-contract-tests.mjs', import.meta.url).href)};` +
+        `await runContractsBounded(${JSON.stringify(inner)},'full',2,{timeoutMs:2000});`);
+      const realKill = process.kill;
+      let report, failure, siblingObservations = 0, deniedObservations = 0;
+      try {
+        process.kill = (pid, requestedSignal = 'SIGTERM') => {
+          if (requestedSignal === 0 && existsSync(slowPidFile) && pid === -Number(readFileSync(slowPidFile, 'utf8')) && !existsSync(done)) {
+            siblingObservations++;
+            throw Object.assign(new Error('fixture live sibling observation'), { code: 'EPERM' });
+          }
+          try { return realKill(pid, requestedSignal); }
+          catch (error) {
+            if (error.code === 'ESRCH' && requestedSignal === 0 && existsSync(fastPidFile) && pid === -Number(readFileSync(fastPidFile, 'utf8'))) {
+              writeFileSync(release, 'the fast group is independently confirmed gone');
+              if (denyRemoval && deniedObservations++ === 0) {
+                throw Object.assign(new Error('fixture removal observation refusal'), { code: 'EPERM' });
+              }
+            }
+            throw error;
+          }
+        };
+        try { report = await runContractsBounded(directory, 'full', 1, { timeoutMs: 4000 }); }
+        catch (error) { failure = error; report = error.report; }
+      } finally { process.kill = realKill; }
+      assert.ok(report, failure?.stack); reports.push(report);
+      const [row] = report.results;
+      for (const pid of row.ownedProcessGroups) ownedGroups.add(pid);
+      assert.equal(siblingObservations, 0, 'one removal must not probe another live sibling group');
+      assert.equal(row.status, 0); assert.equal(row.timedOut, false); assert.equal(row.treeSettled, true);
+      if (denyRemoval) {
+        assert.ok(deniedObservations > 0); assert.ok(failure);
+        assert.match(failure.message, /process group observation: EPERM/, 'a refused observation for the actual removal remains a failed gate');
+      } else { assert.equal(failure, undefined); assert.equal(row.error, undefined); }
+      for (const pid of row.ownedProcessGroups) {
+        assert.throws(() => process.kill(-pid, 0), error => error.code === 'ESRCH');
+        ownedGroups.delete(pid);
+      }
+    }
+    passed = true;
+    console.log('PASS: original eight process-tree cases, targeted nested parallel removal and EPERM fail-closed observation');
+  } finally {
+    let cleanupFailure;
+    for (const pid of ownedGroups) {
+      try { process.kill(-pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') cleanupFailure ??= error; }
+    }
+    if (passed) for (const report of reports) rmSync(report.logRoot, { recursive: true, force: true });
+    rmSync(fixture, { recursive: true, force: true });
+    if (passed && cleanupFailure) throw cleanupFailure;
+  }
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await runContractTierFixtures();
+  await runProcessTreeCleanupFixtures();
+}

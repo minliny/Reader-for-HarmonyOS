@@ -8,7 +8,8 @@ import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { syncIndexFixture } from './lib/sync-index-real-fixture.mjs';
 import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
 import { readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createReaderBuilderProbe, readerBuilderChildProperties, readerBuilderChildPropertyCacheStats } from './lib/reader-control-builder-probe.mjs';
+import { pureModuleProbe, pureModuleProbeStats } from './lib/ets-pure-module-probe.mjs';
 import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
 
@@ -18,6 +19,57 @@ const common='entry/src/main/ets/features/common/',category='entry/src/main/ets/
 const before=golden.sources[common+'ReaderCard.ets'].source;
 const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
+// Repeated child metadata lookup still parses changed inputs with the actual
+// SDK. Only immutable names are shared; callers cannot mutate the next Set.
+{
+ const source="@Component struct CardChildPropertyCacheControl { @Prop label: string = ''; @Prop actionEnabled: boolean = true; build() { Column() {} } }";
+ const before=readerBuilderChildPropertyCacheStats(),first=readerBuilderChildProperties(source,'CardChildPropertyCacheControl');
+ const second=readerBuilderChildProperties(source,'CardChildPropertyCacheControl');
+ assert.deepEqual([...first],['label','actionEnabled']);assert.deepEqual([...second],[...first]);assert.notEqual(first,second);
+ assert.equal(readerBuilderChildPropertyCacheStats().parses,before.parses+1);assert.equal(readerBuilderChildPropertyCacheStats().hits,before.hits+1);
+ first.delete('label');first.add('privateAppearance');
+ assert.deepEqual([...readerBuilderChildProperties(source,'CardChildPropertyCacheControl')],['label','actionEnabled'],'returned Set changes cannot pollute later SDK registration');
+ const changed=source.replace('actionEnabled: boolean','isBusy: boolean'),beforeChanged=readerBuilderChildPropertyCacheStats();
+ assert.deepEqual([...readerBuilderChildProperties(changed,'CardChildPropertyCacheControl')],['label','isBusy'],'same field count with different source cannot borrow the preceding metadata');
+ assert.equal(readerBuilderChildPropertyCacheStats().parses,beforeChanged.parses+1);
+ const beforeName=readerBuilderChildPropertyCacheStats();readerBuilderChildProperties(source,undefined);
+ assert.equal(readerBuilderChildPropertyCacheStats().parses,beforeName.parses+1,'component selection is an explicit cache input');
+ const hadStrict=Object.hasOwn(options,'strict'),strict=options.strict,beforeOptions=readerBuilderChildPropertyCacheStats();
+ try {
+  options.strict=!strict;
+  assert.deepEqual([...readerBuilderChildProperties(source,'CardChildPropertyCacheControl')],['label','actionEnabled']);
+  assert.equal(readerBuilderChildPropertyCacheStats().parses,beforeOptions.parses+1,'changed actual parse options enter the installed SDK instead of borrowing a hit');
+ }finally{if(hadStrict)options.strict=strict;else delete options.strict;}
+ const restored=readerBuilderChildPropertyCacheStats();readerBuilderChildProperties(source,'CardChildPropertyCacheControl');
+ assert.equal(readerBuilderChildPropertyCacheStats().hits,restored.hits+1,'restoring the exact actual options permits only the original metadata hit');
+ const malformed=source.replace("label: string = ''",'label: string = ;'),beforeFailure=readerBuilderChildPropertyCacheStats();
+ for(let attempt=0;attempt<2;attempt++)assert.throws(()=>readerBuilderChildProperties(malformed,'CardChildPropertyCacheControl'),/actual shared child ETS parses/);
+ assert.equal(readerBuilderChildPropertyCacheStats().parses,beforeFailure.parses+2,'failed SDK diagnostics are not memoized');
+ assert.equal(readerBuilderChildPropertyCacheStats().entries,beforeFailure.entries,'a failed parse never enters the metadata cache');
+}
+// Sharing compilation cannot share business state, dependency closures or a
+// mutation's validation result. All variants still use the installed SDK.
+{
+ const source='export class State { value = input; bump() { this.value++; onChange(this.value); } }';
+ const before=pureModuleProbeStats(); let left=0,right=0;
+ const a=pureModuleProbe(source,'CardCacheControl.ets',{input:2,onChange:value=>left=value},['State']);
+ const b=pureModuleProbe(source,'CardCacheControl.ets',{input:7,onChange:value=>right=value},['State']);
+ assert.equal(pureModuleProbeStats().compiles,before.compiles+1);
+ assert.equal(pureModuleProbeStats().hits,before.hits+1);
+ assert.notEqual(a.State,b.State,'factory creates independent classes and dependency closures');
+ const first=new a.State(),second=new b.State(); first.bump();
+ assert.deepEqual([first.value,second.value,left,right],[3,7,3,0]); second.bump();
+ assert.deepEqual([first.value,second.value,left,right],[3,8,3,8]);
+ const changed=pureModuleProbe(source.replace('= input','= input + 10'),'CardCacheControl.ets',{input:2,onChange(){}},['State']);
+ assert.equal(new changed.State().value,12,'changed full source cannot reuse old emit');
+ pureModuleProbe(source,'CardCacheOther.ets',{input:2,onChange(){}},['State']);
+ pureModuleProbe(source,'CardCacheControl.ets',{onChange(){},input:2},['State']);
+ pureModuleProbe(source,'CardCacheControl.ets',{input:2,onChange(){}},['State'],{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.None});
+ pureModuleProbe(source,'CardCacheControl.ets',{input:2,onChange(){}},[]);
+ assert.equal(pureModuleProbeStats().compiles,before.compiles+6,'source/path/parameter order/options/exports each bind output');
+ assert.throws(()=>pureModuleProbe('export class State { value = ; }','CardCacheControl.ets',{input:2,onChange(){}},['State']),/actual pure module parses/);
+ assert.equal(pureModuleProbeStats().compiles,before.compiles+6,'failed SDK diagnostics are never cached');
+}
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const layout=JSON.parse(read('tools/fixtures/reader-card-page-layout-successor-20261014.json'));
 assert.equal(layout.schema,1);assert.equal(layout.page,sync);
@@ -79,28 +131,43 @@ const originalSpec=read(common+'ReaderCardSpecs.ets');
 const methods=['webdavSection','manualActionsSection','autoBackupSection','emptyState','historyRow'];
 const entry={destination:'WebDAV',timestamp:'2026-10-04 08:00',summary:'原始备份结果',status:'success',detail:'保持原始信息',bookCount:2,sourceCount:3};
 const geometry=syncIndexFixture.execute('features/common/SurfaceHorizontalGeometry.ts','({SurfaceWidthSpec,SurfaceHorizontalFrame,resolveHorizontalFrame})');
+// Compile equal production inputs once inside this test. Every comparison still
+// constructs fresh owners, native actors, observed properties and callbacks;
+// neither a rendered fixture nor an assertion result is cached.
+const parentKernels=new Map(),consumerMembers=new Map();let parentInstances=0;
 function parent({legacy=false,method='build',scheme='day',width=352,specSource=originalSpec}={}){
- const shared=cardSdk({source:legacy?before:read(common+'ReaderCard.ets'),specSource,scheme});
+ const cardSource=legacy?before:read(common+'ReaderCard.ets');
+ const kernelKey=JSON.stringify([cardSource,specSource,scheme]);
+ let kernel=parentKernels.get(kernelKey);
+ if(!kernel){kernel={shared:cardSdk({source:cardSource,specSource,scheme}),consumers:new Map()};parentKernels.set(kernelKey,kernel);}
+ const {shared}=kernel;
+ const categoryBody=method==='build',source=legacy?golden.sources[categoryBody?category:sync].source:read(categoryBody?category:sync);
+ const selectionKey=JSON.stringify([source,categoryBody]);
+ let names=consumerMembers.get(selectionKey);
+ if(!names){names=boundedMembers(source).filter(name=>categoryBody||!['build','backBar'].includes(name));consumerMembers.set(selectionKey,names);}
+ const consumerKey=JSON.stringify([source,names]);
+ const Consumer=kernel.consumers.get(consumerKey);
  let owner,contentCalls=0,backupCalls=0;
- if(method==='build'){
-  const source=legacy?golden.sources[category].source:read(category);
-  owner=shared.consumer(source,boundedMembers(source));
+ if(categoryBody){
+  owner=Consumer?new Consumer(undefined,{}):shared.consumer(source,names);
   Object.assign(owner,{title:'真实分类标题',cardWidth:width,appThemeScheme:scheme,content:()=>{contentCalls++;}});
   owner.initialRender();
  }else{
-  const source=legacy?golden.sources[sync].source:read(sync);
-  owner=shared.consumer(source,boundedMembers(source).filter(name=>!['build','backBar'].includes(name)),{...geometry,DEFAULT_SYNC_SNAPSHOT:syncIndexFixture.DEFAULT_SYNC_SNAPSHOT,readerRecoveryView:syncIndexFixture.readerRecoveryView,
+  owner=Consumer?new Consumer(undefined,{}):shared.consumer(source,names,{...geometry,DEFAULT_SYNC_SNAPSHOT:syncIndexFixture.DEFAULT_SYNC_SNAPSHOT,readerRecoveryView:syncIndexFixture.readerRecoveryView,
    registerReaderFonts(){},ReaderWindowCoordinator:{metrics:()=>({windowRect:{width:390}})},readerVisualSafeLeft:()=>0,readerVisualSafeRight:()=>0,readerFloatingBarBottomInset:()=>18,READER_FLOATING_TOP_BAR_HEIGHT:56});
   Object.assign(owner,{appThemeScheme:scheme,contentFrame:()=>({width}),onTriggerBackup:()=>{backupCalls++;}});
   // Exercise the original production bodies, not a synthetic Card-only caller.
   if(method==='historyRow')owner.historyRow(entry);else owner[method]();
  }
+ if(!Consumer)kernel.consumers.set(consumerKey,owner.constructor);
+ parentInstances++;
  const cards=shared.cards(owner);assert.equal(cards.length,1,'one real production Card in '+method);
  const card=cards[0];if(card.appThemeScheme!==scheme){card.appThemeScheme=scheme;shared.properties.flush();}
  return {shared,owner,card,outer:()=>shared.outer(card),contentCalls:()=>contentCalls,backupCalls:()=>backupCalls};
 }
 const physical=node=>Object.fromEntries(['width','constraintSize','backgroundColor','border','borderRadius'].map(key=>[key,node[key]]));
 let comparisons=0;
+const metadataBeforeComparisons=readerBuilderChildPropertyCacheStats();
 for(const method of ['build',...methods])for(const scheme of ['day','night'])for(const width of [0,152,352,800]){
  const old=parent({legacy:true,method,scheme,width}),current=parent({method,scheme,width});
  assert.deepEqual(physical(current.outer()),physical(old.outer()),`${method}/${scheme}/${width} exact original native Card tuple`);
@@ -114,6 +181,8 @@ for(const method of ['build',...methods])for(const scheme of ['day','night'])for
  }
  comparisons++;
 }
+assert.ok(readerBuilderChildPropertyCacheStats().hits>metadataBeforeComparisons.hits,'real Card comparisons reuse identical child metadata');
+assert.ok(readerBuilderChildPropertyCacheStats().entries<=256,'child metadata storage stays bounded');
 // The new owner is a real SDK page composition, not a normalization of the
 // old Stack into another local layout. Current page slots mount the original
 // four Card sections inside one shared Scroll. Native height/host-width
@@ -180,4 +249,22 @@ for(const[scheme,windowWidth,hostWidth,left,right,bottom]of[
  button.updateStateVars(Object.assign(Object.fromEntries(['scheme','specId','label','primary','actionEnabled','layout','isBusy','availableWidth','actionAccessibilityLabel'].map(key=>[key,button[key]])),{actionEnabled:false}));p.shared.properties.flush();click.onClick();assert.equal(p.backupCalls(),1,'retained native action respects busy/disabled update');
  button.aboutToDisappear();click.onClick();assert.equal(p.backupCalls(),1,'old physical content action does not publish after unmount');
 }
-console.log(`PASS F08 actual installed-SDK Card: ${comparisons} original/current six-site day/night/width comparisons; one finite layout successor, three real shared-page slot/scroll/safe-geometry replays and vp measurements; real body/callbacks, retained Props, common propagation/variant isolation and removed free appearance setters. Native layout/device pixels remain separate.`);
+// Reusing emitted classes must not reuse any mounted fixture or its state.
+{
+ const first=parent({width:152}),second=parent({width:352});
+ assert.equal(first.shared,second.shared,'equal source/spec/theme inputs reuse the same SDK compilation');
+ for(const key of ['owner','card'])assert.notEqual(first[key],second[key],'each comparison constructs an independent '+key);
+ for(const key of ['nodes','observers','children','attributeCalls'])assert.notEqual(first.card[key],second.card[key],'native Card '+key+' stays fixture-local');
+ const firstTuple=structuredClone(physical(first.outer())),firstCalls=first.card.attributeCalls.length;
+ second.owner.cardWidth=280;second.shared.flush(second.owner);assert.equal(second.outer().width,280);
+ second.card.appThemeScheme='night';second.shared.properties.flush();
+ assert.deepEqual(physical(first.outer()),firstTuple,'another fixture width/theme update cannot alter retained native values');
+ assert.equal(first.card.attributeCalls.length,firstCalls,'another fixture update cannot replay retained observers');
+ assert.equal(first.card.appThemeScheme,'day');assert.equal(first.contentCalls(),1);assert.equal(second.contentCalls(),1);
+ const action=parent({method:'emptyState'}),otherAction=parent({method:'emptyState'});
+ const click=p=>p.shared.nodes(p.owner).find(node=>node.onClick&&node.create==='立即备份').onClick();
+ click(action);assert.equal(action.backupCalls(),1);assert.equal(otherAction.backupCalls(),0,'compiled callback code retains each owner\'s business closure');
+ click(otherAction);assert.equal(action.backupCalls(),1);assert.equal(otherAction.backupCalls(),1);
+}
+const compiledConsumers=[...parentKernels.values()].reduce((count,kernel)=>count+kernel.consumers.size,0);
+console.log(`PASS F08 actual installed-SDK Card: ${comparisons} original/current six-site day/night/width comparisons; one finite layout successor, three real shared-page slot/scroll/safe-geometry replays and vp measurements; real body/callbacks, retained Props, common propagation/variant isolation and removed free appearance setters; ${parentInstances} fresh parent fixtures from ${parentKernels.size} test-local SDK kernels/${compiledConsumers} consumer compilations with native/property/callback isolation. Native layout/device pixels remain separate.`);

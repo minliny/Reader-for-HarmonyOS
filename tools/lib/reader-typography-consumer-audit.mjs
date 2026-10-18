@@ -10,8 +10,10 @@ export const typographyProperties = ['fontFamily', 'fontWeight', 'fontSize', 'li
 
 /** Parse actual ETS modifier chains, including Marquee/native-input carriers.
  * A Text inside a string/comment is never counted as a production consumer. */
-export function auditTypographyConsumers(source, file = virtualFilePath('TypographyConsumer.ets')) {
-  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+export function auditTypographyConsumers(source, file = virtualFilePath('TypographyConsumer.ets'), sourceTree) {
+  const parsed = sourceTree ?? ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.equal(parsed.fileName, file, 'shared typography AST path matches current source');
+  assert.equal(parsed.text, source, 'shared typography AST bytes match current source');
   assert.equal(parsed.parseDiagnostics.length, 0, `${file}: real ETS parsing`);
   const groups = new Map();
   const rootOf = node => {
@@ -187,10 +189,12 @@ export function typographyRoleImports(source, file = virtualFilePath('Typography
 /** Actual native text/control nodes, including carriers with no font calls.
  * An omitted font tuple means the framework owns rendering; it is not a fake
  * public role and cannot be discovered by a modifier-count-only gate. */
-export function auditNativeTextElements(source, file = virtualFilePath('NativeTypography.ets')) {
-  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+export function auditNativeTextElements(source, file = virtualFilePath('NativeTypography.ets'), sourceTree) {
+  const parsed = sourceTree ?? ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.equal(parsed.fileName, file, 'shared native AST path matches current source');
+  assert.equal(parsed.text, source, 'shared native AST bytes match current source');
   assert.equal(parsed.parseDiagnostics.length, 0, `${file}: native element AST parsing`);
-  const fonts = new Map(auditTypographyConsumers(source,file).map(node => [node.carrierStart,node.modifiers]));
+  const fonts = new Map(auditTypographyConsumers(source,file,parsed).map(node => [node.carrierStart,node.modifiers]));
   const attributes = new Map(), result = [], native = new Set(['Text','Span','Button','TextInput','TextArea','Marquee']);
   const rootOf = node => { while(ts.isCallExpression(node)&&node.expression?.expression)node=node.expression.expression;return node; };
   const modifiers = node => { if(ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)) {

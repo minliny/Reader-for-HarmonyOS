@@ -12,7 +12,7 @@ const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('h
 /** One original AUTO text state moves to a named Builder and a real shared
  * frame. The old policy remains unchanged; only its private paper paint is
  * replaced by the common window-paper variant (including its night color). */
-export function verifyIndexSyncColdLayoutSuccession(baseline,readSource){
+export function verifyIndexSyncColdLayoutSuccession(baseline,readSource,parseCurrent){
  const w=JSON.parse(readSource(indexSyncColdLayoutSuccessorPath));assert.equal(w.schema,1);
  assert.deepEqual([w.page,w.previousMethod,w.currentMethod,w.host,w.variant,w.slot],
   ['entry/src/main/ets/pages/Index.ets','build','syncPreparingContent','ReaderPageScaffold','standard','content']);
@@ -24,7 +24,9 @@ export function verifyIndexSyncColdLayoutSuccession(baseline,readSource){
  assert.equal(digest(w.previousArchitecturePolicy),w.previousArchitecturePolicySha256);
  assert.deepEqual(w.previousArchitecturePolicy.counts,{backgroundColor:4,CustomDialogController:2,showAlertDialog:4});
  assert.deepEqual(baseline.uiPolicies.find(p=>p.file===w.page),w.previousArchitecturePolicy,'cold-page transfer grants no new Index private budget');
- const source=readSource(w.page),tree=ts.createSourceFile(w.page,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);
+ const source=readSource(w.page),tree=parseCurrent?parseCurrent(source,w.page):ts.createSourceFile(w.page,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);
+ assert.equal(tree.fileName,w.page,'shared cold Index AST path matches current source');
+ assert.equal(tree.text,source,'shared cold Index AST bytes match current source');
  const owner=tree.statements.find(n=>ts.isStructDeclaration(n)&&n.name.text==='Index');assert.ok(owner);
  const member=name=>owner.members.find(m=>m.name?.getText(tree)===name),build=member('build'),body=member(w.currentMethod);assert.ok(build&&body);
  const collect=(node,predicate)=>{const found=[];const walk=n=>{if(predicate(n))found.push(n);ts.forEachChild(n,walk);};walk(node);return found;};
@@ -34,7 +36,7 @@ export function verifyIndexSyncColdLayoutSuccession(baseline,readSource){
  const props=new Map(hosts[0].arguments[0].properties.map(p=>[p.name.getText(tree),p.initializer]));
  assert.equal(props.get('variant')?.getText(tree),"'standard'");assert.equal(calls(props.get('content'),'this.'+w.currentMethod).length,1,'actual cold content slot invokes the original AUTO actor successor');
  assert.equal(calls(snapshots[0].elseStatement,'Column').length,0,'the cold route has no parallel private frame');
- const native=auditNativeTextElements(source,w.page).filter(n=>n.kind==='Text'&&n.text===w.previousNative.text);assert.equal(native.length,1,'one retained cold-state native text');
+ const native=auditNativeTextElements(source,w.page,tree).filter(n=>n.kind==='Text'&&n.text===w.previousNative.text);assert.equal(native.length,1,'one retained cold-state native text');
  assert.equal(native[0].method,w.currentMethod);assert.deepEqual({kind:native[0].kind,text:native[0].text,modifiers:native[0].modifiers,attributes:native[0].attributes},w.previousNative,'all original native typography/AUTO effects remain');
  assert.equal(calls(body,'Column').length,1);
  const attributes=Object.fromEntries(collect(body,n=>ts.isCallExpression(n)&&ts.isPropertyAccessExpression(n.expression)&&['width','height','justifyContent','backgroundColor'].includes(n.expression.name.text)).map(n=>[n.expression.name.text,n.arguments[0].getText(tree)]));

@@ -10,7 +10,8 @@ const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('h
 /** A single actual page moves its frame/slots to the shared owner. The old
  * 100-row budget and approved physical typography remain immutable; this
  * transfer removes only the old outer clip, now owned by the common frame. */
-export function verifyFullDirectoryLayoutSuccession(baseline,readSource,shape){
+export function verifyFullDirectoryLayoutSuccession(baseline,readSource,shape,parseCurrent){
+ const parse=(source,file)=>parseCurrent?parseCurrent(source,file):ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  const witness=JSON.parse(readSource(fullDirectoryLayoutSuccessorPath));
  assert.equal(witness.schema,1);
  assert.equal(witness.previousSourceHead,'838078322bb267c95e11757ccce8a242678be44a');
@@ -33,7 +34,9 @@ export function verifyFullDirectoryLayoutSuccession(baseline,readSource,shape){
  assert.equal(digest(witness.previousStyles),witness.previousStylesSha256,'exact previous private frame/card/menu physical inputs');
  assert.equal(witness.removedRootStyleIndex,0,'only the former outer frame clip is transferred');
  assert.deepEqual(witness.previousStyles[witness.removedRootStyleIndex],{owner:'ReaderFullDirectory',method:'build',property:'clip',args:['true']});
- const source=readSource(witness.page),tree=ts.createSourceFile(witness.page,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ const source=readSource(witness.page),tree=parse(source,witness.page);
+ assert.equal(tree.fileName,witness.page,'shared directory AST path matches current source');
+ assert.equal(tree.text,source,'shared directory AST bytes match current source');
  assert.deepEqual(tree.parseDiagnostics,[]);const owner=tree.statements.find(n=>ts.isStructDeclaration(n)&&n.name.text==='ReaderFullDirectory');assert.ok(owner);
  const member=name=>{const value=owner.members.find(n=>n.name?.getText(tree)===name);assert.ok(value,name);return value;};
  const calls=(node,name)=>{const found=[];const walk=n=>{if((ts.isCallExpression(n)||ts.isEtsComponentExpression(n))&&n.expression.getText(tree)===name)found.push(n);ts.forEachChild(n,walk);};walk(node);return found;};
@@ -49,7 +52,9 @@ export function verifyFullDirectoryLayoutSuccession(baseline,readSource,shape){
  // Execute the actual small production methods through the installed SDK.
  // The 18vp design gap is independent of the window safe-top value. Index
  // already consumes that value for detail catalogs; reader controls own it.
- const indexFile='entry/src/main/ets/pages/Index.ets',indexTree=ts.createSourceFile(indexFile,readSource(indexFile),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ const indexFile='entry/src/main/ets/pages/Index.ets',indexSource=readSource(indexFile),indexTree=parse(indexSource,indexFile);
+ assert.equal(indexTree.fileName,indexFile,'shared Index AST path matches current source');
+ assert.equal(indexTree.text,indexSource,'shared Index AST bytes match current source');
  assert.deepEqual(indexTree.parseDiagnostics,[]);const indexOwner=indexTree.statements.find(n=>ts.isStructDeclaration(n)&&n.name.text==='Index');assert.ok(indexOwner);
  const indexMember=name=>{const method=indexOwner.members.find(n=>n.name?.getText(indexTree)===name);assert.ok(method,name);return method;};
  const metrics=createDefaultReaderWindowMetrics(),deps={ReaderWindowCoordinator:{metrics:()=>metrics},readerVisualSafeTop,readerContentSafeTop};

@@ -49,34 +49,120 @@ export function verifyPublishedCoreGate(directory, record) {
   return report;
 }
 
+const BOOT_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SYSTEM_INSTABILITY = /SceneBoard exits|LIFECYCLE_TIMEOUT|guest reset|kernel panic|System is reset|OnSystemReset/i;
+const BOOT_MILESTONES = ['kernel', 'init', 'samgr.ready', 'appspawn.started', 'wms.ready', 'boot.completed'];
+function procRead(query, path) {
+  let text;
+  try { text = String(query(`cat ${path}`)).trim(); }
+  catch (error) {
+    text = String(error.message);
+    if (!text.includes(path) || !/Permission denied/i.test(text)) throw error;
+  }
+  return { text, denied: text.includes(path) && /Permission denied/i.test(text) };
+}
+function timestamp(text, utc) {
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?$/.test(text)) throw new Error('VM startup timestamp is invalid');
+  const date = new Date(text.replace(' ', 'T') + (utc ? 'Z' : ''));
+  const fields = [date[utc ? 'getUTCFullYear' : 'getFullYear'](), date[utc ? 'getUTCMonth' : 'getMonth']() + 1,
+    date[utc ? 'getUTCDate' : 'getDate'](), date[utc ? 'getUTCHours' : 'getHours'](),
+    date[utc ? 'getUTCMinutes' : 'getMinutes'](), date[utc ? 'getUTCSeconds' : 'getSeconds']()];
+  if (!Number.isFinite(date.getTime()) || fields.join(',') !== text.slice(0, 19).match(/\d+/g).map(Number).join(',')) throw new Error('VM startup timestamp is invalid');
+  return date.getTime();
+}
+function vmBootSample(query, now, monotonicNow) {
+  // OpenHarmony Toybox uptime.c uses sysinfo(); init's GetUptimeInMicroSeconds
+  // writes CLOCK_MONOTONIC milestones. No procfs permission change is needed.
+  const hostStart = now(), monotonicStart = monotonicNow();
+  const epoch = () => {
+    const text = String(query('date -u +%s')).trim();
+    if (!/^\d{10,}$/.test(text) || !Number.isSafeInteger(Number(text))) throw new Error('VM guest clock is unavailable');
+    return Number(text) * 1000;
+  };
+  const guestStart = epoch(), bootStart = timestamp(String(query('TZ=UTC uptime -s')).trim(), true);
+  const milestones = BOOT_MILESTONES.map(name => {
+    const text = String(query(`param get ohos.boot.time.${name}`)).trim();
+    if (!/^\d+$/.test(text) || !Number.isSafeInteger(Number(text)) || Number(text) <= 0) throw new Error('VM boot milestone identity is unavailable');
+    return Number(text);
+  });
+  const guestEnd = epoch(), hostEnd = now(), monotonicEnd = monotonicNow();
+  if (monotonicEnd < monotonicStart || monotonicEnd - monotonicStart > 10_000 || guestEnd < guestStart ||
+    guestStart < hostStart - 1000 || guestStart > hostEnd + 1000 || guestEnd < hostStart - 1000 || guestEnd > hostEnd + 1000 ||
+    Math.abs((hostEnd - hostStart) - (monotonicEnd - monotonicStart)) > 1000) throw new Error('VM guest/host clock or observation is inconsistent');
+  if (bootStart > guestStart + 1000 || milestones.some(value => value > milestones.at(-1)) ||
+    milestones.at(-1) / 1000 > guestEnd - bootStart + 1000) throw new Error('VM boot milestone timing is inconsistent');
+  return { bootStart, milestones, guestStart, guestEnd, hostStart, hostEnd, monotonicStart, monotonicEnd };
+}
+function vmInstance(bytes, sample) {
+  const lines = bytes.toString('utf8').split(/\r?\n/);
+  let start = -1, marker = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (/\[TraceTool\.cpp\([^\]]*InitPipe:\d+\)\].*trace pipe name is:/.test(lines[i])) start = i;
+    if (lines[i].includes('Guest OS Boot Completed!!')) marker = i;
+  }
+  if (start < 0 || marker <= start) throw new Error('VM log has no completed current-instance startup');
+  const startTime = timestamp(lines[start].slice(0, 23), false), markerTime = timestamp(lines[marker].slice(0, 23), false);
+  // Host instance initialization precedes the guest kernel; boot completion
+  // follows it. Contain the guest boot in that interval, retaining the existing
+  // one-second timestamp quantization allowance rather than equating events.
+  if (sample.bootStart < startTime - 1000 || sample.bootStart > markerTime + 1000 ||
+    markerTime < startTime || markerTime > sample.hostEnd + 1000 ||
+    markerTime - sample.bootStart < sample.milestones.at(-1) / 1000 - 1000 ||
+    markerTime - sample.bootStart > sample.milestones.at(-1) / 1000 + 5000) throw new Error('VM log startup/boot marker does not match the current guest boot');
+  if (SYSTEM_INSTABILITY.test(lines.slice(marker).join('\n'))) throw new Error('VM system instability detected; stop app operations and preserve system evidence');
+  return { identity: digest(JSON.stringify([lines[start], lines[marker], sample.milestones])), startTime, markerTime };
+}
+
 // Only minimal read-only system queries are allowed until this succeeds.
 // The caller binds the current confirmed VM's emulator log explicitly.
-export function targetReadiness({ targetKind, query, vmLog, now = Date.now, wait = () => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000) }) {
+export function targetReadiness({ targetKind, query, vmLog, now = Date.now, monotonicNow = () => performance.now(), wait = () => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000) }) {
+  if (!['vm', 'physical'].includes(targetKind)) throw new Error('Invalid target kind');
   const boot = query('param get bootevent.boot.completed').trim();
   if (boot !== 'true') throw new Error('Target boot is not complete; stopped before Bundle Manager or application operations');
-  const bootId = query('cat /proc/sys/kernel/random/boot_id').trim();
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bootId)) throw new Error('Target boot identity is unavailable');
+  const bootId = procRead(query, '/proc/sys/kernel/random/boot_id');
+  if (!BOOT_UUID.test(bootId.text) && !(targetKind === 'vm' && bootId.denied)) throw new Error('Target boot identity is unavailable');
   const sceneBoard = query('pidof com.ohos.sceneboard').trim();
   if (!/^\d+$/.test(sceneBoard)) throw new Error('SceneBoard is not running as one stable process');
-  let logRecord;
+  let logRecord, firstBytes, firstStat, fallback, firstSample, instance;
   if (targetKind === 'vm') {
     if (!vmLog || !lstatSync(vmLog).isFile()) throw new Error('VM readiness requires --vm-log for the currently confirmed emulator instance');
-    const uptime = Number(query('cat /proc/uptime').trim().split(/\s+/)[0]);
-    if (!Number.isFinite(uptime) || uptime < 0 || lstatSync(vmLog).mtimeMs < now() - uptime * 1000 - 60_000) throw new Error('VM emulator log predates the current guest boot');
-    const bytes = readFileSync(vmLog), text = bytes.toString('utf8');
+    const uptimeResult = procRead(query, '/proc/uptime'), uptime = Number(uptimeResult.text.split(/\s+/)[0]);
+    const validUptime = /^\d+(?:\.\d+)?(?:\s+\d+(?:\.\d+)?)?$/.test(uptimeResult.text) && Number.isFinite(uptime) && uptime >= 0;
+    if (!validUptime && !uptimeResult.denied) throw new Error('VM uptime is unavailable');
+    fallback = bootId.denied || uptimeResult.denied;
+    firstStat = lstatSync(vmLog); firstBytes = readFileSync(vmLog);
+    if (fallback) { firstSample = vmBootSample(query, now, monotonicNow); instance = vmInstance(firstBytes, firstSample); }
+    else if (firstStat.mtimeMs < now() - uptime * 1000 - 60_000) throw new Error('VM emulator log predates the current guest boot');
+    const text = firstBytes.toString('utf8');
     const marker = text.lastIndexOf('Guest OS Boot Completed!!');
     if (marker < 0) throw new Error('VM emulator log has no Guest OS Boot Completed marker');
     const tail = text.slice(marker);
-    if (/SceneBoard exits|LIFECYCLE_TIMEOUT|guest reset|kernel panic/i.test(tail)) throw new Error('VM system instability detected; stop app operations and preserve system evidence');
-    logRecord = { sha256: digest(bytes), bytes: bytes.length, bootMarker: true, instabilityAfterMarker: false };
+    if (SYSTEM_INSTABILITY.test(tail)) throw new Error('VM system instability detected; stop app operations and preserve system evidence');
+    logRecord = { sha256: digest(firstBytes), bytes: firstBytes.length, bootMarker: true, instabilityAfterMarker: false };
   }
+  const observationStart = monotonicNow(), wallStart = now();
   wait();
+  const observationMs = monotonicNow() - observationStart;
+  if (fallback && (observationMs < 1000 || observationMs > 10_000 || Math.abs(now() - wallStart - observationMs) > 1000)) throw new Error('VM readiness observation interval or clock is invalid');
   if (targetKind === 'vm') {
-    const current = readFileSync(vmLog, 'utf8');
+    const bytes = readFileSync(vmLog), current = bytes.toString('utf8');
     const marker = current.lastIndexOf('Guest OS Boot Completed!!');
     if (marker < 0) throw new Error('VM boot marker disappeared during readiness observation');
-    if (/SceneBoard exits|LIFECYCLE_TIMEOUT|guest reset|kernel panic/i.test(current.slice(marker))) throw new Error('VM system became unstable during readiness observation');
+    if (SYSTEM_INSTABILITY.test(current.slice(marker))) throw new Error('VM system became unstable during readiness observation');
+    if (fallback) {
+      const second = vmBootSample(query, now, monotonicNow), observedBytes = readFileSync(vmLog), stat = lstatSync(vmLog), latest = vmInstance(observedBytes, second);
+      if (stat.dev !== firstStat.dev || stat.ino !== firstStat.ino || stat.size !== observedBytes.length || observedBytes.length < firstBytes.length || !observedBytes.subarray(0, firstBytes.length).equals(firstBytes) ||
+        latest.identity !== instance.identity || JSON.stringify(second.milestones) !== JSON.stringify(firstSample.milestones) ||
+        Math.abs(second.bootStart - firstSample.bootStart) > 1000 ||
+        second.guestStart - firstSample.guestEnd < observationMs - 2000 ||
+        second.guestEnd - firstSample.guestStart > second.monotonicEnd - firstSample.monotonicStart + 2000) throw new Error('VM boot instance, milestones or uptime changed during readiness observation');
+      logRecord = { ...logRecord, sha256: digest(observedBytes), bytes: observedBytes.length, instanceSha256: instance.identity };
+    }
   }
-  if (query('param get bootevent.boot.completed').trim() !== 'true' || query('cat /proc/sys/kernel/random/boot_id').trim() !== bootId || query('pidof com.ohos.sceneboard').trim() !== sceneBoard) throw new Error('Target boot/SceneBoard changed during readiness observation');
-  return { status: 'PASS', checkedAt: new Date().toISOString(), bootIdSha256: digest(bootId), sceneBoardPidSha256: digest(sceneBoard), bootCompleted: true, sceneBoardStable: true, emulatorLog: logRecord };
+  const finalBootId = procRead(query, '/proc/sys/kernel/random/boot_id');
+  if (query('param get bootevent.boot.completed').trim() !== 'true' || finalBootId.text !== bootId.text || finalBootId.denied !== bootId.denied || query('pidof com.ohos.sceneboard').trim() !== sceneBoard) throw new Error('Target boot/SceneBoard changed during readiness observation');
+  return { status: 'PASS', checkedAt: new Date().toISOString(), bootIdSha256: bootId.denied ? instance.identity : digest(bootId.text),
+    bootIdentitySource: bootId.denied ? 'vm-startup-fingerprint-v1' : 'kernel-boot-id',
+    ...(fallback ? { uptimeSource: 'toybox-sysinfo', observationMs } : {}),
+    sceneBoardPidSha256: digest(sceneBoard), bootCompleted: true, sceneBoardStable: true, emulatorLog: logRecord };
 }

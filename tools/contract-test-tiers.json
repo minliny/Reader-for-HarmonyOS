@@ -11,6 +11,7 @@
     "test-bookshelf-detail-removal.mjs",
     "test-bookshelf-management.mjs",
     "test-bundled-source-host-boundary.mjs",
+    "test-contract-scope-development.mjs",
     "test-contract-test-tiers.mjs",
     "test-cookie-security-policy.mjs",
     "test-core-build-identity.mjs",
@@ -514,6 +515,7 @@
     "test-reader-replace-editor-feedback.mjs",
     "test-reader-runtime-dispatch-admission.mjs",
     "test-reader-runtime-owner-lifecycle.mjs",
+    "test-reader-sdk-cache.mjs",
     "test-reader-session-launch-recovery.mjs",
     "test-reader-settings-manga-retention.mjs",
     "test-reader-settings-rounded-clip.mjs",
@@ -754,6 +756,44 @@
       "test-source-default-state-upgrade.mjs",
       "test-source-login-default-policy.mjs",
       "test-source-login-page-projection.mjs"
+    ],
+    "search-return-runtime": [
+      "test-contract-scope-development.mjs",
+      "test-contract-test-tiers.mjs",
+      "test-hap-pipeline-contract.mjs",
+      "test-search-host-wiring.mjs",
+      "test-search-orchestrator.mjs",
+      "test-search-publication-state.mjs",
+      "test-search-view-state.mjs"
     ]
+  },
+  "scopePolicies": {
+    "search-return-runtime": {
+      "timeoutMs": 120000,
+      "failFast": true,
+      "layers": [
+        {
+          "id": "runner-policy",
+          "tests": [
+            "test-contract-scope-development.mjs",
+            "test-contract-test-tiers.mjs",
+            "test-hap-pipeline-contract.mjs"
+          ],
+          "proves": "Runs small local fixtures for strict named-scope selection, bounded fail-fast/unrun settlement and immutable selected/omitted/log/input receipt validation.",
+          "doesNotProve": "No production HAP build, signing, installation, native responsiveness, full-suite evidence or device acceptance."
+        },
+        {
+          "id": "return-runtime",
+          "tests": [
+            "test-search-view-state.mjs",
+            "test-search-publication-state.mjs",
+            "test-search-host-wiring.mjs",
+            "test-search-orchestrator.mjs"
+          ],
+          "proves": "Runs the actual search relevance/projection/query state regression, Unicode/default-locale equivalence and cold-return normalization bounds, retained rows/anchors, publication revisions and Host/orchestrator cancellation/retry/late-result ownership.",
+          "doesNotProve": "Operation-count and bounded method/SDK assertions do not prove native ICU wall time, elimination of THREAD_BLOCK_6S on VM, compositor timing, live source results or user acceptance."
+        }
+      ]
+    }
   }
 }
