@@ -24,7 +24,7 @@ import {
 } from './source-supply-lib.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const coreRepo = resolve(repo, '../Reader-Core-Native');
+const coreRepo = resolve(repo, '../Reader-Core');
 const evidenceRelative = 'reports/tooling/corpus-batch-live-full-1945-v5-2026-07-09.json';
 const privateEvidence = process.env.READER_PRIVATE_SOURCE_EVIDENCE;
 if (!privateEvidence) throw new Error('Set READER_PRIVATE_SOURCE_EVIDENCE to the private archived workspace; raw supply evidence is not a checkout dependency');
