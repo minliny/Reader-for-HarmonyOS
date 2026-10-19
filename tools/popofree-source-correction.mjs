@@ -9,7 +9,7 @@ export const POPOFREE_SOURCE_ID = 'https://m.popofree.com#🎃';
 export const POPOFREE_PREVIOUS_FINGERPRINT = '0e22a102abfbe970231ce966eb9d5261b67369e5bef0ce75ee5b8f752634f7d0';
 export const POPOFREE_V7_FINGERPRINT = 'c65960a75dc148b4d51f5a217eaef0aca3222ac9379a19bd2e481467ae0fe620';
 export const POPOFREE_QUOTE_RULE = '<js>' + readFileSync(new URL(
-  '../../Reader-Core-Native/crates/reader-content/src/popofree_quote_correction.js', import.meta.url), 'utf8').trim() + '</js>';
+  '../../Reader-Core/crates/reader-content/src/popofree_quote_correction.js', import.meta.url), 'utf8').trim() + '</js>';
 export const POPOFREE_CORRECTED_CHAPTER_IDS = [34583368, 34583369, 34583370, 34583371,
   34583372, 34583373, 34583374, 34583376, 34656610, 34656611];
 
@@ -45,7 +45,7 @@ export function applyPopofreeQuoteCorrection(sources) {
     fields: ['ruleContent.content'],
     preserveExploreRules: true,
     verification: 'captured-pages-core-replay',
-    evidence: 'Reader-Core-Native/crates/reader-content/tests/popofree_source_quotes.rs',
+    evidence: 'Reader-Core/crates/reader-content/tests/popofree_source_quotes.rs',
     note: 'Captured chapters 833-846 contain 347 bare quot; tokens in 833-839/841 and six double-encoded quote entities in 842/843. One shared JS rule covers live extraction and protected offline cache correction. Other pages and markup retain their original extraction. Historical suite verdict is unchanged.',
   };
   source.ruleFingerprint = ruleFingerprint(source);

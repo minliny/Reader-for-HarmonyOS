@@ -7,7 +7,7 @@ import { stripTypeScriptTypes } from 'node:module';
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = JSON.parse(readFileSync(resolve(repo, '../Reader-UI/contracts/fixtures/manga-pages-extract.json'), 'utf8'));
 assert.deepEqual(fixture, JSON.parse(readFileSync(resolve(repo,
-  '../Reader-Core-Native/crates/reader-contract/fixtures/manga-pages-extract.json'), 'utf8')));
+  '../Reader-Core/crates/reader-contract/fixtures/manga-pages-extract.json'), 'utf8')));
 const source = readFileSync(resolve(repo, 'entry/src/main/ets/features/manga/MangaResourceGateway.ts'), 'utf8');
 const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
 const Gateway = new Function(`${executable}\nreturn MangaResourceGateway;`)();

@@ -5,7 +5,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, symlinkSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { coreBuildSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
+import { coreBuildSnapshot } from '../../Reader-Core/scripts/build-input-snapshot.mjs';
 
 const root = mkdtempSync(join(tmpdir(), 'reader-native-preflight-'));
 const sha = value => createHash('sha256').update(value).digest('hex');

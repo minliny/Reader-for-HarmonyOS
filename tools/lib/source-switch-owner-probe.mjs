@@ -22,9 +22,9 @@ const category = await import('../../entry/src/main/ets/features/source/ReaderSo
 const providerFamily = await import('../../entry/src/main/ets/features/source/SourceSwitchProviderFamily.ts');
 const scheduler = await import('../../entry/src/main/ets/app/BookRequestScheduler.ts');
 const { ReaderWriteEvidence } = await import('../../entry/src/main/ets/app/ReaderWriteEvidence.ts');
-const repo=fileURLToPath(new URL('../../',import.meta.url)),siblingCore=resolve(repo,'../Reader-Core-Native');
+const repo=fileURLToPath(new URL('../../',import.meta.url)),siblingCore=resolve(repo,'../Reader-Core');
 const coreRoot=process.env.READER_SOURCE_SWITCH_CORE_ROOT??(existsSync(resolve(siblingCore,'bindings/harmony/sdk/reader_core.ts'))
-  ?siblingCore:resolve(repo,'../../Reader-Core-Native'));
+  ?siblingCore:resolve(repo,'../../Reader-Core'));
 const sdk = await import(pathToFileURL(resolve(coreRoot,'bindings/harmony/sdk/reader_core.ts')).href);
 export const read = path => readFileSync(new URL(`../../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const compile = (source, name, deps) => new Function(...Object.keys(deps),

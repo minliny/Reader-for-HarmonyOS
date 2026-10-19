@@ -27,9 +27,9 @@ import { assertPrivateFilePermissions } from './lib/private-file.cjs';
 import { performance } from 'node:perf_hooks';
 import { readSigningAuthority, assertSigningMaterialAuthority, assertSigningCertificateAuthority } from '../tools/reader-signing-authority.mjs';
 import { assertBuildTools } from '../tools/reader-build-tools.mjs';
-import { contentSnapshot, coreBuildSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
-import { acquireBuildLease, acquireBuildWorkspace } from '../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs';
-import { assertWorkspaceLayout } from '../../Reader-Core-Native/scripts/lib/development-environment.mjs';
+import { contentSnapshot, coreBuildSnapshot } from '../../Reader-Core/scripts/build-input-snapshot.mjs';
+import { acquireBuildLease, acquireBuildWorkspace } from '../../Reader-Core/scripts/lib/build-resource-lock.mjs';
+import { assertWorkspaceLayout } from '../../Reader-Core/scripts/lib/development-environment.mjs';
 import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate, verifyPublishedCoreGate, targetReadiness } from './lib/hap-delivery-evidence.mjs';
 import { hapStageReceipt } from './lib/hap-stage-receipt.mjs';
 import { reconcileIdeNativeCache } from './lib/ide-native-cache.mjs';
@@ -38,7 +38,7 @@ import { contractTests, contractSelection, MAX_CONTRACT_TIMEOUT_MS } from '../to
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), '..');
 const WORKSPACE_ROOT = resolve(REPO_ROOT, '..');
-const CORE_ROOT = resolve(WORKSPACE_ROOT, 'Reader-Core-Native');
+const CORE_ROOT = resolve(WORKSPACE_ROOT, 'Reader-Core');
 const DEFAULT_ARTIFACT_ROOT = resolve(REPO_ROOT, '.reader-artifacts/hap');
 const DEFAULT_RETAIN_RUNS = 10;
 const LOCK_ROOT = resolve(process.env.READER_LOCK_DIR || tmpdir());
@@ -76,11 +76,11 @@ const HARMONY_GATE_INPUTS = [
 ];
 const CONTRACT_EVIDENCE_POLICY_INPUT = 'tools/hap-contract-evidence-policy.json';
 const WORKSPACE_CONTRACT_INPUTS = [
-  'Reader-Core-Native/governance/workspace',
-  'Reader-Core-Native/scripts/sync-workspace.mjs',
-  'Reader-Core-Native/scripts/validate-workspace.py',
-  'Reader-Core-Native/scripts/lib',
-  'Reader-Core-Native/scripts/check-local.mjs',
+  'Reader-Core/governance/workspace',
+  'Reader-Core/scripts/sync-workspace.mjs',
+  'Reader-Core/scripts/validate-workspace.py',
+  'Reader-Core/scripts/lib',
+  'Reader-Core/scripts/check-local.mjs',
   'README.md',
   'ARCHITECTURE.md',
   'HAP_BUILD_SYSTEM.md',

@@ -7,9 +7,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { stripTypeScriptTypes } from 'node:module';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const siblingCore = resolve(repo, '../Reader-Core-Native');
+const siblingCore = resolve(repo, '../Reader-Core');
 const core = process.env.READER_SOURCE_SWITCH_CORE_ROOT ?? (existsSync(resolve(siblingCore, 'bindings/harmony/sdk/reader_core.ts'))
-  ? siblingCore : resolve(repo, '../../Reader-Core-Native'));
+  ? siblingCore : resolve(repo, '../../Reader-Core'));
 const coreSdkUrl = pathToFileURL(resolve(core, 'bindings/harmony/sdk/reader_core.ts')).href;
 const { ReaderCoreRequestError } = await import(coreSdkUrl);
 const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAuthorMetadata.ts'), 'utf8');

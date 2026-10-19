@@ -13,7 +13,7 @@ export const resolveEtsLoaderRoot = (options = {}) => resolveHarmonyTool('etsLoa
 export const resolveOpenHarmonySdkRoot = (options = {}) => resolve(resolveEtsLoaderRoot(options), '../../..');
 export const virtualFilePath = name => join(tmpdir(), name).replaceAll('\\', '/');
 export const resolveHostTool = (name, options = {}) => resolveHarmonyTool(name, { cwd: repositoryRoot, ...options });
-export function coreCliPath(coreRoot = resolve(repositoryRoot, '../Reader-Core-Native'), { env = process.env, platform = process.platform } = {}) {
+export function coreCliPath(coreRoot = resolve(repositoryRoot, '../Reader-Core'), { env = process.env, platform = process.platform } = {}) {
   if (env.READER_CORE_CLI) return resolve(env.READER_CORE_CLI);
   return resolve(coreRoot, env.CARGO_TARGET_DIR || 'target', 'debug', platform === 'win32' ? 'reader-cli.exe' : 'reader-cli');
 }

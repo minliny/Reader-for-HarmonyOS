@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createGateReceipt, digest } from '../../Reader-Core-Native/scripts/lib/gate-receipt.mjs';
+import { createGateReceipt, digest } from '../../Reader-Core/scripts/lib/gate-receipt.mjs';
 import { readFileSync } from 'node:fs';
 import { contractTests } from '../tools/run-contract-tests.mjs';
 

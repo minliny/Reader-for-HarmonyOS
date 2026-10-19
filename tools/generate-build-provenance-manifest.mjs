@@ -17,7 +17,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { verifyCoreBuildSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
+import { verifyCoreBuildSnapshot } from '../../Reader-Core/scripts/build-input-snapshot.mjs';
 
 function parseArgs(argv) {
   const values = new Map();

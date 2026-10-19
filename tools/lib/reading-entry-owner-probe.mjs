@@ -7,7 +7,7 @@ import {resolve} from 'node:path';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const { ts } = installedEtsCompiler();
 const root=fileURLToPath(new URL('../../',import.meta.url));
-const coreRoots=[process.env.READER_CORE_ROOT,resolve(root,'../Reader-Core-Native'),resolve(root,'../../../Reader-Core-Native'),resolve(root,'../../Reader-Core-Native')].filter(Boolean);
+const coreRoots=[process.env.READER_CORE_ROOT,resolve(root,'../Reader-Core'),resolve(root,'../../../Reader-Core'),resolve(root,'../../Reader-Core')].filter(Boolean);
 const coreRoot=coreRoots.find(path=>existsSync(resolve(path,'bindings/harmony/sdk/reader_core.ts')));
 assert.ok(coreRoot,'actual Core SDK fixture input exists');
 const sdk=await import(pathToFileURL(resolve(coreRoot,'bindings/harmony/sdk/reader_core.ts')).href);

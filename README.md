@@ -1,6 +1,6 @@
 # Reader for HarmonyOS
 
-Reader 当前唯一完整产品 Host/UI，也是唯一实际消费 `Reader-Core-Native` 的应用。
+Reader 当前唯一完整产品 Host/UI，也是唯一实际消费 `Reader-Core` 的应用。
 
 ## UI 与逻辑稿
 

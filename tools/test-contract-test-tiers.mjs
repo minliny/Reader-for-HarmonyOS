@@ -13,7 +13,7 @@ contractTests(fileURLToPath(new URL('..', import.meta.url)), 'full');
 const workspace = mkdtempSync(join(tmpdir(), 'reader-contract-gate-'));
 const root = join(workspace, 'Reader-for-HarmonyOS');
 mkdirSync(root);
-symlinkSync(fileURLToPath(new URL('../../Reader-Core-Native', import.meta.url)), join(workspace, 'Reader-Core-Native'), 'junction');
+symlinkSync(fileURLToPath(new URL('../../Reader-Core', import.meta.url)), join(workspace, 'Reader-Core'), 'junction');
 try {
   mkdirSync(join(root, 'tools'));
   const manifest = { schemaVersion: 1, source: ['test-pass.mjs'], integration: ['test-fail.mjs'] };

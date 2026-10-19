@@ -11,10 +11,10 @@ import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, veri
 import { contractToolchainLoaders, buildContractScope, prepareIdeNativeInputs, ideNativeBuildEnvironment, ideNativeInputState, releaseContractBuildWorkspace } from '../scripts/hap-pipeline.mjs';
 import { hapStageReceipt } from '../scripts/lib/hap-stage-receipt.mjs';
 import { reconcileIdeNativeCache } from '../scripts/lib/ide-native-cache.mjs';
-import { contentSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
-import { createGateReceipt, gateInputs, digest } from '../../Reader-Core-Native/scripts/lib/gate-receipt.mjs';
-import { CORE_GATE_STAGES } from '../../Reader-Core-Native/scripts/lib/core-gate-stages.mjs';
-import { verifyBuildLease } from '../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs';
+import { contentSnapshot } from '../../Reader-Core/scripts/build-input-snapshot.mjs';
+import { createGateReceipt, gateInputs, digest } from '../../Reader-Core/scripts/lib/gate-receipt.mjs';
+import { CORE_GATE_STAGES } from '../../Reader-Core/scripts/lib/core-gate-stages.mjs';
+import { verifyBuildLease } from '../../Reader-Core/scripts/lib/build-resource-lock.mjs';
 
 const root = realpathSync(mkdtempSync(join(tmpdir(), 'reader-delivery-admission-')));
 const put = (path, value = '') => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, value); return path; };
@@ -316,7 +316,7 @@ try {
     assert.equal(owner.pid, process.pid);
     assert.equal((await beginIdeBuild({})).READER_BUILD_LEASE_TOKEN, owner.token,
       'an already admitted callback must retain the same lease environment');
-    const lockModule = new URL('../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs', import.meta.url).href;
+    const lockModule = new URL('../../Reader-Core/scripts/lib/build-resource-lock.mjs', import.meta.url).href;
     const child = (env, body) => spawnSync(process.execPath, ['--input-type=module', '-e',
       `import { acquireBuildLease, verifyBuildLease } from ${JSON.stringify(lockModule)}; ${body}`],
     { env, encoding: 'utf8', timeout: 10000 });

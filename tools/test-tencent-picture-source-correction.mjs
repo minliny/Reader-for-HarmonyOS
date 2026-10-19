@@ -57,7 +57,7 @@ for (let index = 0; index < original.length; index += 1) {
   const future = structuredClone(current); future[index].builtinVersion = 8;
   assert.throws(() => applyTencentPictureSourceCorrection(future), /newer source/);
 }
-const corpus = JSON.parse(read('../../Reader-Core-Native/tests/fixtures/corpus/sources/src-2196-6781cc801619.json'));
+const corpus = JSON.parse(read('../../Reader-Core/tests/fixtures/corpus/sources/src-2196-6781cc801619.json'));
 assert.equal(ruleFingerprint(corpus), TENCENT_REVISIONS[1].correctedFingerprint,
   'current Core source and packaged source agree');
 assert.match(read('./refresh-source-supply-manifest.mjs'), /applyTencentPictureSourceCorrection\(sources\)/);
@@ -120,8 +120,8 @@ for (let index = 0; index < current.length; index += 1) {
 // Real production protocol and QuickJS parser, using the exact public DATA and
 // nonce script bytes captured from chapter 531040/1. No network is needed.
 const cli = coreCliPath();
-const html = read('../../Reader-Core-Native/tests/fixtures/manga/tencent-free-chapter-531040-1.html');
-const expected = JSON.parse(read('../../Reader-Core-Native/tests/fixtures/manga/tencent-free-chapter-531040-1-pages.json'));
+const html = read('../../Reader-Core/tests/fixtures/manga/tencent-free-chapter-531040-1.html');
+const expected = JSON.parse(read('../../Reader-Core/tests/fixtures/manga/tencent-free-chapter-531040-1-pages.json'));
 assert.equal(expected.length, 36);
 function extract(source, id) {
   const command = { protocolVersion: 1, requestId: id, method: 'manga.pages.extract', params: {

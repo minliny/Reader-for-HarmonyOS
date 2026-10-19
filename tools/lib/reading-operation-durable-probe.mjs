@@ -24,7 +24,7 @@ const sdk = await import('../../entry/vendor/core-harmony/sdk/reader_core.ts');
 const run = promisify(execFile);
 const { ts } = installedEtsCompiler();
 const hostRoot=fileURLToPath(new URL('../../',import.meta.url));
-export const coreRoot=process.env.READER_READING_RECEIPT_CORE_ROOT??resolve(hostRoot,'../Reader-Core-Native');
+export const coreRoot=process.env.READER_READING_RECEIPT_CORE_ROOT??resolve(hostRoot,'../Reader-Core');
 export const coreBinary=coreCliPath(coreRoot);
 const read=p=>fs.readFileSync(resolve(hostRoot,'entry/src/main/ets',p),'utf8');
 export function compile(p,n,deps,official=false){

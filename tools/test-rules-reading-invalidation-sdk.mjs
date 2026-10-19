@@ -8,7 +8,7 @@ const {ReadingEntryPreparation}=await import('../entry/src/main/ets/features/rea
 const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
 const {readerRuleMutationEffects}=await import('../entry/src/main/ets/app/ReaderRuleMutationEffects.ts');
 const {RULES_MUTATION_METHODS}=await import('../entry/src/main/ets/features/settings/RulesMutationContract.ts');
-const core=process.env.READER_CORE_ROOT??resolve('../Reader-Core-Native');
+const core=process.env.READER_CORE_ROOT??resolve('../Reader-Core');
 const {ReaderCoreRuntime}=await import(pathToFileURL(resolve(core,'bindings/harmony/sdk/reader_core.ts')).href);
 const file=new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url);
 const direct=overrides=>productionMotionMethods(file,['requestDirect'],{DEFAULT_CORE_REQUEST_TIMEOUT_MS:1000,

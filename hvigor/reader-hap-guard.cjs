@@ -64,7 +64,7 @@ async function beginIdeBuild(ide) {
   if (buildLease) return buildLease.env;
   if (!buildLeaseReady) {
     const admittedGeneration = buildGeneration;
-    buildLeaseReady = import('../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs').then(({ acquireBuildLease }) => {
+    buildLeaseReady = import('../../Reader-Core/scripts/lib/build-resource-lock.mjs').then(({ acquireBuildLease }) => {
     if (admittedGeneration !== buildGeneration) throw new Error('Reader IDE build ended before resource admission');
     buildLease = acquireBuildLease();
     buildEnvironmentBefore = new Map();

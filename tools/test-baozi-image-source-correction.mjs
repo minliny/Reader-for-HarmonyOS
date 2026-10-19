@@ -36,7 +36,7 @@ assert.equal(actual.exploreUrl, before.exploreUrl);
 assert.equal(actual.enabled, before.enabled);
 assert.equal(actual.enabledExplore, before.enabledExplore);
 
-const corpus = JSON.parse(readFileSync(new URL('../../Reader-Core-Native/tests/fixtures/corpus/sources/src-250-bb44193bd3bd.json', import.meta.url)));
+const corpus = JSON.parse(readFileSync(new URL('../../Reader-Core/tests/fixtures/corpus/sources/src-250-bb44193bd3bd.json', import.meta.url)));
 assert.equal(ruleFingerprint(corpus), BAOZI_CORRECTED_FINGERPRINT, 'Core and bundled rules agree');
 const correctedCorpusCandidate = { ...structuredClone(actual), builtinVersion: 6 };
 delete correctedCorpusCandidate.provenance.contentCorrection;

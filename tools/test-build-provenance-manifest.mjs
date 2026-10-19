@@ -6,7 +6,7 @@ import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSy
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { coreBuildSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
+import { coreBuildSnapshot } from '../../Reader-Core/scripts/build-input-snapshot.mjs';
 
 // Real LLVM ELF/strip and ZIP operations exercise the production generator.
 // This small unsigned ZIP is not an installable Reader or signing evidence.

@@ -32,7 +32,7 @@ async function setup(prior) {
  return f;
 }
 async function nonTxt(f) {
- const bytes=readFileSync(new URL('../../Reader-Core-Native/crates/reader-local-book/tests/fixtures/epub/sample.epub',import.meta.url)),
+ const bytes=readFileSync(new URL('../../Reader-Core/crates/reader-local-book/tests/fixtures/epub/sample.epub',import.meta.url)),
   id='local:'+createHash('sha256').update(bytes).digest('hex'),file=resolve(f.root,'source.epub');
  writeFileSync(file,bytes);await f.command('local_book.import',{bookId:id,filePath:file,format:'epub'});return id;
 }

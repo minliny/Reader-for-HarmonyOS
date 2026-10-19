@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const coreRepo = resolve(repo, '../Reader-Core-Native');
+const coreRepo = resolve(repo, '../Reader-Core');
 const cli = coreCliPath(coreRepo);
 const sourcePath = resolve(repo,
   'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json');

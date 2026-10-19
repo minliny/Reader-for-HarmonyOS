@@ -18,7 +18,7 @@ const run=promisify(execFile);
 const { ts } = installedEtsCompiler();
 const host=fileURLToPath(new URL('../../',import.meta.url));
 const read=p=>fs.readFileSync(resolve(host,'entry/src/main/ets',p),'utf8');
-export const binary=coreCliPath(process.env.READER_RULES_RECEIPT_CORE_ROOT??resolve(host,'../Reader-Core-Native'));
+export const binary=coreCliPath(process.env.READER_RULES_RECEIPT_CORE_ROOT??resolve(host,'../Reader-Core'));
 export function compile(p,name,deps,official=false,source=read(p)) {
  const body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'');
  if(!official)return new Function(...Object.keys(deps),stripTypeScriptTypes(body).replace(/^export /gm,'')+`;return ${name==='*'?'({'+[...source.matchAll(/^export (?:async )?(?:class|const|function) ([A-Za-z0-9_]+)/gm)].map(m=>m[1]).join(',')+'})':name};`)(...Object.values(deps));

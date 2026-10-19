@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const CORE = resolve(ROOT, '../Reader-Core-Native');
+const CORE = resolve(ROOT, '../Reader-Core');
 
 export function assertCoreInputs(core = CORE, app = ROOT) {
   const base = resolve(core, 'target/harmony-napi/arm64-v8a');

@@ -29,9 +29,9 @@ assert.deepEqual(applyPopofreeQuoteCorrection([structuredClone(corrected)]), cor
 const edited = structuredClone(old);
 edited.ruleContent.content = '#user-edited@text';
 assert.throws(() => applyPopofreeQuoteCorrection([edited]), /edited source revision/);
-const coreTest = readFileSync(new URL('../../Reader-Core-Native/crates/reader-content/tests/popofree_source_quotes.rs', import.meta.url), 'utf8');
+const coreTest = readFileSync(new URL('../../Reader-Core/crates/reader-content/tests/popofree_source_quotes.rs', import.meta.url), 'utf8');
 assert.ok(coreTest.includes('popofree_quote_rule()'), 'Core regression must load the production shared correction');
-const coreCorrection = readFileSync(new URL('../../Reader-Core-Native/crates/reader-content/src/source_corrections.rs', import.meta.url), 'utf8');
+const coreCorrection = readFileSync(new URL('../../Reader-Core/crates/reader-content/src/source_corrections.rs', import.meta.url), 'utf8');
 assert.ok(coreCorrection.includes(corrected.ruleFingerprint), 'offline correction must pin the distributed v8 fingerprint');
 const previous = structuredClone(old);
 previous.builtinVersion = 7;

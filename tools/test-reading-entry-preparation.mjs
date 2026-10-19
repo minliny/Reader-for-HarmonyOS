@@ -438,8 +438,8 @@ for (const [method, params, affected] of [
 
 // Check the actual Core contract, not a parallel guessed spelling list. Reads
 // and previews remain non-mutating; every rule write fences both owners.
-const contract = readFileSync(new URL('../../Reader-Core-Native/crates/reader-contract/src/lib.rs', import.meta.url), 'utf8') +
-  readFileSync(new URL('../../Reader-Core-Native/crates/reader-contract/src/reader_ui.rs', import.meta.url), 'utf8');
+const contract = readFileSync(new URL('../../Reader-Core/crates/reader-contract/src/lib.rs', import.meta.url), 'utf8') +
+  readFileSync(new URL('../../Reader-Core/crates/reader-contract/src/reader_ui.rs', import.meta.url), 'utf8');
 const ruleMutations = ['REPLACE_RULE_CREATE', 'REPLACE_RULE_UPDATE', 'REPLACE_RULE_DELETE',
   'REPLACE_PERSIST', 'REPLACE_UNDO', 'DICT_RULE_PUT', 'DICT_RULE_DELETE', 'RULE_BUNDLE_IMPORT'];
 for (const name of ruleMutations) {

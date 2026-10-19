@@ -30,7 +30,7 @@ import {
   run as runPipelineCommand,
 } from '../scripts/hap-pipeline.mjs';
 import { runContractsBounded } from './run-contract-tests.mjs';
-import { contentSnapshot } from '../../Reader-Core-Native/scripts/build-input-snapshot.mjs';
+import { contentSnapshot } from '../../Reader-Core/scripts/build-input-snapshot.mjs';
 
 const { assertCanonicalHapInvocation, assertReaderHapInvocation, isPackageTask, isBuildResourceTask } = createRequire(import.meta.url)('../hvigor/reader-hap-guard.cjs');
 for (const task of ['entry:default@CompileArkTS', 'entry:default@CompileTS', 'entry:default@CompileJS',

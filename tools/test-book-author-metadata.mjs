@@ -18,7 +18,7 @@ const {SearchGateway,SourceSwitchGateway}=await import(`data:text/javascript;bas
 
 // Core executes these same expectations against its actual SQLite alias key,
 // including old-index migration. Keep both platform adapters on one corpus.
-const coreRoot=process.env.READER_CORE_ROOT??localFilePath(new URL('../../Reader-Core-Native/',import.meta.url));
+const coreRoot=process.env.READER_CORE_ROOT??localFilePath(new URL('../../Reader-Core/',import.meta.url));
 const fixture=JSON.parse(readFileSync(resolve(coreRoot,'fixtures/metadata/book-author-labels.json'),'utf8'));
 assert.equal(fixture.version,1);
 for(const row of fixture.cases){

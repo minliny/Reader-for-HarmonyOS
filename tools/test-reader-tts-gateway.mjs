@@ -115,7 +115,7 @@ console.log('reader TTS precise rate round trip: PASS');
 // page added local body versions while the protocol still had its five fields;
 // unversioned hand-written fixtures never exercised that production boundary.
 const wireChapterKeys = Object.keys(JSON.parse(readFileSync(new URL(
-  '../../Reader-Core-Native/protocol/reader-command.schema.json', import.meta.url), 'utf8')).$defs.TtsChapterRef.properties);
+  '../../Reader-Core/protocol/reader-command.schema.json', import.meta.url), 'utf8')).$defs.TtsChapterRef.properties);
 const Page = withReaderProgressProducerFixture(productionMotionMethods(localFilePath(new URL(
   '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url)),
 ['ttsChapterRef', 'commitTtsProgress'], {

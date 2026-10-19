@@ -1,8 +1,8 @@
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, lstatSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { digest, gateInputs, validateGateReceipt } from '../../../Reader-Core-Native/scripts/lib/gate-receipt.mjs';
-import { CORE_GATE_STAGES } from '../../../Reader-Core-Native/scripts/lib/core-gate-stages.mjs';
+import { digest, gateInputs, validateGateReceipt } from '../../../Reader-Core/scripts/lib/gate-receipt.mjs';
+import { CORE_GATE_STAGES } from '../../../Reader-Core/scripts/lib/core-gate-stages.mjs';
 
 const configPath = fileURLToPath(new URL('./hap-required-resources.json', import.meta.url));
 export function requiredHapResources(repo) {

@@ -106,7 +106,7 @@ for (const withdrawn of [false, true]) {
 // Existing Core CLI, metadata-only pipeline: exact bundled search/detail rules
 // and public search payload. Unrelated discovery/network/TOC/content stages are
 // omitted; the detail payload is explicitly synthetic, never called live proof.
-const cli = coreCliPath(resolve(repo, '../Reader-Core-Native'));
+const cli = coreCliPath(resolve(repo, '../Reader-Core'));
 assert.ok(existsSync(cli), `an existing Core CLI is required for the offline metadata fixture: ${cli}`);
 const scratch = mkdtempSync(join(tmpdir(), 'reader-source-metadata-'));
 function parseMetadata(bookSource, label) {

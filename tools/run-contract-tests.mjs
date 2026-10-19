@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync, spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
 import { randomUUID } from 'node:crypto';
-import { acquireBuildLease } from '../../Reader-Core-Native/scripts/lib/build-resource-lock.mjs';
+import { acquireBuildLease } from '../../Reader-Core/scripts/lib/build-resource-lock.mjs';
 
 export const MAX_CONTRACT_TIMEOUT_MS = 110_000;
 export const MAX_CONTRACT_KILL_GRACE_MS = 1_000;

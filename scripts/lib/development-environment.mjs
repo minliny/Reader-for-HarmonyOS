@@ -1,4 +1,4 @@
-// Generated from Reader-Core-Native/scripts/lib/development-environment.mjs; run sync-workspace.mjs --write.
+// Generated from Reader-Core/scripts/lib/development-environment.mjs; run sync-workspace.mjs --write.
 import { existsSync, realpathSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -37,7 +37,7 @@ export function nativeSdkRoot(env = process.env, cwd = process.cwd()) {
 }
 export function assertWorkspaceLayout(root, env = process.env) {
   const result = {};
-  for (const [name, key] of [['Reader-Core-Native','READER_CORE_ROOT'], ['Reader-for-HarmonyOS','READER_HARMONY_ROOT'], ['Reader-UI','READER_UI_ROOT']]) {
+  for (const [name, key] of [['Reader-Core','READER_CORE_ROOT'], ['Reader-for-HarmonyOS','READER_HARMONY_ROOT'], ['Reader-UI','READER_UI_ROOT']]) {
     const adjacent = join(root, name), selected = resolve(root, env[key] || name);
     if (!directory(adjacent) || !directory(selected)) throw new Error(`Missing ${name} in the adjacent Reader workspace layout`);
     if (realpathSync(selected) !== realpathSync(adjacent)) throw new Error(`${key} must identify the adjacent ${name}; full development/HAP gates do not support split repository layouts`);
