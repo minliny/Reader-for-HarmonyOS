@@ -1,0 +1,16 @@
+{
+  "package": "lucide-static",
+  "version": "0.468.0",
+  "url": "https://registry.npmjs.org/lucide-static/-/lucide-static-0.468.0.tgz",
+  "integrity": "sha512-JvpWui2umxRyEVMoETfMzb+qKqibV/sdoqJbKmW1JLdkuhXluJKoO6NqCbvCK/vAbUuH5bTEFD4T6uECsrNcnA==",
+  "tarballSha256": "d87c47325f0b2ac3ad2d6f056889da32b8f1216eafe4ed6534bc02786effe8cc",
+  "license": "ISC",
+  "licenseFile": "LICENSE",
+  "licenseSha256": "1e7290b35280a048667bbf0ebabac1c7fd52a75300e8b2946ac165715997f2bc",
+  "icons": {
+    "ImageOff": {
+      "sourceFile": "image-off.svg",
+      "sourceSha256": "75c7294888945f16934a3e1d93b7cbcdb12241c4cfa2e851fece42a1c8e6c110"
+    }
+  }
+}

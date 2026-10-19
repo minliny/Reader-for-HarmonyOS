@@ -1,3 +1,5 @@
+import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_META } from '../common/ReaderMessageStyle';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderBoundedSurface } from '../common/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../common/ReaderBoundedSurfaceHeader';
 import { ReaderBoundedSurfaceActions } from '../common/ReaderBoundedSurfaceActions';
@@ -61,7 +63,8 @@ export struct LocalImportDialog {
   @Prop failureMessage: string = '';
   @Prop selectionEnabled: boolean = true;
   @Prop selectionBlockedMessage: string = '';
-  @Prop recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @Prop originalPending: boolean = false;
+  @Prop @Watch('onRecoveryChanged') recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppForeground') @Watch('onPresentationChanged') private foreground: boolean = true;
   @State private viewportHeight: number = 0;
@@ -72,9 +75,6 @@ export struct LocalImportDialog {
   @State private shellHeight: number = 228;
   @State private importingOpacity: number = 1;
   @State private resultOpacity: number = 0;
-  @State private spinnerAngle: number = 0;
-  private spinnerStartedAt: number = 0;
-  private spinnerRunning: boolean = false;
   private mounted: boolean = false;
   private motionGeneration: number = 0;
   private pendingHandoff: boolean = false;
@@ -93,10 +93,11 @@ export struct LocalImportDialog {
     this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
     this.onPresentationChanged();
+    this.onRecoveryChanged();
   }
 
   aboutToDisappear(): void {
-    this.mounted = false; this.motionGeneration += 1; this.stopSpinner();
+    this.mounted = false; this.motionGeneration += 1;
   }
 
   build() {
@@ -118,6 +119,14 @@ export struct LocalImportDialog {
       .width('100%')
       .height('100%')
       .padding({ left: this.panelFrame().left, right: this.panelFrame().right });
+      if (this.pendingImport()) {
+        Column() {
+          ReaderRecoveryNotice({ view: this.recovery, tag: '导入待确认', actionLabel: '核对导入结果',
+            onReconcile: (generation: number): void => this.onReconcile(generation) });
+        }.width('100%').padding({ left: this.panelFrame().left, right: this.panelFrame().right,
+          top: 8 })
+          .align(Alignment.Top).hitTestBehavior(HitTestMode.Transparent);
+      }
     }
     .width('100%')
     .height('100%')
@@ -140,21 +149,35 @@ export struct LocalImportDialog {
 
   @Builder
   private fileSelectionPanel() {
-    ReaderBoundedSurface({ specId: 'local-import-selection', surfaceWidth: this.panelFrame().width, surfaceHeight: 399.75,
-      header: (): void => { this.fileSelectionHeader(); }, body: (): void => { this.fileSelectionBody(); }, actions: (): void => { this.fileSelectionActions(); } });
+    ReaderBoundedSurface({ specId: 'local-import-selection', surfaceWidth: this.panelFrame().width,
+      surfaceHeight: this.selectionPanelHeight(), body: (): void => { this.selectionDocument(); } });
+  }
+
+  @Builder
+  private selectionDocument() {
+    Scroll() {
+      Column() { this.fileSelectionHeader(); this.fileSelectionBody(); this.fileSelectionActions(); }.width('100%');
+    }.width('100%').height(this.selectionPanelHeight()).scrollBar(BarState.Auto);
+  }
+
+  private selectionPanelHeight(): number {
+    const scale = Math.max(1, ReaderWindowCoordinator.metrics().systemFontScale);
+    return Math.min(this.availableHeight(), 399.75 * scale);
   }
 
   @Builder
   private fileSelectionHeader() {
-    ReaderBoundedSurfaceHeader({ specId: 'local-import-selection', title: '导入本地书籍' });
+    this.importHeader('导入本地书籍');
   }
 
   @Builder
   private fileSelectionActions() {
-    ReaderBoundedSurfaceActions({ specId: 'local-file-selection',
-      primaryLabel: this.state === 'pickerOpening' ? '正在选择…' : this.selectionEnabled ? '选择文件' : '请稍候',
-      primaryEnabled: this.state !== 'pickerOpening' && this.selectionEnabled,
-      onAction: (id: string): void => { if (id === 'primary') { if (this.selectionEnabled) this.onSelectFiles(); } else this.onClose(); } });
+    Row({ space: 10 }) {
+      ReaderRecoveryAction({ label: '选择文件', actionEnabled: this.state !== 'pickerOpening' && this.selectionEnabled,
+        isBusy: this.state === 'pickerOpening', onReconcile: (): void => { if (this.selectionEnabled) this.onSelectFiles(); } }).layoutWeight(1);
+      ReaderRecoveryAction({ label: '取消', onReconcile: (): void => this.onClose() }).layoutWeight(1);
+    }.width('100%').padding(17);
+
   }
 
   @Builder
@@ -216,12 +239,11 @@ export struct LocalImportDialog {
           Text(this.selectionBlockedMessage.length > 0 ? this.selectionBlockedMessage :
             this.failureMessage.length > 0 ? this.failureMessage : '支持从系统文件中多选 TXT、EPUB、MOBI 与 AZW3。')
             .layoutWeight(1)
-            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)
-            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)
-            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)
-            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)
-            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+            .fontFamily(MESSAGE_BODY.fontFamily)
+            .fontWeight(MESSAGE_BODY.fontWeight)
+            .fontSize(MESSAGE_BODY.fontSizeFp)
+            .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
         }
         .width('100%')
         .padding({ top: TOK_SPACE_MD });
@@ -234,37 +256,24 @@ export struct LocalImportDialog {
   @Builder
   private importingPanel() {
     Column() {
-      Stack({ alignContent: Alignment.Center }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_halo_theme_night') : $r('app.media.importing_halo'))).width(56).height(56);
-        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_spinner_track_theme_night') : $r('app.media.importing_spinner_track'))).width(32).height(32);
-        Image((this.appThemeScheme === 'night' ? $r('app.media.importing_spinner_arc_theme_night') : $r('app.media.importing_spinner_arc'))).width(32).height(32)
-          .rotate({ angle: this.spinnerAngle });
-      }
-      .width(56)
-      .height(56)
-      .margin({ top: 35 });
+      this.importHeader('正在导入');
+      Column({ space: 16 }) {
+        LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+        Text('请稍候，完成后将显示导入结果。')
+          .fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
+          .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center);
+      }.width('100%').padding({ left: 17, right: 17, top: 23, bottom: 14 });
+    }.width(this.panelFrame().width).height(228).alignItems(HorizontalAlign.Start)
+      .opacity(this.importingOpacity).hitTestBehavior(HitTestMode.None);
+  }
 
-      Text('正在导入')
-        .fontFamily(TYPE_FILE_IMPORT_PROGRESS.fontFamily)
-        .fontWeight(TYPE_FILE_IMPORT_PROGRESS.fontWeight)
-        .fontSize(TYPE_FILE_IMPORT_PROGRESS.fontSizeFp)
-        .lineHeight(TYPE_FILE_IMPORT_PROGRESS.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .margin({ top: 20 });
-
-      Text('请稍候')
-        .fontFamily(TYPE_FILE_IMPORT_WAIT.fontFamily)
-        .fontWeight(TYPE_FILE_IMPORT_WAIT.fontWeight)
-        .fontSize(TYPE_FILE_IMPORT_WAIT.fontSizeFp)
-        .lineHeight(TYPE_FILE_IMPORT_WAIT.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .margin({ top: 8 });
-    }
-    .width(this.panelFrame().width)
-    .height(228)
-    .alignItems(HorizontalAlign.Center)
-    .opacity(this.importingOpacity)
-    .hitTestBehavior(HitTestMode.None);
+  @Builder
+  private importHeader(title: string) {
+    Text(title).width('100%').fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
+      .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
+      .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
+      .padding({ left: 17, right: 17, top: 17, bottom: 16 });
   }
 
   @Builder
@@ -293,82 +302,31 @@ export struct LocalImportDialog {
 
   @Builder
   private resultHeader() {
-    ReaderBoundedSurfaceHeader({ specId: 'local-import-result-content', title: '导入结果',
-      onAreaChanged: (_old: Area, next: Area): void => {
+    Column() { this.importHeader(this.summaryTitle()); }.width('100%')
+      .onAreaChange((_old: Area, next: Area): void => {
         this.measuredHeaderHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
-      } });
-  }
-
-  @Builder
-  private resultRecovery() {
-    ReaderRecoveryNotice({ view: this.recovery,
-      onReconcile: (generation: number): void => this.onReconcile(generation) });
+      });
   }
 
   @Builder
   private resultFooter() {
-    ReaderBoundedSurfaceActions({ specId: 'local-import-result', primaryLabel: '完成',
-      actionWidth: this.resultButtonWidth(), availableHeight: this.availableHeight(), feedback: (): void => { this.resultRecovery(); },
-      onAction: (_id: string): void => this.onClose(),
-      onAreaChanged: (_old: Area, next: Area): void => {
+    Column() {
+      ReaderRecoveryAction({ label: '完成', onReconcile: (): void => this.onClose() }).width('100%');
+    }.width('100%').padding(17)
+      .onAreaChange((_old: Area, next: Area): void => {
         this.measuredFooterHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
-      } });
+      });
   }
 
   @Builder
   private resultSummary() {
-    Column() {
-      Row({ space: TOK_SPACE_SM }) {
-        Stack({ alignContent: Alignment.Center }) {
-          Image(this.summaryIcon()).width(18).height(18);
-        }
-        .width(36)
-        .height(36)
-        .backgroundColor(this.allSucceeded() ? readerAppColor('app.LocalImportDialog.resultSummary.backgroundColor.FFE8F4ED', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultSummary.backgroundColor.FFFDECEA', this.appThemeScheme))
-        .borderRadius(18);
-        Column({ space: 1 }) {
-          Text(this.summaryTitle())
-            .fontFamily(TYPE_FILE_IMPORT_LABEL.fontFamily)
-            .fontWeight(TYPE_FILE_IMPORT_LABEL.fontWeight)
-            .fontSize(TYPE_FILE_IMPORT_LABEL.fontSizeFp)
-            .lineHeight(TYPE_FILE_IMPORT_LABEL.lineHeightFp as number)
-            .letterSpacing(TYPE_FILE_IMPORT_LABEL.letterSpacingFp as number)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-          Text(this.resultCountText())
-            .fontFamily(TYPE_FILE_IMPORT_HINT.fontFamily)
-            .fontWeight(TYPE_FILE_IMPORT_HINT.fontWeight)
-            .fontSize(TYPE_FILE_IMPORT_HINT.fontSizeFp)
-            .lineHeight(TYPE_FILE_IMPORT_HINT.lineHeightFp as number)
-            .letterSpacing(TYPE_FILE_IMPORT_HINT.letterSpacingFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start);
-        Stack({ alignContent: Alignment.Center }) {
-          // Figma 2657:818 keeps an 18vp slot; rotated Icon 2657:819 paints
-          // a 23.754vp bound. The 24px export already bakes in that rotation.
-          // Restore its paint scale without shrinking it twice or changing layout.
-          Image((this.appThemeScheme === 'night' ? $r('app.media.import_refresh_theme_night') : $r('app.media.import_refresh')))
-            .width(18)
-            .height(18)
-            .scale({ x: 23.754 / 18, y: 23.754 / 18 });
-        }
-        .width(18)
-        .height(18);
-      }
-      .width('100%')
-      .constraintSize({ minHeight: 52 })
-      .padding({ left: 17, right: 17, top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
-      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.LocalImportDialog.resultSummary.color.FFE8E2D9', this.appThemeScheme) })
-      .borderRadius(12);
-    }
-    .width('100%')
-    .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_MD })
-    .onAreaChange((_old: Area, next: Area): void => {
-      this.measuredSummaryHeight = this.numericAreaLength(next.height);
-      this.updateMeasuredResult();
-    });
+    Text(this.resultCountText()).width('100%').fontFamily(MESSAGE_BODY.fontFamily)
+      .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+      .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
+      .padding({ left: 17, right: 17, bottom: 15 })
+      .onAreaChange((_old: Area, next: Area): void => {
+        this.measuredSummaryHeight = this.numericAreaLength(next.height); this.updateMeasuredResult();
+      });
   }
 
   @Builder
@@ -380,12 +338,11 @@ export struct LocalImportDialog {
       .width('100%')
       .height(this.resultItemsPanelHeight())
       .padding(1)
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.LocalImportDialog.resultItemsPanel.color.FFE8E2D9', this.appThemeScheme) })
-      .borderRadius(12)
+
       .scrollBar(BarState.Off);
     }
     .width('100%')
-    .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_SM });
+    .padding({ left: 17, right: 17 });
   }
 
   @Builder
@@ -405,65 +362,29 @@ export struct LocalImportDialog {
   @Builder
   private resultItem(item: () => LocalImportItem, hasDivider: () => boolean) {
     Column({ space: 0 }) {
-      Row({ space: TOK_SPACE_SM }) {
-        Stack({ alignContent: Alignment.Center }) {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.import_doc_theme_night') : $r('app.media.import_doc'))).width(16).height(16);
-        }
-        .width(32)
-        .height(32)
-        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-        .borderRadius(8);
-        Column({ space: 3 }) {
-          Text(item().fileName)
-            .width('100%')
-            .fontFamily(TYPE_FILE_IMPORT_NAME.fontFamily)
-            .fontWeight(TYPE_FILE_IMPORT_NAME.fontWeight)
-            .fontSize(TYPE_FILE_IMPORT_NAME.fontSizeFp)
-            .lineHeight(TYPE_FILE_IMPORT_NAME.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-          this.resultBadge((): string => item().state === 'success' ?
-            (item().disposition === 'created' ? '新增成功' : item().disposition === 'existing' ? '已在书架' : '成功') :
-            (item().failure?.code === 'recoveryPending' ? '待确认' : '失败'), (): string => item().state === 'success' ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.LocalImportDialog.resultItem.resultBadge.FF5A4A2A', this.appThemeScheme));
+      Row({ space: 9 }) {
+        Image(this.appThemeScheme === 'night' ? $r('app.media.import_doc_theme_night') : $r('app.media.import_doc'))
+          .width(16).height(16).margin({ top: 3 });
+        Column({ space: 4 }) {
+          Text(item().fileName).width('100%').fontFamily(MESSAGE_BODY.fontFamily).fontWeight(500)
+            .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
+          Text(item().state === 'success' ? (item().disposition === 'created' ? '新增成功' :
+            item().disposition === 'existing' ? '已在书架' : '成功') :
+            item().failure?.code === 'recoveryPending' ? '待确认' : '失败')
+            .fontFamily(MESSAGE_META.fontFamily).fontSize(MESSAGE_META.fontSizeFp)
+            .lineHeight(MESSAGE_META.lineHeightFp as number)
+            .fontColor(readerAppColor(item().state === 'success' ? 'TOK_MESSAGE_SOFT_INK' :
+              item().failure?.code === 'recoveryPending' ? 'TOK_MESSAGE_MUTED' : 'TOK_MESSAGE_DANGER', this.appThemeScheme));
           if (item().failure !== undefined) {
-            Text(item().failure?.message ?? '').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(2).width('100%');
+            Text(item().failure?.message ?? '').width('100%').fontFamily(MESSAGE_META.fontFamily)
+              .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+              .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
           }
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start);
-        if (item().state === 'success') {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.import_success_theme_night') : $r('app.media.import_success'))).width(17).height(17);
-        } else {
-          Image($r('app.media.import_failure')).width(17).height(17);
-        }
-      }
-      .width('100%')
-      .constraintSize({ minHeight: 61 })
-      .padding({ left: TOK_SPACE_MD, right: TOK_SPACE_MD, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 })
-      .alignItems(VerticalAlign.Center);
-      if (hasDivider()) {
-        Divider()
-          .width('100%')
-          .color(readerAppColor('app.LocalImportDialog.resultItem.color.FFE8E2D9', this.appThemeScheme))
-          .strokeWidth(1);
-      }
-    }
-    .width('100%');
-  }
-
-  @Builder
-  private resultBadge(label: () => string, color: () => string) {
-    Text(label())
-      .fontFamily(TYPE_FILE_IMPORT_BADGE.fontFamily)
-      .fontWeight(TYPE_FILE_IMPORT_BADGE.fontWeight)
-      .fontSize(TYPE_FILE_IMPORT_BADGE.fontSizeFp)
-      .lineHeight(TYPE_FILE_IMPORT_BADGE.lineHeightFp as number)
-      .letterSpacing(TYPE_FILE_IMPORT_BADGE.letterSpacingFp as number)
-      .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-      .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-      .backgroundColor(color())
-      .borderRadius(4);
+        }.layoutWeight(1).alignItems(HorizontalAlign.Start);
+      }.width('100%').alignItems(VerticalAlign.Top).padding({ top: 13, bottom: 13 })
+        .border({ width: { top: 1 }, color: readerAppColor('TOK_MESSAGE_BORDER', this.appThemeScheme) });
+    }.width('100%');
   }
 
   @Builder
@@ -535,7 +456,8 @@ export struct LocalImportDialog {
   }
 
   private summaryTitle(): string {
-    if (this.resultItems().some((item: LocalImportItem): boolean => item.failure?.code === 'recoveryPending')) return '部分结果待确认';
+    if (this.resultItems().some((item: LocalImportItem): boolean => item.failure?.code === 'recoveryPending'))
+      return this.resultItems().some((item: LocalImportItem): boolean => item.state === 'success') ? '部分结果待确认' : '导入结果待确认';
     return this.allSucceeded() ? '导入完成' : (this.batch?.imported === 0 ? '导入未完成' : '部分导入完成');
   }
 
@@ -557,10 +479,10 @@ export struct LocalImportDialog {
       this.shellHeight = Math.min(228, this.availableHeight());
       this.importingOpacity = 1;
       this.resultOpacity = 0;
-      if (this.foreground && !this.reduceMotion) this.startSpinner(); else this.stopSpinner();
+
       return;
     }
-    this.stopSpinner();
+
     if (this.state === 'result') {
       this.pendingHandoff = true;
       this.updateMeasuredResult();
@@ -568,23 +490,6 @@ export struct LocalImportDialog {
       this.motionGeneration += 1;
       this.wasImporting = false;
     }
-  }
-
-  private startSpinner(): void {
-    if (this.spinnerRunning) return;
-    this.spinnerRunning = true;
-    this.spinnerStartedAt = readerMotionNowMs();
-    this.spinnerAngle = 0;
-    // Authorized §7.4 candidate: not claimed as a Figma import timing.
-    this.getUIContext().animateTo({ duration: 1000, curve: Curve.Linear, iterations: -1 },
-      (): void => { this.spinnerAngle = 360; });
-  }
-
-  private stopSpinner(): void {
-    if (!this.spinnerRunning) return;
-    this.spinnerRunning = false;
-    const angle = ((readerMotionNowMs() - this.spinnerStartedAt) % 1000) * .36;
-    this.getUIContext().animateTo({ duration: 0 }, (): void => { this.spinnerAngle = angle; });
   }
 
   private updateMeasuredResult(): void {
@@ -622,6 +527,19 @@ export struct LocalImportDialog {
       return Number.isFinite(parsed) ? parsed : 0;
     }
     return 0;
+  }
+
+  private pendingImport(): boolean {
+    return this.recovery.visible && (this.originalPending ||
+      this.resultItems().some((item: LocalImportItem): boolean => item.failure?.code === 'recoveryPending'));
+  }
+
+  private lastRecoveryFeedback: string = '';
+  private onRecoveryChanged(): void {
+    if (!this.recovery.visible || !this.recovery.canRetry || this.pendingImport()) { this.lastRecoveryFeedback = ''; return; }
+    if (!this.mounted || this.recovery.message === this.lastRecoveryFeedback) return;
+    this.lastRecoveryFeedback = this.recovery.message;
+    try { this.getUIContext().getPromptAction().showToast({ message: this.recovery.message, duration: 2000 }); } catch (_) {}
   }
 
   private resultCountText(): string {

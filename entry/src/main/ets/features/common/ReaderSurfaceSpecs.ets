@@ -5,44 +5,42 @@ import { SOURCE_SWITCH_VISUAL } from '../source/SourceSwitchVisual';
  * measured geometry and safe insets; the existing bounded surface paints it. */
 export type DrawerSpecId = 'reader-action-sheet' | 'source-switch-drawer';
 export class DrawerSurfaceSpec {
-  readonly maxWidth: number;
-  readonly cornerRadius: number;
-  readonly surfaceRole: ReaderAppColorRole;
-  readonly lineRole: ReaderAppColorRole = 'TOK_DOWNLOAD_LINE';
-  readonly scrimRole: ReaderAppColorRole;
+  readonly maxWidth: number = SOURCE_SWITCH_VISUAL.drawerMaxWidth;
+  readonly cornerRadius: number = SOURCE_SWITCH_VISUAL.drawerCornerRadius;
+  readonly surfaceRole: ReaderAppColorRole = 'TOK_SS_WINDOW_BG';
+  readonly lineRole: ReaderAppColorRole = 'TOK_ROW_DIVIDER';
+  readonly scrimRole: ReaderAppColorRole = 'TOK_SS_DRAWER_SCRIM';
   readonly inkRole: ReaderAppColorRole = 'TOK_INK';
-  readonly minimumContentHeight: number = 260;
-  readonly contentInset: number = 18;
-  readonly sideContentInset: number = 20;
-  readonly compactSideContentInset: number = 16;
-  readonly compactViewportWidth: number = 700;
-  readonly handleWidth: number = 42;
-  readonly handleHeight: number = 5;
-  readonly handleZone: number = 30;
+  readonly minimumContentHeight: number = 0;
+  readonly contentInset: number = SOURCE_SWITCH_VISUAL.normalSideInset;
+  readonly sideContentInset: number = SOURCE_SWITCH_VISUAL.normalSideInset;
+  readonly compactSideContentInset: number = SOURCE_SWITCH_VISUAL.narrowSideInset;
+  readonly compactViewportWidth: number = SOURCE_SWITCH_VISUAL.narrowWidthThreshold;
+  readonly handleWidth: number = SOURCE_SWITCH_VISUAL.gripWidth;
+  readonly handleHeight: number = SOURCE_SWITCH_VISUAL.gripHeight;
+  readonly handleTop: number = SOURCE_SWITCH_VISUAL.gripMarginTop;
+  readonly handleBottom: number = SOURCE_SWITCH_VISUAL.gripMarginBottom;
+  readonly handleZone: number = SOURCE_SWITCH_VISUAL.gripMarginTop + SOURCE_SWITCH_VISUAL.gripHeight + SOURCE_SWITCH_VISUAL.gripMarginBottom;
   readonly closeSize: number = 44;
-  readonly closeIcon: number = 18;
-  readonly closeTop: number = 24;
-  readonly closeRight: number = 12;
-  readonly titleFontFamily: string = 'ReaderMangaSans900';
-  readonly titleFontWeight: number = 900;
-  readonly titleFontSize: number = 18;
-  readonly titleLineHeight: number = 26;
+  readonly closeIcon: number = SOURCE_SWITCH_VISUAL.closeIconSize;
+  readonly closeTop: number = 0;
+  readonly closeRight: number = 0;
+  readonly titleFontFamily: string = 'ReaderNotoSerifSCBold';
+  readonly titleFontWeight: number = SOURCE_SWITCH_VISUAL.titleFontWeight;
+  readonly titleFontSize: number = SOURCE_SWITCH_VISUAL.titleFontSize;
+  readonly titleLineHeight: number = SOURCE_SWITCH_VISUAL.titleLineHeight;
   readonly titleMinFontScale: number = 0;
   readonly titleMaxFontScale: number = 2;
-  readonly titleBottom: number = 14;
-  readonly sideTitleFontFamily: string = 'ReaderMangaSans600';
-  readonly sideTitleFontWeight: number = 600;
-  readonly sideTitleFontSize: number = 15;
-  readonly sideTitleLineHeight: number = 24;
-  readonly sideHeaderHeight: number = 66;
-  readonly sideHeaderBottom: number = 17;
+  readonly titleHeight: number = SOURCE_SWITCH_VISUAL.headingHeight;
+  readonly titleBottom: number = 0;
+  readonly sideTitleFontFamily: string = 'ReaderNotoSerifSCBold';
+  readonly sideTitleFontWeight: number = SOURCE_SWITCH_VISUAL.titleFontWeight;
+  readonly sideTitleFontSize: number = SOURCE_SWITCH_VISUAL.titleFontSize;
+  readonly sideTitleLineHeight: number = SOURCE_SWITCH_VISUAL.titleLineHeight;
+  readonly sideHeaderHeight: number = SOURCE_SWITCH_VISUAL.headingHeight + SOURCE_SWITCH_VISUAL.gripMarginTop + SOURCE_SWITCH_VISUAL.gripMarginBottom;
+  readonly sideHeaderBottom: number = 0;
   readonly handleRole: ReaderAppColorRole = 'TOK_SS_DRAWER_HANDLE';
-  constructor(id: DrawerSpecId) {
-    this.maxWidth = id === 'source-switch-drawer' ? SOURCE_SWITCH_VISUAL.drawerMaxWidth : 0;
-    this.cornerRadius = id === 'source-switch-drawer' ? SOURCE_SWITCH_VISUAL.drawerCornerRadius : 22;
-    this.surfaceRole = id === 'source-switch-drawer' ? 'TOK_SS_WINDOW_BG' : 'TOK_DOWNLOAD_SURFACE';
-    this.scrimRole = id === 'source-switch-drawer' ? 'TOK_SS_DRAWER_SCRIM' : 'TOK_DOWNLOAD_SCRIM';
-  }
+  constructor(_id: DrawerSpecId) {}
 }
 const DRAWER_SPECS: Record<DrawerSpecId, DrawerSurfaceSpec> = {
   'reader-action-sheet': new DrawerSurfaceSpec('reader-action-sheet'),
@@ -58,7 +56,7 @@ export function resolveDrawerSpec(id: DrawerSpecId): DrawerSurfaceSpec { return 
  */
 export type DialogSpecId = 'book-removal' | 'json-import' | 'shelf-group' | 'local-import';
 
-export type DialogHeaderFontFamily = 'ReaderNotoSansSC' | 'ReaderNotoSerifSCBold';
+export type DialogHeaderFontFamily = 'ReaderMangaSans600' | 'ReaderNotoSerifSCBold';
 
 /**
  * cap        — the surface column width is clamped to maxWidth (native modal).
@@ -109,7 +107,7 @@ export interface DialogSurfaceSpecInit {
 }
 
 export class DialogSurfaceSpec {
-  readonly headerFontWeight: number = 700;
+  readonly headerFontWeight: number = 600;
   readonly maxWidth: number;
   readonly edgeGap: number;
   readonly widthPercent: number;
@@ -163,68 +161,48 @@ export class DialogSurfaceSpec {
   }
 }
 
+// User-approved confirmation/form/task family, 2026-10-19. Hosts continue
+// to own focus, masks, keyboard/safe-area bounds and operation admission.
 const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
-  // Figma Library/BookDetail/DeleteDialog 2269:46. Native CustomDialog host.
   'book-removal': new DialogSurfaceSpec({
     maxWidth: 306, edgeGap: 20, widthPercent: 0, frameMode: 'cap', usesKeyboardSafeArea: false,
     padding: 17, borderRadius: 12,
-    backgroundRole: 'TOK_CARD_BG_HI', hasShadow: true, hasBorder: true,
-    headerFontSize: 17, headerFontFamily: 'ReaderNotoSansSC', headerTextAlign: TextAlign.Start,
-    headerLineHeight: 20,
-    // bodyActionsGap stays 0: the shared surface's inner body wrapper owns
-    // the 30vp body→actions spacing as the single spacing owner.
-    headerGap: 16, bodyActionsGap: 0,
-    actionsLayout: 'row', actionHeight: 38, actionBorderRadius: 12, actionUsesPressFeedback: true,
-    actionExtendsTouchRegion: true,
-    bodyActionsOwnMargin: 30,
-    actionPrimarySurfaceRole: 'TOK_SURFACE_PANEL_SOFT', actionPrimaryLabelRole: 'TOK_INK',
+    backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,
+    headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,
+    headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,
+    actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,
+    actionExtendsTouchRegion: false,
+    actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',
   }),
-  // Portable JSON acquisition surface. Self-drawn full-height overlay host;
-  // the mask and zIndex stay in the caller, only the framed card is shared.
-  // The original business order puts the local-file action between the
-  // description and the URL form, so only the trailing online-import action
-  // uses the shared actions row; the body embeds the local button itself.
-  // bodyActionsGap 16 reproduces the original Column({ space: TOK_SPACE_MD })
-  // separation between the URL group and the trailing action.
   'json-import': new DialogSurfaceSpec({
-    maxWidth: 520, edgeGap: 20, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
-    padding: 16, borderRadius: 14,
-    backgroundRole: 'TOK_SURFACE_SOLID', hasShadow: false, hasBorder: true,
-    headerFontSize: 22, headerFontFamily: 'ReaderNotoSerifSCBold', headerTextAlign: TextAlign.Start,
-    headerLineHeight: 28,
-    headerGap: 16, bodyActionsGap: 16, bodyActionsOwnMargin: 0,
-    actionsLayout: 'stack', actionHeight: 44, actionBorderRadius: 8, actionUsesPressFeedback: false,
+    maxWidth: 360, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
+    padding: 17, borderRadius: 12,
+    backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,
+    headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,
+    headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,
+    actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,
     actionExtendsTouchRegion: false,
-    actionPrimarySurfaceRole: 'TOK_PRIMARY_DARK', actionPrimaryLabelRole: 'TOK_ON_PRIMARY',
+    actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',
   }),
-  // Index default-group assignment overlay (formerly hand-drawn width('75%')
-  // frame). Percentage width is a preserved legacy spec, not a new pattern;
-  // no actions row — dismissal is owned by the caller's mask tap.
   'shelf-group': new DialogSurfaceSpec({
-    maxWidth: 0, edgeGap: 0, widthPercent: 75, frameMode: 'cap', usesKeyboardSafeArea: false,
-    padding: 20, borderRadius: 20,
-    backgroundRole: 'TOK_SURFACE_SOLID', hasShadow: false, hasBorder: false,
-    // The former inline Column centered its intrinsic title by default. Keep
-    // that visual baseline explicit now that the shared header is full-width.
-    headerFontSize: 17, headerFontFamily: 'ReaderNotoSansSC', headerTextAlign: TextAlign.Center,
-    headerLineHeight: 20,
-    headerGap: 12, bodyActionsGap: 0, bodyActionsOwnMargin: 0,
-    actionsLayout: 'row', actionHeight: 0, actionBorderRadius: 0, actionUsesPressFeedback: false,
+    maxWidth: 360, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
+    padding: 17, borderRadius: 12,
+    backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,
+    headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,
+    headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,
+    actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,
     actionExtendsTouchRegion: false,
-    actionPrimarySurfaceRole: 'TOK_SURFACE_PANEL_SOFT', actionPrimaryLabelRole: 'TOK_INK',
+    actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',
   }),
-  // Local file import keeps its measured state-specific heights and state
-  // machine. This entry owns only the outer frame and safe horizontal role.
   'local-import': new DialogSurfaceSpec({
-    maxWidth: 350, edgeGap: 20, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
-    padding: 20, borderRadius: 20,
-    backgroundRole: 'TOK_SURFACE_SOLID', hasShadow: true, hasBorder: false,
-    headerFontSize: 18, headerFontFamily: 'ReaderNotoSerifSCBold', headerTextAlign: TextAlign.Start,
-    headerLineHeight: 24.75,
-    headerGap: 17, bodyActionsGap: 16, bodyActionsOwnMargin: 0,
-    actionsLayout: 'stack', actionHeight: 44, actionBorderRadius: 22, actionUsesPressFeedback: false,
+    maxWidth: 350, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
+    padding: 17, borderRadius: 12,
+    backgroundRole: 'TOK_MESSAGE_SURFACE', hasShadow: true, hasBorder: true,
+    headerFontSize: 17, headerFontFamily: 'ReaderMangaSans600', headerTextAlign: TextAlign.Start,
+    headerLineHeight: 24, headerGap: 12, bodyActionsGap: 28, bodyActionsOwnMargin: 0,
+    actionsLayout: 'row', actionHeight: 44, actionBorderRadius: 12, actionUsesPressFeedback: true,
     actionExtendsTouchRegion: false,
-    actionPrimarySurfaceRole: 'TOK_PRIMARY_DARK', actionPrimaryLabelRole: 'TOK_ON_PRIMARY',
+    actionPrimarySurfaceRole: 'TOK_MESSAGE_SOFT', actionPrimaryLabelRole: 'TOK_MESSAGE_SOFT_INK',
   }),
 };
 
@@ -239,144 +217,32 @@ export function resolveDialogSpec(id: DialogSpecId): DialogSurfaceSpec {
  */
 export type SheetSpecId = 'bookshelf-book-action';
 
-export interface SheetSurfaceSpecInit {
-  height: number;
-  horizontalInset: number;
-  handleWidth: number;
-  handleHeight: number;
-  handleTop: number;
-  titleTop: number;
-  titleInset: number;
-  titleFontFamily: string;
-  titleFontSize: number;
-  titleLineHeight: number;
-  actionStart: number;
-  actionStep: number;
-  actionCount: number;
-  actionHeight: number;
-  actionPaddingLeft: number;
-  actionBorderRadius: number;
-  borderWidth: number;
-  borderRadius: number;
-  shadowRadius: number;
-  shadowOffsetY: number;
-  actionLabelFontFamily: string;
-  actionLabelFontSize: number;
-  actionLabelLineHeight: number;
-  backgroundRole: ReaderAppColorRole;
-  borderRole: ReaderAppColorRole;
-  handleRole: ReaderAppColorRole;
-  titleRole: ReaderAppColorRole;
-  actionTextRole: ReaderAppColorRole;
-  dangerTextRole: ReaderAppColorRole;
-  actionBackgroundRole: ReaderAppColorRole;
-  dangerBackgroundRole: ReaderAppColorRole;
-  shadowRole: ReaderAppColorRole;
-  hostBackgroundRole: ReaderAppColorRole;
-  hostMaskRole: ReaderAppColorRole;
-}
-
+/** The native book Sheet owns its one opaque frame and safe area. Content
+ * flows naturally into FIT_CONTENT; no fixed legacy row offsets or height. */
 export class SheetSurfaceSpec {
-  readonly titleFontWeight: number = 700;
-  readonly actionLabelFontWeight: number = 700;
-  readonly height: number;
-  readonly horizontalInset: number;
-  readonly handleWidth: number;
-  readonly handleHeight: number;
-  readonly handleTop: number;
-  readonly titleTop: number;
-  readonly titleInset: number;
-  readonly titleFontFamily: string;
-  readonly titleFontSize: number;
-  readonly titleLineHeight: number;
-  readonly actionStart: number;
-  readonly actionStep: number;
-  readonly actionCount: number;
-  readonly actionHeight: number;
-  readonly actionPaddingLeft: number;
-  readonly actionBorderRadius: number;
-  readonly borderWidth: number;
-  readonly borderRadius: number;
-  readonly shadowRadius: number;
-  readonly shadowOffsetY: number;
-  readonly actionLabelFontFamily: string;
-  readonly actionLabelFontSize: number;
-  readonly actionLabelLineHeight: number;
-  readonly backgroundRole: ReaderAppColorRole;
-  readonly borderRole: ReaderAppColorRole;
-  readonly handleRole: ReaderAppColorRole;
-  readonly titleRole: ReaderAppColorRole;
-  readonly actionTextRole: ReaderAppColorRole;
-  readonly dangerTextRole: ReaderAppColorRole;
-  readonly actionBackgroundRole: ReaderAppColorRole;
-  readonly dangerBackgroundRole: ReaderAppColorRole;
-  readonly shadowRole: ReaderAppColorRole;
-  readonly hostBackgroundRole: ReaderAppColorRole;
-  readonly hostMaskRole: ReaderAppColorRole;
-
-  constructor(init: SheetSurfaceSpecInit) {
-    this.height = init.height;
-    this.horizontalInset = init.horizontalInset;
-    this.handleWidth = init.handleWidth;
-    this.handleHeight = init.handleHeight;
-    this.handleTop = init.handleTop;
-    this.titleTop = init.titleTop;
-    this.titleInset = init.titleInset;
-    this.titleFontFamily = init.titleFontFamily;
-    this.titleFontSize = init.titleFontSize;
-    this.titleLineHeight = init.titleLineHeight;
-    this.actionStart = init.actionStart;
-    this.actionStep = init.actionStep;
-    this.actionCount = init.actionCount;
-    this.actionHeight = init.actionHeight;
-    this.actionPaddingLeft = init.actionPaddingLeft;
-    this.actionBorderRadius = init.actionBorderRadius;
-    this.borderWidth = init.borderWidth;
-    this.borderRadius = init.borderRadius;
-    this.shadowRadius = init.shadowRadius;
-    this.shadowOffsetY = init.shadowOffsetY;
-    this.actionLabelFontFamily = init.actionLabelFontFamily;
-    this.actionLabelFontSize = init.actionLabelFontSize;
-    this.actionLabelLineHeight = init.actionLabelLineHeight;
-    this.backgroundRole = init.backgroundRole;
-    this.borderRole = init.borderRole;
-    this.handleRole = init.handleRole;
-    this.titleRole = init.titleRole;
-    this.actionTextRole = init.actionTextRole;
-    this.dangerTextRole = init.dangerTextRole;
-    this.actionBackgroundRole = init.actionBackgroundRole;
-    this.dangerBackgroundRole = init.dangerBackgroundRole;
-    this.shadowRole = init.shadowRole;
-    this.hostBackgroundRole = init.hostBackgroundRole;
-    this.hostMaskRole = init.hostMaskRole;
-  }
-
-  actionY(index: number): number {
-    return this.actionStart + (index * this.actionStep);
-  }
+  readonly maxWidth: number = SOURCE_SWITCH_VISUAL.drawerMaxWidth;
+  readonly horizontalInset: number = SOURCE_SWITCH_VISUAL.normalSideInset;
+  readonly handleWidth: number = SOURCE_SWITCH_VISUAL.gripWidth;
+  readonly handleHeight: number = SOURCE_SWITCH_VISUAL.gripHeight;
+  readonly handleTop: number = SOURCE_SWITCH_VISUAL.gripMarginTop;
+  readonly handleBottom: number = SOURCE_SWITCH_VISUAL.gripMarginBottom;
+  readonly titleInset: number = SOURCE_SWITCH_VISUAL.normalSideInset;
+  readonly titleHeight: number = SOURCE_SWITCH_VISUAL.headingHeight;
+  readonly titleBottom: number = 0;
+  readonly titleFontFamily: string = 'ReaderNotoSerifSCBold';
+  readonly titleFontWeight: number = SOURCE_SWITCH_VISUAL.titleFontWeight;
+  readonly titleFontSize: number = SOURCE_SWITCH_VISUAL.titleFontSize;
+  readonly titleLineHeight: number = SOURCE_SWITCH_VISUAL.titleLineHeight;
+  readonly contentBottom: number = SOURCE_SWITCH_VISUAL.normalSideInset;
+  readonly borderRadius: number = SOURCE_SWITCH_VISUAL.drawerCornerRadius;
+  readonly handleRole: ReaderAppColorRole = 'TOK_SS_DRAWER_HANDLE';
+  readonly titleRole: ReaderAppColorRole = 'TOK_INK';
+  readonly hostBackgroundRole: ReaderAppColorRole = 'TOK_SS_WINDOW_BG';
+  readonly hostMaskRole: ReaderAppColorRole = 'TOK_SS_DRAWER_SCRIM';
 }
 
 const SHEET_SPECS: Record<SheetSpecId, SheetSurfaceSpec> = {
-  // Figma book action surface; values preserve the current host-bound frame.
-  'bookshelf-book-action': new SheetSurfaceSpec({
-    height: 270, horizontalInset: 14,
-    handleWidth: 42, handleHeight: 4, handleTop: 9,
-    titleTop: 34, titleInset: 14,
-    titleFontFamily: 'ReaderNotoSansSC', titleFontSize: 17, titleLineHeight: 20.4,
-    actionStart: 70, actionStep: 46, actionCount: 4, actionHeight: 40,
-    actionPaddingLeft: 12, actionBorderRadius: 12,
-    borderWidth: 1, borderRadius: 24,
-    shadowRadius: 46, shadowOffsetY: 18,
-    actionLabelFontFamily: 'ReaderNotoSansSC', actionLabelFontSize: 13, actionLabelLineHeight: 15.6,
-    backgroundRole: 'TOK_CARD_BG_HI', borderRole: 'TOK_BORDER', handleRole: 'TOK_MUTED',
-    titleRole: 'TOK_INK', actionTextRole: 'TOK_GREEN',
-    dangerTextRole: 'app.BookshelfBookActionSheet.actionSlot.fontColor.FFD7473E',
-    actionBackgroundRole: 'TOK_PRIMARY_SOFT',
-    dangerBackgroundRole: 'app.BookshelfBookActionSheet.actionSlot.backgroundColor.1AD6473D',
-    shadowRole: 'app.BookshelfBookActionSheet.build.color.29594632',
-    hostBackgroundRole: 'app.BookshelfPage.bookshelfTabContent.bindSheet.FFFFFCF8',
-    hostMaskRole: 'app.BookshelfPage.bookshelfTabContent.bindSheet.52000000',
-  }),
+  'bookshelf-book-action': new SheetSurfaceSpec(),
 };
 
 export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {
@@ -386,138 +252,41 @@ export function resolveSheetSpec(id: SheetSpecId): SheetSurfaceSpec {
 /** Shared content-only action-sheet recipes. Hosts still own the scrim,
  * placement and dismissal; these values keep row rhythm identical across
  * reading, bookshelf and future download action surfaces. */
-export type ActionSheetSpecId = 'grouped' | 'quick';
+export type ActionSheetSpecId = 'grouped' | 'quick' | 'bookshelf';
 
-export interface ActionSheetSurfaceSpecInit {
-  sectionHeadingHeight: number;
-  sectionHeadingFontSize: number;
-  sectionHeadingLineHeight: number;
-  quickActionHeight: number;
-  quickActionGap: number;
-  quickLabelFontSize: number;
-  quickLabelLineHeight: number;
-  quickSecondaryFontSize: number;
-  quickSecondaryLineHeight: number;
-  rowHeight: number;
-  rowSecondaryHeight: number;
-  rowGap: number;
-  rowInsetLeft: number;
-  rowInsetRight: number;
-  labelFontSize: number;
-  labelLineHeight: number;
-  secondaryFontSize: number;
-  secondaryLineHeight: number;
-  trailingFontSize: number;
-  trailingLineHeight: number;
-  iconSize: number;
-  chevronSize: number;
-  dividerHeight: number;
-  dividerInset: number;
-  quickSeparatorTop: number;
-  quickSeparatorBottom: number;
-  quickActionCount: number;
-}
-
+/** All action-sheet owners share one finite row recipe. Variant names keep
+ * existing business API compatibility; none selects a different appearance. */
 export class ActionSheetSurfaceSpec {
   readonly regularFontFamily: string = 'ReaderNotoSansSCUIRegular';
-  readonly emphasisFontFamily: string = 'ReaderNotoSansSCUIBold';
   readonly regularFontWeight: number = 400;
-  readonly emphasisFontWeight: number = 700;
+  readonly labelFontFamily: string = 'ReaderNotoSansSCUIMedium';
+  readonly labelFontWeight: number = 500;
   readonly inkRole: ReaderAppColorRole = 'TOK_INK';
   readonly mutedRole: ReaderAppColorRole = 'TOK_MUTED';
   readonly dangerRole: ReaderAppColorRole = 'TOK_DOWNLOAD_DANGER';
-  readonly lineRole: ReaderAppColorRole = 'TOK_DOWNLOAD_LINE';
-  readonly groupRole: ReaderAppColorRole = 'TOK_DOWNLOAD_SOFT';
-  readonly groupRadius: number = 14;
-  readonly groupGap: number = 12;
-  readonly quickIconContainer: number = 40;
-  readonly sectionHeadingHeight: number;
-  readonly sectionHeadingFontSize: number;
-  readonly sectionHeadingLineHeight: number;
-  readonly quickActionHeight: number;
-  readonly quickActionGap: number;
-  readonly quickLabelFontSize: number;
-  readonly quickLabelLineHeight: number;
-  readonly quickSecondaryFontSize: number;
-  readonly quickSecondaryLineHeight: number;
-  readonly rowHeight: number;
-  readonly rowSecondaryHeight: number;
-  readonly rowGap: number;
-  readonly rowInsetLeft: number;
-  readonly rowInsetRight: number;
-  readonly labelFontSize: number;
-  readonly labelLineHeight: number;
-  readonly secondaryFontSize: number;
-  readonly secondaryLineHeight: number;
-  readonly trailingFontSize: number;
-  readonly trailingLineHeight: number;
-  readonly iconSize: number;
-  readonly chevronSize: number;
-  readonly dividerHeight: number;
-  readonly dividerInset: number;
-  readonly quickSeparatorTop: number;
-  readonly quickSeparatorBottom: number;
-  readonly quickActionCount: number;
-
-  constructor(init: ActionSheetSurfaceSpecInit) {
-    this.sectionHeadingHeight = init.sectionHeadingHeight;
-    this.sectionHeadingFontSize = init.sectionHeadingFontSize;
-    this.sectionHeadingLineHeight = init.sectionHeadingLineHeight;
-    this.quickActionHeight = init.quickActionHeight;
-    this.quickActionGap = init.quickActionGap;
-    this.quickLabelFontSize = init.quickLabelFontSize;
-    this.quickLabelLineHeight = init.quickLabelLineHeight;
-    this.quickSecondaryFontSize = init.quickSecondaryFontSize;
-    this.quickSecondaryLineHeight = init.quickSecondaryLineHeight;
-    this.rowHeight = init.rowHeight;
-    this.rowSecondaryHeight = init.rowSecondaryHeight;
-    this.rowGap = init.rowGap;
-    this.rowInsetLeft = init.rowInsetLeft;
-    this.rowInsetRight = init.rowInsetRight;
-    this.labelFontSize = init.labelFontSize;
-    this.labelLineHeight = init.labelLineHeight;
-    this.secondaryFontSize = init.secondaryFontSize;
-    this.secondaryLineHeight = init.secondaryLineHeight;
-    this.trailingFontSize = init.trailingFontSize;
-    this.trailingLineHeight = init.trailingLineHeight;
-    this.iconSize = init.iconSize;
-    this.chevronSize = init.chevronSize;
-    this.dividerHeight = init.dividerHeight;
-    this.dividerInset = init.dividerInset;
-    this.quickSeparatorTop = init.quickSeparatorTop;
-    this.quickSeparatorBottom = init.quickSeparatorBottom;
-    this.quickActionCount = init.quickActionCount;
-  }
+  readonly lineRole: ReaderAppColorRole = 'TOK_ROW_DIVIDER';
+  readonly groupRole: ReaderAppColorRole = 'TOK_SS_WINDOW_BG';
+  readonly iconContainer: number = 36;
+  readonly iconRadius: number = 14;
+  readonly rowHeight: number = SOURCE_SWITCH_VISUAL.rowHeight;
+  readonly rowPaddingY: number = SOURCE_SWITCH_VISUAL.rowPaddingY;
+  readonly rowGap: number = SOURCE_SWITCH_VISUAL.rowGap;
+  readonly rowInsetLeft: number = 0;
+  readonly rowInsetRight: number = 0;
+  readonly labelFontSize: number = SOURCE_SWITCH_VISUAL.sourceNameFontSize;
+  readonly labelLineHeight: number = SOURCE_SWITCH_VISUAL.sourceNameLineHeight;
+  readonly secondaryFontSize: number = SOURCE_SWITCH_VISUAL.latestChapterFontSize;
+  readonly secondaryLineHeight: number = SOURCE_SWITCH_VISUAL.latestChapterLineHeight;
+  readonly trailingFontSize: number = SOURCE_SWITCH_VISUAL.latestChapterFontSize;
+  readonly trailingLineHeight: number = SOURCE_SWITCH_VISUAL.latestChapterLineHeight;
+  readonly iconSize: number = 22;
+  readonly chevronSize: number = 14;
+  readonly dividerHeight: number = 0.5;
+  readonly dividerInset: number = 48;
 }
-
-interface ActionSheetSpecs {
-  grouped: ActionSheetSurfaceSpec;
-  quick: ActionSheetSurfaceSpec;
-}
-
-const ACTION_SHEET_SPECS: ActionSheetSpecs = {
-  grouped: new ActionSheetSurfaceSpec({
-    sectionHeadingHeight: 26, sectionHeadingFontSize: 12, sectionHeadingLineHeight: 18,
-    quickActionHeight: 88, quickActionGap: 4, quickLabelFontSize: 13, quickLabelLineHeight: 18,
-    quickSecondaryFontSize: 10, quickSecondaryLineHeight: 14,
-    rowHeight: 50, rowSecondaryHeight: 58, rowGap: 12, rowInsetLeft: 8, rowInsetRight: 4,
-    labelFontSize: 14, labelLineHeight: 20, secondaryFontSize: 11, secondaryLineHeight: 16,
-    trailingFontSize: 12, trailingLineHeight: 18, iconSize: 22, chevronSize: 14,
-    dividerHeight: 1, dividerInset: 42, quickSeparatorTop: 4, quickSeparatorBottom: 8, quickActionCount: 3,
-  }),
-  quick: new ActionSheetSurfaceSpec({
-    sectionHeadingHeight: 26, sectionHeadingFontSize: 12, sectionHeadingLineHeight: 18,
-    quickActionHeight: 88, quickActionGap: 4, quickLabelFontSize: 13, quickLabelLineHeight: 18,
-    quickSecondaryFontSize: 10, quickSecondaryLineHeight: 14,
-    rowHeight: 50, rowSecondaryHeight: 58, rowGap: 12, rowInsetLeft: 8, rowInsetRight: 4,
-    labelFontSize: 14, labelLineHeight: 20, secondaryFontSize: 11, secondaryLineHeight: 16,
-    trailingFontSize: 12, trailingLineHeight: 18, iconSize: 22, chevronSize: 14,
-    dividerHeight: 1, dividerInset: 42, quickSeparatorTop: 4, quickSeparatorBottom: 8, quickActionCount: 3,
-  }),
-};
-
-export function resolveActionSheetSpec(id: ActionSheetSpecId): ActionSheetSurfaceSpec {
-  return id === 'quick' ? ACTION_SHEET_SPECS.quick : ACTION_SHEET_SPECS.grouped;
+const ACTION_SHEET_SPEC: ActionSheetSurfaceSpec = new ActionSheetSurfaceSpec();
+export function resolveActionSheetSpec(_id: ActionSheetSpecId): ActionSheetSurfaceSpec {
+  return ACTION_SHEET_SPEC;
 }
 
 /**
@@ -644,7 +413,7 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     actionMutesContent: true,
     height: 0,
     width: 176, pointerWidth: 24, pointerHeight: 12,
-    actionHeight: 50, actionCount: 4,
+    actionHeight: 50, actionCount: 5,
     trailingExtension: 11, anchorOverlap: 5,
     borderWidth: 1, borderRadius: 16,
     shadowRadius: 28, shadowOffsetY: 10,

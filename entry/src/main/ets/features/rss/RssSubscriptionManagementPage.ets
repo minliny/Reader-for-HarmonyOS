@@ -320,7 +320,7 @@ export struct RssSubscriptionManagementPage {
         (): void => this.onViewArticles(subscriptionId));
       this.actionTarget('编辑来源', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_edit_theme_night') : $r('app.media.rss_manage_edit')), false, true,
         (): void => this.onEditSource(subscriptionId));
-      this.actionTarget('立即刷新', (this.appThemeScheme === 'night' ? $r('app.media.rss_manage_refresh_theme_night') : $r('app.media.rss_manage_refresh')), false, true,
+      this.actionTarget('立即刷新', (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')), false, true,
         (): void => this.onRefresh(subscriptionId));
       this.actionTarget('删除', $r('app.media.rss_manage_delete'), true, true,
         (): void => this.onDelete(subscriptionId));

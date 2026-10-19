@@ -1,5 +1,6 @@
 import { ReaderActionSheetAction, ReaderActionSheetContent } from './ReaderActionSheetContent';
 import { SheetSurfaceSpec, resolveSheetSpec } from './ReaderSurfaceSpecs';
+import { readerActionIcon } from './ReaderActionIconResources';
 
 /** Finite per-book actions. The native host owns presentation identity;
  * this small keyed subtree captures it for every physical callback. */
@@ -33,16 +34,15 @@ export struct ReaderSheetActionList {
   }
 
   private actionItems(id: string): ReaderActionSheetAction[] {
-    const night = this.appThemeScheme === 'night';
     return [
       new ReaderActionSheetAction(this.actionToken(id, 'multi-select'), '多选', '', '', '', true,
-        night ? $r('app.media.bookshelf_more_batch_theme_night') : $r('app.media.bookshelf_more_batch'), 'default', false),
+        readerActionIcon('check', this.appThemeScheme), 'default', false),
       new ReaderActionSheetAction(this.actionToken(id, 'book-info'), '书籍信息', '', '', '', true,
-        night ? $r('app.media.import_info_theme_night') : $r('app.media.import_info'), 'default', false),
+        readerActionIcon('info', this.appThemeScheme), 'default', false),
       new ReaderActionSheetAction(this.actionToken(id, 'edit-group'), '编辑分组', '', '', '', true,
-        night ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder'), 'default', false),
-      new ReaderActionSheetAction(this.actionToken(id, 'remove'), '移除书架', '书架', '移除后可在书籍详情中重新加入', '', true,
-        night ? $r('app.media.download_visual_trash_theme_night') : $r('app.media.download_visual_trash'), 'danger', false),
+        readerActionIcon('folder', this.appThemeScheme), 'default', false),
+      new ReaderActionSheetAction(this.actionToken(id, 'remove'), '移除书架', '', '', '', true,
+        readerActionIcon('trash', this.appThemeScheme), 'danger', false),
     ];
   }
 
@@ -64,20 +64,15 @@ export struct ReaderSheetActionList {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Scroll() {
-      Column() {
+    Column() {
       ForEach([this.presentationId], (id: string): void => {
         ReaderActionSheetContent({
-          variant: 'quick',
+          variant: 'bookshelf',
           actions: this.actionItems(id),
           onAction: (token: string): void => this.dispatchToken(token),
         });
       }, (id: string): string => `book-action-content:${id}`);
-      }.width('100%');
-      }.width('100%').height('100%').scrollBar(BarState.Auto);
-    }.width('100%').height(Math.max(0, this.surfaceSpec().height - this.surfaceSpec().actionStart))
-      .padding({ left: this.surfaceSpec().horizontalInset, right: this.surfaceSpec().horizontalInset })
-      .position({ x: 0, y: this.surfaceSpec().actionStart });
+    }.width('100%')
+      .padding({ left: this.surfaceSpec().horizontalInset, right: this.surfaceSpec().horizontalInset });
   }
 }

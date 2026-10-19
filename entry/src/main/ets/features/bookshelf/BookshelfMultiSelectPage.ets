@@ -1,5 +1,6 @@
-import { TYPE_SHELF_SELECTION_ACTION, TYPE_SHELF_SELECTION_AUTHOR, TYPE_SHELF_SELECTION_AUTHOR_WIDE, TYPE_SHELF_SELECTION_CHECK, TYPE_SHELF_SELECTION_HEADING, TYPE_SHELF_SELECTION_REMOVE, TYPE_SHELF_SELECTION_TITLE, TYPE_SHELF_SELECTION_TITLE_WIDE } from '../common/ReaderTypography';
+import { TYPE_SHELF_SELECTION_ACTION, TYPE_SHELF_SELECTION_AUTHOR, TYPE_SHELF_SELECTION_AUTHOR_WIDE, TYPE_SHELF_SELECTION_HEADING, TYPE_SHELF_SELECTION_REMOVE, TYPE_SHELF_SELECTION_TITLE, TYPE_SHELF_SELECTION_TITLE_WIDE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
+import { readerActionIcon } from '../common/ReaderActionIconResources';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from './ShelfBookPresentation';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
@@ -168,18 +169,14 @@ export struct BookshelfMultiSelectPage {
 
         Stack({ alignContent: Alignment.Center }) {
           if (this.isSelected(book)) {
-            Text('✓')
-              .fontFamily(TYPE_SHELF_SELECTION_CHECK.fontFamily)
-              .fontWeight(TYPE_SHELF_SELECTION_CHECK.fontWeight)
-              .fontSize(TYPE_SHELF_SELECTION_CHECK.fontSizeFp)
-              .fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionCard.fontColor.FFFFFFFF', this.appThemeScheme))
-              .textAlign(TextAlign.Center);
+            Image(readerActionIcon('check', this.appThemeScheme))
+              .width(14).height(14).objectFit(ImageFit.Contain);
           }
         }
         .width(22)
         .height(22)
         .margin({ right: 4, bottom: 4 })
-        .backgroundColor(this.isSelected(book) ? readerAppColor('app.BookshelfMultiSelectPage.selectionCard.backgroundColor.FFF58517', this.appThemeScheme) : readerAppColor('app.BookshelfMultiSelectPage.selectionCard.backgroundColor.FFFFFCF8', this.appThemeScheme))
+        .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.BookshelfMultiSelectPage.selectionCard.backgroundColor.FFFFFCF8', this.appThemeScheme))
         .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.BookshelfMultiSelectPage.selectionCard.color.FFC1C7CD', this.appThemeScheme) })
         .borderRadius(11)
         .shadow({ radius: 4, color: readerAppColor('app.BookshelfMultiSelectPage.selectionCard.color.26000000', this.appThemeScheme), offsetX: 0, offsetY: 2 });
@@ -222,15 +219,19 @@ export struct BookshelfMultiSelectPage {
   private removeBar() {
     Column({ space: 0 }) {
       Column({ space: 6 }) {
-        Image($r('app.media.bookshelf_multiselect_trash'))
-          .width(22)
-          .height(22);
-        Text(!this.ready ? '正在读取书架' : this.busy ? '正在移除' : '移除书架')
+        Stack({ alignContent: Alignment.Center }) {
+          Image(this.appThemeScheme === 'night' ? $r('app.media.reader_danger_trash_theme_night') : $r('app.media.reader_danger_trash')).width(22).height(22)
+            .opacity(!this.ready || this.busy ? 0 : 1);
+          if (!this.ready || this.busy) {
+            LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+          }
+        }.width(22).height(22);
+        Text('移除书架')
           .fontFamily(TYPE_SHELF_SELECTION_REMOVE.fontFamily)
           .fontWeight(TYPE_SHELF_SELECTION_REMOVE.fontWeight)
           .fontSize(TYPE_SHELF_SELECTION_REMOVE.fontSizeFp)
           .lineHeight(TYPE_SHELF_SELECTION_REMOVE.lineHeightFp as number)
-          .fontColor(readerAppColor('app.BookshelfMultiSelectPage.removeBar.fontColor.FFD7473E', this.appThemeScheme));
+          .fontColor(readerAppColor('TOK_DOWNLOAD_DANGER', this.appThemeScheme));
       }
       .width(74)
       .alignItems(HorizontalAlign.Center)
@@ -352,11 +353,11 @@ export struct BookshelfMultiSelectPage {
   private selectionBadge(book: ShelfBook) {
     Stack({ alignContent: Alignment.Center }) {
       if (this.isSelected(book)) {
-        Text('✓').fontFamily(TYPE_SHELF_SELECTION_CHECK.fontFamily).fontWeight(TYPE_SHELF_SELECTION_CHECK.fontWeight).fontSize(TYPE_SHELF_SELECTION_CHECK.fontSizeFp).fontColor(readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.fontColor.FFFFFFFF', this.appThemeScheme));
+        Image(readerActionIcon('check', this.appThemeScheme)).width(14).height(14).objectFit(ImageFit.Contain);
       }
     }
     .width(22).height(22).margin({ right: 2, bottom: 2 })
-    .backgroundColor(this.isSelected(book) ? readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.backgroundColor.FFF58517', this.appThemeScheme) : readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.backgroundColor.FFFFFCF8', this.appThemeScheme))
+    .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.backgroundColor.FFFFFCF8', this.appThemeScheme))
     .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.color.FFC1C7CD', this.appThemeScheme) })
     .borderRadius(11).shadow({ radius: 4, color: readerAppColor('app.BookshelfMultiSelectPage.selectionBadge.color.26000000', this.appThemeScheme), offsetX: 0, offsetY: 2 });
   }

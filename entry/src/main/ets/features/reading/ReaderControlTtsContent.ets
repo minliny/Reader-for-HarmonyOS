@@ -623,7 +623,7 @@ export struct ReaderControlTtsContent {
       }
       Row({ space: 4 * this.p() }) {
         Image($r(kind === 'toggle' ? (this.isActivelySpeaking() ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_pause_theme_night' : 'app.media.reader_tts_make_pause') : (this.appScheme === 'night' ? 'app.media.reader_tts_make_play_theme_night' : 'app.media.reader_tts_make_play')) :
-          (kind === 'stop' ? 'app.media.reader_tts_make_stop' :
+          (kind === 'stop' ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_stop_theme_night' : 'app.media.reader_tts_make_stop') :
           (kind === 'previous' ? (this.p() === 0 ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_previous_quick_theme_night' : 'app.media.reader_tts_make_previous_quick') : (this.appScheme === 'night' ? 'app.media.reader_tts_make_previous_theme_night' : 'app.media.reader_tts_make_previous')) : (this.p() === 0 ? (this.appScheme === 'night' ? 'app.media.reader_tts_make_next_quick_theme_night' : 'app.media.reader_tts_make_next_quick') : (this.appScheme === 'night' ? 'app.media.reader_tts_make_next_theme_night' : 'app.media.reader_tts_make_next'))))))
           .width(kind === 'toggle' ? 13 + 7 * this.p() : kind === 'stop' ? 10 : 14 + 12 * this.p())
           .height(kind === 'toggle' ? 13 + 7 * this.p() : kind === 'stop' ? 10 : 14 + 12 * this.p());
@@ -683,13 +683,15 @@ export struct ReaderControlTtsContent {
         Row({ space: 4 }) {
           Text(this.timerCaption()).fontFamily(TYPE_READER_TTS_RETAINED_TIMER_META.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TIMER_META.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_TIMER_META.fontSizeFp).fontColor(readerAppColor('TOK_TTS_TEAL', this.appScheme))
             .layoutWeight(1).maxLines(1).textAlign(TextAlign.Center);
-          Image($r(this.appScheme === 'night' ? 'app.media.reader_chevron_down_theme_night' : 'app.media.reader_chevron_down')).width(8).height(4);
+          Image(this.appScheme === 'night' ? $r('app.media.reader_tts_timer_cycle_theme_night') :
+            $r('app.media.reader_tts_timer_cycle')).width(12).height(12).accessibilityLevel('no');
         }.width(this.frame().quickTimerSelect.width).height(this.frame().quickTimerSelect.height)
           .padding({ left: 8, right: 8 }).alignItems(VerticalAlign.Center)
           .position({ x: this.frame().quickTimerSelect.x, y: this.frame().quickTimerSelect.y })
           .backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appScheme)).border({ width: 0.5, color: readerAppColor('TOK_TTS_TEAL_LINE', this.appScheme) }).borderRadius(999)
           .opacity(this.frame().quickTimerSelect.opacity).enabled(this.sharedInput())
-          .accessibilityText(`定时${this.timerCaption()}，切换定时`)
+          .accessibilityText(`定时${this.timerCaption()}，循环切换定时预设`)
+          .accessibilityRole(AccessibilityRoleType.BUTTON).focusable(this.sharedInput())
           .onClick((): void => this.cycleQuickTimer());
         Column({ space: 12 }) {
           Column({ space: 8 }) {
@@ -1104,7 +1106,9 @@ export struct ReaderControlTtsContent {
         Text(this.httpEngines.length > 0 ? '已配置 · 编辑' : '立即配置').fontFamily(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontSizeFp)
           .fontColor(this.httpEngines.length > 0 ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.FFFAF4', this.appScheme));
-        Image($r(this.appScheme === 'night' ? 'app.media.reader_appearance_make_chevron_theme_night' : 'app.media.reader_appearance_make_chevron')).width(12).height(12);
+        Image(this.httpEngines.length === 0 ?
+          (this.appScheme === 'night' ? $r('app.media.reader_tts_configure_chevron_theme_night') : $r('app.media.reader_tts_configure_chevron')) :
+          (this.appScheme === 'night' ? $r('app.media.reader_appearance_make_chevron_theme_night') : $r('app.media.reader_appearance_make_chevron'))).width(12).height(12);
       }.height(30).padding({ left: 11, right: 9 }).borderRadius(999)
         .backgroundColor(this.httpEngines.length > 0 ? readerAppColor('app.control.paint.1A2F6373', this.appScheme) : readerAppColor('TOK_TTS_TEAL', this.appScheme))
         .border({ width: this.httpEngines.length > 0 ? .5 : 0, color: readerAppColor('app.control.paint.4D2F6373', this.appScheme) })

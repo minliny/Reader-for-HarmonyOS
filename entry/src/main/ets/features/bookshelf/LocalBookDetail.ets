@@ -1,3 +1,4 @@
+import { ReaderPageState } from '../common/ReaderPageState';
 import type { MeasureOptions } from '@ohos.measure';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { bookCoverDisplayUrl } from '../common/BookCoverDisplay';
@@ -79,9 +80,10 @@ export struct LocalBookDetail {
   @Prop removing: boolean = false;
   @Prop adding: boolean = false;
   @Prop cancellingAdd: boolean = false;
-  @Prop shelfMessage: string = '';
+  @Prop @Watch('onShelfMessageChanged') shelfMessage: string = '';
   @Prop admissionIdentity: string = '';
   @Prop loadingMessage: string = '';
+  @Prop catalogBusy: boolean = false;
   onContinue: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onOpenDirectory: () => void = (): void => {};
@@ -113,6 +115,7 @@ export struct LocalBookDetail {
     this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
     this.onBookChanged();
+    this.onShelfMessageChanged();
   }
 
   aboutToDisappear(): void {
@@ -134,11 +137,11 @@ export struct LocalBookDetail {
 
   @Builder
   private fontPreparationContent() {
-    Column({ space: 12 }) {
-      if (this.mangaFontsFailed) {
-        Text('详情暂时无法显示').fontSize(TYPE_BOOK_DETAIL_EMPTY.fontSizeFp);
-        Button('重试').onClick((): void => this.prepareMangaDetailFonts());
-      }
+    Column() {
+      ReaderPageState({ loading: !this.mangaFontsFailed,
+        title: this.mangaFontsFailed ? '详情暂时无法显示' : '正在准备详情…',
+        actionLabel: this.mangaFontsFailed ? '重试' : '',
+        onAction: (): void => this.prepareMangaDetailFonts() });
     }.width('100%').height('100%').justifyContent(FlexAlign.Center);
   }
 
@@ -173,9 +176,8 @@ export struct LocalBookDetail {
         this.readingFacts();
         this.summary();
         this.catalog();
-        if (this.shelfMessage.length > 0) {
-          Text(this.shelfMessage).width('100%').fontSize(12)
-            .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme));
+        if (!this.detailBookAvailable()) {
+          ReaderPageState({ title: '书籍已移出书架', message: this.shelfMessage || '请返回书架重新导入本地文件后继续阅读。' });
         }
       }.width(this.contentFrame().width).alignItems(HorizontalAlign.Start)
         .margin({ left: this.contentFrame().left, right: this.contentFrame().right })
@@ -482,8 +484,8 @@ export struct LocalBookDetail {
           entry.index, entry.title, entry.level ?? null, entry.navigable ?? null]));
       }
       if (this.toc.length === 0) {
-        Text(this.chapterEmptyMessage()).width('100%').padding({ top: 16, bottom: 16 })
-          .fontSize(13).lineHeight(22).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        ReaderPageState({ title: this.chapterEmptyMessage(), loading: this.catalogLoading() })
+          .padding({ top: 24, bottom: 24 });
       }
     }.width('100%').margin({ top: this.book.contentKind === 'manga' ? visual.catalogTop : 0 });
   }
@@ -597,6 +599,7 @@ export struct LocalBookDetail {
           .attributeModifier(new MangaDirectoryPressFeedback(!this.removing && this.detailBookAvailable(), this.book.contentKind === 'manga', this.appThemeScheme))
           .onClick((): void => { if (!this.removing && this.detailBookAvailable()) this.onContinue(); });
         ForEach([this.admissionIdentity], (identity: string) => {
+        Stack({ alignContent: Alignment.Center }) {
         Text(this.shelfActionLabel()).width(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94)
           .height(this.book.contentKind === 'manga' ? undefined : 48)
           .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailActionMinHeight : 48 })
@@ -607,7 +610,7 @@ export struct LocalBookDetail {
           .minFontScale(this.book.contentKind === 'manga' ? Math.min(1, this.mangaFontScale()) : 0)
           .maxFontScale(this.book.contentKind === 'manga' ? Math.max(1, this.mangaFontScale()) : 2)
           .halfLeading(this.book.contentKind === 'manga').fontWeight(500)
-          .textAlign(TextAlign.Center).fontColor(this.detailColor(this.inBookshelf ? 'TOK_MUTED' : 'TOK_GREEN',
+          .textAlign(TextAlign.Center).fontColor(this.removing || this.cancellingAdd ? Color.Transparent : this.detailColor(this.inBookshelf ? 'TOK_MUTED' : 'TOK_GREEN',
             this.book.contentKind === 'manga' ? 'muted' : this.inBookshelf ? 'muted' : 'accent'))
           .backgroundColor(this.detailColor('TOK_SURFACE_PANEL_SOFT', 'soft')).borderRadius(this.book.contentKind === 'manga' ? visual.detailActionRadius : 16)
           .border({ width: 1, color: this.detailColor('TOK_LINE', 'line') })
@@ -619,6 +622,10 @@ export struct LocalBookDetail {
               if (this.adding) this.onCancelAdd(identity); else this.onRemove(identity);
             }
           });
+          if (this.removing || this.cancellingAdd) {
+            LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+          }
+        }
         }, (identity: string): string => identity);
       }.width('100%').height(this.book.contentKind === 'manga' ? undefined : 48)
         .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailActionMinHeight : 48 }).alignItems(VerticalAlign.Center);
@@ -768,6 +775,14 @@ export struct LocalBookDetail {
       }
     });
   }
+  private lastShelfFeedback: string = '';
+  private onShelfMessageChanged(): void {
+    if (!this.shelfMessage) { this.lastShelfFeedback = ''; return; }
+    if (!this.mounted || !this.detailBookAvailable() || !this.shelfMessage || this.shelfMessage === this.lastShelfFeedback) return;
+    this.lastShelfFeedback = this.shelfMessage;
+    try { this.getUIContext().getPromptAction().showToast({ message: this.shelfMessage, duration: 2000 }); } catch (_) {}
+  }
+  private catalogLoading(): boolean { return this.catalogBusy; }
   private chapterEmptyMessage(): string {
     return this.loadingMessage.trim() || (!this.readingEnabled ? this.readingBlockedReason.trim() : '') || '暂无章节信息';
   }
@@ -875,9 +890,9 @@ export struct LocalBookDetail {
     return this.inBookshelf ? '继续阅读' : '开始阅读';
   }
   private shelfActionLabel(): string {
-    if (this.cancellingAdd) return '正在取消…';
+    if (this.cancellingAdd) return '取消加入';
     if (this.adding) return '取消加入';
-    if (this.removing) return this.inBookshelf ? '正在移除…' : '正在加入…';
+    if (this.removing) return this.inBookshelf ? '移除书架' : '加入书架';
     if (!this.detailBookAvailable()) return '已移除';
     return this.inBookshelf ? '移除书架' : '加入书架';
   }

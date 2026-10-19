@@ -53,6 +53,7 @@ export struct ReaderFullDirectory {
   @Prop chapterTitle: string = '';
   @Prop entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  @Prop catalogBusy: boolean = false;
   onRetryCatalog: () => void = (): void => {};
   @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
@@ -99,7 +100,6 @@ export struct ReaderFullDirectory {
   // Directory Module or exits a Detail-origin directory session.
   onExit: () => void = (): void => {};
 
-  @State private recoveryHeight: number = 0;
   @State private panelProgress: number = 1;
   @State private containerWidth: number = 0;
   @State private containerHeight: number = 0;
@@ -168,13 +168,23 @@ export struct ReaderFullDirectory {
     }
   }
 
+  @Builder
+  private directoryOverlay() {
+    if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
+      Column() { this.recoveryContent(); }
+        .width(this.panelWidth()).position({ x: this.panelLeft(), y: this.panelTop() })
+        .zIndex(8).hitTestBehavior(HitTestMode.Transparent);
+    }
+    this.offlineBookMenu();
+  }
+
   build() {
     ReaderPageScaffold({
       variant: this.catalogContext === 'detail' ? 'directory' : 'readerDirectory', headerKind: 'floating',
       headerMeasurementKey: this.topBarTop(),
       header: (): void => { this.topBar(); },
       content: (): void => { this.directoryContent(); },
-      overlayContent: (): void => { this.offlineBookMenu(); },
+      overlayContent: (): void => { this.directoryOverlay(); },
       onHeaderHeightChange: (height: number, presentedTop: number): void => {
         if (this.mounted && presentedTop === this.topBarTop() && Number.isFinite(height) && height > 0) {
           this.catalogHeaderTop = presentedTop;
@@ -196,20 +206,11 @@ export struct ReaderFullDirectory {
   @Builder
   private directoryContent() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible) {
-        Column() {
-          this.recoveryContent();
-        }.width(this.panelWidth()).position({ x: this.panelLeft(), y: this.panelTop() })
-          .onAreaChange((_old: Area, area: Area): void => {
-            const height = readerPageAreaLength(area.height);
-            if (Number.isFinite(height) && height >= 0 && Math.abs(height - this.recoveryHeight) > .1)
-              this.recoveryHeight = height;
-          });
-      }
       Stack({ alignContent: Alignment.BottomStart }) {
         FullDirectoryPanel({
           entries: this.entries,
           catalogMessage: this.catalogMessage,
+          catalogBusy: this.catalogBusy,
           onRetryCatalog: (): void => this.onRetryCatalog(),
           currentChapterIndex: this.currentChapterIndex,
           allowUnanchoredBrowse: this.catalogContext === 'detail',
@@ -217,7 +218,7 @@ export struct ReaderFullDirectory {
           mangaSearch: this.mangaSearch,
           isTablet: this.usesExpandedLayout(),
           panelWidthOverride: this.panelWidth(),
-          panelHeightOverride: Math.max(0, this.fullPanelHeight() - this.activeRecoveryHeight()),
+          panelHeightOverride: this.fullPanelHeight(),
           onSelectChapter: (index: number): void => this.onSelectChapter(index),
           onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: JsonObject): void =>
             this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof),
@@ -232,8 +233,8 @@ export struct ReaderFullDirectory {
         });
       }
       .width(this.panelWidth())
-      .height(Math.max(0, this.panelViewportHeight() - this.activeRecoveryHeight()))
-      .position({ x: this.panelLeft(), y: this.panelTop() + this.activeRecoveryHeight() })
+      .height(this.panelViewportHeight())
+      .position({ x: this.panelLeft(), y: this.panelTop() })
       .opacity(this.shouldAnimatePanel() ? this.panelProgress : 1)
       .clip(true);
     }
@@ -241,9 +242,6 @@ export struct ReaderFullDirectory {
     .height('100%');
   }
 
-  private activeRecoveryHeight(): number {
-    return this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible ? this.recoveryHeight : 0;
-  }
 
   @Builder
   private topBar() {

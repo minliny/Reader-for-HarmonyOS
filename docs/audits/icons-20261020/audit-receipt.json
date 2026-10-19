@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "kind": "static-complete-icon-audit",
+  "source": {
+    "files": 497,
+    "resourceReferences": 570,
+    "uniqueResourceNames": 333,
+    "renderSites": 255,
+    "renderByKind": {
+      "Image": 239,
+      "LoadingProgress": 14,
+      "Progress": 2
+    },
+    "textGlyphCandidates": 8,
+    "symbolLiteralCandidates": 120,
+    "drawingCandidates": 10,
+    "customIconCarriers": 18
+  },
+  "media": {
+    "media": 419,
+    "svg": 413,
+    "nightSvg": 195,
+    "referencedAssets": 333
+  },
+  "parseDiagnostics": 0,
+  "changedInputsSinceInventory": [],
+  "missingDocLinks": [],
+  "missingLiteralResources": [],
+  "sourceIndexSha256": "a0435f0d3d48df38d5d7c7b9a1515d96ccbab1eb4d8a4734810e2ca29ab17919",
+  "resourceIndexSha256": "37af85eb8d17d2cd4a03a93db24fb4b2e4aafbb1933668b42b3da66dc8f58230",
+  "themeRegistrySha256": "1a7a7fdd49c375a8bda8bd6ff912b01b7a28188773fbce7897985bcda64df67f",
+  "productionModified": false,
+  "appTests": "NOT_RUN",
+  "build": "NOT_RUN",
+  "device": "NOT_RUN",
+  "nativeVisualAcceptance": "OPEN"
+}

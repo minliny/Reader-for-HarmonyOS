@@ -15,31 +15,11 @@ export struct ReaderDirectoryToolbar {
   onBottom: () => void = (): void => {};
   onToggleSort: () => void = (): void => {};
 
-  // Retained as the semantic icon selector for SDK probes and accessibility
-  // contracts. The builder below uses direct branches for device rendering.
-  private icon(kind: string): Resource {
-    if (kind === 'search') return this.appThemeScheme === 'night' ?
-      $r('app.media.reader_directory_search_theme_night') : $r('app.media.reader_directory_search');
-    if (kind === 'top') return this.appThemeScheme === 'night' ?
-      $r('app.media.reader_directory_top_theme_night') : $r('app.media.reader_directory_top');
-    if (kind === 'bottom') return this.appThemeScheme === 'night' ?
-      $r('app.media.reader_directory_bottom_theme_night') : $r('app.media.reader_directory_bottom');
-    if (this.ascending) return this.appThemeScheme === 'night' ?
-      $r('app.media.reader_directory_sort_ascending_theme_night') : $r('app.media.reader_directory_sort_ascending');
-    return this.appThemeScheme === 'night' ?
-      $r('app.media.reader_directory_sort_descending_theme_night') : $r('app.media.reader_directory_sort_descending');
-  }
-
   @Builder
   private tool(kind: string, title: string, action: () => void) {
     Stack({ alignContent: Alignment.Center }) {
-      // Keep the semantic selector as the first layer for shared SDK probes;
-      // the explicit resource layer below is the device-safe fallback.
-      Image(this.icon(kind)).width(24).height(24);
-      // Keep each resource reference in the builder branch.  ArkUI's
-      // runtime resource resolver can drop an Image when a Resource returned
-      // from a helper is used inside a repeated component, leaving the
-      // button background visible but the icon missing on device/VM.
+      // Keep exactly one native image, with explicit resource branches. This
+      // preserves the device-safe lookup without stacking a second copy.
       if (kind === 'search') {
         if (this.appThemeScheme === 'night') {
           Image($r('app.media.reader_directory_search_theme_night')).width(24).height(24);
@@ -73,7 +53,7 @@ export struct ReaderDirectoryToolbar {
       }
     }
       .width(32).height(32).backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
-      .accessibilityText(title).onClick(action);
+      .accessibilityText(title).accessibilityRole(AccessibilityRoleType.BUTTON).focusable(true).onClick(action);
   }
 
   build() {

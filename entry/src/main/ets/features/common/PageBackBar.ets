@@ -32,7 +32,7 @@ export struct PageBackBar {
    * their own surface treatment below.
    */
   @Prop surface: 'solid' | 'transparent' = 'solid';
-  /** 默认 `search_back`;详情页等可传其他返回图标。 */
+  /** 默认 `book_detail_back`；详情页等可传其他返回图标。 */
   backIcon?: Resource;
   /** 可选父页面颜色；默认颜色在渲染时读取当前主题，不能冻结在构造阶段。 */
   @Prop titleColor: string = '';
@@ -43,14 +43,16 @@ export struct PageBackBar {
   build() {
     Row({ space: this.variant === 'mangaDirectory' ? 0 : TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image(this.backIcon !== undefined ? this.backIcon : (this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back')))
+        Image(this.backIcon !== undefined ? this.backIcon : (this.appThemeScheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back')))
           .width(this.variant === 'mangaDirectory' ? visual.headerIcon : 24)
-          .height(this.variant === 'mangaDirectory' ? visual.headerIcon : 24);
+          .height(this.variant === 'mangaDirectory' ? visual.headerIcon : 24)
+          .objectFit(ImageFit.Contain).accessibilityLevel('no');
       }
       .width(this.variant === 'mangaDirectory' ? visual.headerSlot : 44)
       .height(this.variant === 'mangaDirectory' ? visual.headerSlot : 44)
       .borderRadius(this.variant === 'mangaDirectory' ? visual.headerButtonRadius : 22)
       .attributeModifier(new MangaDirectoryPressFeedback(true, this.variant === 'mangaDirectory', this.appThemeScheme))
+      .accessibilityText('返回').accessibilityRole(AccessibilityRoleType.BUTTON).focusable(true)
       .onClick((): void => this.onBack());
 
       Text(this.title)

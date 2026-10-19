@@ -183,9 +183,9 @@ export struct MainTabBar {
     // inactive muted outline changes to the Night palette.
     const night = this.appThemeScheme === 'night';
     if (this.vertical && this.railVariant === 'bookshelf') {
-      if (key === 'bookshelf') return 'bookshelf_library';
-      if (key === 'discover') return night ? 'bookshelf_compass_theme_night' : 'bookshelf_compass';
-      if (key === 'rss') return night ? 'bookshelf_rss_theme_night' : 'bookshelf_rss';
+      if (key === 'bookshelf') return 'bookshelf_library_active';
+      if (key === 'discover') return night ? 'bookshelf_compass_outline_theme_night' : 'bookshelf_compass_outline';
+      if (key === 'rss') return night ? 'bookshelf_rss_outline_theme_night' : 'bookshelf_rss_outline';
       return night ? 'bookshelf_settings_theme_night' : 'bookshelf_settings';
     }
     if (key === 'bookshelf') {

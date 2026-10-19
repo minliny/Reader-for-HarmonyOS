@@ -1,6 +1,7 @@
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../common/ReaderFontFamilies';
 import { ReaderActionSheetAction, ReaderActionSheetContent } from '../common/ReaderActionSheetContent';
+import { readerActionIcon } from '../common/ReaderActionIconResources';
 import type { MangaDownloadAction, MangaDownloadActionId } from './MangaDownloadActionsGateway';
 
 /** Content reused inside the existing manga operation sheet/catalog popup. */
@@ -19,13 +20,20 @@ export struct MangaDownloadOperationsPanel {
   build() {
     Column({ space: 8 }) {
       if (this.loading) {
-        Text('正在读取下载状态…').fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
-          .fontColor(this.ink()).width('100%').height(48).textAlign(TextAlign.Center);
+        Row({ space: 10 }) {
+          LoadingProgress().width(32).height(32)
+            .color(readerAppColor('TOK_GREEN', this.effectiveScheme()));
+          Text('正在读取下载状态…').fontSize(13).lineHeight(20).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+            .fontColor(this.ink());
+        }.width('100%').constraintSize({ minHeight: 44 }).justifyContent(FlexAlign.Center);
       } else if (this.failureMessage.length > 0) {
-        Text(this.failureMessage).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+        Text(this.failureMessage).fontSize(13).lineHeight(20).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
           .fontColor(this.ink()).width('100%');
-        Button('重试').height(48).width('100%').fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
-          .fontColor(this.ink()).backgroundColor(this.paper()).borderRadius(14).onClick((): void => this.onRetry());
+        Row() {
+          Button('重试').height(32).padding({ left: 12, right: 12 }).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+            .fontColor(readerAppColor('TOK_GREEN', this.effectiveScheme())).backgroundColor(Color.Transparent).borderRadius(8)
+            .onClick((): void => this.onRetry());
+        }.width('100%').justifyContent(FlexAlign.End);
       } else {
         ReaderActionSheetContent({ variant: 'grouped', actions: this.sheetActions(), scheme: this.panelScheme,
           onAction: (id: string): void => this.performAction(id) });
@@ -41,15 +49,14 @@ export struct MangaDownloadOperationsPanel {
     });
   }
   private actionIcon(id: MangaDownloadActionId): Resource {
-    const night = this.effectiveScheme() === 'night';
-    if (id === 'pause') return night ? $r('app.media.download_visual_pause_theme_night') : $r('app.media.download_visual_pause');
-    if (id === 'resume') return night ? $r('app.media.download_visual_play_theme_night') : $r('app.media.download_visual_play');
-    if (id === 'cancel') return night ? $r('app.media.download_visual_close_theme_night') : $r('app.media.download_visual_close');
-    if (id === 'updateChapter') return night ? $r('app.media.download_visual_retry_theme_night') : $r('app.media.download_visual_retry');
-    if (id === 'releaseRetention') return night ? $r('app.media.download_visual_storage_theme_night') : $r('app.media.download_visual_storage');
-    if (id === 'deleteDownloads') return night ? $r('app.media.download_visual_trash_theme_night') : $r('app.media.download_visual_trash');
-    if (id === 'clearCache') return night ? $r('app.media.download_visual_clear_theme_night') : $r('app.media.download_visual_clear');
-    return night ? $r('app.media.download_visual_download_theme_night') : $r('app.media.download_visual_download');
+    const scheme = this.effectiveScheme();
+    if (id === 'pause') return readerActionIcon('pause', scheme);
+    if (id === 'resume') return readerActionIcon('play', scheme);
+    if (id === 'cancel' || id === 'clearCache') return readerActionIcon('close', scheme);
+    if (id === 'updateChapter') return readerActionIcon('refresh', scheme);
+    if (id === 'releaseRetention') return readerActionIcon('storage', scheme);
+    if (id === 'deleteDownloads') return readerActionIcon('trash', scheme);
+    return readerActionIcon('download', scheme);
   }
   private performAction(id: string): void {
     if (this.loading || this.failureMessage.length > 0) return;
@@ -58,5 +65,4 @@ export struct MangaDownloadOperationsPanel {
   }
   private effectiveScheme(): string { return this.panelScheme === 'auto' ? this.appThemeScheme : this.panelScheme; }
   private ink(): string { return this.panelInkColor || readerAppColor('TOK_INK', this.effectiveScheme()); }
-  private paper(): string { return this.panelPaperColor || readerAppColor('TOK_PAPER', this.effectiveScheme()); }
 }

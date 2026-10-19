@@ -54,10 +54,8 @@ export struct ReaderActionMenuSurface {
   build() {
     if (this.variant === 'menu') {
       this.menuActions();
-    } else if (this.variant === 'quick') {
-      this.quickActions();
     } else {
-      this.groupedActions();
+      this.actionRows();
     }
   }
 
@@ -81,6 +79,7 @@ export struct ReaderActionMenuSurface {
         if (this.action(id).icon !== undefined) {
           Image(this.action(id).icon)
             .width(this.spec().actionIconSize).height(this.spec().actionIconSize)
+            .objectFit(ImageFit.Contain).accessibilityLevel('no')
             .opacity(this.action(id).enabled || !this.spec().actionMutesContent ? 1 : 0.45);
         }
         Text(this.action(id).label)
@@ -106,77 +105,12 @@ export struct ReaderActionMenuSurface {
   }
 
   @Builder
-  private groupedActions() {
+  private actionRows() {
     Column({ space: 0 }) {
-      ForEach(this.sectionIds(0), (id: string): void => {
-        this.actionGroup(id, 0);
-      }, (id: string): string => id);
+      ForEach(this.actions, (action: ReaderMenuActionView, index: number): void => {
+        this.row(action.id, index);
+      }, (action: ReaderMenuActionView): string => action.id);
     }.width('100%');
-  }
-
-  @Builder
-  private quickActions() {
-    Column({ space: 0 }) {
-      Row({ space: this.actionSheetSpec().quickActionGap }) {
-        ForEach(this.actions, (action: ReaderMenuActionView, index: number): void => {
-          if (index < this.actionSheetSpec().quickActionCount) this.quickAction(action.id);
-        }, (action: ReaderMenuActionView, index: number): string => `quick:${index}:${action.id}`);
-      }.width('100%').constraintSize({ minHeight: this.actionSheetSpec().quickActionHeight });
-
-      if (this.actions.length > this.actionSheetSpec().quickActionCount) {
-        Row().width('100%').height(this.actionSheetSpec().dividerHeight).backgroundColor(this.color('line'))
-          .margin({ top: this.actionSheetSpec().quickSeparatorTop, bottom: this.actionSheetSpec().quickSeparatorBottom });
-        Column({ space: 0 }) {
-          ForEach(this.sectionIds(this.actionSheetSpec().quickActionCount), (id: string): void => {
-            this.actionGroup(id, this.actionSheetSpec().quickActionCount);
-          }, (id: string): string => `list:${id}`);
-        }.width('100%');
-      }
-    }.width('100%');
-  }
-
-  @Builder
-  private actionGroup(id: string, first: number) {
-    Column({ space: 0 }) {
-      this.sectionHeading(id);
-      Column({ space: 0 }) {
-        ForEach(this.groupActions(id, first), (item: ReaderMenuActionView): void => {
-          this.row(item.id, this.actionIndex(item.id));
-        }, (item: ReaderMenuActionView): string => item.id);
-      }.width('100%').backgroundColor(this.color('group')).borderRadius(this.actionSheetSpec().groupRadius);
-    }.width('100%').margin({ bottom: this.actionSheetSpec().groupGap });
-  }
-
-  @Builder
-  private sectionHeading(id: string) {
-    if (this.action(id).section.length > 0) {
-      Text(this.action(id).section).fontSize(this.actionSheetSpec().sectionHeadingFontSize).lineHeight(this.actionSheetSpec().sectionHeadingLineHeight)
-        .fontFamily(this.actionSheetSpec().emphasisFontFamily).fontWeight(this.actionSheetSpec().emphasisFontWeight)
-        .fontColor(this.color('muted')).width('100%').constraintSize({ minHeight: this.actionSheetSpec().sectionHeadingHeight }).padding({ top: 4, bottom: 4 });
-    }
-  }
-
-  @Builder
-  private quickAction(id: string) {
-    Column({ space: this.actionSheetSpec().quickActionGap + 2 }) {
-      if (this.action(id).icon !== undefined) {
-        Stack() {
-          Image(this.action(id).icon).width(this.actionSheetSpec().iconSize).height(this.actionSheetSpec().iconSize);
-        }.width(this.actionSheetSpec().quickIconContainer).height(this.actionSheetSpec().quickIconContainer)
-          .backgroundColor(this.color('group')).borderRadius(this.actionSheetSpec().groupRadius);
-      }
-      Text(this.action(id).label).fontSize(this.actionSheetSpec().quickLabelFontSize).lineHeight(this.actionSheetSpec().quickLabelLineHeight)
-        .fontFamily(this.actionSheetSpec().emphasisFontFamily).fontWeight(this.actionSheetSpec().emphasisFontWeight)
-        .fontColor(this.color(this.action(id).tone === 'danger' ? 'danger' : 'ink'))
-        .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
-      if (this.action(id).secondary.length > 0) {
-        Text(this.action(id).secondary).fontSize(this.actionSheetSpec().quickSecondaryFontSize).lineHeight(this.actionSheetSpec().quickSecondaryLineHeight)
-          .fontFamily(this.actionSheetSpec().regularFontFamily).fontWeight(this.actionSheetSpec().regularFontWeight)
-          .fontColor(this.color('muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }
-    }.layoutWeight(1).constraintSize({ minHeight: this.actionSheetSpec().quickActionHeight }).padding({ top: 12, bottom: 12 })
-      .justifyContent(FlexAlign.Center).opacity(this.action(id).enabled ? 1 : 0.48).enabled(this.action(id).enabled)
-      .accessibilityGroup(true).accessibilityText(this.accessibilityLabel(this.action(id))).onClick((): void => this.commitAction(id));
   }
 
   @Builder
@@ -184,64 +118,52 @@ export struct ReaderActionMenuSurface {
     Column({ space: 0 }) {
       Row({ space: this.actionSheetSpec().rowGap }) {
         if (this.action(id).icon !== undefined) {
-          Image(this.action(id).icon).width(this.actionSheetSpec().iconSize).height(this.actionSheetSpec().iconSize);
+          Stack({ alignContent: Alignment.Center }) {
+            Image(this.action(id).icon).width(this.actionSheetSpec().iconSize).height(this.actionSheetSpec().iconSize)
+              .objectFit(ImageFit.Contain).accessibilityLevel('no');
+          }.width(this.actionSheetSpec().iconContainer).height(this.actionSheetSpec().iconContainer)
+            .backgroundColor(readerAppColor(this.action(id).tone === 'danger' ? 'TOK_DOWNLOAD_DANGER' : 'TOK_GREEN', this.effectiveScheme()))
+            .borderRadius(this.actionSheetSpec().iconRadius);
         }
-        Column({ space: 1 }) {
-          Text(this.action(id).label).fontSize(this.actionSheetSpec().labelFontSize).lineHeight(this.actionSheetSpec().labelLineHeight)
-            .fontFamily(this.action(id).tone === 'danger' ? this.actionSheetSpec().emphasisFontFamily : this.actionSheetSpec().regularFontFamily)
-            .fontWeight(this.action(id).tone === 'danger' ? this.actionSheetSpec().emphasisFontWeight : this.actionSheetSpec().regularFontWeight)
-            .fontColor(this.color(this.action(id).tone === 'danger' ? 'danger' : 'ink'))
-            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
-          if (this.action(id).secondary.length > 0) {
-            Text(this.action(id).secondary).fontSize(this.actionSheetSpec().secondaryFontSize).lineHeight(this.actionSheetSpec().secondaryLineHeight)
-              .fontFamily(this.actionSheetSpec().regularFontFamily).fontWeight(this.actionSheetSpec().regularFontWeight)
-              .fontColor(this.color('muted')).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
-          }
-        }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-        if (this.action(id).trailing.length > 0) {
-          Text(this.action(id).trailing).fontSize(this.actionSheetSpec().trailingFontSize).lineHeight(this.actionSheetSpec().trailingLineHeight)
-            .fontFamily(this.actionSheetSpec().regularFontFamily).fontWeight(this.actionSheetSpec().regularFontWeight)
-            .fontColor(this.color('muted')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+        Text(this.action(id).label).fontSize(this.actionSheetSpec().labelFontSize).lineHeight(this.actionSheetSpec().labelLineHeight)
+          .fontFamily(this.actionSheetSpec().labelFontFamily).fontWeight(this.actionSheetSpec().labelFontWeight)
+          .fontColor(this.color(this.action(id).tone === 'danger' ? 'danger' : 'ink'))
+          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1);
+        if ((!this.action(id).enabled && this.action(id).secondary.length > 0) || this.action(id).trailing.length > 0) {
+          Column({ space: 1 }) {
+            if (!this.action(id).enabled && this.action(id).secondary.length > 0) {
+              Text(this.action(id).secondary).fontSize(this.actionSheetSpec().secondaryFontSize).lineHeight(this.actionSheetSpec().secondaryLineHeight)
+                .fontFamily(this.actionSheetSpec().regularFontFamily).fontWeight(this.actionSheetSpec().regularFontWeight)
+                .fontColor(this.color('muted')).textAlign(TextAlign.End)
+                .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
+            }
+            if (this.action(id).trailing.length > 0) {
+              Text(this.action(id).trailing).fontSize(this.actionSheetSpec().trailingFontSize).lineHeight(this.actionSheetSpec().trailingLineHeight)
+                .fontFamily(this.actionSheetSpec().regularFontFamily).fontWeight(this.actionSheetSpec().regularFontWeight)
+                .fontColor(this.color('muted')).textAlign(TextAlign.End)
+                .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+            }
+          }.alignItems(HorizontalAlign.End).constraintSize({ maxWidth: '42%' }).flexShrink(1);
         }
         if (this.action(id).showChevron) {
           Image(this.effectiveScheme() === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))
             .width(this.actionSheetSpec().chevronSize).height(this.actionSheetSpec().chevronSize);
         }
-      }.width('100%').constraintSize({ minHeight: this.action(id).secondary.length > 0 ? this.actionSheetSpec().rowSecondaryHeight : this.actionSheetSpec().rowHeight })
-        .padding({ left: this.actionSheetSpec().rowInsetLeft, right: this.actionSheetSpec().rowInsetRight, top: 10, bottom: 10 })
+      }.width('100%').constraintSize({ minHeight: this.actionSheetSpec().rowHeight })
+        .padding({ left: this.actionSheetSpec().rowInsetLeft, right: this.actionSheetSpec().rowInsetRight,
+          top: this.actionSheetSpec().rowPaddingY, bottom: this.actionSheetSpec().rowPaddingY })
         .opacity(this.action(id).enabled ? 1 : 0.48).enabled(this.action(id).enabled)
         .accessibilityGroup(true).accessibilityText(this.accessibilityLabel(this.action(id))).onClick((): void => this.commitAction(id));
-      if (index < this.actions.length - 1 && !this.startsSection(index + 1)) {
-        Row().width(`calc(100% - ${this.actionSheetSpec().dividerInset}vp)`).height(this.actionSheetSpec().dividerHeight).backgroundColor(this.color('line'))
-          .opacity(0.45).margin({ left: this.actionSheetSpec().dividerInset });
+      if (index < this.actions.length - 1) {
+        Row().width(`calc(100% - ${this.actionSheetSpec().dividerInset}vp)`).height(this.actionSheetSpec().dividerHeight)
+          .backgroundColor(readerAppColor('TOK_ROW_DIVIDER', this.effectiveScheme()))
+          .margin({ left: this.actionSheetSpec().dividerInset });
       }
     }.width('100%');
   }
 
-  private startsSection(index: number): boolean {
-    if (index < 0 || index >= this.actions.length) return false;
-    return index === 0 || this.actions[index].section !== this.actions[index - 1].section;
-  }
-
-  private actionIndex(id: string): number {
-    return this.actions.findIndex((item: ReaderMenuActionView): boolean => item.id === id);
-  }
-
-  private sectionIds(first: number): string[] {
-    return this.actions.filter((_item: ReaderMenuActionView, index: number): boolean =>
-      index >= first && (index === first || this.startsSection(index)))
-      .map((item: ReaderMenuActionView): string => item.id);
-  }
-
-  private groupActions(id: string, first: number): ReaderMenuActionView[] {
-    const start = Math.max(first, this.actionIndex(id));
-    let end = start + 1;
-    while (end < this.actions.length && !this.startsSection(end)) end++;
-    return this.actions.slice(start, end);
-  }
-
   private actionSheetSpec(): ActionSheetSurfaceSpec {
-    return resolveActionSheetSpec(this.variant === 'quick' ? 'quick' : 'grouped');
+    return resolveActionSheetSpec(this.variant === 'bookshelf' ? 'bookshelf' : this.variant === 'quick' ? 'quick' : 'grouped');
   }
 
   private spec(): PopupSurfaceSpec { return resolvePopupSpec(this.specId); }
@@ -259,9 +181,9 @@ export struct ReaderActionMenuSurface {
 
   private effectiveScheme(): string { return this.scheme === 'auto' ? this.appThemeScheme : this.scheme; }
 
-  private color(role: 'ink' | 'muted' | 'danger' | 'line' | 'group'): string {
+  private color(role: 'ink' | 'muted' | 'danger'): string {
     const spec = this.actionSheetSpec();
-    return readerAppColor(role === 'ink' ? spec.inkRole : role === 'muted' ? spec.mutedRole : role === 'danger' ? spec.dangerRole : role === 'group' ? spec.groupRole : spec.lineRole,
+    return readerAppColor(role === 'ink' ? spec.inkRole : role === 'muted' ? spec.mutedRole : spec.dangerRole,
       this.effectiveScheme());
   }
 

@@ -28,6 +28,7 @@ export struct BookshelfMoreMenu {
   onBatchManage: () => void = (): void => {};
   onLocalImport: () => void = (): void => {};
   onBookshelfSettings: () => void = (): void => {};
+  onDownloadsRequested: () => void = (): void => {};
   onCheckUpdates: () => void = (): void => {};
   @Prop canCheckUpdates: boolean = false;
   @Prop updateRunning: boolean = false;
@@ -146,7 +147,7 @@ export struct BookshelfMoreMenu {
   }
 
   private menuActions(): ReaderMenuActionView[] {
-    return ['batch', 'import', 'update', 'settings'].map((id: string): ReaderMenuActionView =>
+    return ['batch', 'import', 'update', 'downloads', 'settings'].map((id: string): ReaderMenuActionView =>
       new ReaderMenuActionView(id, this.actionLabel(id), this.actionEnabled(id), this.actionIcon(id),
         id === 'update' && !this.canCheckUpdates ? '检查更新，没有在线书籍' : this.actionLabel(id)));
   }
@@ -156,6 +157,7 @@ export struct BookshelfMoreMenu {
     if (id === 'batch') this.commitAction(this.onBatchManage);
     else if (id === 'import') this.commitAction(this.onLocalImport);
     else if (id === 'update') this.commitAction(this.onCheckUpdates);
+    else if (id === 'downloads') this.commitAction(this.onDownloadsRequested);
     else if (id === 'settings') this.commitAction(this.onBookshelfSettings);
   }
 
@@ -167,14 +169,16 @@ export struct BookshelfMoreMenu {
     if (key === 'batch') return '批量管理';
     if (key === 'import') return '本地导入';
     if (key === 'settings') return '书架设置';
-    if (this.updateRunning) return `检查中 ${this.updateProgressDone}/${this.updateProgressTotal}`;
+    if (key === 'downloads') return '下载管理';
+    if (this.updateRunning) return this.updateProgressTotal > 0 ? `检查中 ${this.updateProgressDone}/${this.updateProgressTotal}` : '正在检查…';
     return this.backgroundUpdateRunning ? '正在自动检查' : '检查更新';
   }
 
   private actionIcon(key: string): Resource {
     if (key === 'batch') return this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_batch_theme_night') : $r('app.media.bookshelf_more_batch');
     if (key === 'import') return this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_import_theme_night') : $r('app.media.bookshelf_more_import');
-    if (key === 'update') return this.appThemeScheme === 'night' ? $r('app.media.settings_gen_refresh_theme_night') : $r('app.media.settings_gen_refresh');
+    if (key === 'update') return this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_update_theme_night') : $r('app.media.bookshelf_more_update');
+    if (key === 'downloads') return this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_download_theme_night') : $r('app.media.bookshelf_more_download');
     return this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_settings_theme_night') : $r('app.media.bookshelf_more_settings');
   }
 

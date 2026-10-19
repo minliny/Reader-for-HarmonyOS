@@ -362,7 +362,9 @@ export struct ReaderControlReplaceContent {
   @Builder
   private ruleToolbar() {
     Row({ space: 8 }) {
-      this.toolbarButton('新增规则', $r('app.media.reader_control_replace_add'), true, (): void => this.openEditor());
+      this.toolbarButton('新增规则', this.appThemeScheme === 'night' ?
+        $r('app.media.reader_control_replace_add_theme_night') : $r('app.media.reader_control_replace_add'),
+        true, (): void => this.openEditor());
       this.toolbarButton('导入', (this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_import_theme_night') : $r('app.media.reader_control_replace_import')), false, (): void => this.openImport());
       this.toolbarButton('导出', (this.appThemeScheme === 'night' ? $r('app.media.reader_control_replace_export_theme_night') : $r('app.media.reader_control_replace_export')), false, (): void => { this.perform(this.onExport); });
     }.width(this.frame().toolbar.width).height(40)

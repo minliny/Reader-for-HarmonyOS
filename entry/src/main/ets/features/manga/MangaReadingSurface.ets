@@ -1,4 +1,7 @@
+import { readerActionIcon } from '../common/ReaderActionIconResources';
 import { LengthMetrics } from '@kit.ArkUI';
+import { ReaderPageState } from '../common/ReaderPageState';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
 import { MangaDirectoryCurrentFooter } from './MangaDirectoryCurrentFooter';
 import { MangaDirectoryPressFeedback } from './MangaDirectoryPressFeedback';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryLineBox, mangaDirectoryFooterHeight, mangaDirectoryQuickFlowGaps, mangaDirectoryQuickMinimumListHeight } from './MangaDirectoryVisual';
@@ -66,9 +69,14 @@ class MangaLayoutFrame extends FrameCallback {
 /** Sheet admission has its own frame fence; it does not own image layout. */
 class MangaSheetFrame extends FrameCallback {
   private readonly action: () => void;
+  private pending: boolean = true;
   constructor(action: () => void) { super(); this.action = action; }
-  onFrame(_time: number): void { this.action(); }
-  onIdle(_remaining: number): void {}
+  onFrame(_time: number): void {}
+  onIdle(_remaining: number): void {
+    if (!this.pending) return;
+    this.pending = false;
+    this.action();
+  }
 }
 
 class MangaStripDataSource implements IDataSource {
@@ -153,12 +161,16 @@ export struct MangaReadingSurface {
   @Prop errorColor: string = '#ffb4ab';
   onExitRequestHandler: (exit: (intent?: 'navigation') => void) => void = (): void => {};
   onChapter: (direction: number) => void = (_direction: number): void => {};
-  @State @Watch('onWindowChromeChanged') private error: string = '';
+  @State @Watch('onErrorPresentationChanged') private error: string = '';
+  @State private openFailureStage: 'source' | 'chapter' = 'chapter';
+  private nativeImageFailures: Set<string> = new Set<string>();
+  private preparationFailureNoticeKey: string = '';
+  private openedErrorNoticeKey: string = '';
   @State private offlineProbeStatus: string = '';
   private detachOfflineProbe: (() => void) | undefined;
   @State private title: string = '';
   @State @Watch('onWindowChromeChanged') private recovering: boolean = false;
-  @State private opened: boolean = false;
+  @State @Watch('onErrorPresentationChanged') private opened: boolean = false;
   private controller: MangaSessionController | undefined;
   private readonly data: MangaStripDataSource = new MangaStripDataSource();
   private readonly scroller: ListScroller = new ListScroller();
@@ -308,6 +320,7 @@ export struct MangaReadingSurface {
   }
   private async open(controller: MangaSessionController, resumePosition: boolean = false): Promise<void> {
     try {
+      this.openFailureStage = 'chapter';
       this.detachOfflineProbe = this.offline ? this.runtime?.subscribeMangaOfflineProbe?.((state: string): void => {
         if (this.mounted) this.offlineProbeStatus = state;
       }) : undefined;
@@ -385,6 +398,7 @@ export struct MangaReadingSurface {
         }
       }
       if (session === undefined && this.remoteBookSeed !== undefined) {
+        this.openFailureStage = 'source';
         session = await this.acquireCatalog(current);
       }
       if (!current()) return;
@@ -400,6 +414,7 @@ export struct MangaReadingSurface {
       }
       if (!current()) return;
       if (index === undefined) throw new Error('MANGA_CATALOG_REQUIRED');
+      this.openFailureStage = 'chapter';
       await controller.open(this.sourceId, this.bookId, index, this.offline, this.chapterIndex === undefined, this.directoryTargetProof, startAtChapterFirst);
       if (!this.mounted || this.controller !== controller) return;
       await controller.setPreviewMode(this.effectiveFit() === 'contain', controller.displayedOrdinal);
@@ -478,11 +493,10 @@ export struct MangaReadingSurface {
     const chapter = this.controller?.chapter;
     if (!this.mounted || chapter === undefined) return;
     this.recovering = this.controller?.recoveryRequired === true;
-    const preparationError = this.controller?.preparationError;
-    if (preparationError !== undefined) this.error = preparationError;
-    else if (this.error === 'MANGA_CHAPTER_CACHE_CAPACITY' || this.error === 'MANGA_CHAPTER_PREPARATION_FAILED') this.error = '';
+    this.notifyPreparationFailure();
     const manifestChanged = this.publishedManifestVersion !== chapter.manifest.manifestVersion;
     if (manifestChanged && this.controller !== undefined) {
+      this.nativeImageFailures.clear();
       this.publishedManifestVersion = chapter.manifest.manifestVersion;
       this.layoutGeneration++; this.viewportGeneration++;
       this.pendingRestoreAnchor = undefined; this.restoringAnchor = false;
@@ -512,6 +526,17 @@ export struct MangaReadingSurface {
         (this.restoringAnchor ? this.pendingRestoreAnchor !== undefined : this.data.projection.affectsAnchor(anchor.ordinal)))
         this.restore(anchor.ordinal, anchor.y, anchor.x ?? 0);
     } catch (error) { this.error = error instanceof Error ? error.message : '漫画布局失败'; }
+  }
+  private notifyPreparationFailure(): void {
+    const failure = this.controller?.preparationError;
+    if (failure === undefined) { this.preparationFailureNoticeKey = ''; return; }
+    // Background whole-chapter preparation cannot replace admitted pixels
+    // with a persistent global error. The original More actions remain.
+    if (!this.opened) return;
+    const key = `${this.controller?.chapter?.manifest.manifestVersion ?? ''}\u0000${failure}`;
+    if (key === this.preparationFailureNoticeKey) return;
+    this.preparationFailureNoticeKey = key;
+    try { this.getUIContext().getPromptAction().showToast({ message: this.displayError(failure), duration: 2000 }); } catch (_) {}
   }
   private notifyPublishedRows(structure: boolean): void {
     // Image/auth facts are plain controller fields, not an observed UI property.
@@ -839,8 +864,19 @@ export struct MangaReadingSurface {
       Math.min(this.viewportWidth, this.viewportHeight * row.width / row.sourceHeight) : this.viewportWidth);
   }
   private rowDisplayHeight(row: MangaStripRow): number {
+    if (!row.known && this.rowHasError(row)) return this.unavailableImageHeight(row) + 12;
     const height = this.rowDisplayWidth(row) * row.height / row.width;
     return this.effectiveFit() === 'contain' ? Math.max(height, this.viewportHeight * this.zoom) : height;
+  }
+  private unavailableImageWidth(row: MangaStripRow): number {
+    return row.known ? this.rowDisplayWidth(row) : Math.max(1, this.rowDisplayWidth(row) - 32);
+  }
+  private unavailableImageHeight(row: MangaStripRow): number {
+    return row.known ? this.rowDisplayWidth(row) * row.height / row.width :
+      Math.max(160, Math.min(220, this.unavailableImageWidth(row) / 2));
+  }
+  private nativeFailureKey(row: MangaStripRow, uri: string): string {
+    return `${this.controller?.chapter?.manifest.manifestVersion ?? ''}\u0000${row.key}\u0000${uri}`;
   }
   private rowDisplayTop(row: MangaStripRow): number { return (this.rowDisplayHeight(row) - this.rowDisplayWidth(row) * row.height / row.width) / 2; }
   private rowDisplayLeft(row: MangaStripRow): number { return (this.viewportWidth * this.zoom - this.rowDisplayWidth(row)) / 2; }
@@ -937,21 +973,37 @@ export struct MangaReadingSurface {
       this.controller?.visiblePages().find(page => page.ordinal === row.ordinal)?.error ?? 'MANGA_IMAGE_FAILED';
   }
   private rowHasError(row: MangaStripRow): boolean {
+    const tile = this.controller?.tile(row.ordinal, row.tileIndex);
+    if (tile?.image !== undefined) {
+      return this.nativeImageFailures.has(this.nativeFailureKey(row, tile.image.fileUri));
+    }
     return this.controller?.tile(row.ordinal, row.tileIndex)?.error !== undefined ||
       this.controller?.visiblePages().some(page => page.ordinal === row.ordinal && page.status === 'failed') === true;
   }
-  /** Keep a failed viewport readable: one visible error card owns the retry. */
-  private primaryErrorRowKey(): string {
-    const start = Math.max(0, this.first);
-    const end = Math.min(this.data.totalCount() - 1, this.requestedLast());
-    for (let candidate = start; candidate <= end; candidate++) {
-      const row = this.data.getData(candidate);
-      if (this.rowHasError(row)) return row.key;
-    }
-    return '';
+  private wholeImageUnavailable(row: MangaStripRow): boolean {
+    return row.known && this.controller?.visiblePages().some(page => page.ordinal === row.ordinal && page.status === 'failed') === true;
   }
-  private isPrimaryErrorRow(row: MangaStripRow): boolean {
-    return this.rowHasError(row) && this.primaryErrorRowKey() === row.key;
+  /** A tiled long image is still one logical image. Pick one failed region
+   * nearest its centre; a readable region always keeps its admitted pixels. */
+  private unavailableMarkerTile(row: MangaStripRow): number {
+    if (!this.wholeImageUnavailable(row)) return row.tileIndex;
+    const geometry = this.controller?.pageGeometry(row.ordinal);
+    const tileHeight = geometry?.tileHeight ?? row.height;
+    const count = Math.max(1, Math.ceil(row.sourceHeight / tileHeight));
+    const middle = Math.min(count - 1, Math.floor(row.sourceHeight / 2 / tileHeight));
+    for (let distance = 0; distance < count; distance++) {
+      for (const index of distance === 0 ? [middle] : [middle - distance, middle + distance]) {
+        if (index < 0 || index >= count) continue;
+        if (this.controller?.tile(row.ordinal, index)?.image === undefined) return index;
+      }
+    }
+    return -1;
+  }
+  private unavailableMarkerTop(row: MangaStripRow): number {
+    const height = this.unavailableImageHeight(row);
+    const centre = this.rowDisplayWidth(row) * (row.sourceHeight / 2 - row.sourceY) / row.width;
+    return this.wholeImageUnavailable(row) && centre >= 16 && centre <= height - 16 ?
+      centre - 16 : Math.max(0, (height - 32) / 2);
   }
   private displayChapterTitle(index: number, title: string): string {
     const normalized = typeof title === 'string' ? title.trim() : '';
@@ -966,7 +1018,7 @@ export struct MangaReadingSurface {
     // as ReaderContinuousReadingStage does for decoded inline images.
     return JSON.stringify([row.key, row.known, row.width, row.height, row.sourceY, row.sourceHeight,
       tile?.image?.fileUri ?? '', tile?.image?.revision ?? '', tile?.error ?? pageError ?? '',
-      this.isPrimaryErrorRow(row), this.boundaryPaintGeneration]);
+      this.rowHasError(row), this.unavailableMarkerTile(row), this.boundaryPaintGeneration]);
   }
   private async handleBack(intent?: 'navigation'): Promise<void> {
     if (this.boundaryBusy || this.boundaryDragging) {
@@ -1128,8 +1180,30 @@ export struct MangaReadingSurface {
     this.controlsVisible = !this.controlsVisible;
   }
   private controlsPresentedForWindow(): boolean {
-    return !this.chapterEnd && (this.controlsVisible || this.error.length > 0 || this.openingRetry ||
+    return !this.chapterEnd && (this.controlsVisible || (!this.opened && this.error.length > 0) || this.openingRetry ||
       this.recovering || this.loginRequiredForControls || this.panel.length > 0);
+  }
+  private onErrorPresentationChanged(): void {
+    this.onWindowChromeChanged();
+    this.notifyOpenedError();
+  }
+  private notifyOpenedError(): void {
+    if (this.error.length === 0) { this.openedErrorNoticeKey = ''; return; }
+    if (!this.mounted || !this.opened || !this.windowChromeActive || this.isReaderIdentityCurrent?.() === false ||
+      this.error === 'MANGA_SESSION_CANCELLED') return;
+    // Image failures stay with their own logical image. Preserve the error
+    // fact for the existing login/recovery decisions without a global alert.
+    for (let index = Math.max(0, this.first); index <= this.requestedLast(); index++) {
+      const row = this.data.getData(index);
+      if (this.rowHasError(row) && this.imageError(row) === this.error) return;
+    }
+    const key = JSON.stringify([this.sourceId, this.bookId, this.controller?.chapter?.manifest.manifestVersion,
+      this.presentationGeneration, this.error]);
+    if (key === this.openedErrorNoticeKey) return;
+    try {
+      this.getUIContext().getPromptAction().showToast({ message: this.displayError(this.error) });
+      this.openedErrorNoticeKey = key;
+    } catch (_) {}
   }
   private refreshLoginRequiredForControls(): void {
     if (!this.mounted) return;
@@ -1428,6 +1502,11 @@ export struct MangaReadingSurface {
     if (this.pendingChapterTransition !== undefined && owner === this.controller && manifest === this.controller?.chapter?.manifest &&
       this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri === uri)
       this.nativeTransitionReject?.(new Error('MANGA_CHAPTER_NATIVE_IMAGE_FAILED'));
+    else if (this.mounted && owner === this.controller && manifest === this.controller?.chapter?.manifest &&
+      this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri === uri) {
+      this.nativeImageFailures.add(this.nativeFailureKey(row, uri));
+      this.data.notify(false, this.first, this.requestedLast());
+    }
   }
   private confirmBoundaryFrame(): void {
     this.traceBoundary('paint-gate');
@@ -1554,15 +1633,12 @@ export struct MangaReadingSurface {
     this.panelPhase = 'opening';
     this.panelOffset = this.panelTravel(); this.panelScrimOpacity = 0;
     if (this.reduceMotion) { this.panelOffset = 0; this.panelScrimOpacity = 1; this.panelPhase = 'open'; this.scheduleDirectoryOuterPosition(this.directoryOuterIdentity()); return; }
+    // The native surface must finish its first layout at the offscreen
+    // endpoint before either animation changes the observed values.
     this.getUIContext().postFrameCallback(new MangaSheetFrame((): void => {
       if (!this.mounted || generation !== this.panelGeneration || this.panelPhase !== 'opening') return;
-      // onFrame runs before that frame's build/layout. Keep the screen-out
-      // endpoint through this whole frame, then animate in the following one.
-      this.getUIContext().postFrameCallback(new MangaSheetFrame((): void => {
-        if (!this.mounted || generation !== this.panelGeneration || this.panelPhase !== 'opening') return;
-        this.getUIContext().animateTo({ duration: 160, curve: Curve.EaseInOut }, (): void => { this.panelScrimOpacity = 1; });
-        this.settlePanel(generation);
-      }));
+      this.getUIContext().animateTo({ duration: 160, curve: Curve.EaseInOut }, (): void => { this.panelScrimOpacity = 1; });
+      this.settlePanel(generation);
     }));
   }
   private async showDetail(): Promise<void> {
@@ -1695,11 +1771,17 @@ export struct MangaReadingSurface {
   private directoryColumnWidth(): number { return mangaDirectoryColumnWidth(this.stageWidth); }
   private widePanel(): boolean { return this.persistentDirectory() || this.viewportWidth >= 600 || this.viewportWidth > this.viewportHeight; }
   private panelWidth(): number | string {
-    if (!this.widePanel()) return '100%';
+    if (!this.widePanel()) return this.isActionPanel() ? Math.min(resolveDrawerSpec('reader-action-sheet').maxWidth, this.stageWidth > 0 ? this.stageWidth : this.viewportWidth) : '100%';
     return this.stageWidth <= 700 ? Math.min(320, this.stageWidth * 0.85) :
       Math.max(240, Math.min(this.persistentDirectory() ? 340 : 320, this.stageWidth * 0.45));
   }
-  private panelContentInset(): number { return this.widePanel() ? this.stageWidth <= 700 ? 16 : 20 : 18; }
+  private panelContentInset(): number {
+    if (this.isActionPanel()) {
+      const spec = resolveDrawerSpec('reader-action-sheet');
+      return Number(this.panelWidth()) <= spec.compactViewportWidth ? spec.compactSideContentInset : spec.contentInset;
+    }
+    return this.widePanel() ? this.stageWidth <= 700 ? 16 : 20 : 18;
+  }
   // The demo snap is a maximum, not a forced empty sheet height.
   private panelHeight(): number {
     const snap = this.panel === 'directory' ? 0.78 : this.panel === 'more' ? 0.75 : this.panel === 'mode' || this.panel === 'settings' ? 0.67 : 0.5;
@@ -1844,12 +1926,26 @@ export struct MangaReadingSurface {
     if (this.persistentDirectory()) insets.left = Math.max(0, insets.left - this.directoryColumnWidth());
     return insets;
   }
+  @Builder
+  private chapterLoadState() {
+    Column() {
+      ReaderPageState({ loading: this.error.length === 0 || this.openingRetry,
+        inkColor: this.inkColor(), mutedColor: this.mutedColor(),
+        title: this.error.length === 0 || this.openingRetry ? '' :
+          (this.openFailureStage === 'source' ? '书源加载失败' : '章节加载失败'),
+        message: this.error.length === 0 || this.openingRetry ? '正在载入章节…' : this.displayError(this.error),
+        actionLabel: this.offline ? '' : '重试', onAction: (): void => { void this.retryOpen(); },
+        secondaryActionLabel: '切换书源', onSecondaryAction: (): void => { void this.openSourceSwitch(); } });
+    }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+      .padding(this.interactiveInsets(this.windowMetricsRevision));
+  }
   build() {
     Column() {
       Row() {
         if (this.persistentDirectory()) { this.tabletDirectory(); }
         Stack({ alignContent: Alignment.Center }) {
         this.boundaryViewport();
+        if (!this.opened) { this.chapterLoadState(); }
         if (this.previousChapterPixels.length > 0) { this.retainedChapterPixels(); }
         if (this.opened && this.showPageNumbers && !this.controlsVisible && !this.chapterEnd && !this.boundaryBusy) {
           Stack({ alignContent: Alignment.BottomEnd }) {
@@ -1961,21 +2057,30 @@ export struct MangaReadingSurface {
       List({ scroller: this.scroller, space: 0 }) {
         LazyForEach(this.data, (row: MangaStripRow, index: number) => {
           ListItem() {
-            if (this.controller?.tile(row.ordinal, row.tileIndex)?.image !== undefined) {
+            if (this.rowHasError(row)) {
+              Stack({ alignContent: Alignment.TopStart }) {
+                if (this.unavailableMarkerTile(row) === row.tileIndex) {
+                  Image((this.backgroundPreference === 'ink' ? $r('app.media.reader_image_unavailable_theme_night') : $r('app.media.reader_image_unavailable')))
+                    .width(32).height(32).accessibilityText('此图片不可用')
+                    .position({ x: Math.max(0, (this.unavailableImageWidth(row) - 32) / 2), y: this.unavailableMarkerTop(row) });
+                }
+              }.width(this.unavailableImageWidth(row)).height(this.unavailableImageHeight(row))
+                .backgroundColor(Color.Transparent)
+                .border({ width: { left: 1, right: 1,
+                  top: this.wholeImageUnavailable(row) && row.sourceY > 0 ? 0 : 1,
+                  bottom: this.wholeImageUnavailable(row) && row.sourceY + row.height < row.sourceHeight ? 0 : 1 },
+                  color: this.lineColor() })
+                .borderRadius({ topLeft: this.wholeImageUnavailable(row) && row.sourceY > 0 ? 0 : 4,
+                  topRight: this.wholeImageUnavailable(row) && row.sourceY > 0 ? 0 : 4,
+                  bottomLeft: this.wholeImageUnavailable(row) && row.sourceY + row.height < row.sourceHeight ? 0 : 4,
+                  bottomRight: this.wholeImageUnavailable(row) && row.sourceY + row.height < row.sourceHeight ? 0 : 4 })
+                .margin({ bottom: row.known ? 0 : 12 });
+            } else if (this.controller?.tile(row.ordinal, row.tileIndex)?.image !== undefined) {
               this.tileImage(row, this.controller?.tile(row.ordinal, row.tileIndex)?.image?.fileUri ?? '', this.rowRenderKey(row), this.controller, this.controller?.chapter?.manifest);
             } else {
               Column() {
-              if (this.rowHasError(row)) {
-                if (this.isPrimaryErrorRow(row)) {
-                  Text(this.displayError(this.imageError(row))).fontColor(this.errorColor).maxLines(4)
-                  Button(this.retryLabel(row)).onClick((): void => this.retry(row))
-                } else {
-                  // The adjacent failed row keeps its measured slot, while the
-                  // viewport exposes a single actionable error for this load.
-                  Blank()
-                }
-                } else { LoadingProgress().width(24).height(24) }
-              }.width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width).justifyContent(FlexAlign.Center)
+                LoadingProgress().width(32).height(32).color(this.mutedColor());
+              }.width(this.rowDisplayWidth(row)).height(this.rowDisplayWidth(row) * row.height / row.width).justifyContent(FlexAlign.Center);
             }
           }.width('100%').height(this.rowDisplayHeight(row)).align(Alignment.Center)
             .onAppear((): void => this.onRowAppear(index))
@@ -2049,13 +2154,11 @@ export struct MangaReadingSurface {
         .shadow({ radius: this.appThemeScheme === 'night' ? 0 : 18,
           color: this.appThemeScheme === 'night' ? '#22000000' : '#1A594632', offsetX: 0, offsetY: 5 });
       if (this.recovering) {
-        Button(this.controller?.replacementRecoveryRequired === true ? '内容已更新，从新版首图开始' : '内容已更新，确认从当前页继续').fontSize(12).height(44)
-          .onClick((): void => { void this.confirmRecovery(); });
-      }
-      if (this.error.length > 0) { Text(this.displayError(this.error)).fontSize(12).fontColor(this.errorColor).maxLines(3).padding(8).backgroundColor(this.surfaceColor()).borderRadius(12); }
-      if ((this.error.length > 0 || this.openingRetry) && !this.opened && !this.offline) {
-        Button(this.openingRetry ? '重试中' : '重试').height(44).enabled(!this.openingRetry)
-          .onClick((): void => { void this.retryOpen(); });
+        ReaderRecoveryNotice({ tag: '内容更新',
+          view: { visible: true, generation: this.presentationGeneration, canRetry: true,
+            message: this.controller?.replacementRecoveryRequired === true ? '内容已更新，需从新版首图开始。' : '内容已更新，需确认阅读位置。' },
+          actionLabel: this.controller?.replacementRecoveryRequired === true ? '从首图开始' : '从当前页继续',
+          onReconcile: (): void => { void this.confirmRecovery(); } });
       }
       if (this.loginRequiredForControls) { Button(this.loggingIn ? '登录处理中' : '登录书源后重试').height(44).enabled(!this.loggingIn).onClick((): void => { void this.loginAndRetry(); }); }
       if (this.offlineProbeStatus.length > 0) { Text(this.offlineProbeStatus).fontSize(10).maxLines(4).fontColor(this.mutedColor()).id('reader-manga-offline-probe-status'); }
@@ -2063,13 +2166,16 @@ export struct MangaReadingSurface {
   }
   @Builder
   private iconAction(icon: Resource, label: string, action: () => void) {
-    ReaderIconButton({ icon, specId: 'manga-reader-action', accessibilityLabel: label, onTap: action });
+    ReaderIconButton({ icon, specId: 'manga-reader-action',
+      scheme: this.backgroundPreference === 'ink' ? 'night' : 'day', accessibilityLabel: label, onTap: action });
   }
   @Builder
   private bottomControls() {
     Column({ space: 4 }) {
       Row({ space: 10 }) {
         Button('‹').height(28).width(28).fontSize(20).fontColor(this.mutedColor()).backgroundColor(Color.Transparent)
+          .accessibilityText('上一页').accessibilityRole(AccessibilityRoleType.BUTTON)
+          .focusable(this.opened && this.pageOrdinal() > 0)
           .enabled(this.opened && this.pageOrdinal() > 0).onClick((): void => { void this.stepPage(-1); });
         Column({ space: 3 }) {
           Slider({ value: this.pageOrdinal() + 1, min: 1, max: Math.max(1, this.horizontalPageCount), step: 1 })
@@ -2086,6 +2192,7 @@ export struct MangaReadingSurface {
           }.width('100%').justifyContent(FlexAlign.Center).height(16);
         }.layoutWeight(1);
         Button('›').height(28).width(28).fontSize(20).fontColor(this.mutedColor()).backgroundColor(Color.Transparent)
+          .accessibilityText('下一页').accessibilityRole(AccessibilityRoleType.BUTTON).focusable(this.opened)
           .enabled(this.opened).onClick((): void => { void this.stepPage(1); });
       }.width('100%').height(48).alignItems(VerticalAlign.Top);
       Row() {
@@ -2114,9 +2221,14 @@ export struct MangaReadingSurface {
     Stack({ alignContent: this.widePanel() ? Alignment.End : Alignment.Bottom }) {
       Column().width('100%').height('100%').backgroundColor(this.widePanel() ? Color.Transparent : this.panel === 'directory' ? mangaDirectoryColor('scrim', this.backgroundPreference === 'ink' ? 'night' : 'day') : this.isActionPanel() ? readerAppColor(resolveDrawerSpec('reader-action-sheet').scrimRole, this.backgroundPreference === 'ink' ? 'night' : 'day') : '#57000000')
         .opacity(this.widePanel() ? 1 : this.panelScrimOpacity)
-        .onClick((): void => { void this.closePanel(); });
+        .onClick((): void => {
+          // The opening touch and an unfinished handle gesture cannot also
+          // become an outside dismissal while the surface is moving.
+          if (this.panelPhase === 'open') void this.closePanel();
+        });
       if (this.isActionPanel()) { this.actionPanelSurface(); }
       else {
+      Column() {
       Stack({ alignContent: Alignment.TopEnd }) {
         Column() {
           if (this.widePanel()) {
@@ -2202,31 +2314,48 @@ export struct MangaReadingSurface {
         .shadow({ radius: this.widePanel() ? 32 : 48,
           color: this.widePanel() ? '#11000000' : this.backgroundPreference === 'ink' ? '#66000000' : '#33000000',
           offsetX: this.widePanel() ? -14 : 0, offsetY: this.widePanel() ? 0 : -16 })
-        .translate({ x: this.widePanel() ? this.panelOffset : 0, y: this.widePanel() ? 0 : this.panelOffset })
         .enabled(this.panelPhase === 'open' || this.panelPhase === 'dragging');
+      }.width(this.panelWidth())
+        .translate({ x: this.widePanel() ? this.panelOffset : 0, y: this.widePanel() ? 0 : this.panelOffset })
+        .hitTestBehavior(HitTestMode.Block);
       }
     }.width('100%').height('100%');
   }
-  private isActionPanel(): boolean { return this.panel === 'more' || this.panel === 'downloads'; }
+  @State private actionHeaderMeasuredHeight: number = 0;
+  private isActionPanel(): boolean { return this.panel === 'more' || this.panel === 'downloads' || this.panel === 'mode' || this.panel === 'settings'; }
+  private actionHeaderHeight(): number {
+    if (this.actionHeaderMeasuredHeight > 0) return this.actionHeaderMeasuredHeight;
+    const spec = resolveDrawerSpec('reader-action-sheet');
+    return this.widePanel() ? spec.sideHeaderHeight : spec.handleZone + spec.titleHeight;
+  }
   private actionPanelInsets(): ReaderInsetsVp {
     const insets = this.panelInsets(this.windowMetricsRevision);
     return { left: insets.left, right: insets.right, top: this.widePanel() ? insets.top : 0, bottom: insets.bottom };
   }
   @Builder
   private actionPanelSurface() {
-    ReaderBoundedSurface({ specId: 'reader-action-sheet', surfaceWidth: this.panelWidth(),
-      surfaceHeight: this.widePanel() ? this.panelHeight() : 0, maxSurfaceHeight: this.panelHeight(),
-      placement: this.widePanel() ? 'side' : 'bottom', scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
-      safeInsets: this.actionPanelInsets(), header: (): void => { this.actionPanelHeader(); },
-      body: (): void => { this.actionPanelBody(); },
-    }).translate({ x: this.widePanel() ? this.panelOffset : 0, y: this.widePanel() ? 0 : this.panelOffset })
-      .enabled(this.panelPhase === 'open' || this.panelPhase === 'dragging');
+    // Keep a native hit target alive while its children are waiting for the
+    // opening/closing animation. A disabled whole surface exposes its scrim.
+    Column() {
+      ReaderBoundedSurface({ specId: 'reader-action-sheet', surfaceWidth: this.panelWidth(),
+        surfaceHeight: this.widePanel() ? this.panelHeight() : 0, maxSurfaceHeight: this.panelHeight(),
+        placement: this.widePanel() ? 'side' : 'bottom', scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+        safeInsets: this.actionPanelInsets(), header: (): void => { this.actionPanelHeader(); },
+        body: (): void => { this.actionPanelBody(); },
+      }).enabled(this.panelPhase === 'open' || this.panelPhase === 'dragging');
+    }.width(this.panelWidth())
+      .translate({ x: this.widePanel() ? this.panelOffset : 0, y: this.widePanel() ? 0 : this.panelOffset })
+      .hitTestBehavior(HitTestMode.Block);
   }
   @Builder
   private actionPanelHeader() {
-    ReaderBoundedSurfaceHeader({ specId: 'reader-action-sheet', title: this.panelTitle(), surfaceWidth: this.stageWidth,
+    ReaderBoundedSurfaceHeader({ specId: 'reader-action-sheet', title: this.panelTitle(), surfaceWidth: Number(this.panelWidth()),
       placement: this.widePanel() ? 'side' : 'bottom', scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
       actionEnabled: this.panelPhase === 'open' || this.panelPhase === 'dragging',
+      onAreaChanged: (_old: Area, area: Area): void => {
+        const height = Number(area.height);
+        if (Number.isFinite(height) && height > 0 && Math.abs(height - this.actionHeaderMeasuredHeight) > .5) this.actionHeaderMeasuredHeight = height;
+      },
       onClose: (): void => { void this.closePanel(); },
       onHandlePanStart: (): void => this.beginPanelDrag(), onHandlePanUpdate: (offset: number): void => this.updatePanelDrag(offset),
       onHandlePanEnd: (offset: number, velocity: number): void => this.finishPanelDrag(offset, velocity),
@@ -2241,9 +2370,11 @@ export struct MangaReadingSurface {
             failureMessage: this.downloadActionsFailure, panelScheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
             onAction: (action: MangaDownloadActionId): void => this.performDownloadAction(action),
             onRetry: (): void => { void this.openDownloadActions(this.downloadActionsChapterIndex); } });
-        } else { this.morePanel(); }
-      }.width('100%').padding({ left: this.panelContentInset(), right: this.panelContentInset(), bottom: this.widePanel() ? 22 : 24 });
-    }.width('100%').constraintSize({ maxHeight: Math.max(1, this.panelContentHeight() - (this.widePanel() ? 83 : 70)) })
+        } else if (this.panel === 'mode') { this.modePanel(); }
+        else if (this.panel === 'settings') { this.settingsPanel(); }
+        else { this.morePanel(); }
+      }.width('100%').padding({ left: this.panelContentInset(), right: this.panelContentInset(), bottom: resolveDrawerSpec('reader-action-sheet').contentInset });
+    }.width('100%').constraintSize({ maxHeight: Math.max(1, this.panelContentHeight() - this.actionHeaderHeight()) })
       .layoutWeight(this.widePanel() ? 1 : 0).scrollBar(BarState.Auto);
   }
   @Builder
@@ -2573,27 +2704,27 @@ export struct MangaReadingSurface {
     const refreshSecondary = this.refreshing ? '正在重新加载…' : !this.opened ? '章节尚未打开' : this.offline ? '离线时不可用' : '';
     const actions: ReaderActionSheetAction[] = [
       new ReaderActionSheetAction('source', '更换书源', '阅读', '', '', true,
-        this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch'), 'default', true),
+        readerActionIcon('source', this.backgroundPreference === 'ink' ? 'night' : 'day'), 'default', true),
       new ReaderActionSheetAction('refresh', refreshLabel, '阅读', refreshSecondary, '', this.opened && !this.offline && !this.refreshing,
-        this.backgroundPreference === 'ink' ? $r('app.media.download_visual_retry_theme_night') : $r('app.media.download_visual_retry')),
+        readerActionIcon('refresh', this.backgroundPreference === 'ink' ? 'night' : 'day')),
       new ReaderActionSheetAction('detail', '漫画详情', '阅读', '', '', true,
-        this.backgroundPreference === 'ink' ? $r('app.media.import_info_theme_night') : $r('app.media.import_info'), 'default', true),
+        readerActionIcon('info', this.backgroundPreference === 'ink' ? 'night' : 'day'), 'default', true),
     ];
     if (this.downloadEnabled) {
       actions.push(
         new ReaderActionSheetAction('downloadChapter', '下载本话', '下载', this.opened && this.directoryCurrentChapterIndex >= 0 ? '' : '章节尚未打开', '', this.opened && this.directoryCurrentChapterIndex >= 0,
-          this.backgroundPreference === 'ink' ? $r('app.media.download_visual_download_theme_night') : $r('app.media.download_visual_download')),
+          readerActionIcon('download', this.backgroundPreference === 'ink' ? 'night' : 'day')),
         new ReaderActionSheetAction('downloadBook', '下载全部章节', '下载', '', '', true,
-          this.backgroundPreference === 'ink' ? $r('app.media.download_visual_storage_theme_night') : $r('app.media.download_visual_storage')),
+          readerActionIcon('storage', this.backgroundPreference === 'ink' ? 'night' : 'day')),
         new ReaderActionSheetAction('downloadManager', '下载管理', '下载', '', '', true,
-          this.backgroundPreference === 'ink' ? $r('app.media.download_visual_more_theme_night') : $r('app.media.download_visual_more'), 'default', true),
+          readerActionIcon('more', this.backgroundPreference === 'ink' ? 'night' : 'day'), 'default', true),
       );
     }
     actions.push(new ReaderActionSheetAction('shelf', this.inBookshelf ? '移出书架' : '加入书架', '书架',
-      this.inBookshelf ? '退出阅读，前往详情确认' : '', '', true,
+      '', '', true,
       this.inBookshelf
-        ? (this.backgroundPreference === 'ink' ? $r('app.media.download_visual_trash_theme_night') : $r('app.media.download_visual_trash'))
-        : (this.backgroundPreference === 'ink' ? $r('app.media.bookshelf_more_import_theme_night') : $r('app.media.bookshelf_more_import')),
+        ? (readerActionIcon('trash', this.backgroundPreference === 'ink' ? 'night' : 'day'))
+        : (readerActionIcon('import', this.backgroundPreference === 'ink' ? 'night' : 'day')),
       this.inBookshelf ? 'danger' : 'default', this.inBookshelf));
     return actions;
   }
@@ -2608,7 +2739,12 @@ export struct MangaReadingSurface {
       if (this.refreshing) return;
       this.refreshing = true;
       void this.performMorePanelAction((): Promise<void> => this.refreshImages())
-        .catch((error: Error): void => { if (this.mounted) this.error = error.message; })
+        .catch((error: Error): void => {
+          if (!this.mounted) return;
+          if (this.opened) {
+            try { this.getUIContext().getPromptAction().showToast({ message: '刷新未完成，已保留当前内容。' }); } catch (_) {}
+          } else this.error = error.message;
+        })
         .finally((): void => { if (this.mounted) this.refreshing = false; });
       return;
     }

@@ -294,7 +294,7 @@ export struct ReaderSearchField {
       return (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_input_search_theme_night') : $r('app.media.reader_directory_input_search'));
     }
     if (this.variant === 'readerQuick') {
-      return (this.appThemeScheme === 'night' ? $r('app.media.reader_quick_search_theme_night') : $r('app.media.reader_quick_search'));
+      return (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_search_theme_night') : $r('app.media.reader_directory_search'));
     }
     return (this.appThemeScheme === 'night' ? $r('app.media.search_mag_theme_night') : $r('app.media.search_mag'));
   }

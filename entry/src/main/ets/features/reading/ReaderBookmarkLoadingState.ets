@@ -13,8 +13,8 @@ export struct ReaderBookmarkLoadingState {
   build() {
     Column({ space: 8 }) {
       LoadingProgress()
-        .width(20)
-        .height(20)
+        .width(32)
+        .height(32)
         .color(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       Text('书签载入中…')
         .fontFamily(TYPE_READER_BOOKMARK_LOADING.fontFamily as string)

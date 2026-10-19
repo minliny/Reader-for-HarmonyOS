@@ -1,6 +1,6 @@
 import { TYPE_APP_BODY, TYPE_APP_PRIMARY_ACTION, TYPE_SHELF_STATE_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
-import { SearchSpinner } from '../search/SearchSpinner';
+import { ReaderPageState } from '../common/ReaderPageState';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerContentSafeTop } from '../common/ReaderWindowMetrics';
 import {
@@ -19,42 +19,11 @@ export struct BookshelfStatusContent {
 
   build() {
     Scroll() {
-      Column({ space: 16 }) {
-        if (this.failed) {
-          Text('书架加载失败')
-            .fontFamily(TYPE_SHELF_STATE_TITLE.fontFamily)
-            .fontWeight(TYPE_SHELF_STATE_TITLE.fontWeight)
-            .fontSize(TYPE_SHELF_STATE_TITLE.fontSizeFp)
-            .lineHeight(TYPE_SHELF_STATE_TITLE.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-            .textAlign(TextAlign.Center);
-          Text('无法读取书架内容，请重试。')
-            .fontFamily(TYPE_APP_BODY.fontFamily)
-            .fontWeight(TYPE_APP_BODY.fontWeight)
-            .fontSize(TYPE_APP_BODY.fontSizeFp)
-            .lineHeight(TYPE_APP_BODY.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .textAlign(TextAlign.Center);
-          Text('重试')
-            .fontFamily(TYPE_APP_PRIMARY_ACTION.fontFamily)
-            .fontWeight(TYPE_APP_PRIMARY_ACTION.fontWeight)
-            .fontSize(TYPE_APP_PRIMARY_ACTION.fontSizeFp)
-            .lineHeight(TYPE_APP_PRIMARY_ACTION.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-            .padding({ left: 18, right: 18, top: 11.5, bottom: 11.5 })
-            .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
-            .borderRadius(999)
-            .responseRegion({ x: 0, y: -4, width: '100%', height: 44 })
-            .onClick((): void => this.onRetry());
-        } else {
-          SearchSpinner({ active: true, reduceMotion: this.reduceMotion, diameter: 24 });
-          Text('正在加载书架…')
-            .fontFamily(TYPE_APP_BODY.fontFamily)
-            .fontWeight(TYPE_APP_BODY.fontWeight)
-            .fontSize(TYPE_APP_BODY.fontSizeFp)
-            .lineHeight(TYPE_APP_BODY.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-        }
+      Column() {
+        ReaderPageState({ loading: !this.failed,
+          title: this.failed ? '书架加载失败' : '正在加载书架…',
+          message: this.failed ? '无法读取书架内容，请重试。' : '',
+          actionLabel: this.failed ? '重试' : '', onAction: this.onRetry });
       }
       .width('100%')
       .constraintSize({ minHeight: this.minimumContentHeight() })

@@ -1,3 +1,4 @@
+import { ReaderPageState } from '../common/ReaderPageState';
 import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from './BookshelfViewModeHost';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
@@ -20,6 +21,7 @@ import { MangaBookPresentation } from '../manga/MangaBookPresentation';
 import { BookshelfViewState } from './BookshelfViewState';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
 import { FrameCallback } from '@kit.ArkUI';
+import { readerScrimmedOpaqueColor } from '../common/ReaderScrimColor';
 import curves from '@ohos.curves';
 import { readerMotionNowMs } from '../common/ReaderMotionClock';
 import { motionSegment, ReversibleMotionTimeline } from '../common/MotionTimeline';
@@ -48,7 +50,7 @@ import { NoCoverCover } from './NoCoverCover';
 import { registerReaderShelfFonts } from '../common/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
 import { SheetSurfaceSpec, resolveSheetSpec } from '../common/ReaderSurfaceSpecs';
-import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
+import { ReaderWindowChromeStyle, ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import {
   readerFloatingBarBottomInset,
   readerFloatingTabContentInset,
@@ -165,6 +167,7 @@ export struct BookshelfPage {
   @StorageLink('readerBookshelfSourceFilter') @Watch('onShelfFiltersChanged') private sourceFilter: string = 'all';
   @Prop @Watch('onBooksChanged') books: ShelfBook[];
   @Prop serverFiltered: boolean = false;
+  @Prop noticeTopInset: number = 0;
   @Prop headerClearance: number = readerPageInitialHeaderHeight('bookshelf') + 14;
   @Prop @Watch('onShelfPresentationChanged') navigationGeneration: number = 0;
   @Prop unfilteredOnlineBooks: boolean = false;
@@ -202,9 +205,13 @@ export struct BookshelfPage {
   private requestedViewMode: BookshelfViewMode = 'cover';
   private viewModeReadFailed: boolean = false;
   @State private actionBook: ShelfBook | undefined = undefined;
+  @State private bookActionSheetVisible: boolean = false;
   @State private actionSheetId: string = '';
   private actionSheetRevision: number = 0;
   private actionSheetNavigation: number = 0;
+  private actionSheetAppearedId: string = '';
+  private actionSheetChromeId: string = '';
+  private pendingBookAction: (() => void) | undefined = undefined;
   @State private visibleBookCount: number = 0;
   private readonly viewMotion: BookshelfViewMotionContract = bookshelfViewMotionContract();
   private pendingViewMode: BookshelfViewMode = 'cover';
@@ -242,6 +249,19 @@ export struct BookshelfPage {
     if (confirmedMode === undefined) this.loadViewMode();
   }
 
+  private viewModePending(): boolean {
+    return this.viewModeSnapshot.receipt?.receipt.confirmation === 'unknown' ||
+      this.viewModeSnapshot.receipt?.facts.blocked === true;
+  }
+  private lastModeFeedback: string = '';
+  @State private modeReconcileBusy: boolean = false;
+  private modeFeedback(): void {
+    const view = this.viewModeRecovery();
+    if (!view.visible || this.viewModePending()) { this.lastModeFeedback = ''; return; }
+    if (view.message === this.lastModeFeedback) return;
+    this.lastModeFeedback = view.message;
+    try { this.getUIContext().getPromptAction().showToast({ message: view.message, duration: 2000 }); } catch (_) {}
+  }
   private viewModeRecovery(): ReaderRecoveryView {
     const view = readerRecoveryView(this.viewModeSnapshot.receipt, this.viewModeSnapshot.readFacts);
     if (this.viewModeSnapshot.receipt?.facts.blockedReason === 'BOOKSHELF_RESTORE_PENDING') {
@@ -251,17 +271,23 @@ export struct BookshelfPage {
   }
 
   private retryViewMode(generation: number = this.viewModeRecovery().generation): void {
+    if (!this.mounted || this.modeReconcileBusy || generation !== this.viewModeRecovery().generation) return;
+    this.lastModeFeedback = '';
     const revision = this.viewModeRevision;
+    this.modeReconcileBusy = true;
     void this.viewModeHost.reconcile(generation, (): boolean => this.mounted && revision === this.viewModeRevision)
       .then((snapshot): void => {
         if (snapshot === undefined || !this.mounted || revision !== this.viewModeRevision) return;
         this.applyViewModeSnapshot(snapshot);
+      }).finally((): void => {
+        if (this.mounted && revision === this.viewModeRevision) this.modeReconcileBusy = false;
       });
   }
 
   private applyViewModeSnapshot(snapshot: BookshelfViewModeSnapshot): void {
     this.viewModeSnapshot = snapshot;
     this.viewModeError = this.viewModeRecovery().message;
+    this.modeFeedback();
     this.viewModeReadFailed = snapshot.readFacts?.canRetry === true;
     const mode = snapshot.canonical;
     if (mode === undefined) return;
@@ -292,6 +318,12 @@ export struct BookshelfPage {
     this.viewState.filterExpanded = this.filterRowVisible;
     this.viewportRestoreGeneration += 1;
     this.mounted = false;
+    this.modeReconcileBusy = false;
+    this.bookActionSheetVisible = false;
+    this.pendingBookAction = undefined;
+    this.actionSheetAppearedId = '';
+    if (this.actionSheetChromeId.length > 0) ReaderWindowCoordinator.requestAppChrome();
+    this.actionSheetChromeId = '';
     this.actionBook = undefined;
     this.actionSheetId = '';
     this.actionSheetRevision += 1;
@@ -311,6 +343,14 @@ export struct BookshelfPage {
       } else {
         this.phoneContent();
       }
+      if (this.viewModePending()) {
+        Column() {
+          ReaderRecoveryNotice({ view: this.viewModeRecovery(), tag: '显示方式待确认', actionLabel: '核对显示方式',
+            busy: this.modeReconcileBusy || this.viewModeSnapshot.receipt?.facts.fact === 'refreshing' || this.viewModeSnapshot.readFacts?.fact === 'refreshing',
+            onReconcile: (generation: number): void => this.retryViewMode(generation) });
+        }.width('100%').padding({ left: 17, right: 17, top: this.headerClearance + this.noticeTopInset })
+          .hitTestBehavior(HitTestMode.Transparent);
+      }
     }
     .width('100%')
     .height('100%')
@@ -320,13 +360,13 @@ export struct BookshelfPage {
         this.viewportWidth = width;
       }
     })
-    .bindSheet(this.actionBook !== undefined, this.bookActionSheetContent, this.bookActionSheetOptions());
+    .bindSheet(this.bookActionSheetVisible, this.bookActionSheetContent, this.bookActionSheetOptions());
   }
 
   private bookActionSheetOptions(presentationId: string = this.actionSheetId,
     book: ShelfBook | undefined = this.actionBook): SheetOptions {
     return {
-      height: this.bookActionSheetSpec().height,
+      height: SheetSize.FIT_CONTENT,
       width: this.bookActionWidth(),
       preferType: SheetType.BOTTOM,
       dragBar: false,
@@ -334,9 +374,34 @@ export struct BookshelfPage {
       backgroundColor: readerAppColor(this.bookActionSheetSpec().hostBackgroundRole, this.appThemeScheme),
       radius: { topLeft: this.bookActionSheetSpec().borderRadius, topRight: this.bookActionSheetSpec().borderRadius, bottomLeft: 0, bottomRight: 0 },
       maskColor: readerAppColor(this.bookActionSheetSpec().hostMaskRole, this.appThemeScheme),
+      shadow: { radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 },
       enableOutsideInteractive: false,
-      onDisappear: (): void => this.dismissBookActionSheet(presentationId, book),
+      onWillAppear: (): void => this.claimBookActionChrome(presentationId, book),
+      onAppear: (): void => {
+        if (this.isCurrentBookActionSheet(presentationId, book)) this.actionSheetAppearedId = presentationId;
+      },
+      onWillDismiss: (dismissal: DismissSheetAction): void => {
+        if (!this.isCurrentBookActionSheet(presentationId, book)) return;
+        // Ignore the opening gesture's release/outside hit until the native
+        // sheet has finished entering. Back remains an explicit dismissal.
+        if (dismissal.reason !== DismissReason.PRESS_BACK && this.actionSheetAppearedId !== presentationId) return;
+        this.dismissBookActionSheet(presentationId, book);
+        dismissal.dismiss();
+      },
+      onDisappear: (): void => this.finishBookActionSheet(presentationId, book),
     };
+  }
+
+  private claimBookActionChrome(presentationId: string, book: ShelfBook | undefined): void {
+    if (!this.isCurrentBookActionSheet(presentationId, book)) return;
+    const mask = readerAppColor(this.bookActionSheetSpec().hostMaskRole, this.appThemeScheme);
+    const paper = readerScrimmedOpaqueColor(readerAppColor('app.window.background', this.appThemeScheme), mask);
+    const ink = readerScrimmedOpaqueColor(readerAppColor('app.window.foreground', this.appThemeScheme), mask);
+    const style = new ReaderWindowChromeStyle(paper, this.appThemeScheme === 'night' ? 'light' : 'dark', ink);
+    style.navigationUnderlayColor = readerAppColor(this.bookActionSheetSpec().hostBackgroundRole, this.appThemeScheme);
+    style.navigationContentColor = readerAppColor('app.window.foreground', this.appThemeScheme);
+    this.actionSheetChromeId = presentationId;
+    ReaderWindowCoordinator.requestOverlayChrome(style);
   }
 
   private bookActionSheetSpec(): SheetSurfaceSpec {
@@ -527,20 +592,10 @@ export struct BookshelfPage {
         }
       }
 
-      if (this.viewModeError.length > 0) {
-        ListItem() {
-          ReaderRecoveryNotice({ view: this.viewModeRecovery(), actionLabel: '刷新显示方式',
-            onReconcile: (generation: number): void => this.retryViewMode(generation) });
-        }
-      }
-
       if (this.visibleBookCount === 0) {
         ListItem() {
-          Column({ space: 8 }) {
-            Text('没有符合条件的书籍').fontSize(TYPE_APP_INHERITED_STATE.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-            Text('清除全部条件').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-              .height(36).onClick((): void => this.clearFilters());
-          }.width('100%').padding({ top: 16, bottom: 16 });
+          ReaderPageState({ title: '没有符合条件的书籍', actionLabel: '清除全部条件',
+            onAction: (): void => this.clearFilters() }).padding({ top: 40, bottom: 40 });
         }
       }
 
@@ -967,16 +1022,19 @@ export struct BookshelfPage {
 
 
   private presentBookActionSheet(book: ShelfBook): void {
-    if (!this.mounted || !this.books.some((candidate: ShelfBook): boolean => candidate.sourceId === book.sourceId && candidate.bookId === book.bookId)) return;
+    if (!this.mounted || this.actionBook !== undefined || !this.books.some((candidate: ShelfBook): boolean => candidate.sourceId === book.sourceId && candidate.bookId === book.bookId)) return;
     this.actionSheetId = `bookshelf-action:${++this.actionSheetRevision}`;
     this.actionSheetNavigation = this.navigationGeneration;
+    this.actionSheetAppearedId = '';
+    this.pendingBookAction = undefined;
     this.actionBook = book;
+    this.bookActionSheetVisible = true;
   }
 
   private isCurrentBookActionSheet(presentationId: string, book: ShelfBook | undefined): boolean {
     // Builder arguments unwrap State proxies; the opening and compound book
     // identity own this callback across both representations.
-    return this.mounted && this.actionSheetNavigation === this.navigationGeneration && presentationId.length > 0 && presentationId === this.actionSheetId &&
+    return this.mounted && this.bookActionSheetVisible && this.actionSheetNavigation === this.navigationGeneration && presentationId.length > 0 && presentationId === this.actionSheetId &&
       book !== undefined && this.actionBook !== undefined && this.actionBook.sourceId === book.sourceId && this.actionBook.bookId === book.bookId && this.books.some(
         (candidate: ShelfBook): boolean => candidate.sourceId === book.sourceId && candidate.bookId === book.bookId);
   }
@@ -984,20 +1042,39 @@ export struct BookshelfPage {
   private dismissBookActionSheet(presentationId: string, book: ShelfBook | undefined): void {
     if (!this.mounted || presentationId.length === 0 || presentationId !== this.actionSheetId ||
       book === undefined || this.actionBook === undefined || this.actionBook.sourceId !== book.sourceId || this.actionBook.bookId !== book.bookId) return;
+    this.pendingBookAction = undefined;
+    this.bookActionSheetVisible = false;
+  }
+
+  private finishBookActionSheet(presentationId: string, book: ShelfBook | undefined): void {
+    if (!this.mounted || presentationId.length === 0 || presentationId !== this.actionSheetId ||
+      book === undefined || this.actionBook === undefined || this.actionBook.sourceId !== book.sourceId || this.actionBook.bookId !== book.bookId) return;
+    const action = this.pendingBookAction;
+    const navigation = this.actionSheetNavigation;
+    this.pendingBookAction = undefined;
+    this.bookActionSheetVisible = false;
     this.actionBook = undefined;
     this.actionSheetId = '';
+    this.actionSheetAppearedId = '';
+    if (this.actionSheetChromeId === presentationId) {
+      this.actionSheetChromeId = '';
+      ReaderWindowCoordinator.requestAppChrome();
+    }
+    if (navigation === this.navigationGeneration && action !== undefined) action();
   }
 
   private performBookAction(presentationId: string, book: ShelfBook | undefined, action: (book: ShelfBook, navigation?: number) => void): void {
     if (!this.isCurrentBookActionSheet(presentationId, book) || book === undefined) return;
-    this.actionBook = undefined;
-    this.actionSheetId = '';
-    action(book, this.actionSheetNavigation);
+    const navigation = this.actionSheetNavigation;
+    this.pendingBookAction = (): void => action(book, navigation);
+    // Keep the keyed content until native onDisappear; otherwise FIT_CONTENT
+    // and route navigation can destroy the outgoing sheet before its motion.
+    this.bookActionSheetVisible = false;
   }
 
   private bookActionWidth(): number {
-    // Same live horizontal frame as the outside edges of the shelf covers.
-    return this.shelfContentWidth(this.isWideViewport());
+    // Match the source drawer's live width cap, independently of shelf covers.
+    return this.resolveContentFrame(new SurfaceWidthSpec(this.bookActionSheetSpec().maxWidth)).width;
   }
 
   private phoneContentWidth(): number {
@@ -1143,7 +1220,7 @@ export struct BookshelfPage {
   private bookSelectionHandler(provider: () => ShelfBook | undefined): () => void {
     const navigation = this.navigationGeneration;
     return (): void => {
-      if (!this.isShelfPresentationCurrent(navigation)) return;
+      if (!this.isShelfPresentationCurrent(navigation) || this.actionBook !== undefined) return;
       const book = provider();
       if (book !== undefined) this.onBookSelected(book, navigation);
     };
@@ -1238,6 +1315,7 @@ export struct BookshelfPage {
     if (this.mounted && revision === this.viewModeRevision) {
       this.viewModeSnapshot = snapshot;
       this.viewModeError = this.viewModeRecovery().message;
+      this.modeFeedback();
       if (snapshot.receipt?.receipt.confirmation !== 'confirmed') this.applyViewModeSnapshot(snapshot);
     }
     return snapshot.receipt?.receipt.confirmation === 'confirmed';
@@ -1245,6 +1323,7 @@ export struct BookshelfPage {
 
   private setViewMode(mode: BookshelfViewMode): void {
     if (!this.mounted || !this.viewModeHost.canSave()) return;
+    this.modeReconcileBusy = false;
     const revision = ++this.viewModeRevision;
     this.requestedViewMode = mode;
     this.viewModeReadFailed = false;

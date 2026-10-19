@@ -1,6 +1,8 @@
 import { readingFailureHint } from './ReadingFailurePresentation';
 import { ReaderReadingRecordHost } from './ReaderReadingRecordHost';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_META, MESSAGE_GESTURE_ICON } from '../common/ReaderMessageStyle';
 import type { ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../app/BookRequestScheduler';
 import { ReaderReadingImageResources, sameReaderReadingImageResource } from './ReaderReadingImageResources';
@@ -2611,6 +2613,8 @@ export struct ReadingExperience {
   private retryReaderPreferenceNotice(domain: 'settings' | 'tts', generation: number): void {
     const view = domain === 'settings' ? this.readerSettingsRecovery : this.ttsPreferencesRecovery;
     if (!view.canRetry || view.generation !== generation || !this.isSessionActive(this.lifecycleToken)) return;
+    this.setReaderPreferenceNotice(domain, domain === 'settings' ?
+      '正在核对并保存阅读设置…' : '正在核对并保存朗读设置…', false);
     if (domain === 'settings') {
       const current = this.captureReaderSettingsAdmission(this.lifecycleToken, this.readerSettingsMutationGeneration);
       if (this.readerSettingsGateway.writeFacts().pendingReconciliation) this.retryPendingReaderSettings(current);
@@ -2638,12 +2642,10 @@ export struct ReadingExperience {
 
   @Builder
   private readerRecoveryContent() {
-    // Use the existing nonmodal recovery slot; settings and TTS each retain
-    // their own write facts while other recovery messages are replaced.
-    if (this.controlVisible() && this.phase !== 'failed' && !this.sourceSwitchPresentationVisible &&
-      (this.readerRecoveryView.visible ||
-        (this.readerPreferenceModule() === 'settings' && this.readerSettingsRecovery.visible) ||
-        (this.readerPreferenceModule() === 'tts' && this.ttsPreferencesRecovery.visible))) {
+    // Pending original operations survive closing a tool panel. This root
+    // overlay never changes the page's measured body or the control geometry.
+    if (!this.sourceSwitchPresentationVisible &&
+      (this.readerRecoveryView.visible || this.readerSettingsRecovery.visible || this.ttsPreferencesRecovery.visible)) {
       Scroll() {
         Column({ space: 8 }) {
           if (this.readerRecoveryView.visible) {
@@ -2652,15 +2654,17 @@ export struct ReadingExperience {
                 onReconcile: (): void => this.reconcileReaderRecovery(generation) });
             }, (generation: number): string => `recovery:${generation}`);
           }
-          if (this.readerPreferenceModule() === 'settings' && this.readerSettingsRecovery.visible) {
+          if (this.readerSettingsRecovery.visible) {
             ForEach([this.readerSettingsRecovery.generation], (generation: number): void => {
-              ReaderRecoveryNotice({ view: this.readerSettingsRecovery, actionLabel: '重试保存',
+              ReaderRecoveryNotice({ view: this.readerSettingsRecovery, tag: '阅读设置',
+                busy: !this.readerSettingsRecovery.canRetry, actionLabel: '重试保存',
                 onReconcile: (): void => this.retryReaderPreferenceNotice('settings', generation) });
             }, (generation: number): string => `settings:${generation}`);
           }
-          if (this.readerPreferenceModule() === 'tts' && this.ttsPreferencesRecovery.visible) {
+          if (this.ttsPreferencesRecovery.visible) {
             ForEach([this.ttsPreferencesRecovery.generation], (generation: number): void => {
-              ReaderRecoveryNotice({ view: this.ttsPreferencesRecovery, actionLabel: '重试保存',
+              ReaderRecoveryNotice({ view: this.ttsPreferencesRecovery, tag: '朗读设置',
+                busy: !this.ttsPreferencesRecovery.canRetry, actionLabel: '重试保存',
                 onReconcile: (): void => this.retryReaderPreferenceNotice('tts', generation) });
             }, (generation: number): string => `tts:${generation}`);
           }
@@ -2669,7 +2673,7 @@ export struct ReadingExperience {
       .width(this.controlLayout(this.readerWindowMetricsRevision).topBarWidth)
       .constraintSize({ maxHeight: Math.max(0, this.viewportHeight / 3) })
       .position({ x: (this.viewportWidth - this.controlLayout(this.readerWindowMetricsRevision).topBarWidth) / 2,
-        y: this.controlLayout(this.readerWindowMetricsRevision).topBarTop + 54 })
+        y: this.controlLayout(this.readerWindowMetricsRevision).topBarTop + (this.controlVisible() ? 54 : 10) })
       .zIndex(8).hitTestBehavior(HitTestMode.Transparent);
     }
   }
@@ -8313,7 +8317,6 @@ export struct ReadingExperience {
   private async persistTtsPreferencesSnapshot(snapshot: ReaderTtsPreferencesSnapshot,
     isAdmitted?: () => boolean): Promise<void> {
     if (isAdmitted?.() === false) return;
-    this.setReaderPreferenceNotice('tts', '正在保存朗读设置…', false);
     await this.ttsPreferencesGateway.update(snapshot, false, isAdmitted);
     this.settleReaderPreferenceNotice('tts', (): boolean => isAdmitted?.() !== false);
   }
@@ -9572,7 +9575,6 @@ export struct ReadingExperience {
 
   private async persistReaderSettingsSnapshot(snapshot: ReaderSettingsSnapshot, current: () => boolean): Promise<void> {
     if (!current()) return;
-    this.setReaderPreferenceNotice('settings', '正在保存阅读设置…', false);
     await this.readerSettingsGateway.update(snapshot, false, current);
     this.settleReaderPreferenceNotice('settings', current);
   }
@@ -12963,21 +12965,22 @@ export struct ReadingExperience {
       result.topAccessoryY = Math.max(this.bookmarkFeedbackTopBoundary(layout),
         layout.contentTop - result.topAccessoryHeight);
     }
-    const hint = measureReaderPageChromeText('松手移除书签', TYPE_READER_IMMERSIVE_PROGRESS, layout, context);
+    const hint = measureReaderPageChromeText('松手移除书签', MESSAGE_META, layout, context);
+    const hintHeight = Math.max(hint.height, MESSAGE_GESTURE_ICON.lineHeightFp as number);
     this.bookmarkHintX = Math.max(layout.contentLeft, layout.pageChromeVisualSafeLeft);
     this.bookmarkHintWidth = Math.max(0, layout.viewportWidth - this.bookmarkHintX -
       Math.max(layout.contentRight, layout.pageChromeVisualSafeRight));
-    this.bookmarkHintHeight = hint.height;
+    this.bookmarkHintHeight = hintHeight;
     this.bookmarkHintBodyTop = layout.contentTop;
     this.bookmarkHintY = Math.max(layout.pageChromeVisualSafeTop + layout.pageChromeTopRegionHeight,
       result.topStartY + title.height, result.topEndY + clock.height,
-      result.topAccessoryY + result.topAccessoryHeight, layout.contentTop - hint.height);
+      result.topAccessoryY + result.topAccessoryHeight, layout.contentTop - hintHeight);
     if (statusVisible) {
       // Independent actors share the reserved blank lane horizontally. Large
       // text may use additional space exposed by the pull, never the body.
       this.bookmarkHintWidth = Math.max(0,
         result.topAccessoryX - READER_PAGE_CHROME_FOOTER_GAP - this.bookmarkHintX);
-      this.bookmarkHintY = Math.max(this.bookmarkFeedbackTopBoundary(layout), layout.contentTop - hint.height);
+      this.bookmarkHintY = Math.max(this.bookmarkFeedbackTopBoundary(layout), layout.contentTop - hintHeight);
     }
     this.bookmarkCornerLayoutCacheKey = key;
     this.bookmarkCornerLayoutCache = result;
@@ -13045,9 +13048,9 @@ export struct ReadingExperience {
     // Keep one native image actor. Its source, visibility and opacity update
     // together; a page change must not depend on a separate If removing the
     // old image after its resource observer has already painted an outline.
-    Image(this.pageBookmarkFeedbackMode(this.pageTurnRenderRevision) === 'filled' ? (this.readerAppScheme === 'night' ?
+    Image(this.pageBookmarkFeedbackMode(this.pageTurnRenderRevision) === 'filled' ? (readerAppearanceChromeTone(this.visibleReadingAppearance().activeTheme) === 'light' ?
       $r('app.media.reader_page_bookmark_filled_theme_night') : $r('app.media.reader_page_bookmark_filled')) :
-      (this.readerAppScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
+      (readerAppearanceChromeTone(this.visibleReadingAppearance().activeTheme) === 'light' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
         $r('app.media.reader_directory_marker_bookmark_active')))
       .width(this.bookmarkCornerLayout().topAccessoryWidth)
       .height(this.bookmarkCornerLayout().topAccessoryHeight)
@@ -13061,16 +13064,21 @@ export struct ReadingExperience {
       .zIndex(9).hitTestBehavior(HitTestMode.None);
     if (!this.controlVisible() && !this.controlObscured &&
       this.bookmarkFeedbackHintLabel(this.pageTurnRenderRevision).length > 0 && this.bookmarkFeedbackHintFits()) {
-      Text(this.bookmarkFeedbackHintLabel(this.pageTurnRenderRevision))
-        .fontFamily(TYPE_READER_IMMERSIVE_PROGRESS.fontFamily)
-        .fontWeight(TYPE_READER_IMMERSIVE_PROGRESS.fontWeight)
-        .fontSize(TYPE_READER_IMMERSIVE_PROGRESS.fontSizeFp)
-        .lineHeight(TYPE_READER_IMMERSIVE_PROGRESS.lineHeightFp)
-        .letterSpacing(TYPE_READER_IMMERSIVE_PROGRESS.letterSpacingFp)
-        .fontColor(readerThemeDefinition(this.visibleReadingAppearance().activeTheme).chromeMeta)
-        .width(this.bookmarkHintWidth).height(this.bookmarkHintHeight)
+      Row({ space: 8 }) {
+        if (this.bookmarkPageOffsetY > 0 && this.bookmarkUnavailableMessage.length === 0) {
+          Text('↓').fontFamily(MESSAGE_GESTURE_ICON.fontFamily).fontSize(MESSAGE_GESTURE_ICON.fontSizeFp)
+            .lineHeight(MESSAGE_GESTURE_ICON.lineHeightFp as number)
+            .minFontScale(1).maxFontScale(1).accessibilityLevel('no')
+            .fontColor(readerThemeDefinition(this.visibleReadingAppearance().activeTheme).chromeMeta)
+            .rotate({ angle: this.bookmarkPreviewChanged ? 180 : 0 });
+        }
+        Text(this.bookmarkFeedbackHintLabel(this.pageTurnRenderRevision))
+          .fontFamily(MESSAGE_META.fontFamily).fontWeight(MESSAGE_META.fontWeight)
+          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+          .fontColor(readerThemeDefinition(this.visibleReadingAppearance().activeTheme).chromeMeta)
+          .textAlign(TextAlign.Center).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+      }.width(this.bookmarkHintWidth).height(this.bookmarkHintHeight).justifyContent(FlexAlign.Center)
         .position({ x: this.bookmarkHintX, y: this.bookmarkHintY })
-        .textAlign(TextAlign.Center).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .clip(true).zIndex(9).hitTestBehavior(HitTestMode.None);
     }
   }
@@ -14539,39 +14547,39 @@ export struct ReadingExperience {
   @Builder
   private readingFailureContent() {
     Scroll() {
-      Column({ space: 20 }) {
+      Column({ space: 12 }) {
         Text(this.sourceSwitchFailureMessage.length > 0 ? '换源未完成' : '正文暂时无法显示')
-          .fontSize(TYPE_READER_READING_FAILURE_TITLE.fontSizeFp)
-          .fontWeight(TYPE_READER_READING_FAILURE_TITLE.fontWeight as number)
-          .fontColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink);
-        Text(this.sourceSwitchFailureMessage.length > 0 ? this.sourceSwitchFailureMessage : this.failureHint)
-          .fontSize(TYPE_READER_READING_FAILURE_DETAIL.fontSizeFp)
+          .fontFamily(MESSAGE_TITLE.fontFamily).fontSize(MESSAGE_TITLE.fontSizeFp)
+          .lineHeight(MESSAGE_TITLE.lineHeightFp as number).fontWeight(MESSAGE_TITLE.fontWeight)
           .fontColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink)
-          .width('100%');
+          .width('100%').textAlign(TextAlign.Center);
+        Text(this.sourceSwitchFailureMessage.length > 0 ? this.sourceSwitchFailureMessage : this.failureHint)
+          .fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
+          .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+          .fontColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink)
+          .width('100%').textAlign(TextAlign.Center);
         if (this.sourceSwitchFailureMessage.length > 0) {
           ForEach([this.sourceSwitchScopeId], (scopeId: number): void => {
-            Button('重试').onClick((): void => this.onRetryFailedSourceSwitch(scopeId));
+            ReaderRecoveryAction({ label: '重试', onReconcile: (): void => this.onRetryFailedSourceSwitch(scopeId) });
           }, (scopeId: number): string => `${scopeId}`);
         } else {
           if (this.readerRecoveryView.visible && this.readerRecoveryView.canRetry) {
             ForEach([this.readerRecoveryView.generation], (generation: number): void => {
-              ReaderRecoveryNotice({ view: this.readerRecoveryView, actionLabel: this.readerRecoveryActionLabel,
+              ReaderRecoveryAction({ label: this.readerRecoveryActionLabel,
                 onReconcile: (): void => this.reconcileReaderRecovery(generation) });
             }, (generation: number): string => `${generation}`);
           } else {
-            Button('重试').onClick((): void => this.retryReading());
+            ReaderRecoveryAction({ label: '重试', onReconcile: (): void => this.retryReading() });
           }
         }
-        Button('阅读设置')
-          .onClick((): void => this.openReaderControl());
+        ReaderRecoveryAction({ label: '阅读设置', onReconcile: (): void => this.openReaderControl() });
         if (this.sourceSwitchFailureMessage.length > 0) {
           ForEach([this.sourceSwitchScopeId], (scopeId: number): void => {
-            Button('继续当前书源').onClick((): void => this.onDismissSourceSwitchFailure(scopeId));
+            ReaderRecoveryAction({ label: '继续当前书源', onReconcile: (): void => this.onDismissSourceSwitchFailure(scopeId) });
           }, (scopeId: number): string => `${scopeId}`);
         }
         if (this.sourceId !== LOCAL_READING_SOURCE_ID) {
-          Button('切换书源')
-            .onClick((): void => this.onSwitchSource());
+          ReaderRecoveryAction({ label: '切换书源', onReconcile: (): void => this.onSwitchSource() });
         }
       }
       .width('100%')

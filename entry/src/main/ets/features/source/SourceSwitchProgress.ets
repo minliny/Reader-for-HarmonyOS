@@ -48,8 +48,7 @@ export struct SourceSwitchProgress {
         Column() {
           Row() {
             SourceSwitchSpinner({ active: this.active, diameter: SOURCE_SWITCH_VISUAL.switchSpinnerSize,
-              strokeWidth: SOURCE_SWITCH_VISUAL.switchSpinnerStrokeWidth,
-              durationMs: SOURCE_SWITCH_VISUAL.switchSpinnerDurationMs, reduceMotion: this.reduceMotion });
+              reduceMotion: this.reduceMotion });
           }.width(SOURCE_SWITCH_VISUAL.switchSpinnerSlotSize).height(SOURCE_SWITCH_VISUAL.switchSpinnerSlotSize)
             .justifyContent(FlexAlign.Center).margin({ bottom: SOURCE_SWITCH_VISUAL.switchSpinnerBottomGap });
           Text('正在切换书源').fontFamily(TYPE_SOURCE_SWITCH_NOVEL_SWITCH_TITLE.fontFamily)

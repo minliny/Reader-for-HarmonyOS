@@ -54,6 +54,8 @@ const EMPTY_BATCH_CHECK_PROGRESS: SourceBatchCheckProgress = {
   results: [],
 };
 
+export type SourceToolsStatusEvent = 'state' | 'batch' | 'feedback';
+
 export interface SourceToolsSnapshot {
   sources: BookSource[];
   original?: RulesMutationSnapshot;
@@ -78,6 +80,8 @@ export interface SourceToolsSnapshot {
   editorOperation: OperationFacts<BookSource[]> | undefined;
   busy: boolean;
   statusMessage: string;
+  /** The event that produced statusMessage, independent of retained results. */
+  statusEvent: SourceToolsStatusEvent;
 }
 
 interface SourceToolsPatch {
@@ -101,6 +105,7 @@ interface SourceToolsPatch {
   editorOperation?: OperationFacts<BookSource[]> | null;
   busy?: boolean;
   statusMessage?: string;
+  statusEvent?: SourceToolsStatusEvent;
 }
 
 export const EMPTY_SOURCE_TOOLS_SNAPSHOT: SourceToolsSnapshot = {
@@ -121,6 +126,7 @@ export const EMPTY_SOURCE_TOOLS_SNAPSHOT: SourceToolsSnapshot = {
   editorOperation: undefined,
   busy: false,
   statusMessage: '',
+  statusEvent: 'state',
 };
 
 /**
@@ -204,7 +210,7 @@ export class SourceToolsOrchestrator {
       try {
         const sources = await this.gateway.loadSources(undefined, true);
         if (this.isCurrentSession(session)) {
-          this.publish({ sources, busy: false, statusMessage: '已读取 Core 数据',
+          this.publish({ sources, busy: false, statusMessage: '已读取 Core 数据', statusEvent: 'state',
             readFacts: projectOperationFacts({ phase: 'succeeded', value: sources, generation: ++sourceToolsReceiptGeneration }) });
         }
       } catch (error) {
@@ -228,6 +234,7 @@ export class SourceToolsOrchestrator {
       selectedSourceIds: selection,
       selectedSourceCount: selection.length,
       statusMessage: selection.length === 0 ? '已清空选择' : `已选择 ${selection.length} 个书源`,
+      statusEvent: 'state',
     });
   }
 
@@ -473,6 +480,7 @@ export class SourceToolsOrchestrator {
             editorOperation: null,
             busy: false,
             statusMessage: '编辑原始 BookSource JSON',
+            statusEvent: 'state',
           });
         }
       } catch (error) {
@@ -799,7 +807,14 @@ export class SourceToolsOrchestrator {
     } catch (error) {
       const receipt = this.snapshot.receipt;
       if (receipt !== undefined) this.publishManagementReceipt(session, receipt.receipt.confirmation, 'failed', (error as Error).message);
-      this.publishIfCurrent(session, { busy: false, readFacts: projectOperationFacts({ phase: 'failed', value: this.snapshot.sources,
+      // A read-only retry owns this failure event. Selection and retained
+      // batch state must not hide it or replay a previous operation's copy.
+      this.publishIfCurrent(session, { busy: false,
+        statusEvent: receipt === undefined ? 'feedback' : undefined,
+        statusMessage: receipt === undefined ? (this.snapshot.sources.length > 0 ?
+          '书源刷新失败，已保留现有列表' : '书源读取失败，请稍后重试') : undefined,
+        readFacts: projectOperationFacts({ phase: 'failed',
+        value: receipt === undefined && this.snapshot.sources.length === 0 ? undefined : this.snapshot.sources,
         canRetry: true, generation: ++sourceToolsReceiptGeneration, message: (error as Error).message }) });
     }
   }
@@ -897,6 +912,10 @@ export class SourceToolsOrchestrator {
       busy: patch.busy ?? this.snapshot.busy,
       statusMessage: this.gateway.originalMutationSnapshot()?.blocked ? this.gateway.originalMutationSnapshot()?.message ?? '' :
         patch.statusMessage ?? this.snapshot.statusMessage,
+      // A batch event belongs to this actual progress/result publication, not
+      // to the last batch card retained while later tools operations run.
+      statusEvent: patch.statusEvent ?? (patch.statusMessage === undefined ? this.snapshot.statusEvent :
+        patch.batchCheck !== undefined ? 'batch' : (patch.busy ?? this.snapshot.busy) ? 'state' : 'feedback'),
     };
     this.deliver();
   }
@@ -962,6 +981,7 @@ export class SourceToolsOrchestrator {
       },
       busy: source.busy,
       statusMessage: source.statusMessage,
+      statusEvent: source.statusEvent,
     };
   }
 

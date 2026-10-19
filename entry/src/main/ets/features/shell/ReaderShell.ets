@@ -89,6 +89,7 @@ export struct ReaderShell {
   // 目录 overlay。
   @Prop tocEntries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  @Prop catalogBusy: boolean = false;
   @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
   onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
@@ -311,7 +312,7 @@ export struct ReaderShell {
         if (this.contentKind === 'manga') {
           BookDirectoryPage({
             sourceId: this.sourceId, bookId: this.bookId, bookKind: this.bookKind ?? '', contentKind: 'manga',
-            bookTitle: this.bookTitle, entries: this.tocEntries, catalogMessage: this.catalogMessage,
+            bookTitle: this.bookTitle, entries: this.tocEntries, catalogMessage: this.catalogMessage, catalogBusy: this.catalogBusy,
             currentChapterIndex: this.directoryCurrentChapterIndex,
             currentPageOrdinal: this.directoryCurrentPageOrdinal, currentPageTotal: this.directoryCurrentPageTotal,
             directoryRecovery: this.directoryRecovery,
@@ -333,6 +334,7 @@ export struct ReaderShell {
             chapterTitle: this.directoryChapterTitle,
             entries: this.tocEntries,
             catalogMessage: this.catalogMessage,
+            catalogBusy: this.catalogBusy,
             directoryRecovery: this.directoryRecovery,
             onReconcileBookmarks: this.onReconcileBookmarks,
             onContinueBookmarks: this.onContinueBookmarks,

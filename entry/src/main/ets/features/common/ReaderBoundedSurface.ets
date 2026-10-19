@@ -8,8 +8,8 @@ export type ReaderBoundedSurfaceId = 'source-switch-window' | 'source-switch-dra
  * owner's measured viewport geometry; visual choices are finite spec IDs.
  * The native/content-cover host, tasks and lifecycle stay with the caller. */
 /** Finite spec adapter shared by both column and fixed-position stack
- * roots. Geometry inputs belong to bounded modal owners; the book sheet
- * always consumes its registered height and full-width native host contract. */
+ * roots. Geometry inputs belong to bounded modal owners; the native book
+ * Sheet paints its one frame and measures its normal-flow content. */
 export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttribute> {
   private readonly id: ReaderBoundedSurfaceId;
   private readonly width: number | string;
@@ -40,8 +40,9 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
         .backgroundColor(readerAppColor(spec.surfaceRole, this.scheme))
         .border(side ? { width: { left: 1 }, color: readerAppColor(spec.lineRole, this.scheme) } : undefined)
         .borderRadius({ topLeft: side ? 0 : spec.cornerRadius, topRight: side ? 0 : spec.cornerRadius, bottomLeft: 0, bottomRight: 0 })
-        .clip(true).shadow({ radius: side ? 32 : 48, color: side ? '#11000000' : this.scheme === 'night' ? '#66000000' : '#33000000',
-          offsetX: side ? -14 : 0, offsetY: side ? 0 : -16 });
+        .hitTestBehavior(HitTestMode.Block)
+        .shadow({ radius: 0, color: Color.Transparent, offsetX: 0, offsetY: 0 })
+        .clip(true);
       return;
     }
     if (this.id === 'local-import-selection' || this.id === 'local-import-progress' || this.id === 'local-import-result-content') {
@@ -59,11 +60,9 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
     }
     if (this.id === 'bookshelf-book-action') {
       const spec = resolveSheetSpec('bookshelf-book-action');
-      instance.width('100%').height(spec.height)
-        .backgroundColor(readerAppColor(spec.backgroundRole, this.scheme))
-        .border({ width: spec.borderWidth, color: readerAppColor(spec.borderRole, this.scheme) })
-        .borderRadius({ topLeft: spec.borderRadius, topRight: spec.borderRadius, bottomLeft: 0, bottomRight: 0 })
-        .shadow({ radius: spec.shadowRadius, color: readerAppColor(spec.shadowRole, this.scheme), offsetX: 0, offsetY: spec.shadowOffsetY }).clip(true);
+      // Native bindSheet owns the opaque paper, radius, clipping and safe
+      // bottom. A second fixed box would distort FIT_CONTENT and crop rows.
+      instance.width('100%').padding({ bottom: spec.contentBottom });
       return;
     }
     const spec = resolvePopupSpec(this.id === 'source-switch-window' ? 'source-switch-window' : 'tts-config-manager');
@@ -101,7 +100,7 @@ export struct ReaderBoundedSurface {
 
   build() {
     if (this.specId === 'bookshelf-book-action') {
-      Stack({ alignContent: Alignment.TopStart }) { this.header(); this.body(); this.actions(); }
+      Column({ space: 0 }) { this.header(); this.body(); this.actions(); }.alignItems(HorizontalAlign.Start)
         .attributeModifier(this.frameModifier());
     } else if (this.specId === 'local-import-progress') {
       Stack({ alignContent: Alignment.Center }) { this.header(); this.body(); this.actions(); }

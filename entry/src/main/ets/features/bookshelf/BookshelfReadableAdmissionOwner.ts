@@ -69,7 +69,7 @@ export class BookshelfReadableAdmissionOwner {
     } catch (error) {
       // Generic throws do not prove whether durable admission was dispatched.
       // No automatic replay or compensating remove is performed.
-      if (task.snapshot.receipt === undefined) task.snapshot = { ...task.snapshot, confirmation: 'unknown' };
+      if (task.snapshot.receipt === undefined && !task.cancelConfirmed) task.snapshot = { ...task.snapshot, confirmation: 'unknown' };
       if (!task.cancelPending && !task.cancelConfirmed && !task.cancelUnconfirmed) {
         const duplicate = error instanceof ReaderCoreRequestError && error.event.error.code === 'BOOK_ALREADY_ON_SHELF';
         const rejected = duplicate;
@@ -98,6 +98,7 @@ export class BookshelfReadableAdmissionOwner {
       // never creates an add receipt or finalizes a pending preparation.
       task.cancelConfirmed = true; task.cancelUnconfirmed = false; task.addUnconfirmed = false;
       task.snapshot = { ...task.snapshot, membership: saved !== undefined,
+        confirmation: task.snapshot.receipt === undefined ? 'none' : 'confirmed',
         message: saved === undefined ? '已取消加入书架' : '' };
       this.effect(task, false, admitted, completed);
     } catch (error) {

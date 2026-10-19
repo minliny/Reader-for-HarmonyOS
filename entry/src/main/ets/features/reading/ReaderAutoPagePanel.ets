@@ -235,7 +235,7 @@ export struct ReaderAutoPagePanel {
     Column() {
       Stack({ alignContent: Alignment.Center }) {
         Image($r(this.status === 'running' ?
-          (this.appThemeScheme === 'night' ? 'app.media.reader_session_pause_theme_night' : 'app.media.reader_session_pause') : (this.appThemeScheme === 'night' ? 'app.media.reader_auto_play_theme_night' : 'app.media.reader_auto_play')))
+          (this.appThemeScheme === 'night' ? 'app.media.reader_session_pause_theme_night' : 'app.media.reader_session_pause') : (this.appThemeScheme === 'night' ? 'app.media.reader_auto_full_play_theme_night' : 'app.media.reader_auto_full_play')))
           .width(20)
           .height(20);
       }

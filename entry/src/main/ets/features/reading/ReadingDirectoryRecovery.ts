@@ -13,10 +13,18 @@ export interface ReadingDirectoryRecovery {
   canContinueBookmarks: boolean;
   canContinueOffline: boolean;
   offlineBlocked?: boolean;
+  bookmarksKind?: ReadingDirectoryMessageKind;
+  offlineKind?: ReadingDirectoryMessageKind;
+  bookmarksReadbackFailed?: boolean;
+  offlineReadbackFailed?: boolean;
+  bookmarksBusy?: boolean;
+  offlineBusy?: boolean;
 }
+export type ReadingDirectoryMessageKind = 'pending' | 'result' | 'readback' | 'none';
 const EMPTY_VIEW: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
 export const EMPTY_READING_DIRECTORY_RECOVERY: ReadingDirectoryRecovery = { presentationId: '',
-  bookmarks: EMPTY_VIEW, offline: EMPTY_VIEW, canContinueBookmarks: false, canContinueOffline: false };
+  bookmarks: EMPTY_VIEW, offline: EMPTY_VIEW, canContinueBookmarks: false, canContinueOffline: false,
+  bookmarksBusy: false, offlineBusy: false };
 
 export function readingDirectoryRecovery(presentationId: string, book: ReadingBookDetail,
   directory?: ReaderDirectoryOperation, offline?: ReadingOfflineOperation): ReadingDirectoryRecovery {
@@ -46,7 +54,33 @@ export function readingDirectoryRecovery(presentationId: string, book: ReadingBo
     canRetry: cached.projection.facts.canRetry };
   else if (cached?.progress !== undefined && cached.progress.failedChapters > 0) cache = { ...cache, visible: true,
     generation: cached.generation, message: `离线下载部分完成：${cached.progress.completedChapters}/${cached.progress.totalChapters} 章已完成，${cached.progress.failedChapters} 章失败` };
-  return { presentationId, bookmarks, offline: cache,
+  const bookmarksReadbackFailed = dir?.projection.receipt.confirmation === 'confirmed' && dir.projection.receipt.readback === 'failed';
+  const offlineReadbackFailed = cached?.projection.receipt.confirmation === 'confirmed' && cached.projection.receipt.readback === 'failed';
+  // These are presentation channels, never a new confirmation or a retry
+  // authority. Known outcomes must not inherit the pending-notice shell.
+  let bookmarksKind: ReadingDirectoryMessageKind = 'none';
+  if (bookmarks.visible) {
+    if (dir === undefined || dir.projection.receipt.confirmation === 'unknown' || dir.canContinueOriginal === true) bookmarksKind = 'pending';
+    else if (dir.completion === 'partial' ||
+      (dir.projection.receipt.confirmation === 'undispatched' && dir.projection.receipt.readback === 'failed')) bookmarksKind = 'result';
+    else if (bookmarksReadbackFailed) bookmarksKind = 'readback';
+  }
+  let offlineKind: ReadingDirectoryMessageKind = 'none';
+  if (cache.visible) {
+    if (cached === undefined || cached.projection.receipt.confirmation === 'unknown' || cached.canContinueOriginal === true) offlineKind = 'pending';
+    else if (cached.materializationFailure !== undefined || (cached.progress?.failedChapters ?? 0) > 0 ||
+      (cached.projection.receipt.confirmation === 'undispatched' && cached.projection.receipt.readback === 'failed')) offlineKind = 'result';
+    else if (offlineReadbackFailed) offlineKind = 'readback';
+  }
+  if (cached?.projection.receipt.confirmation === 'unknown' && offlineKind === 'pending' &&
+    !cache.message.startsWith('离线操作结果尚未确认')) {
+    cache = { ...cache, message: `离线操作结果尚未确认；${cache.message}` };
+  }
+  bookmarks = { ...bookmarks, visible: bookmarksKind !== 'none' };
+  cache = { ...cache, visible: offlineKind !== 'none' };
+  return { presentationId, bookmarks, offline: cache, bookmarksKind, offlineKind,
+    bookmarksReadbackFailed, offlineReadbackFailed,
+    bookmarksBusy: dir?.projection.receipt.readback === 'reading', offlineBusy: cached?.projection.receipt.readback === 'reading',
     canContinueBookmarks: dir?.canContinueOriginal === true, canContinueOffline: cached?.canContinueOriginal === true,
     offlineBlocked: offline?.action === 'clear' && offline.projection.receipt.confirmation === 'unknown' && offline.blockingClear?.active !== false };
 }

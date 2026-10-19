@@ -2,11 +2,14 @@ import { ReaderPageScaffold } from '../common/ReaderPageScaffold';
 import { readerPageContentStartInset, readerStandardPageContentFrame } from '../common/ReaderPageShell';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderIconButton } from '../common/ReaderIconButton';
+import { ReaderPressFeedback } from '../common/ReaderPressFeedback';
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import type { SourceManagementProjection } from './SourceHost';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
 import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { ReaderPageState } from '../common/ReaderPageState';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
 import { TYPE_FORM_COMPACT_ACTION, TYPE_FORM_HINT, TYPE_FORM_LABEL_ACTION, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_TITLE, TYPE_SOURCE_STATE_TITLE } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 // Source Management — rebuilt 2026-08-05 against live Figma nodes
@@ -98,11 +101,11 @@ export struct SourceManagementPage {
   @Prop groups: string[] = [];
   @Prop isTablet: boolean;
   @Prop reduceMotion: boolean = false;
-  @Prop operation: SourceManagementProjection = { action: 'load', sourceId: '' };
+  @Prop @Watch('onMessageChanged') operation: SourceManagementProjection = { action: 'load', sourceId: '' };
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
-  @Prop statusKind: SourceManagementStatusKind = 'idle';
-  @Prop statusMessage: string = '';
+  @Prop @Watch('onMessageChanged') statusKind: SourceManagementStatusKind = 'idle';
+  @Prop @Watch('onMessageChanged') statusMessage: string = '';
   @Prop statusActionLabel: string = '';
   @Prop statusActionGeneration: number = 0;
   onStatusAction: (generation: number) => void = (_generation: number): void => {};
@@ -121,6 +124,8 @@ export struct SourceManagementPage {
   @State private groupClosing: boolean = false;
   @State private groupSelectionId: string = '';
   private mounted: boolean = false;
+  private lastFeedbackIdentity: string = '';
+  private lastToastMessage: string = '';
   private temporaryBackIdentity: string = '';
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
@@ -139,6 +144,7 @@ export struct SourceManagementPage {
     this.mounted = true;
     registerReaderFonts(this.getUIContext().getFont());
     this.rebuildSourceProjection();
+    this.lastFeedbackIdentity = this.feedbackIdentity();
     const identity = `source-back:${++sourceTemporaryGeneration}`;
     this.temporaryBackIdentity = identity;
     this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity);
@@ -198,7 +204,7 @@ export struct SourceManagementPage {
       content: (): void => { this.pageContent(); },
       header: (): void => { this.backBar(); },
       footer: (): void => { this.pageFooter(); },
-      overlayContent: (): void => { this.groupOverlay(); },
+      overlayContent: (): void => { this.pendingOverlay(); this.groupOverlay(); },
       onHeaderHeightChange: (height: number): void => {
         if (Number.isFinite(height) && height > 0 && Math.abs(height - this.pageHeaderHeight) > 0.1) {
           this.pageHeaderHeight = height;
@@ -293,8 +299,10 @@ export struct SourceManagementPage {
       }
       .width(40)
       .height(40)
-      .borderRadius(12)
-      .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+      .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), this.appThemeScheme, 12))
+      .responseRegion({ x: -2, y: -2, width: 44, height: 44 })
+      .focusable(true)
+      .accessibilityRole(AccessibilityRoleType.BUTTON)
       .accessibilityText('导入书源')
       .onClick((): void => this.onAddSource());
     }
@@ -322,7 +330,7 @@ export struct SourceManagementPage {
   private originalRecoveryView(): ReaderRecoveryView {
     const original = this.operation.original;
     return { message: original?.message ?? '', visible: original?.blocked === true,
-      canRetry: false, generation: original?.generation ?? 0 };
+      canRetry: true, generation: original?.generation ?? 0 };
   }
 
   private originalActionIdentities(): string[] {
@@ -338,17 +346,50 @@ export struct SourceManagementPage {
 
   @Builder
   private originalRecovery() {
-    ReaderRecoveryNotice({ view: this.originalRecoveryView() });
     ForEach(this.originalActionIdentities(), (identity: string) => {
-      ReaderRecoveryAction({ label: '核对原操作回执', generation: this.originalActionGeneration(identity),
-        actionEnabled: this.operation.original?.busy !== true,
-        onReconcile: (generation: number): void => { if (this.originalActionCurrent(identity)) this.onReconcile(generation); } });
-      if (this.operation.original?.canRetryOriginal === true) {
-        ReaderRecoveryAction({ label: this.operation.original?.confirmation === 'confirmed' && this.operation.original?.writeStage === 'cleanup' ? '继续原清理' : '继续原操作',
-          generation: this.originalActionGeneration(identity), actionEnabled: this.operation.original?.busy !== true,
-          onReconcile: (generation: number): void => { if (this.originalActionCurrent(identity)) this.onContinueOriginal(generation); } });
-      }
+      ReaderRecoveryNotice({ view: this.originalRecoveryView(), actionLabel: '核对',
+        busy: this.operation.original?.busy === true,
+        secondaryActionLabel: this.operation.original?.canRetryOriginal === true ?
+          (this.operation.original?.confirmation === 'confirmed' && this.operation.original?.writeStage === 'cleanup' ? '继续清理' : '继续') : '',
+        onReconcile: (generation: number): void => { if (this.originalActionCurrent(identity)) this.onReconcile(generation); },
+        onSecondaryAction: (generation: number): void => { if (this.originalActionCurrent(identity)) this.onContinueOriginal(generation); } });
     }, (identity: string): string => identity);
+  }
+
+  @Builder
+  private pendingOverlay() {
+    Column() {
+      if (this.operation.original?.blocked === true) { this.originalRecovery(); }
+      else if (this.operation.receipt?.receipt.confirmation === 'unknown') {
+        ReaderRecoveryNotice({ view: this.recovery(), actionLabel: '核对', busy: this.statusKind === 'loading',
+          onReconcile: this.onReconcile });
+      }
+    }.width('100%')
+      .padding({ left: this.contentFrame().left, right: this.contentFrame().right,
+        top: this.pageHeaderHeight > 0 ? this.pageHeaderHeight : readerPageContentStartInset() })
+      .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  private feedbackIdentity(): string {
+    return `${this.operation.receipt?.facts.generation ?? 0}:${this.operation.readFacts?.generation ?? 0}:` +
+      `${this.statusKind}:${this.statusMessage}`;
+  }
+
+  private onMessageChanged(): void {
+    const identity = this.feedbackIdentity();
+    if (!this.mounted || identity === this.lastFeedbackIdentity) return;
+    this.lastFeedbackIdentity = identity;
+    if (this.statusKind === 'loading' || this.operation.receipt?.facts.fact === 'refreshing') {
+      this.lastToastMessage = '';
+      return;
+    }
+    if (this.operation.original?.blocked ||
+      this.operation.receipt?.receipt.confirmation === 'unknown') return;
+    if (this.sources.length === 0 && this.operation.readFacts?.fact === 'failed') return;
+    const message = this.statusMessage || (this.recovery().visible ? this.recovery().message : '');
+    if (message.length === 0 || message.startsWith('正在') || message === this.lastToastMessage) return;
+    this.lastToastMessage = message;
+    try { this.getUIContext().getPromptAction().showToast({ message, duration: 2200 }); } catch (_) {}
   }
 
   @Builder
@@ -381,6 +422,16 @@ export struct SourceManagementPage {
     .margin({ top: TOK_SPACE_XS })
     .backgroundColor(this.statusKind === 'error' ? readerAppColor('app.SourceManagementPage.STATUS_ERROR_BG', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .borderRadius(7);
+  }
+
+  @Builder
+  private statusAction() {
+    if (this.statusActionLabel.length > 0 && this.operation.original?.blocked !== true) {
+      ForEach([this.statusActionGeneration], (generation: number): void => {
+        ReaderRecoveryAction({ label: this.statusActionLabel, generation,
+          onReconcile: (value: number): void => this.onStatusAction(value) });
+      }, (generation: number): string => `source-status-action:${generation}`);
+    }
   }
 
   @Builder
@@ -487,21 +538,34 @@ export struct SourceManagementPage {
         Column() {
           this.searchField();
           this.statsRow();
-          if (this.operation.original?.blocked === true) { this.originalRecovery(); }
-          else if (this.statusKind !== 'idle' || this.recovery().visible) { this.statusBanner(); }
+          this.statusAction();
+          if (this.operation.original?.blocked !== true && this.operation.receipt?.receipt.confirmation !== 'unknown' && this.recovery().canRetry && this.sources.length > 0) {
+            ReaderRecoveryAction({ label: '刷新列表', generation: this.recovery().generation, onReconcile: this.onReconcile });
+          }
+          if (this.statusKind === 'loading' && this.sources.length > 0 && this.operation.original?.blocked !== true) {
+            Row({ space: 10 }) {
+              LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme));
+              Text(this.statusMessage || '正在读取书源').layoutWeight(1)
+                .fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp)
+                .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+            }.width('100%').padding({ top: 12, bottom: 12 });
+          }
           this.filterArea();
           this.categoryFilter();
         }.width('100%').padding({ bottom: TOK_SPACE_CONTROL_INLINE });
       }
-      if (this.sources.length === 0 && this.statusKind !== 'loading') {
+      if (this.sources.length === 0 && this.operation.original?.blocked !== true) {
         ListItem() {
-          Column({ space: TOK_SPACE_XS }) {
-            Text('暂无书源').fontFamily(TYPE_SOURCE_STATE_TITLE.fontFamily).fontWeight(TYPE_SOURCE_STATE_TITLE.fontWeight)
-              .fontSize(TYPE_SOURCE_STATE_TITLE.fontSizeFp).lineHeight(TYPE_SOURCE_STATE_TITLE.lineHeightFp as number).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-            Text('点击下方「＋ 新增书源」导入 Legado 书源 JSON').fontFamily(TYPE_SEARCH_RESULT_INTRO.fontFamily)
-              .fontWeight(TYPE_SEARCH_RESULT_INTRO.fontWeight).fontSize(TYPE_SEARCH_RESULT_INTRO.fontSizeFp).lineHeight(TYPE_SEARCH_RESULT_INTRO.lineHeightFp as number)
-              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-          }.width('100%').padding({ top: 64 }).alignItems(HorizontalAlign.Center);
+          ReaderPageState({ title: this.statusKind === 'loading' ? '正在读取书源' :
+            (this.operation.readFacts?.fact === 'failed' ? '书源读取失败' : '暂无书源'),
+            message: this.statusKind === 'loading' ? '请稍候' : this.operation.readFacts?.fact === 'failed' ?
+              '请稍后重试。' : '点击下方「＋ 新增书源」导入 Legado 书源 JSON',
+            loading: this.statusKind === 'loading',
+            actionLabel: this.operation.readFacts?.fact === 'failed' ? '重试' : '',
+            onAction: (): void => {
+              if (this.recovery().canRetry) this.onReconcile(this.recovery().generation);
+              else this.onRetryLoad();
+            } });
         }
       }
       // LazyForEach owns an explicit data source so an empty-to-populated Core

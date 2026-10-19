@@ -679,7 +679,7 @@ export struct SourceSwitchWindow {
     Row({ space: this.narrowWindow() ? SOURCE_SWITCH_VISUAL.narrowDiscoveryGap : SOURCE_SWITCH_VISUAL.discoveryGap }) {
       if (this.isSweeping()) {
         SourceSwitchSpinner({ active: this.foreground, diameter: SOURCE_SWITCH_VISUAL.discoverySpinnerSize,
-          strokeWidth: SOURCE_SWITCH_VISUAL.discoverySpinnerStrokeWidth, durationMs: SOURCE_SWITCH_VISUAL.discoverySpinnerDurationMs, reduceMotion: this.reduceMotion });
+          reduceMotion: this.reduceMotion });
       } else {
         Image(this.appThemeScheme === 'night' ? $r('app.media.search_mag_theme_night') : $r('app.media.search_mag'))
           .width(SOURCE_SWITCH_VISUAL.discoverySpinnerSize).height(SOURCE_SWITCH_VISUAL.discoverySpinnerSize).accessibilityLevel('no');

@@ -27,7 +27,7 @@ export struct CategoryRow {
   build() {
     Row({ space: TOK_SPACE_SM }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image(this.icon).width(15).height(15);
+        Image(this.icon).width(15).height(15).objectFit(ImageFit.Contain).accessibilityLevel('no');
       }
       .width(28)
       .height(28)

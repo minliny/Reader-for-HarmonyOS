@@ -943,6 +943,20 @@ export struct ReaderControlPanel {
           .opacity(this.frame().navigation.opacity)
           .enabled(this.contentInputEnabled() && this.frame().navigation.opacity > 0)
           .hitTestBehavior(this.frame().navigation.opacity > 0 ? HitTestMode.Default : HitTestMode.None);
+        // The empty cap above the header is also a grab region. Requiring an
+        // exact hit on the old 72vp-wide handle made Full -> Quick difficult
+        // to begin. Stop at the header's top so its title/actions keep input.
+        Stack()
+          .id('reader-control-motion-grab-cap')
+          .width(this.layout.fullPanelWidth)
+          .height(Math.max(0, Math.min(19, this.frame().shell.height,
+            this.frame().header.y - this.frame().shell.y,
+            this.frame().content.y - this.frame().shell.y)))
+          .position({ x: 0, y: this.frame().shell.y })
+          .zIndex(3)
+          .hitTestBehavior(HitTestMode.Block)
+          .accessibilityLevel('no')
+          .onTouch((event: TouchEvent): void => this.handleControlTouch(event));
         Stack({ alignContent: Alignment.TopStart }) {
           // Paint from the same actor used by the spatial axis. Stack margin
           // alignment must not become a second source of vertical placement.
@@ -958,7 +972,8 @@ export struct ReaderControlPanel {
         .position({ x: (this.layout.fullPanelWidth - 72) / 2, y: this.frame().shell.y })
         .hitTestBehavior(HitTestMode.Block)
         .accessibilityText(this.contentLocation().level === 'home' ?
-          '控制栏拖动区域，向下关闭' : '控制栏展开或收起，向下关闭')
+          '控制栏拖动区域，向下关闭' : this.contentLocation().form === 'full' ?
+            '完整控制栏，向下收回快捷控制栏' : '快捷控制栏，向上展开，向下关闭')
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .accessibilityLevel('no')
         .accessibilityVirtualNode(this.accessibleControlActions)
@@ -1139,7 +1154,7 @@ export struct ReaderControlPanel {
     if (location.module === 'tts') return $r(this.appScheme === 'night' ? 'app.media.reader_tts_header_theme_night' : 'app.media.reader_tts_header');
     if (location.module === 'appearance') return $r(this.appScheme === 'night' ? 'app.media.reader_appearance_header_theme_night' : 'app.media.reader_appearance_header');
     if (location.module === 'settings') return $r(this.appScheme === 'night' ? 'app.media.reader_settings_header_theme_night' : 'app.media.reader_settings_header');
-    if (location.module === 'autoPage') return $r(this.appScheme === 'night' ? 'app.media.reader_auto_full_header_theme_night' : 'app.media.reader_auto_full_header');
+    if (location.module === 'autoPage') return $r(this.appScheme === 'night' ? 'app.media.rc_autopage_theme_night' : 'app.media.rc_autopage');
     return $r(this.appScheme === 'night' ? 'app.media.rc_search_theme_night' : 'app.media.rc_search');
   }
 
@@ -1469,7 +1484,7 @@ export struct ReaderControlPanel {
     Row({ space: 8 }) {
       // BackHitArea 44×42 (icon 24 居中)。
       Stack({ alignContent: Alignment.Center }) {
-        Image($r(this.appScheme === 'night' ? 'app.media.rc_arrow_left_theme_night' : 'app.media.rc_arrow_left'))
+        Image($r(this.appScheme === 'night' ? 'app.media.book_detail_back_theme_night' : 'app.media.book_detail_back'))
           .width(24)
           .height(24);
       }

@@ -15,6 +15,7 @@ import {
   TOK_SURFACE_FIELD,
 } from './ReaderTokens';
 import { ReaderDialogSurface, DialogActionView } from './ReaderDialogSurface';
+import { MESSAGE_BODY, MESSAGE_META } from './ReaderMessageStyle';
 
 /**
  * Shared acquisition surface for portable JSON imports.
@@ -74,13 +75,13 @@ export struct JsonImportDialog {
 
   @Builder
   private formBody() {
-    Column({ space: TOK_SPACE_MD }) {
+    Column({ space: 16 }) {
       Text(this.description)
         .width('100%')
-        .fontFamily(TYPE_JSON_IMPORT_DESCRIPTION.fontFamily as string)
-        .fontSize(TYPE_JSON_IMPORT_DESCRIPTION.fontSizeFp)
-        .lineHeight(TYPE_JSON_IMPORT_DESCRIPTION.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        .fontFamily(MESSAGE_BODY.fontFamily as string)
+        .fontSize(MESSAGE_BODY.fontSizeFp)
+        .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
 
       this.localButton();
 
@@ -98,17 +99,17 @@ export struct JsonImportDialog {
           }, onSubmit: (): void => this.submitOnlineImport() });
         Text('GitHub 仓库文件请使用 Raw 链接；普通 blob 页面不是 JSON。')
           .width('100%')
-          .fontFamily(TYPE_FORM_NOTE.fontFamily as string)
-          .fontSize(TYPE_FORM_NOTE.fontSizeFp)
-          .lineHeight(TYPE_FORM_NOTE.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+          .fontFamily(MESSAGE_META.fontFamily as string)
+          .fontSize(MESSAGE_META.fontSizeFp)
+          .lineHeight(MESSAGE_META.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
         if (this.validationMessage.length > 0) {
           Text(this.validationMessage)
             .width('100%')
-            .fontFamily(TYPE_FORM_NOTE.fontFamily as string)
-            .fontSize(TYPE_FORM_NOTE.fontSizeFp)
-            .lineHeight(TYPE_FORM_NOTE.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_DANGER', this.appThemeScheme));
+            .fontFamily(MESSAGE_BODY.fontFamily as string)
+            .fontSize(MESSAGE_BODY.fontSizeFp)
+            .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_MESSAGE_DANGER', this.appThemeScheme));
         }
       }
       .width('100%')
@@ -131,6 +132,10 @@ export struct JsonImportDialog {
     const onlineUrl = this.urlDraft.trim();
     if (onlineUrl.length === 0) {
       this.validationMessage = '请输入在线 JSON 的 HTTP/HTTPS 地址';
+      return;
+    }
+    if (!/^https?:\/\//i.test(onlineUrl)) {
+      this.validationMessage = '请使用以 http:// 或 https:// 开头的 JSON 链接';
       return;
     }
     this.onImportOnline(onlineUrl);

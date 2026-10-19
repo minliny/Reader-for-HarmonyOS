@@ -110,7 +110,8 @@ export struct ReaderLabeledIconAction {
   aboutToDisappear(): void { this.mounted = false; }
   @Builder
   private labelContents() {
-    Image(this.icon).width(resolveReaderLabeledIconActionSpec(this.specId).iconSize).height(resolveReaderLabeledIconActionSpec(this.specId).iconSize);
+    Image(this.icon).width(resolveReaderLabeledIconActionSpec(this.specId).iconSize).height(resolveReaderLabeledIconActionSpec(this.specId).iconSize)
+      .objectFit(ImageFit.Contain).opacity(this.actionEnabled ? 1 : 0.45).accessibilityLevel('no');
     Text(this.label).attributeModifier(new ReaderLabeledIconLabelModifier(this.specId, this.isDanger, this.scheme));
   }
   build() {

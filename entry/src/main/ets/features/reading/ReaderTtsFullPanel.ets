@@ -275,7 +275,7 @@ export struct ReaderTtsFullPanel {
             Row().width(4).height(18).backgroundColor(readerAppColor('app.control.onPrimary', this.appThemeScheme)).borderRadius(1);
           }
         } else {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_play_theme_night') : $r('app.media.reader_tts_play'))).width(25).height(25);
+          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_auto_full_play_theme_night') : $r('app.media.reader_auto_full_play'))).width(25).height(25);
         }
       } else if (kind === 'stop') {
         Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_stop_theme_night') : $r('app.media.reader_tts_stop'))).width(28).height(28);

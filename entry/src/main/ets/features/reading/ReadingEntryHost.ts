@@ -30,6 +30,8 @@ export interface ReadingEntrySnapshot {
   session?: RemoteReadingSession;
   inBookshelf: boolean;
   loadingMessage: string;
+  /** Catalog acquisition activity, independent of its user-visible wording. */
+  catalogLoading?: boolean;
   verdict: RemoteContentVerdict;
   candidateAdmissionActive: boolean;
   candidateAdmissionFailed: boolean;
@@ -96,7 +98,7 @@ export class ReadingEntryHost {
   private readonly runtime: ReaderRuntimeOwner;
   private lease: ReadingEntryLease | undefined;
   private state: ReadingEntrySnapshot = { scopeId: 0, sessionGeneration: 0, toc: [], inBookshelf: false,
-    loadingMessage: '', verdict: 'verifying', candidateAdmissionActive: false, candidateAdmissionFailed: false };
+    loadingMessage: '', catalogLoading: false, verdict: 'verifying', candidateAdmissionActive: false, candidateAdmissionFailed: false };
   private probeGeneration: number = 0;
   private readableRevision: number = -1;
   private projectionActive: DetailProjectionIntent | undefined;
@@ -125,7 +127,7 @@ export class ReadingEntryHost {
   snapshot(): ReadingEntrySnapshot { return { ...this.state }; }
   retire(): void {
     this.lease = undefined; this.state = { ...this.state, scopeId: this.state.scopeId + 1,
-      candidateAdmissionActive: false }; this.probeGeneration += 1; this.preparationGeneration += 1;
+      candidateAdmissionActive: false, catalogLoading: false }; this.probeGeneration += 1; this.preparationGeneration += 1;
     this.projectionPending = undefined;
     this.mangaDisplayRefreshTask = undefined; this.mangaDisplayRefreshSession = undefined; this.mangaDisplayRefreshedSession = undefined;
     this.lastRemoteInput = undefined;
@@ -145,11 +147,11 @@ export class ReadingEntryHost {
     try {
       const toc = await new LocalReadingFlowGateway(this.runtime).loadToc(selection.bookId);
       if (!current()) return;
-      this.state = { ...this.state, toc: toc.entries, loadingMessage: '' }; this.publish(scope, lease);
+      this.state = { ...this.state, toc: toc.entries, loadingMessage: '', catalogLoading: false }; this.publish(scope, lease);
       await this.projectDirectory(scope);
     } catch (error) {
       if (!current()) return;
-      this.state = { ...this.state, toc: [], loadingMessage: errorMessageOf(error) }; this.publish(scope, lease);
+      this.state = { ...this.state, toc: [], loadingMessage: errorMessageOf(error), catalogLoading: false }; this.publish(scope, lease);
       this.diagnostic(lease, 'local-detail', error);
     }
   }
@@ -175,7 +177,7 @@ export class ReadingEntryHost {
       if (input.shelfSnapshot !== undefined) this.runtime.noteReadingPreparationIntent(seed.sourceId, seed.bookId);
       if (this.sameBook(input.validatedSession, seed) &&
         this.runtime.bookAcquisitions().hasCurrentCatalogProjection(input.validatedSession!)) {
-        this.install(input.validatedSession); this.state = { ...this.state, toc: this.catalog(input.validatedSession!) };
+        this.install(input.validatedSession); this.state = { ...this.state, toc: this.catalog(input.validatedSession!), catalogLoading: false };
         this.publish(scope, lease);
       }
       return;
@@ -225,7 +227,7 @@ export class ReadingEntryHost {
         input.shelfBooks?.find(book => book.sourceId === session.identity.sourceId && book.bookId === session.identity.bookId);
       this.install(session);
       this.state = { ...this.state, seed: seeds[index], book: this.sessionDetail(session, sourceName, group),
-        toc: this.catalog(session), inBookshelf: suppliedShelf !== undefined, loadingMessage: '' };
+        toc: this.catalog(session), inBookshelf: suppliedShelf !== undefined, loadingMessage: '', catalogLoading: false };
       this.publish(scope, lease);
       const probe = this.probe(scope);
       if (suppliedShelf === undefined) void this.readMembership(session, scope, lease);
@@ -239,6 +241,7 @@ export class ReadingEntryHost {
       }
     } catch (error) {
       if (!current()) return;
+      this.state = { ...this.state, catalogLoading: false };
       if (error instanceof RemoteChapterCacheRefreshError) { await this.refreshCachedChapter(error, scope, lease, current); return; }
       if (!admissionMeasured) this.admissionDiagnostic(scope, lease, seed, admissionStartedAt);
       const catalogAvailable = group && this.state.session !== undefined && this.state.toc.length > 0;
@@ -253,7 +256,7 @@ export class ReadingEntryHost {
         candidateAdmissionFailed: group || input.retainAdmissionThroughProbe === true };
       this.publish(scope, lease); this.diagnostic(lease, 'remote-detail', error);
     } finally {
-      if (current()) { this.state = { ...this.state, candidateAdmissionActive: false }; this.publish(scope, lease); }
+      if (current()) { this.state = { ...this.state, candidateAdmissionActive: false, catalogLoading: false }; this.publish(scope, lease); }
     }
   }
 
@@ -278,7 +281,7 @@ export class ReadingEntryHost {
   bindReader(book: ReadingBookDetail, session: RemoteReadingSession | undefined, toc: LocalReadingTocEntry[],
     inBookshelf: boolean, lease: ReadingEntryLease): void {
     if (session !== undefined && !this.sameBook(session, book)) throw new Error('READING_ENTRY_SESSION_IDENTITY_MISMATCH');
-    this.begin(lease, book, inBookshelf, '', undefined, session, toc);
+    this.begin(lease, book, inBookshelf, '', undefined, session, toc, undefined, false);
   }
 
   /** Read-only display anchor for a standalone text directory. Canonical
@@ -311,7 +314,7 @@ export class ReadingEntryHost {
     const previous = this.state.toc;
     this.install(session);
     const toc = session.contentKind === 'manga' ? this.mangaDirectoryProjection(session, previous) : this.catalog(session);
-    this.state = { ...this.state, book: this.sessionDetail(session, book.sourceName), toc, loadingMessage: '' };
+    this.state = { ...this.state, book: this.sessionDetail(session, book.sourceName), toc, loadingMessage: '', catalogLoading: false };
     this.publish(scope, lease);
     if (session.contentKind === 'manga') void this.refreshMangaDirectoryDisplay(refreshDirectoryDisplay, false);
     return true;
@@ -525,7 +528,7 @@ export class ReadingEntryHost {
       if (revision !== this.runtime.bookAcquisitions().readingProjectionRevision()) { this.projectionPending ??= intent; return; }
       const merged = copyRemoteReadingSession(session); merged.book = this.remoteDetail(detail);
       this.install(merged, wasReadable ? revision : undefined, row);
-      this.state = { ...this.state, toc: this.catalog(merged), loadingMessage: '' }; this.publish(intent.scopeId, lease);
+      this.state = { ...this.state, toc: this.catalog(merged), loadingMessage: '', catalogLoading: false }; this.publish(intent.scopeId, lease);
       void this.projectDirectory(intent.scopeId);
       if (this.state.verdict !== 'readable') await this.probe(intent.scopeId);
     } catch (error) { if (current()) this.backgroundFailure(intent.scopeId, lease, 'detail-projection', error); }
@@ -574,7 +577,8 @@ export class ReadingEntryHost {
   }
 
   private begin(lease: ReadingEntryLease, book: ReadingBookDetail, inBookshelf: boolean, loadingMessage: string,
-    seed?: RemoteReadingBookSeed, session?: RemoteReadingSession, toc: LocalReadingTocEntry[] = [], displayCoverUrl?: string): number {
+    seed?: RemoteReadingBookSeed, session?: RemoteReadingSession, toc: LocalReadingTocEntry[] = [], displayCoverUrl?: string,
+    catalogLoading: boolean = true): number {
     if (!this.runtimeCurrent() || !lease.isCurrent()) throw new Error('READING_ENTRY_OWNER_RETIRED');
     const previous = this.state.book;
     const sameDisplayIdentity = this.lease !== undefined && previous !== undefined && previous.sourceId === book.sourceId &&
@@ -586,7 +590,7 @@ export class ReadingEntryHost {
     this.membershipGeneration = lease.membership().generation;
     this.mangaDisplayRefreshTask = undefined; this.mangaDisplayRefreshSession = undefined; this.mangaDisplayRefreshedSession = undefined;
     this.state = { scopeId: scope, sessionGeneration: this.state.sessionGeneration, book: displayedBook, seed, toc, inBookshelf,
-      loadingMessage, verdict: book.sourceId === LOCAL_SOURCE_ID ? 'readable' : 'verifying', candidateAdmissionActive: false, candidateAdmissionFailed: false };
+      loadingMessage, catalogLoading, verdict: book.sourceId === LOCAL_SOURCE_ID ? 'readable' : 'verifying', candidateAdmissionActive: false, candidateAdmissionFailed: false };
     this.readableRevision = -1; this.install(session); this.runtime.bookAcquisitions().setPreparationVisible(false);
     this.publish(scope, lease); return scope;
   }
@@ -632,7 +636,7 @@ export class ReadingEntryHost {
       const completed = coordinator.readingProjectionRevision();
       if (completed !== revision + 2) throw new Error('正文配置已变化，请重新读取本章');
       this.install(withPreparedRemoteChapter(error.session, chapter, completed));
-      this.state = { ...this.state, verdict: 'readable', loadingMessage: '' }; this.publish(scope, lease); return chapter.chapterIndex;
+      this.state = { ...this.state, verdict: 'readable', loadingMessage: '', catalogLoading: false }; this.publish(scope, lease); return chapter.chapterIndex;
     } catch (failure) {
       if (current()) { this.setVerdict(verdictForFailureKind(remoteReadingFailureKindOf(failure)), scope, lease);
         this.notice(lease, '正文未更新', errorMessageOf(failure)); }
@@ -642,7 +646,7 @@ export class ReadingEntryHost {
   private admitCatalog(session: RemoteReadingSession, seeds: RemoteReadingBookSeed[], names: string[], scope: number, lease: ReadingEntryLease): void {
     const index = seeds.findIndex(seed => this.sameBook(session, seed)); if (index < 0) return;
     this.install(session); this.state = { ...this.state, seed: seeds[index], book: this.sessionDetail(session, names[index] || session.identity.sourceId, true),
-      toc: this.catalog(session), loadingMessage: '', verdict: 'verifying' }; this.publish(scope, lease);
+      toc: this.catalog(session), loadingMessage: '', catalogLoading: false, verdict: 'verifying' }; this.publish(scope, lease);
   }
   private async refreshInBackground(seed: RemoteReadingBookSeed, name: string, cached: RemoteReadingSession,
     scope: number, lease: ReadingEntryLease, refresh?: Promise<RemoteReadingSession>): Promise<void> {
@@ -654,7 +658,7 @@ export class ReadingEntryHost {
       if (!current() || !this.sameBook(refreshed, cached.identity)) return;
       const changed = !sameRemoteSessionEvidence(this.state.session, refreshed); this.install(refreshed); displayed = refreshed;
       this.state = { ...this.state, book: this.sessionDetail(refreshed, name.trim() || refreshed.identity.sourceId),
-        toc: this.catalog(refreshed), loadingMessage: '', backgroundError: undefined }; this.publish(scope, lease);
+        toc: this.catalog(refreshed), loadingMessage: '', catalogLoading: false, backgroundError: undefined }; this.publish(scope, lease);
       if (changed || this.state.verdict !== 'readable') void this.probe(scope);
       void this.projectDirectory(scope);
       if (name.trim().length === 0 || name === refreshed.identity.sourceId) void this.resolveSourceName(refreshed, scope, lease);

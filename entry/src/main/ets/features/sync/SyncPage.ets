@@ -176,7 +176,7 @@ export struct SyncPage {
             '与 WebDAV 登录密码分开保存', true, (value: string): void => {
               this.backupPass = value;
             });
-          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.sync_folder_theme_night') : $r('app.media.sync_folder')), '同步目录', this.effectiveWebdavPath(),
+          this.webdavInputRow((this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder')), '同步目录', this.effectiveWebdavPath(),
             '/ReaderBackup/ReaderAndroid', false, (value: string): void => {
               this.webdavPathEdited = true;
               this.webdavPath = value;

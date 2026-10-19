@@ -3,6 +3,10 @@ import { ReaderButton } from '../common/ReaderButton';
 import { ReaderInlineSelect } from '../common/ReaderInlineSelect';
 import { ReaderFormField } from '../common/ReaderFormField';
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { ReaderPageState } from '../common/ReaderPageState';
+import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_META } from '../common/ReaderMessageStyle';
+import { readerPageContentStartInset } from '../common/ReaderPageShell';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../app/ReaderNativeAlertOwner';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -202,6 +206,7 @@ export struct SourceToolsPage {
   private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
   private exportRevision: number = 0;
+  private lastFeedbackIdentity: string = '';
 
   aboutToDisappear(): void { this.mounted = false; this.exportRevision += 1; this.nativeAlertOwner.retire(); }
 
@@ -213,6 +218,7 @@ export struct SourceToolsPage {
     this.projectedBusy = !this.snapshot.busy;
     this.projectedBatchResultsIdentity = '';
     this.projectedDebugLogsIdentity = '';
+    this.lastFeedbackIdentity = this.feedbackIdentity();
     this.syncListDataSources();
   }
 
@@ -221,6 +227,7 @@ export struct SourceToolsPage {
       variant: 'tools',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
+      overlayContent: (): void => { this.pendingOverlay(); },
     });
   }
 
@@ -232,7 +239,9 @@ export struct SourceToolsPage {
   @Builder
   private pageContent() {
     this.statusCard();
-    this.recoveryAction();
+    if (this.snapshot.original?.blocked !== true && this.snapshot.receipt?.receipt.confirmation !== 'unknown' && this.recovery().canRetry) {
+      this.recoveryAction();
+    }
     this.exportCard();
     // V1 @Builder parameters are captured when the builder subtree is
     // mounted. Rebuild only this small controls card when its primitive
@@ -314,10 +323,10 @@ export struct SourceToolsPage {
         Text(`检测进度 ${this.snapshot.batchCheck.completed}/${this.snapshot.batchCheck.total}` +
           `（${this.batchCheckPercent(this.snapshot.batchCheck)}%）`)
           .layoutWeight(1)
-          .fontFamily(TYPE_SOURCE_TOOLS_HEADING.fontFamily)
-          .fontWeight(TYPE_SOURCE_TOOLS_HEADING.fontWeight)
-          .fontSize(TYPE_SOURCE_TOOLS_HEADING.fontSizeFp)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+          .fontFamily(MESSAGE_TITLE.fontFamily)
+          .fontWeight(MESSAGE_TITLE.fontWeight)
+          .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
         Text(this.batchCheckPhaseLabel(this.snapshot.batchCheck))
           .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
           .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
@@ -340,12 +349,11 @@ export struct SourceToolsPage {
         Text(`当前 ${this.snapshot.batchCheck.currentIndex}/${this.snapshot.batchCheck.total}：` +
           `${this.snapshot.batchCheck.currentSourceName}（检测所选能力）`)
           .width('100%')
-          .fontFamily(TYPE_SOURCE_TOOLS_DESCRIPTION.fontFamily as string)
-          .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp)
-          .lineHeight(TYPE_SOURCE_TOOLS_DESCRIPTION.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
+          .fontFamily(MESSAGE_BODY.fontFamily as string)
+          .fontSize(MESSAGE_BODY.fontSizeFp)
+          .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
+          .wordBreak(WordBreak.BREAK_ALL);
       }
       Row({ space: TOK_SPACE_XS }) {
         this.batchCounter(`所选项通过 ${this.snapshot.batchCheck.passed}`, readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme));
@@ -382,10 +390,10 @@ export struct SourceToolsPage {
       }
     }
     .width('100%')
-    .padding(TOK_SPACE_SM)
-    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(10);
+    .padding(17)
+    .backgroundColor(readerAppColor('TOK_MESSAGE_SURFACE', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_MESSAGE_BORDER', this.appThemeScheme) })
+    .borderRadius(12);
   }
 
   @Builder
@@ -411,16 +419,19 @@ export struct SourceToolsPage {
           .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
           .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
           .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
+          .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
+          .wordBreak(WordBreak.BREAK_ALL);
+        Text(result.sourceId)
+          .width('100%').fontFamily(MESSAGE_META.fontFamily as string)
+          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
+          .wordBreak(WordBreak.BREAK_ALL);
         Text(result.message)
           .width('100%')
-          .fontFamily(TYPE_SOURCE_TOOLS_CAPTION.fontFamily as string)
-          .fontSize(TYPE_SOURCE_TOOLS_CAPTION.fontSizeFp)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
+          .fontFamily(MESSAGE_BODY.fontFamily as string)
+          .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
+          .wordBreak(WordBreak.BREAK_ALL);
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
@@ -432,8 +443,9 @@ export struct SourceToolsPage {
           (result.state === 'failed' ? readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('app.SourceToolsPage.batchResultRow.fontColor.FF9A6A1F', this.appThemeScheme)));
     }
     .width('100%')
-    .height(58)
-    .padding({ left: TOK_SPACE_XS, right: TOK_SPACE_XS })
+    .constraintSize({ minHeight: 58 })
+    .alignItems(VerticalAlign.Top)
+    .padding({ top: 13, bottom: 13, left: TOK_SPACE_XS, right: TOK_SPACE_XS })
     .border({ width: { bottom: TOK_BORDER_W }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
   }
 
@@ -460,15 +472,12 @@ export struct SourceToolsPage {
   }
   @Builder
   private originalRecoveryActions(identity: string, generation: number) {
-    ReaderRecoveryAction({ label: '核对原操作回执', generation,
-      actionEnabled: !this.snapshot.busy && this.snapshot.original?.busy !== true,
-      onReconcile: (value: number): void => this.reconcileOriginal(identity, value) });
-    if (this.snapshot.original?.canRetryOriginal) {
-      ReaderRecoveryAction({
-        label: this.snapshot.original?.confirmation === 'confirmed' && this.snapshot.original?.writeStage === 'cleanup' ? '继续原清理' : '继续原操作',
-        generation, actionEnabled: !this.snapshot.busy && this.snapshot.original?.busy !== true,
-        onReconcile: (value: number): void => this.continueOriginal(identity, value) });
-    }
+    ReaderRecoveryNotice({ view: { visible: true, message: this.snapshot.original?.message ?? '', canRetry: true, generation },
+      actionLabel: '核对', busy: this.snapshot.busy || this.snapshot.original?.busy === true,
+      secondaryActionLabel: this.snapshot.original?.canRetryOriginal ?
+        (this.snapshot.original.confirmation === 'confirmed' && this.snapshot.original.writeStage === 'cleanup' ? '继续清理' : '继续') : '',
+      onReconcile: (value: number): void => this.reconcileOriginal(identity, value),
+      onSecondaryAction: (value: number): void => this.continueOriginal(identity, value) });
   }
   @Builder
   private recoveryAction() {
@@ -476,22 +485,40 @@ export struct SourceToolsPage {
       ForEach([this.originalRecoveryIdentity()], (identity: string) => {
         this.originalRecoveryActions(identity, this.snapshot.original?.generation ?? 0);
       }, (identity: string): string => `source-original-recovery:${identity}`);
+    } else if (this.snapshot.receipt?.receipt.confirmation === 'unknown') {
+      ReaderRecoveryNotice({ view: this.recovery(), actionLabel: '核对', busy: this.snapshot.busy, onReconcile: this.onReconcile });
     } else if (this.recovery().canRetry) {
-      ReaderRecoveryAction({ generation: this.recovery().generation, onReconcile: this.onReconcile });
+      ReaderRecoveryAction({ label: '刷新列表', generation: this.recovery().generation, onReconcile: this.onReconcile });
     }
   }
   @Builder
+  private pendingOverlay() {
+    Column() {
+      if (this.snapshot.original?.blocked || this.snapshot.receipt?.receipt.confirmation === 'unknown') {
+        this.recoveryAction();
+      }
+    }
+      .width('100%').padding({ left: 20, right: 20, top: readerPageContentStartInset() })
+      .alignItems(HorizontalAlign.Start).hitTestBehavior(HitTestMode.Transparent);
+  }
+  @Builder
   private statusCard() {
-    Text(this.snapshot.original?.blocked ? this.snapshot.original.message : this.recovery().visible ? this.recovery().message : this.snapshot.statusMessage.length > 0 ? this.snapshot.statusMessage : '书源规则与持久化均由 Rust Core 负责')
-      .width('100%')
-      .fontFamily(TYPE_SOURCE_TOOLS_STATUS.fontFamily as string)
-      .fontSize(TYPE_SOURCE_TOOLS_STATUS.fontSizeFp)
-      .lineHeight(TYPE_SOURCE_TOOLS_STATUS.lineHeightFp as number)
-      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .padding(TOK_SPACE_SM)
-      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(8);
+    if (this.snapshot.sources.length === 0 && this.snapshot.original?.blocked !== true) {
+      ReaderPageState({ title: this.snapshot.readFacts?.fact === 'failed' ? '书源读取失败' :
+        (this.snapshot.busy ? '正在读取书源' : '暂无书源'),
+        message: this.snapshot.readFacts?.fact === 'failed' ? '请稍后重试。' :
+          (this.snapshot.busy ? '请稍候' : '返回书源管理后，可导入书源 JSON。'),
+        loading: this.snapshot.busy,
+        actionLabel: this.snapshot.readFacts?.canRetry ? '重试' : '',
+        onAction: (): void => this.onReconcile(this.snapshot.readFacts?.generation ?? 0) });
+    } else if (this.snapshot.busy && this.snapshot.batchCheck.phase !== 'running' && this.snapshot.batchCheck.phase !== 'stopping' && this.snapshot.original?.blocked !== true) {
+      Row({ space: 10 }) {
+        LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme));
+        Text(this.snapshot.statusMessage).layoutWeight(1)
+          .fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp)
+          .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+      }.width('100%').padding(17);
+    }
   }
 
   @Builder
@@ -595,12 +622,6 @@ export struct SourceToolsPage {
       }
       .width('100%');
       if (this.snapshot.editorReadback?.fact === 'confirmedRefreshFailed') {
-        Text('保存已由 Core 确认；下面的操作只重新读取书源列表，不会再次执行 source.import。')
-          .width('100%')
-          .fontFamily(TYPE_SOURCE_TOOLS_NOTE.fontFamily as string)
-          .fontSize(TYPE_SOURCE_TOOLS_NOTE.fontSizeFp)
-          .lineHeight(TYPE_SOURCE_TOOLS_NOTE.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
         this.actionButton('重新读取已保存书源', false, !this.snapshot.busy,
           (): void => this.onReconcileEditor());
       }
@@ -615,7 +636,10 @@ export struct SourceToolsPage {
   @Builder
   private debugCard() {
     Column({ space: TOK_SPACE_SM }) {
-      this.heading(this.snapshot.debugSourceId.length > 0 ? '最近一次检测详情' : '书源调试');
+      Text(this.snapshot.debugSourceId.length > 0 ? '最近一次检测详情' : '书源调试')
+        .width('100%').fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
+        .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
       Row({ space: TOK_SPACE_SM }) {
         ReaderInlineSelect({
           value: this.snapshot.checkMode === 'explore' ? '发现' : '搜索',
@@ -636,13 +660,21 @@ export struct SourceToolsPage {
       ReaderFormField({ scheme: this.appThemeScheme, specId: 'source-debug', text: this.snapshot.debugKey,
         placeholder: '检测关键词（留空时使用 Core 默认“我的”）', onTextChange: (value: string): void => this.onDebugKeyChanged(value) });
       if (this.snapshot.debugSourceId.length > 0) {
-        Text(`检测对象：${this.snapshot.debugSourceId}`)
+        Text('检测对象')
+          .width('100%').fontFamily(MESSAGE_META.fontFamily as string)
+          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+        Text(this.snapshot.debugSourceId)
           .width('100%')
-          .fontFamily(TYPE_SOURCE_TOOLS_DEBUG_ID.fontFamily as string)
-          .fontSize(TYPE_SOURCE_TOOLS_DEBUG_ID.fontSizeFp)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis });
+          .fontFamily(MESSAGE_META.fontFamily as string)
+          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
+          .wordBreak(WordBreak.BREAK_ALL);
+      }
+      if (this.snapshot.debugLogs.length === 0) {
+        Text('暂无检测记录').width('100%').padding({ top: 28, bottom: 28 }).textAlign(TextAlign.Center)
+          .fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp)
+          .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
       }
       List() {
         LazyForEach(this.debugLogDataSource, (log: SourceDebugLog, index: number) => {
@@ -658,20 +690,32 @@ export struct SourceToolsPage {
       .scrollBar(BarState.Off);
     }
     .width('100%')
-    .padding(TOK_SPACE_SM)
-    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(10);
+    .padding(17)
+    .backgroundColor(readerAppColor('TOK_MESSAGE_SURFACE', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_MESSAGE_BORDER', this.appThemeScheme) })
+    .borderRadius(12);
   }
 
   @Builder
   private debugLogRow(log: SourceDebugLog, index: number) {
-        Text(`${index + 1}. [${log.state}] ${log.message}`)
-          .width('100%')
-          .fontFamily(TYPE_SOURCE_TOOLS_DEBUG_LOG.fontFamily as string)
-          .fontSize(TYPE_SOURCE_TOOLS_DEBUG_LOG.fontSizeFp)
-          .lineHeight(TYPE_SOURCE_TOOLS_DEBUG_LOG.lineHeightFp as number)
-          .fontColor(log.state === -1 ? readerAppColor('app.SourceToolsPage.debugLogRow.fontColor.FFA8584D', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme));
+    Row({ space: 9 }) {
+      Text(`${index + 1}`).width(22).fontFamily(MESSAGE_META.fontFamily as string)
+        .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+      Column({ space: 4 }) {
+        if (log.state === -1) {
+          Text('检测失败').fontFamily(MESSAGE_META.fontFamily as string).fontSize(MESSAGE_META.fontSizeFp)
+            .lineHeight(MESSAGE_META.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_DANGER', this.appThemeScheme));
+        }
+        Text(log.message).width('100%').fontFamily(MESSAGE_BODY.fontFamily as string)
+          .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme)).wordBreak(WordBreak.BREAK_ALL);
+        Text(`状态码 ${log.state}`).width('100%').fontFamily(MESSAGE_META.fontFamily as string)
+          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+      }.layoutWeight(1).alignItems(HorizontalAlign.Start);
+    }.width('100%').alignItems(VerticalAlign.Top).padding({ top: 13, bottom: 13 })
+      .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_MESSAGE_BORDER', this.appThemeScheme) });
   }
 
   @Builder
@@ -734,6 +778,25 @@ export struct SourceToolsPage {
 
   private onSnapshotChanged(): void {
     this.syncListDataSources();
+    this.showTransientFeedback();
+  }
+
+  private feedbackIdentity(): string {
+    return `${this.snapshot.receipt?.facts.generation ?? 0}:${this.snapshot.readFacts?.generation ?? 0}:` +
+      `${this.snapshot.busy ? 1 : 0}:${this.snapshot.statusEvent}:${this.snapshot.statusMessage}`;
+  }
+
+  private showTransientFeedback(): void {
+    const identity = this.feedbackIdentity();
+    if (!this.mounted || identity === this.lastFeedbackIdentity) return;
+    this.lastFeedbackIdentity = identity;
+    if (this.snapshot.busy || this.snapshot.original?.blocked || this.snapshot.receipt?.receipt.confirmation === 'unknown' ||
+      this.snapshot.statusEvent === 'batch' || this.snapshot.statusEvent === 'state') return;
+    const read = this.snapshot.readFacts;
+    if (read?.fact === 'failed' && !read.hasValue) return;
+    const message = this.snapshot.statusMessage;
+    if (message.length === 0) return;
+    try { this.getUIContext().getPromptAction().showToast({ message, duration: 2200 }); } catch (_) {}
   }
 
   private syncListDataSources(): void {

@@ -1,4 +1,6 @@
 import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
 import type { SettingsOperationProjection, SettingsCacheCleanupSnapshot } from './SettingsHost';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../app/ReaderNativeAlertOwner';
@@ -6,7 +8,7 @@ import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYP
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 import { ReaderThemeHost } from '../../app/ReaderThemeHost';
 import { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
-import { readerPageAreaLength } from '../common/ReaderPageShell';
+import { readerPageAreaLength, readerPageContentStartInset } from '../common/ReaderPageShell';
 // Settings General — rebuilt 2026-08-05 against live Figma nodes
 // 943:2897 (Phone 390×844) / 943:3369 (Tablet 760×960).
 // Batch 3: 设置/偏好/行为/权限四个区块收敛到 CategorySection(Card+Heading+rows)，
@@ -74,7 +76,7 @@ export struct SettingsPage {
     developerMode: false,
   };
   @Prop isTablet: boolean;
-  @Prop operation: SettingsOperationProjection = { action: 'load' };
+  @Prop @Watch('onOperationChanged') operation: SettingsOperationProjection = { action: 'load' };
   @Prop @Watch('onCacheCleanupChanged') cacheCleanup: SettingsCacheCleanupSnapshot | undefined = undefined;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onRetryAccepted: (generation: number) => void = (_generation: number): void => {};
@@ -100,6 +102,9 @@ export struct SettingsPage {
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
   private resetRevision: number = 0;
+  private lastOperationFeedback: string = '';
+  private lastOperationToast: string = '';
+  private lastCacheFeedback: string = '';
   @State private openSelect: SettingsSelectField | '' = '';
   @State private selectionId: string = '';
   private selectionField: SettingsSelectField | '' = '';
@@ -129,6 +134,8 @@ export struct SettingsPage {
     catch (_unavailable) { this.themeOwner = undefined; }
     registerReaderFonts(this.getUIContext().getFont());
     this.syncSnapshotValues();
+    this.lastOperationFeedback = this.operationFeedbackIdentity();
+    this.lastCacheFeedback = this.cacheFeedbackIdentity();
     this.onCacheCleanupChanged();
     const identity = `settings-back:${++settingsSelectionGeneration}`;
     this.temporaryBackIdentity = identity;
@@ -164,7 +171,7 @@ export struct SettingsPage {
       onOpenSync: this.onOpenSync,
       onRssRequested: this.onRssRequested,
       onDiscoverRequested: this.onDiscoverRequested,
-      showOverlay: this.openSelect !== '',
+      showOverlay: this.openSelect !== '' || this.hasPendingSettings() || this.hasPendingCleanup(),
       onOverlayOriginChange: (x: number, y: number): void => {
         this.originX = x;
         this.originY = y;
@@ -191,7 +198,7 @@ export struct SettingsPage {
         this.navRow('同步与备份', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_sync_theme_night') : $r('app.media.settings_row_sync')), (): void => this.onOpenSync());
       }
       this.navRow('书架设置', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_shelf_search_theme_night') : $r('app.media.settings_row_shelf_search')), this.onOpenBookshelfSettings);
-      this.navRow('下载管理', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download')), this.onOpenDownloads);
+      this.navRow('下载管理', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_download_theme_night') : $r('app.media.settings_row_download')), this.onOpenDownloads);
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
         this.navRow('关于与反馈', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_about_theme_night') : $r('app.media.settings_row_about')), (): void => {});
       }
@@ -254,14 +261,95 @@ export struct SettingsPage {
 
   @Builder
   private operationFeedback() {
-    if (this.feedbackMessage().length > 0) {
-      Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .width('100%').padding(12);
+    if (this.resetInFlight || this.cacheCleanupInFlight) {
+      Row({ space: 10 }) {
+        LoadingProgress().width(32).height(32).color(readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme));
+        Text(this.resetInFlight ? '正在恢复界面与阅读设置' : this.cacheCleanup?.operation.message ?? '正在清理文字缓存')
+          .layoutWeight(1).fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp)
+          .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+      }.width('100%').padding(17);
     }
-    ForEach(this.recoveryActionIdentities(), (identity: string): void => {
-      ReaderRecoveryAction({ label: this.recoveryActionLabel(identity), generation: this.recoveryActionGeneration(identity),
-        actionEnabled: this.recoveryActionCurrent(identity), onReconcile: (): void => this.dispatchRecoveryAction(identity) });
-    }, (identity: string): string => identity);
+    if (!this.hasPendingSettings() && this.recovery().canRetry) {
+      ForEach(this.recoveryActionIdentities().filter((identity: string): boolean => this.recoveryActionKind(identity) === 'read'), (identity: string): void => {
+        ReaderRecoveryAction({ label: '刷新设置', generation: this.recoveryActionGeneration(identity),
+          actionEnabled: this.recoveryActionCurrent(identity), onReconcile: (): void => this.dispatchRecoveryAction(identity) });
+      }, (identity: string): string => identity);
+    }
+  }
+
+  private hasPendingSettings(): boolean {
+    return this.operation.receipt?.receipt.confirmation === 'unknown' || this.operation.canRetryAccepted === true;
+  }
+
+  private hasPendingCleanup(): boolean {
+    return this.cacheCleanup?.confirmation === 'unknown' || this.cacheCleanup?.canContinueOriginal === true ||
+      this.cacheCleanup?.confirmation === 'confirmed' && this.cacheCleanup.operation.canRetry;
+  }
+
+  private recoveryIdentityFor(kind: string): string {
+    return this.recoveryActionIdentities().find((identity: string): boolean => this.recoveryActionKind(identity) === kind) ?? '';
+  }
+  private capturedPendingAction(identity: string, index: number): string {
+    return (JSON.parse(identity) as string[])[index];
+  }
+
+  @Builder
+  private pendingFeedback() {
+    Column({ space: 10 }) {
+      if (this.hasPendingSettings()) {
+        ForEach([JSON.stringify([this.recoveryIdentityFor('read'), this.recoveryIdentityFor('accepted'),
+          this.temporaryBackIdentity, `${this.operation.receipt?.facts.generation ?? 0}`])], (identity: string) => {
+          ReaderRecoveryNotice({ view: { visible: true, message: this.recovery().message || '当前设置尚未确认，请核对原保存结果。',
+            canRetry: true, generation: this.operation.receipt?.facts.generation ?? 0 },
+            actionLabel: '核对', busy: this.operation.receipt?.facts.fact === 'refreshing',
+            secondaryActionLabel: this.recoveryIdentityFor('accepted').length > 0 ? '继续保存' : '',
+            onReconcile: (): void => this.dispatchRecoveryAction(this.capturedPendingAction(identity, 0)),
+            onSecondaryAction: (): void => this.dispatchRecoveryAction(this.capturedPendingAction(identity, 1)) });
+        }, (key: string): string => key);
+      }
+      if (this.hasPendingCleanup()) {
+        ForEach([JSON.stringify([this.recoveryIdentityFor('cache-read'), this.recoveryIdentityFor('cache-continue'),
+          this.temporaryBackIdentity, `${this.cacheCleanup?.operation.generation ?? 0}`])], (identity: string) => {
+          ReaderRecoveryNotice({ view: { visible: true,
+            message: this.cacheCleanup?.operation.message ?? '原清理结果尚未确认，请核对；已有正文仍可使用',
+            canRetry: true, generation: this.cacheCleanup?.operation.generation ?? 0 },
+            actionLabel: '核对', busy: this.cacheCleanup?.busy === true,
+            secondaryActionLabel: this.recoveryIdentityFor('cache-continue').length > 0 ? '继续' : '',
+            onReconcile: (): void => this.dispatchRecoveryAction(this.capturedPendingAction(identity, 0)),
+            onSecondaryAction: (): void => this.dispatchRecoveryAction(this.capturedPendingAction(identity, 1)) });
+        }, (key: string): string => key);
+      }
+    }.width('100%').padding({ left: 20, right: 20, top: readerPageContentStartInset() })
+      .hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  private operationFeedbackIdentity(): string {
+    return `${this.operation.receipt?.facts.generation ?? 0}:${this.operation.readFacts?.generation ?? 0}`;
+  }
+
+  private onOperationChanged(): void {
+    const identity = this.operationFeedbackIdentity();
+    if (!this.mounted || identity === this.lastOperationFeedback) return;
+    this.lastOperationFeedback = identity;
+    if (this.operation.receipt?.facts.fact === 'refreshing' || this.operation.readFacts?.fact === 'refreshing') {
+      this.lastOperationToast = '';
+      return;
+    }
+    if (!this.hasPendingSettings() && this.recovery().visible &&
+      (this.operation.readFacts?.fact === 'refreshFailed' || this.operation.receipt?.receipt.fact === 'confirmedRefreshFailed')) {
+      const message = this.recovery().message;
+      if (message !== this.lastOperationToast) { this.lastOperationToast = message; this.showFeedbackToast(message); }
+    }
+  }
+
+  private cacheFeedbackIdentity(): string {
+    return `${this.cacheCleanup?.operation.generation ?? 0}:${this.cacheCleanup?.operation.fact ?? ''}:` +
+      `${this.cacheCleanup?.busy === true ? 1 : 0}:${this.cacheCleanup?.operation.message ?? ''}`;
+  }
+
+  private showFeedbackToast(message: string): void {
+    if (!this.mounted || message.length === 0) return;
+    try { this.getUIContext().getPromptAction().showToast({ message, duration: 2200 }); } catch (_) {}
   }
 
   @Builder
@@ -280,8 +368,8 @@ export struct SettingsPage {
   @Builder
   private behaviorCard() {
     CategorySection({ title: '行为与反馈' }) {
-      this.switchRow('自动检查更新', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_update_theme_night') : $r('app.media.settings_gen_update')), 'autoCheckUpdate');
-      this.switchRow('减少动态效果', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_motion_theme_night') : $r('app.media.settings_gen_motion')), 'reduceMotion');
+      this.switchRow('自动检查更新', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_row_download_theme_night') : $r('app.media.settings_row_download')), 'autoCheckUpdate');
+      this.switchRow('减少动态效果', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'reduceMotion');
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
         this.switchRow('点击当前底栏回顶部', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_tap_top_theme_night') : $r('app.media.settings_gen_tap_top')), 'tapBottomScrollTop');
         this.switchRow('崩溃日志', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_crash_theme_night') : $r('app.media.settings_gen_crash')), 'crashLog');
@@ -480,7 +568,7 @@ export struct SettingsPage {
       CategoryRow({
         icon: (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_cache_theme_night') : $r('app.media.settings_gen_cache')),
         label: '缓存清理',
-        onRowClick: (): void => this.clearTextCache(capturedIdentity),
+        onRowClick: (): void => this.requestClearTextCache(capturedIdentity),
       }) {
         // Keep the reactive state read in the concrete component tree. ArkUI
         // does not invalidate this slot when the value crosses a @Builder
@@ -499,6 +587,18 @@ export struct SettingsPage {
         .backgroundColor(readerAppColor('TOK_SETTING_ACTION_BG', this.appThemeScheme));
       }
     }, (capturedIdentity: string): string => capturedIdentity);
+  }
+
+  private requestClearTextCache(identity: string): void {
+    if (!this.mounted || identity !== this.temporaryBackIdentity || this.cacheCleanupInFlight || this.hasPendingCleanup()) return;
+    this.nativeAlertOwner.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native), 'confirmation', {
+      title: '清理文字缓存',
+      message: '清理可重新获取的文字正文与正文图片。保留下载任务、受保护内容、书籍、阅读进度和书签。',
+      primaryButton: { value: '取消', action: (): void => {} },
+      secondaryButton: { value: '清理', fontColor: readerAppColor('TOK_MESSAGE_DANGER', this.appThemeScheme),
+        action: (): void => this.clearTextCache(identity) },
+    }, (): boolean => this.mounted && identity === this.temporaryBackIdentity &&
+      ReaderRuntimeOwner.isCurrent(this.themeOwner) && !this.cacheCleanupInFlight && !this.hasPendingCleanup());
   }
 
   private clearTextCache(identity: string = this.temporaryBackIdentity): void {
@@ -527,6 +627,11 @@ export struct SettingsPage {
 
   private onCacheCleanupChanged(): void {
     if (this.cacheCleanup !== undefined) this.applyCacheCleanup(this.cacheCleanup);
+    const identity = this.cacheFeedbackIdentity();
+    if (!this.mounted || identity === this.lastCacheFeedback) return;
+    this.lastCacheFeedback = identity;
+    if (this.cacheCleanup !== undefined && !this.cacheCleanup.busy && !this.hasPendingCleanup())
+      this.showFeedbackToast(this.cacheCleanup.operation.message ?? '');
   }
 
   private applyCacheCleanup(snapshot: SettingsCacheCleanupSnapshot): void {
@@ -630,6 +735,7 @@ export struct SettingsPage {
 
   @Builder
   private buildOverlay() {
+    this.pendingFeedback();
     if (this.openSelect !== '') {
       SettingsSelectOverlay({
         isTablet: this.isTablet,
@@ -690,7 +796,10 @@ export struct SettingsPage {
     } catch (_) {
       if (this.mounted && revision === this.resetRevision) this.resetMessage = '恢复未完成，已保留恢复记录；点击恢复默认重试';
     } finally {
-      if (this.mounted && revision === this.resetRevision) this.resetInFlight = false;
+      if (this.mounted && revision === this.resetRevision) {
+        this.resetInFlight = false;
+        if (!this.hasPendingSettings()) this.showFeedbackToast(this.resetMessage);
+      }
     }
   }
 
@@ -698,12 +807,12 @@ export struct SettingsPage {
   private dangerRow() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.settings_gen_refresh_theme_night') : $r('app.media.settings_gen_refresh'))).width(15).height(15);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.settings_reset_defaults_theme_night') : $r('app.media.settings_reset_defaults'))).width(15).height(15);
       }
       .width(28)
       .height(28)
       .borderRadius(14)
-      .backgroundColor(readerAppColor('TOK_SETTING_ICON_BG', this.appThemeScheme));
+      .backgroundColor(readerAppColor('TOK_SETTING_DANGER_ICON_BG', this.appThemeScheme));
 
       Text('恢复默认')
         .layoutWeight(1)

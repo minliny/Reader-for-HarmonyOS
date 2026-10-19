@@ -1,3 +1,7 @@
+import { ReaderPageState } from '../common/ReaderPageState';
+import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
+import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { ReaderStandardPage } from '../common/ReaderStandardPage';
 import { ReaderButton } from '../common/ReaderButton';
 import { ReaderFormField } from '../common/ReaderFormField';
@@ -41,7 +45,7 @@ import {
 export struct BookshelfManagementPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @Prop snapshot: BookshelfManagementSnapshot = EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
+  @Prop @Watch('onSnapshotChanged') snapshot: BookshelfManagementSnapshot = EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT;
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
   onBack: () => void = (): void => {};
@@ -58,6 +62,7 @@ export struct BookshelfManagementPage {
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
+    this.onSnapshotChanged();
   }
 
   build() {
@@ -65,6 +70,7 @@ export struct BookshelfManagementPage {
       variant: 'management',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
+      overlayContent: (): void => { this.pendingOverlay(); },
     });
   }
 
@@ -75,8 +81,13 @@ export struct BookshelfManagementPage {
 
   @Builder
   private pageContent() {
+    if (!this.hasReadData()) {
+      ReaderPageState({ title: this.snapshot.busy ? '正在读取书架数据…' : '书架数据读取失败',
+        message: this.snapshot.busy ? '' : this.snapshot.readFacts?.message ?? '请重试读取分组、书架与阅读记录。',
+        loading: this.snapshot.busy, actionLabel: !this.snapshot.busy && !this.originalPending() ? '重试' : '',
+        onAction: (): void => this.onReconcile(this.recovery().generation) }).padding({ top: 40, bottom: 40 });
+    } else {
     this.statusCard();
-    this.recoveryAction();
     this.statisticsCard();
     this.groupEditorCard();
     this.groupsCard();
@@ -89,31 +100,34 @@ export struct BookshelfManagementPage {
       .fontSize(TYPE_SHELF_MANAGEMENT_NOTE.fontSizeFp)
       .lineHeight(TYPE_SHELF_MANAGEMENT_NOTE.lineHeightFp as number)
       .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-  }
-
-
-  @Builder
-  private recoveryAction() {
-    ForEach(this.recoveryIdentities(), (identity: string) => {
-      this.recoveryActor(identity);
-    }, (identity: string): string => identity);
-  }
-
-  @Builder
-  private recoveryActor(identity: string) {
-    if (identity.startsWith('read:')) {
-      ReaderRecoveryAction({ generation: Number(identity.substring(5)), onReconcile: this.onReconcile });
-    } else {
-      ReaderRecoveryAction({ generation: Number(identity.substring(9)), label: '继续原分组操作',
-        onReconcile: this.onContinueOriginal });
     }
   }
-  private recoveryIdentities(): string[] {
-    const view = this.recovery(); const identities: string[] = [];
-    if (view.canRetry) identities.push(`read:${view.generation}`);
-    if (this.snapshot.managementMutation?.canContinueOriginal === true && !this.snapshot.busy && this.snapshot.receipt !== undefined)
-      identities.push(`continue:${this.snapshot.receipt.facts.generation}`);
-    return identities;
+
+
+  private hasReadData(): boolean { return this.snapshot.readFacts?.hasValue === true; }
+  private originalPending(): boolean {
+    return this.snapshot.managementMutation?.blocked === true || this.snapshot.receipt?.receipt.confirmation === 'unknown';
+  }
+  @Builder
+  private pendingOverlay() {
+    if (this.originalPending()) {
+      Column() {
+        ReaderRecoveryNotice({ view: this.recovery(), tag: '分组待处理', actionLabel: '核对操作结果', busy: this.snapshot.busy,
+          onReconcile: this.onReconcile,
+          secondaryActionLabel: this.snapshot.managementMutation?.canContinueOriginal === true ? '继续原分组操作' : '',
+          onSecondaryAction: this.onContinueOriginal });
+      }.width('100%').padding({ left: 17, right: 17,
+        top: 64 }).hitTestBehavior(HitTestMode.Transparent);
+    }
+  }
+  private lastFeedback: string = '';
+  private onSnapshotChanged(): void {
+    const view = this.recovery();
+    if (this.originalPending() || !this.hasReadData() || this.snapshot.busy) { this.lastFeedback = ''; return; }
+    const message = view.visible ? view.message : this.snapshot.statusMessage;
+    if (!message || message === this.lastFeedback) return;
+    this.lastFeedback = message;
+    try { this.getUIContext().getPromptAction().showToast({ message, duration: 2000 }); } catch (_) {}
   }
   private recovery(): ReaderRecoveryView {
     const view = readerRecoveryView(this.snapshot.receipt, this.snapshot.readFacts);
@@ -127,17 +141,17 @@ export struct BookshelfManagementPage {
 
   @Builder
   private statusCard() {
-    Text(this.recovery().visible ? this.recovery().message : this.snapshot.statusMessage)
-      .width('100%')
-      .fontFamily(TYPE_SHELF_MANAGEMENT_STATUS.fontFamily)
-      .fontWeight(TYPE_SHELF_MANAGEMENT_STATUS.fontWeight)
-      .fontSize(TYPE_SHELF_MANAGEMENT_STATUS.fontSizeFp)
-      .lineHeight(TYPE_SHELF_MANAGEMENT_STATUS.lineHeightFp as number)
-      .fontColor(this.snapshot.busy ? readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .padding(TOK_SPACE_SM)
-      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(8);
+    if (this.snapshot.busy) {
+      Row({ space: 10 }) {
+        LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+        Text(this.snapshot.statusMessage).layoutWeight(1).fontFamily(MESSAGE_BODY.fontFamily)
+          .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+      }.width('100%').padding({ top: 12, bottom: 12 });
+    } else if (!this.originalPending() && this.recovery().canRetry) {
+      ReaderRecoveryAction({ variant: 'text', label: '刷新列表', generation: this.recovery().generation,
+        onReconcile: this.onReconcile });
+    }
   }
 
   @Builder
@@ -188,11 +202,7 @@ export struct BookshelfManagementPage {
     Column({ space: TOK_SPACE_SM }) {
       this.heading('Core 分组');
       if (this.snapshot.data.groups.length === 0) {
-        Text('暂无分组')
-          .fontFamily(TYPE_SHELF_MANAGEMENT_BODY.fontFamily)
-          .fontWeight(TYPE_SHELF_MANAGEMENT_BODY.fontWeight)
-          .fontSize(TYPE_SHELF_MANAGEMENT_BODY.fontSizeFp)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+ReaderPageState({ title: '暂无分组' }).padding({ top: 24, bottom: 24 });
       } else {
         List({ space: TOK_SPACE_XS }) {
           Repeat(this.snapshot.data.groups)
@@ -303,11 +313,7 @@ export struct BookshelfManagementPage {
     Column({ space: TOK_SPACE_SM }) {
       this.heading('Core 阅读记录');
       if (this.snapshot.data.records.length === 0) {
-        Text('暂无阅读记录')
-          .fontFamily(TYPE_SHELF_MANAGEMENT_BODY.fontFamily)
-          .fontWeight(TYPE_SHELF_MANAGEMENT_BODY.fontWeight)
-          .fontSize(TYPE_SHELF_MANAGEMENT_BODY.fontSizeFp)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+ReaderPageState({ title: '暂无阅读记录' }).padding({ top: 24, bottom: 24 });
       } else {
         List() {
           Repeat(this.snapshot.data.records)

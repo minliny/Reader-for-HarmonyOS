@@ -1,4 +1,6 @@
 import { ReaderFormField } from '../common/ReaderFormField';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
 import { TYPE_READER_SNIPPET_INLINE_MATCH, TYPE_READER_SNIPPET_INLINE_REGULAR } from '../common/ReaderTypography';
 import { TYPE_READER_SEARCH_RETAINED_LOAD_MORE_ACTION_STATUS, TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK, TYPE_READER_SEARCH_RETAINED_RESULTS_BODY_STATUS, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -46,6 +48,7 @@ export struct ReaderControlSearchContent {
   searchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
   @Prop @Watch('acceptSearchPublication') searchRevision: number = 0;
   @State @Watch('onResultDataChanged') private state: ReaderQuickSearchState = { kind: 'idle' };
+  @State private retainedLoadMoreFailure: boolean = false;
   private acceptedSearchState: ReaderQuickSearchState | undefined = undefined;
   onTemporaryLayerChange: (active: boolean) => void = (_active: boolean): void => {};
   onBack: () => void = (): void => {};
@@ -93,6 +96,9 @@ export struct ReaderControlSearchContent {
     // Compare the raw owner snapshot, not ArkUI's top-level @State proxy.
     if (this.acceptedSearchState === next) return;
     this.acceptedSearchState = next;
+    if (next.kind !== 'results') this.retainedLoadMoreFailure = false;
+    else if (next.loadMoreError !== undefined) this.retainedLoadMoreFailure = true;
+    else if (next.loadingMore !== true) this.retainedLoadMoreFailure = false;
     this.state = next;
   }
 
@@ -480,7 +486,23 @@ export struct ReaderControlSearchContent {
    */
   @Builder
   private loadMoreAction() {
-    if (this.state.kind === 'results' && this.state.hasMore === true) {
+    if (this.state.kind === 'results' && (this.state.hasMore === true || this.state.loadMoreError !== undefined)) {
+      if (this.retainedLoadMoreFailure) {
+        Row({ space: 10 }) {
+          Text('后续结果加载失败')
+            .fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
+            .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+          ReaderRecoveryAction({ label: this.state.hasMore === true ? '重试' : '重新搜索', variant: 'text', isBusy: this.state.loadingMore === true,
+            actionEnabled: this.interactionEnabled && (this.motionProgress === 0 || this.motionProgress === 1),
+            onReconcile: (): void => {
+              if (this.state.kind !== 'results') return;
+              if (this.state.hasMore === true) this.onLoadMore(); else this.onSearch();
+            } });
+        }.width(this.frame().results.width).height(44).justifyContent(FlexAlign.Center)
+          .position({ x: 0, y: Math.max(0, this.frame().results.height - 44) })
+          .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
+      } else {
       Stack({ alignContent: Alignment.Center }) {
         Text(this.state.loadingMore === true ? '正在加载…' :
           (this.state.loadMoreError === undefined ? '加载更多结果' : '加载失败，重试'))
@@ -500,6 +522,7 @@ export struct ReaderControlSearchContent {
         if (this.state.kind === 'results' && this.state.loadingMore !== true && this.interactionEnabled &&
           (this.motionProgress === 0 || this.motionProgress === 1)) this.onLoadMore();
       });
+      }
     }
   }
 

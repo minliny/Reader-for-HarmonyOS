@@ -85,6 +85,7 @@ export struct FullDirectoryPanel {
 
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  @Prop catalogBusy: boolean = false;
   onRetryCatalog: () => void = (): void => {};
   @Prop @Watch('onReadingAnchorChanged') currentChapterIndex: number = -1;
   // Detail catalogs can be browsed before a reading position exists. The
@@ -475,8 +476,7 @@ export struct FullDirectoryPanel {
 
   private catalogRetryVisible(): boolean {
     if (this.entries.length > 0 || this.navigationActive) return false;
-    const message = this.catalogMessage.trim();
-    return !/^正在|^加载|^读取/.test(message);
+    return !this.catalogBusy;
   }
 
   @Builder

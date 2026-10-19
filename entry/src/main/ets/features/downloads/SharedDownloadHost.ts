@@ -1,9 +1,10 @@
 import type { BookAcquisitionChange } from '../../app/BookAcquisitionCoordinator';
 import { BookshelfFlowGateway } from '../bookshelf/BookshelfFlowGateway';
 import type { ShelfBook } from '../../app/ReaderCoreGateway';
+import { ReaderCoreGateway } from '../../app/ReaderCoreGateway';
 import type { ReaderRuntimeOwner } from '../../app/ReaderRuntimeOwner';
 import { SharedDownloadGateway } from './SharedDownloadGateway';
-import { createDownloadBookView, type DownloadBookView, type DownloadStorageSummary, type DownloadStoragePolicyView, type SharedDownloadActionTarget } from './SharedDownloadProjection';
+import { createDownloadBookView, projectDownloadBookAvailability, type DownloadBookView, type DownloadStorageSummary, type DownloadStoragePolicyView, type SharedDownloadActionTarget } from './SharedDownloadProjection';
 import type { SharedDownloadCoordinatorSnapshot } from './SharedDownloadCoordinator';
 
 export interface SharedDownloadSnapshot {
@@ -32,6 +33,7 @@ export class SharedDownloadHost {
   private generation: number = 0;
   private snapshot: SharedDownloadSnapshot = { books: [], loading: false, error: '', storageSummary: {} };
   private readonly gateway: SharedDownloadGateway;
+  private readonly shelfGateway: ReaderCoreGateway;
   private readonly refreshes: Map<string, Promise<void>> = new Map();
   private readonly owner: ReaderRuntimeOwner;
   private readonly publish: (snapshot: SharedDownloadSnapshot) => void;
@@ -48,6 +50,7 @@ export class SharedDownloadHost {
     this.owner = owner;
     this.publish = publish;
     this.gateway = new SharedDownloadGateway(owner);
+    this.shelfGateway = new ReaderCoreGateway(owner);
     this.statusIndex = DOWNLOAD_STATUS_INDEX.get(owner) ?? new Map<string, IndexedDownloadBook>();
     DOWNLOAD_STATUS_INDEX.set(owner, this.statusIndex);
   }
@@ -62,6 +65,50 @@ export class SharedDownloadHost {
     this.intentSignatures.clear();
     if (this.progressTimer !== undefined) clearTimeout(this.progressTimer);
     this.progressTimer = undefined; this.pendingBookKeys.clear();
+  }
+
+  /** Return from the reader to the same runtime's loaded page. Rebind the
+   * presentation and reconcile changed download clocks without a shelf walk. */
+  resume(snapshot: SharedDownloadSnapshot, current: () => boolean): void {
+    const generation = ++this.generation;
+    this.refreshes.clear(); this.stopProgress();
+    const active = (): boolean => generation === this.generation && current();
+    if (!active()) return;
+    this.rowPositions.clear();
+    snapshot.books.forEach((book: DownloadBookView, index: number): void => { this.rowPositions.set(book.key, index); });
+    this.snapshot = { ...snapshot, loading: false };
+    this.publish(this.snapshot);
+    this.bindProgress(active);
+    this.bindAcceptedIntents(active);
+    for (const book of this.snapshot.books) {
+      if (this.reuseIndexedRow(book, this.currentStatusRevision(book)) === undefined)
+        this.pendingBookKeys.add(book.key);
+    }
+    this.scheduleProgress(active);
+  }
+
+  updateShelfBook(book: ShelfBook, current: () => boolean): void {
+    if (!current()) return;
+    const index = this.rowPositions.get(JSON.stringify([book.sourceId, book.bookId]));
+    if (index === undefined) return;
+    const books = this.snapshot.books.slice();
+    books[index] = this.withShelfMetadata(books[index], book);
+    this.update({ ...this.snapshot, books }, current);
+  }
+
+  async refreshReadingMetadata(sourceId: string, bookId: string, current: () => boolean): Promise<void> {
+    const generation = this.generation;
+    const active = (): boolean => generation === this.generation && current();
+    if (!active()) return;
+    const book = await this.shelfGateway.loadShelfBook(sourceId, bookId, active);
+    if (active() && book !== undefined) this.updateShelfBook(book, active);
+  }
+
+  private withShelfMetadata(view: DownloadBookView, book: ShelfBook): DownloadBookView {
+    const fresh = createDownloadBookView(book);
+    return { ...view, key: fresh.key, shelfBook: book, sourceId: fresh.sourceId,
+      bookId: fresh.bookId, coverUrl: fresh.coverUrl, title: fresh.title, author: fresh.author,
+      sourceLabel: fresh.sourceLabel, contentKind: fresh.contentKind, recentRead: fresh.recentRead };
   }
 
   async reload(current: () => boolean): Promise<void> {
@@ -236,8 +283,17 @@ export class SharedDownloadHost {
     const chapters = view.chapters.map(chapter => chapter.localComplete || !requested.has(chapter.index) ? chapter :
       paused.has(chapter.index) ? { ...chapter, queueState: 'paused' as const, stateLabel: '已暂停' } :
         running && chapter.queueState === 'missing' ? { ...chapter, queueState: 'queued' as const, stateLabel: '等待下载' } : chapter);
-    return { ...view, chapters, state: running ? 'downloading' : view.state,
-      stateLabel: running ? '下载中' : job.status === 'failed' ? (job.error || '下载失败，请重试') : view.stateLabel };
+    const projected = projectDownloadBookAvailability(view, chapters, view.totalChapters, view.bytes);
+    // A failed accepted range can later be completed through the reader's
+    // existing download path. Preserve that historical Runtime failure, but
+    // do not let it mask newly proven local completeness in this read model.
+    const complete = new Set(chapters.filter(chapter => chapter.navigable && chapter.localComplete)
+      .map(chapter => chapter.index));
+    const requestedComplete = requested.size > 0 && Array.from(requested).every(index => complete.has(index));
+    const failed = job.status === 'failed' && !requestedComplete;
+    return { ...projected, state: running || failed ? 'downloading' : projected.state,
+      stateLabel: running ? '下载中' : failed ? '下载失败' : projected.stateLabel,
+      downloadError: failed ? (job.error || '下载任务已停止，请重试') : undefined };
   }
 
   private currentStatusRevision(book: DownloadBookView): string | undefined {
@@ -259,9 +315,7 @@ export class SharedDownloadHost {
     if (indexed === undefined || indexed.statusRevision !== revision || indexed.view.contentKind !== fresh.contentKind) return undefined;
     const cached = indexed.view;
     if (JSON.stringify(cached.shelfBook) === JSON.stringify(fresh.shelfBook)) return cached;
-    return { ...cached, key: fresh.key, shelfBook: fresh.shelfBook, sourceId: fresh.sourceId,
-      bookId: fresh.bookId, coverUrl: fresh.coverUrl, title: fresh.title, author: fresh.author,
-      sourceLabel: fresh.sourceLabel, contentKind: fresh.contentKind, recentRead: fresh.recentRead };
+    return this.withShelfMetadata(cached, fresh.shelfBook);
   }
 
   private indexLoadedRow(view: DownloadBookView, revision: string | undefined): void {
@@ -312,9 +366,11 @@ export class SharedDownloadHost {
         let books: DownloadBookView[] | undefined;
         for (const row of changed) {
           const index = this.rowPositions.get(row.key);
-          if (index === undefined || this.sameRow(this.snapshot.books[index], row)) continue;
+          if (index === undefined) continue;
+          const nextRow = this.withShelfMetadata(row, this.snapshot.books[index].shelfBook);
+          if (this.sameRow(this.snapshot.books[index], nextRow)) continue;
           if (books === undefined) books = this.snapshot.books.slice();
-          books[index] = row;
+          books[index] = nextRow;
         }
         if (books !== undefined) this.update({ ...this.snapshot, books }, current);
       }).finally((): void => {
@@ -326,10 +382,12 @@ export class SharedDownloadHost {
 
   private replace(book: DownloadBookView, current: () => boolean): void {
     const index = this.rowPositions.get(book.key);
-    if (index === undefined || this.sameRow(this.snapshot.books[index], book)) return;
+    if (index === undefined) return;
+    const next = this.withShelfMetadata(book, this.snapshot.books[index].shelfBook);
+    if (this.sameRow(this.snapshot.books[index], next)) return;
     // Clone only the outer list and replace the changed row. Unchanged book
     // objects retain identity so ArkUI can skip their full projection.
-    const books = this.snapshot.books.slice(); books[index] = book;
+    const books = this.snapshot.books.slice(); books[index] = next;
     this.update({ ...this.snapshot, books }, current);
   }
 

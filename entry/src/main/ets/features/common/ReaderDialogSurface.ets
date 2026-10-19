@@ -1,3 +1,4 @@
+import { MESSAGE_ACTION } from './ReaderMessageStyle';
 import { TYPE_DIALOG_ACTION, TYPE_SELECT_OPTION } from './ReaderTypography';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from './ReaderWindowMetrics';
@@ -87,7 +88,7 @@ export struct ReaderDialogSurface {
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(readerAppColor(this.spec().backgroundRole, this.appThemeScheme))
     .border(this.spec().hasBorder ?
-      { width: 1, color: readerAppColor('TOK_BORDER', this.appThemeScheme) } :
+      { width: 1, color: readerAppColor('TOK_MESSAGE_BORDER', this.appThemeScheme) } :
       { width: 0, color: Color.Transparent })
     .borderRadius(this.spec().borderRadius)
     .shadow(this.spec().hasShadow ? {
@@ -111,7 +112,7 @@ export struct ReaderDialogSurface {
           .layoutWeight(1)
           .fontFamily(this.spec().headerFontFamily).fontWeight(this.spec().headerFontWeight)
           .fontSize(this.spec().headerFontSize).lineHeight(this.spec().headerLineHeight)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .textAlign(this.spec().headerTextAlign);
         Text('关闭')
@@ -128,7 +129,7 @@ export struct ReaderDialogSurface {
         .width('100%')
         .fontFamily(this.spec().headerFontFamily).fontWeight(this.spec().headerFontWeight)
         .fontSize(this.spec().headerFontSize).lineHeight(this.spec().headerLineHeight)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
         .textAlign(this.spec().headerTextAlign);
     }
   }
@@ -156,7 +157,7 @@ export struct ReaderDialogSurface {
   private actionCell(action: DialogActionView) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Text(action.label)
-        .fontFamily(TYPE_DIALOG_ACTION.fontFamily).fontWeight(TYPE_DIALOG_ACTION.fontWeight).fontSize(TYPE_DIALOG_ACTION.fontSizeFp).lineHeight(TYPE_DIALOG_ACTION.lineHeightFp as number)
+        .fontFamily(MESSAGE_ACTION.fontFamily).fontWeight(MESSAGE_ACTION.fontWeight).fontSize(MESSAGE_ACTION.fontSizeFp).lineHeight(MESSAGE_ACTION.lineHeightFp as number)
         .fontColor(this.actionLabelColor(action));
     }
     .width(this.spec().actionsLayout === 'stack' ? '100%' : undefined)
@@ -241,9 +242,9 @@ export struct ReaderDialogSurface {
       return readerAppColor(this.spec().actionPrimaryLabelRole, this.appThemeScheme);
     }
     if (action.tone === 'danger') {
-      return readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme);
+      return readerAppColor('TOK_MESSAGE_DANGER', this.appThemeScheme);
     }
-    return readerAppColor('TOK_INK', this.appThemeScheme);
+    return readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme);
   }
 
   private actionSurfaceRole(action: DialogActionView): ReaderAppColorRole {
@@ -251,9 +252,9 @@ export struct ReaderDialogSurface {
       return this.spec().actionPrimarySurfaceRole;
     }
     if (action.tone === 'danger') {
-      return 'app.BookshelfBookActionSheet.actionSlot.fontColor.FFD7473E';
+      return 'TOK_MESSAGE_SOFT';
     }
-    return 'TOK_SURFACE_PANEL_SOFT';
+    return 'TOK_MESSAGE_SOFT';
   }
 
   private actionModifier(action: DialogActionView): AttributeModifier<CommonAttribute> {

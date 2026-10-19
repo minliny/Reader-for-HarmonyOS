@@ -72,47 +72,39 @@ export struct ReaderBoundedSurfaceHeader {
   }
 
   @Builder private actionSheetHeader() {
-    if (this.placement === 'side') {
-      Column() {
-        Row({ space: 12 }) {
-          Text(this.title).fontFamily(this.drawerSpec().sideTitleFontFamily).fontWeight(this.drawerSpec().sideTitleFontWeight)
-            .fontSize(this.drawerSpec().sideTitleFontSize).lineHeight(this.drawerSpec().sideTitleLineHeight)
-            .minFontScale(this.drawerSpec().titleMinFontScale).maxFontScale(this.drawerSpec().titleMaxFontScale)
-            .fontColor(readerAppColor(this.drawerSpec().inkRole, this.drawerScheme())).layoutWeight(1);
-          this.drawerClose();
-        }.width('100%').height(this.drawerSpec().sideHeaderHeight)
-          .border({ width: { bottom: 1 }, color: readerAppColor(this.drawerSpec().lineRole, this.drawerScheme()) });
-      }.width('100%').padding({ left: this.drawerInset(), right: this.drawerInset() })
-        .margin({ bottom: this.drawerSpec().sideHeaderBottom });
-    } else {
-      Stack({ alignContent: Alignment.TopEnd }) {
-        Column() {
-          Row() {
-            Blank().width(this.drawerSpec().handleWidth).height(this.drawerSpec().handleHeight).borderRadius(3)
-              .backgroundColor(readerAppColor(this.drawerSpec().handleRole, this.drawerScheme()));
-          }.width('100%').height(this.drawerSpec().handleZone).justifyContent(FlexAlign.Center)
-            .gesture(PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 1 })
-              .onActionStart((): void => this.onHandlePanStart())
-              .onActionUpdate((event: GestureEvent): void => this.onHandlePanUpdate(event.offsetY))
-              .onActionEnd((event: GestureEvent): void => this.onHandlePanEnd(event.offsetY, event.velocityY))
-              .onActionCancel((): void => this.onHandlePanEnd(0, 0)));
-          Text(this.title).fontFamily(this.drawerSpec().titleFontFamily).fontWeight(this.drawerSpec().titleFontWeight)
-            .fontSize(this.drawerSpec().titleFontSize).lineHeight(this.drawerSpec().titleLineHeight)
-            .minFontScale(this.drawerSpec().titleMinFontScale).maxFontScale(this.drawerSpec().titleMaxFontScale)
-            .fontColor(readerAppColor(this.drawerSpec().inkRole, this.drawerScheme())).width('100%')
-            .padding({ left: this.drawerSpec().contentInset, right: this.drawerSpec().contentInset + this.drawerSpec().closeSize, bottom: this.drawerSpec().titleBottom });
-        }.width('100%');
+    Column({ space: 0 }) {
+      if (this.placement === 'bottom') {
+        Row() {
+          Blank().width(this.drawerSpec().handleWidth).height(this.drawerSpec().handleHeight).borderRadius(3)
+            .backgroundColor(readerAppColor(this.drawerSpec().handleRole, this.drawerScheme()));
+        }.width('100%').justifyContent(FlexAlign.Center)
+          .padding({ top: this.drawerSpec().handleTop, bottom: this.drawerSpec().handleBottom })
+          .gesture(PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 1 })
+            .onActionStart((): void => this.onHandlePanStart())
+            .onActionUpdate((event: GestureEvent): void => this.onHandlePanUpdate(event.offsetY))
+            .onActionEnd((event: GestureEvent): void => this.onHandlePanEnd(event.offsetY, event.velocityY))
+            .onActionCancel((): void => this.onHandlePanEnd(0, 0)));
+      }
+      Row({ space: 12 }) {
+        Text(this.title).fontFamily(this.drawerSpec().titleFontFamily).fontWeight(this.drawerSpec().titleFontWeight)
+          .fontSize(this.drawerSpec().titleFontSize).lineHeight(this.drawerSpec().titleLineHeight).halfLeading(true)
+          .minFontScale(this.drawerSpec().titleMinFontScale).maxFontScale(this.drawerSpec().titleMaxFontScale)
+          .fontColor(readerAppColor(this.drawerSpec().inkRole, this.drawerScheme())).layoutWeight(1)
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         this.drawerClose();
-      }.width('100%');
-    }
+      }.width('100%').constraintSize({ minHeight: this.drawerSpec().titleHeight })
+        .padding({ left: this.drawerInset(), right: this.drawerInset() });
+    }.width('100%')
+      .padding(this.placement === 'side' ? { top: this.drawerSpec().handleTop, bottom: this.drawerSpec().handleBottom } : {})
+      .onAreaChange((oldValue: Area, next: Area): void => this.onAreaChanged(oldValue, next));
   }
 
   @Builder private drawerClose() {
     Row() {
-      Image(this.drawerScheme() === 'night' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close'))
+      Image(this.drawerScheme() === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close'))
         .width(this.drawerSpec().closeIcon).height(this.drawerSpec().closeIcon);
     }.width(this.drawerSpec().closeSize).height(this.drawerSpec().closeSize).justifyContent(FlexAlign.Center)
-      .margin(this.placement === 'side' ? {} : { top: this.drawerSpec().closeTop, right: this.drawerSpec().closeRight })
+      .backgroundColor(Color.Transparent).borderRadius(8)
       .enabled(this.actionEnabled).accessibilityText(this.placement === 'side' ? '关闭宽屏面板' : '关闭面板')
       .onClick((): void => { if (this.actionEnabled) this.onClose(); });
   }
@@ -141,15 +133,20 @@ export struct ReaderBoundedSurfaceHeader {
   private sheetSpec(): SheetSurfaceSpec { return resolveSheetSpec('bookshelf-book-action'); }
 
   @Builder private sheetHeader() {
-    Row() {
-      Blank().width(this.sheetSpec().handleWidth).height(this.sheetSpec().handleHeight)
-        .backgroundColor(readerAppColor(this.sheetSpec().handleRole, this.appThemeScheme)).borderRadius(999);
-    }.width('100%').height(this.sheetSpec().handleHeight).justifyContent(FlexAlign.Center)
-      .position({ x: 0, y: this.sheetSpec().handleTop });
-    Text(this.title).fontFamily(this.sheetSpec().titleFontFamily).fontWeight(this.sheetSpec().titleFontWeight)
-      .fontSize(this.sheetSpec().titleFontSize).lineHeight(this.sheetSpec().titleLineHeight)
-      .fontColor(readerAppColor(this.sheetSpec().titleRole, this.appThemeScheme)).maxLines(1)
-      .position({ x: this.sheetSpec().titleInset, y: this.sheetSpec().titleTop });
+    Column({ space: 0 }) {
+      Row() {
+        Blank().width(this.sheetSpec().handleWidth).height(this.sheetSpec().handleHeight)
+          .backgroundColor(readerAppColor(this.sheetSpec().handleRole, this.appThemeScheme)).borderRadius(999);
+      }.width('100%').justifyContent(FlexAlign.Center)
+        .margin({ top: this.sheetSpec().handleTop, bottom: this.sheetSpec().handleBottom });
+      Row() {
+        Text(this.title).fontFamily(this.sheetSpec().titleFontFamily).fontWeight(this.sheetSpec().titleFontWeight)
+          .fontSize(this.sheetSpec().titleFontSize).lineHeight(this.sheetSpec().titleLineHeight).halfLeading(true)
+          .fontColor(readerAppColor(this.sheetSpec().titleRole, this.appThemeScheme)).maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis }).width('100%');
+      }.width('100%').constraintSize({ minHeight: this.sheetSpec().titleHeight })
+        .padding({ left: this.sheetSpec().titleInset, right: this.sheetSpec().titleInset });
+    }.width('100%').margin({ bottom: this.sheetSpec().titleBottom });
   }
 
   @Builder private headerRow() {

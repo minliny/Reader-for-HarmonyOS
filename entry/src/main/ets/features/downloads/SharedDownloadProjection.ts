@@ -85,7 +85,10 @@ export interface DownloadBookView {
   totalChapters?: number;
   downloadedChapters?: number;
   state?: DownloadBookState;
+  /** Finite availability label. Failure explanations never become action captions. */
   stateLabel: string;
+  /** Accepted Runtime task failure; independent of a metadata/projection read failure. */
+  downloadError?: string;
   progressPercent?: number;
   /** Unknown when the existing Host cannot measure this book's image bytes. */
   bytes?: number;
@@ -204,6 +207,19 @@ export function filterDownloadBooks(books: DownloadBookView[], filters: SharedDo
   });
 }
 
+/** A real reading record mapped to this book's current navigable catalog.
+ * Legacy currentChapterIndex alone may only be catalog metadata. */
+export function currentDownloadReadingChapterIndex(book: DownloadBookView): number | undefined {
+  if (book.shelfBook.sourceId !== book.sourceId || book.shelfBook.bookId !== book.bookId) return undefined;
+  const recorded = book.shelfBook.readingPosition?.chapterIndex;
+  const readAt = book.shelfBook.lastReadAt;
+  const index = recorded !== undefined ? recorded : book.contentKind === 'manga' &&
+    readAt !== undefined && Number.isFinite(readAt) && readAt >= 0 ? book.shelfBook.currentChapterIndex : undefined;
+  if (index === undefined || !Number.isSafeInteger(index) || index < 0) return undefined;
+  return book.chapters.some(chapter => chapter.navigable && chapter.sourceId === book.sourceId &&
+    chapter.bookId === book.bookId && chapter.index === index) ? index : undefined;
+}
+
 /** Correct target labels only. Opening a directory is not starting reading. */
 export function describeDownloadReadingTarget(book: DownloadBookView,
   chapter?: DownloadChapterView): DownloadReadingTarget {
@@ -216,7 +232,7 @@ export function describeDownloadReadingTarget(book: DownloadBookView,
     entry.sourceId === book.sourceId && entry.bookId === book.bookId &&
     chapter.sourceId === book.sourceId && chapter.bookId === book.bookId && entry.navigable && chapter.navigable);
   const exact = selected !== undefined;
-  const resumeIndex = book.shelfBook.currentChapterIndex ?? book.shelfBook.readingPosition?.chapterIndex;
+  const resumeIndex = currentDownloadReadingChapterIndex(book);
   const resume = chapter === undefined ? book.chapters.find(entry => entry.navigable &&
     entry.sourceId === book.sourceId && entry.bookId === book.bookId && entry.index === resumeIndex) : undefined;
   const first = chapter === undefined && resumeIndex === undefined && book.projectionStatus === 'ready' &&

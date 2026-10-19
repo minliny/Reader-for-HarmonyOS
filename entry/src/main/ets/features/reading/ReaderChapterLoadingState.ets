@@ -39,7 +39,8 @@ export struct ReaderChapterLoadingState {
         .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Center);
       ReaderIconButton({
         specId: 'navigation-back',
-        icon: readerAppearanceChromeTone(this.theme) === 'light' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back'),
+        scheme: readerAppearanceChromeTone(this.theme) === 'light' ? 'night' : 'day',
+        icon: readerAppearanceChromeTone(this.theme) === 'light' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back'),
         accessibilityLabel: '取消加载并返回',
         onTap: (): void => this.onBack(),
       }).position({ x: this.leftInset + 12, y: this.topInset + 8 });

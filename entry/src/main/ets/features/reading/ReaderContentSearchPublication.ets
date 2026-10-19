@@ -1,4 +1,5 @@
 import type { ReaderQuickSearchState } from './ReaderQuickSearchPanel';
+import type { RemoteReadingGatewayError } from './RemoteReadingContract';
 import type { ReadingSessionFlowGateway, ReadingContentSearchPage, ReadingContentSearchResult } from './ReadingSessionFlowGateway';
 
 /** Sole owner of search generation, cursor and result publication. Only a numeric
@@ -76,14 +77,21 @@ export class ReaderContentSearchPublication {
       changed();
     }).catch((error: Error): void => {
       if (!current() || this.state.kind !== 'results') return;
-      // Never merge a new snapshot through offset fallback after cursor failure.
-      // Keep visible hits and require a new search to obtain a new position space.
+      // Core keeps the last receipt for an exact cursor replay. Retain that
+      // token after a transient/unknown failure, including a lost response;
+      // never fall back to offset or merge a newly acquired snapshot. A stale
+      // or expired snapshot explicitly requires a new search instead.
       const latest = this.state;
       if (latest.kind !== 'results') return;
+      const failure = error as RemoteReadingGatewayError;
+      const retryable = cursor !== undefined && failure.code !== 'positionContextStale' &&
+        failure.code !== 'sourceVersionChanged' && failure.code !== 'invalidInput';
       this.publish({ kind: 'results', keyword: latest.keyword, results: latest.results,
-        offset: latest.offset, hasMore: false, loadingMore: false, loadMoreError: error.message });
-      if (cursor !== undefined) this.release(gateway, cursor);
-      this.cursor = undefined;
+        offset: latest.offset, hasMore: retryable, loadingMore: false, loadMoreError: error.message });
+      if (!retryable) {
+        if (cursor !== undefined) this.release(gateway, cursor);
+        this.cursor = undefined;
+      }
       changed();
     });
   }

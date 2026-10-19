@@ -202,7 +202,7 @@ export struct ReaderAutoPageFullPanel {
   private header() {
     Row() {
       Row({ space: 8 }) {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_auto_full_header_theme_night') : $r('app.media.reader_auto_full_header')))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.rc_autopage_theme_night') : $r('app.media.rc_autopage')))
           .width(16)
           .height(16);
         Text('自动翻页')

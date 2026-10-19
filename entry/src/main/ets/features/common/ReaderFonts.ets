@@ -80,12 +80,13 @@ export function prepareSharedDownloadFonts(): Promise<boolean> {
     families.every((family: string): boolean => readerFontFamilyReady(family)));
 }
 
-/** Only faces used by the initial bookshelf shell need a checked receipt
- * before its first build. Reader body and control faces retain their own
- * on-demand admission after the shelf has been mounted. */
+/** Initial shelf and its shared message surfaces need checked receipts before
+ * first build, including the message action 500 and title 600 static faces.
+ * Reader body and other control faces retain their on-demand admission. */
 export function prepareReaderShelfFonts(): Promise<void> {
   return Promise.all([READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
-    READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD]
+    READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD,
+    READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_600]
     .map((family: string): Promise<void> => prepareReaderFontFamily(family))).then((): void => {});
 }
 

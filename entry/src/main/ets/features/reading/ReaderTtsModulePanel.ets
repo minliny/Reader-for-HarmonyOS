@@ -153,7 +153,7 @@ export struct ReaderTtsModulePanel {
           Row().width(3).height(13).backgroundColor(readerAppColor('app.control.onPrimary', this.appThemeScheme)).borderRadius(1);
         }
       } else {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_tts_play_theme_night') : $r('app.media.reader_tts_play')))
+        Image((this.appThemeScheme === 'night' ? $r('app.media.reader_auto_full_play_theme_night') : $r('app.media.reader_auto_full_play')))
           .width(21)
           .height(21);
       }

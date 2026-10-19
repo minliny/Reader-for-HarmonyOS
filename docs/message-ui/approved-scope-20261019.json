@@ -1,0 +1,79 @@
+{
+  "schema": "reader-message-style-scope-v1",
+  "reviewDate": "2026-10-19",
+  "phase": "design-reviewed-not-implemented",
+  "approvedReferences": {
+    "confirmation": "confirmation-demo.html",
+    "selection-input": "selection-input-demo.html",
+    "task-progress-result": "task-progress-demo.html",
+    "transient-feedback": "transient-feedback-demo.html",
+    "pending-operation": "pending-notice-complex-demo.html",
+    "pending-operation-business-example": "source-delete-pending-demo.html",
+    "page-state": "page-state-demo.html",
+    "manga-image-placeholder": "manga-placeholder-demo.html",
+    "reading-panel-state": "reading-panel-state-demo.html",
+    "check-detail": "check-detail-demo.html"
+  },
+  "rules": [
+    "按子状态和实际操作事实选样式，不能按旧组件名一刀切。",
+    "普通刷新或读回失败且旧内容可用：保留旧内容和原入口，使用短时反馈。首次失败且无可用内容：使用当前页面或局部内容区的失败态。",
+    "原操作仍待核对或继续时采用常驻顶部浮层；明确失败、部分完成、已完成与未确认分别表达，不互相冒充，不因读取列表成功就确认先前写入。",
+    "常驻浮层沿用标签加标题、小文字动作靠右；长标题自然换行，必要时展开标题；各待处理事项保留各自动作和完成边界。",
+    "任务等待仅使用真实可得进度，无法确定总量时使用鸿蒙原生LoadingProgress，不编造百分比；普通动作忙态保留原宿主和动作范围。",
+    "书签内容区加载采用32px原生LoadingProgress；已确认的文字动作内部加载采用18px并固定占位，避免点击后布局跳动。",
+    "正文搜索后续结果失败属于局部状态：保留关键词与已有结果，在末尾提示并只重试后续结果。",
+    "不增加新的权限、登录、重试、批处理或业务流程；保留各页面、Dialog和面板的既有职责与数据保护范围。",
+    "本清单为样式确认和实施边界，不代表应用源码已修改、已构建、已安装或已通过原生验收。"
+  ],
+  "originalRejectedGroups": [
+    {"id":"A01","states":[{"when":"普通刷新失败，仍有旧内容","style":"transient-feedback","preserve":"已有结果与刷新入口"}]},
+    {"id":"A02","states":[{"when":"原操作待核对或继续","style":"pending-operation","preserve":"核对和继续原操作的区别及准入条件"}]},
+    {"id":"A03","states":[{"when":"写入已确认但列表读回失败","style":"transient-feedback","preserve":"已完成的写入与旧列表；只刷新，不重复写入"}]},
+    {"id":"A04","states":[{"when":"阅读或朗读设置仍有待处理的保存事项","style":"pending-operation","preserve":"按事实表达待确认或未保存，保留当前效果、草稿和原重试入口；不得改写原操作事实"}]},
+    {"id":"A08","states":[{"when":"编辑分组主体","style":"selection-input","preserve":"既有分组选项与表单动作"},{"when":"原分组操作待核对或继续","style":"pending-operation","preserve":"在当前可见宿主上承载，避免被遮罩挡住"},{"when":"普通读取失败且旧内容可用","style":"transient-feedback","preserve":"已有分组和输入"}]},
+    {"id":"A12","states":[{"when":"启动等待或失败","style":"page-state","preserve":"重试、退出及现有数据保留语义"}]},
+    {"id":"A13","states":[{"when":"书签或离线原操作尚有待处理事项","style":"pending-operation","preserve":"已完成的部分、尚未派发的部分、核对和继续范围"},{"when":"已明确的部分结果","style":"task-progress-result","preserve":"部分完成的事实，不改称全部未确认"}]},
+    {"id":"A14","states":[{"when":"恢复动作组件采样","style":"context-dependent-action","preserve":"动作随所属提示宿主选用已确认样式；不是独立消息类型"}]},
+    {"id":"B01","states":[{"when":"首次加载或无可用内容的失败","style":"page-state","preserve":"原生加载和重试"}]},
+    {"id":"B02","states":[{"when":"成功读取后确认空书架","style":"page-state","preserve":"导入和搜索入口"}]},
+    {"id":"B03","states":[{"when":"筛选无匹配","style":"page-state","preserve":"清除筛选后恢复实际书籍"}],"keepUnchanged":["更新章数标记","无封面","书籍元信息"]},
+    {"id":"B04","states":[{"when":"检查、读取或移除进行中","style":"task-progress-result","preserve":"原动作或菜单位置的忙态，不新增全局进度弹层"}]},
+    {"id":"B05","states":[{"when":"分组保存进行中","style":"task-progress-result","preserve":"当前宿主和原操作范围"},{"when":"读取无内容或失败","style":"page-state","preserve":"空态和失败分开"},{"when":"有旧内容的普通刷新失败","style":"transient-feedback","preserve":"旧内容和草稿"},{"when":"原分组操作待处理","style":"pending-operation","preserve":"继续原操作的条件"}]},
+    {"id":"B06","states":[{"when":"详情、目录空或无法显示；书籍已移除导致不可继续","style":"page-state","preserve":"具体原因、重新导入或重试入口"},{"when":"加入、移除或取消进行中","style":"task-progress-result","preserve":"动作本体及真实完成边界"}]},
+    {"id":"B09","states":[{"when":"导入进行中","style":"task-progress-result","preserve":"真实任务进度"},{"when":"首次读取失败或确认无书源","style":"page-state","preserve":"失败与空态分别表达"},{"when":"有旧内容的普通刷新失败","style":"transient-feedback","preserve":"已有列表"},{"when":"原操作结果待核对或继续","style":"pending-operation","preserve":"核对和继续的条件"}],"keepUnchanged":["来源标签","逐源状态点及正常状态显示"]},
+    {"id":"B10","states":[{"when":"批量检测进度与实时结果","style":"task-progress-result","preserve":"当前项、真实计数、能力范围和停止入口"}]},
+    {"id":"B11","states":[{"when":"原写入待核对或继续","style":"pending-operation","preserve":"草稿和原操作身份"},{"when":"保存已确认但列表读回失败","style":"transient-feedback","preserve":"已保存事实；重读不重复提交保存"},{"when":"JSON输入校验提示","style":"selection-input","preserve":"原字段和输入"},{"when":"检测详情与日志","style":"check-detail","preserve":"完整对象标识、原消息内容、状态码和换行"}]},
+    {"id":"B12","states":[{"when":"清理或恢复进行中及明确结果","style":"task-progress-result","preserve":"已清理、部分清理、失败、未确认各自事实"},{"when":"普通完成或刷新反馈","style":"transient-feedback","preserve":"已有正文、设置和稳定入口"},{"when":"原清理或设置操作待处理","style":"pending-operation","preserve":"原操作核对和继续边界"}]},
+    {"id":"B15","states":[{"when":"清理自动保存的决定","style":"confirmation","preserve":"清理范围、保留内容、书架与阅读记录保留语义"},{"when":"清理范围及数据保留说明","style":"contextual-description","preserve":"原位置的必要说明，不转换为常驻通知"}],"keepUnchanged":["原有容量与设备空间事实"]},
+    {"id":"B18","states":[{"when":"保存仍有待处理事项","style":"pending-operation","preserve":"当前设置与原重试入口，明确失败与未确认分别表达"},{"when":"显示方式普通读回失败且旧内容可用","style":"transient-feedback","preserve":"当前显示方式"},{"when":"没有可用的局部设置内容","style":"page-state","preserve":"在对应局部内容区呈现读取失败和重试"}]},
+    {"id":"B19","states":[{"when":"目录筛选空、确认无章节或暂时无法显示","style":"page-state","preserve":"空与失败分开；清除搜索、重试或重新准备目录按原原因处理"}]}
+  ],
+  "confirmedReadingApplications": [
+    {"id":"C01","style":"transient-feedback","scope":"正文就绪后的换源完成短提示"},
+    {"id":"C03","style":"reading-panel-state","scope":"书签加载、空态、失败；返回目录只切当前面板标签；内容加载32px"},
+    {"id":"C06","style":"transient-feedback","scope":"已确认书签下拉及释放反馈；保持同纸色、书签图标与方向箭头，非普通Toast"},
+    {"id":"C07","style":"reading-panel-state","scope":"仅后续结果失败的末尾提示；保留关键词和已有结果"},
+    {"id":"C15","style":"transient-feedback","scope":"章末上拉伴随反馈，不足回弹，达到条件后松手才翻章"},
+    {"id":"C17","style":"manga-image-placeholder","scope":"未知图片短占位，透明底、1px轻边界、4px圆角、12px间距、32px图片失效图标居中；390宽预览格子358×179；多图重复单元；已知图片几何保留"},
+    {"id":"C18","style":"page-state","scope":"书源或章节本身加载不了直接页面报错，按实际失败阶段区分；不从失败图数量推断书源不可用；不新增登录机制"}
+  ],
+  "keepUnchanged": [
+    "状态标记和内容缺省组整体排除：书籍内容类型/来源标签、已在书架标记、更新章数、阅读进度、状态点、无封面。对应B16/B17及其他页面的同类复用。",
+    "未单独纳入的播放器、正常状态控件、换源候选卡片及其他页面结构保持现状。",
+    "当前关闭的RSS、同步、权限展示及旧模块不恢复、不新增入口。",
+    "既有登录能力、操作事实、数据归属、事务边界及核对/继续原操作的安全条件不因改样式改变。"
+  ],
+  "withdrawnReferences": [
+    {"path":"inline-notice-demo.html","reason":"用户否定将通用恢复提示嵌入页面"},
+    {"path":"floating-notice-content-demo.html","reason":"早期排版、正文与按钮方案已被后续确认稿替代"},
+    {"path":"content-status-demo.html","reason":"用户明确排除，保持原样"},
+    {"path":"reading-local-state-demo.html","reason":"漫画分类及动作方案撤回；正文搜索按reading-panel-state-demo确认稿处理"},
+    {"path":"top-notice-demo.html","reason":"仅保留选择顶部悬浮方向的过程证据；最终样式和动作以pending-notice-complex-demo为准"}
+  ],
+  "rejectedMangaProposals": [
+    "把600×800代码兜底直接作为巨大失败占位的设计尺寸",
+    "以可见文字替代图片失效图标",
+    "失败图片汇总条、失败计数及批量重试入口",
+    "逐图重试按钮及旧笼统登录/重开示例"
+  ]
+}

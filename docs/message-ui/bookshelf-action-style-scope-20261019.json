@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "request": "长按书架页书籍的弹窗比例不对，边框和排版参考书源切换弹窗，图标背景色和强调色不统一且过淡",
+  "reference": "current source-switch drawer",
+  "surface": "bookshelf-book-action",
+  "frame": { "maxWidth": 390, "radius": 22, "height": "FIT_CONTENT", "background": "TOK_SS_WINDOW_BG", "scrim": "TOK_SS_DRAWER_SCRIM", "owner": "native bindSheet" },
+  "content": { "layout": "four vertical action rows", "horizontalInset": 20, "iconTile": 36, "icon": 22, "normalAccent": "TOK_GREEN", "dangerAccent": "TOK_DOWNLOAD_DANGER", "iconForeground": "TOK_DOWNLOAD_GREEN_INK" },
+  "preserve": ["original action callbacks and admission", "once-only presentation dispatch and retired callback rejection", "existing menu quick grouped variants", "source-switch drawer", "all app data"],
+  "evidenceBoundary": "Source and SDK verification do not constitute native layout or user acceptance."
+}

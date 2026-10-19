@@ -1,7 +1,8 @@
 import { ReaderLabeledIconAction } from '../common/ReaderLabeledIconAction';
 import { ReaderButton } from '../common/ReaderButton';
 import { readerRecoveryView, type ReaderRecoveryView } from '../../app/ReaderRecoveryProjection';
-import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';
+import { ReaderRecoveryAction } from '../common/ReaderRecoveryAction';
+import { ReaderPageState } from '../common/ReaderPageState';
 import { TYPE_APP_SECTION_LABEL, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_LABEL, TYPE_DISCOVER_AUTHOR, TYPE_DISCOVER_CATEGORY, TYPE_DISCOVER_FILTER_LABEL, TYPE_DISCOVER_FILTER_VALUE, TYPE_DISCOVER_INTRO, TYPE_DISCOVER_RANK_TITLE, TYPE_DISCOVER_SOURCE_META, TYPE_DISCOVER_STATE_TITLE, TYPE_DISCOVER_STATUS } from '../common/ReaderTypography';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
 // Discover main page — rebuilt 2026-08-06 against live Figma node 376:2
@@ -60,7 +61,7 @@ export struct DiscoverPage {
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private fixedHeaderHeight: number = readerPageContentStartInset();
-  @Prop presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
+  @Prop @Watch('onPresentationChanged') presentation: DiscoverPresentation = EMPTY_DISCOVER_PRESENTATION;
   @Prop isTablet: boolean;
   onBack: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
@@ -71,9 +72,29 @@ export struct DiscoverPage {
   onSelectKind: (index: number) => void = (_index: number): void => {};
   onPreviousPage: () => void = (): void => {};
   onNextPage: () => void = (): void => {};
+  private mounted: boolean = false;
+  private lastReadFeedback: string = '';
 
   aboutToAppear(): void {
+    this.mounted = true;
+    this.lastReadFeedback = this.readFeedbackIdentity();
     registerReaderFonts(this.getUIContext().getFont());
+  }
+
+  aboutToDisappear(): void { this.mounted = false; }
+
+  private readFeedbackIdentity(): string {
+    return `${this.presentation.operation?.generation ?? 0}:${this.presentation.operation?.fact ?? ''}:${this.presentation.loading ? 1 : 0}`;
+  }
+
+  private onPresentationChanged(): void {
+    const identity = this.readFeedbackIdentity();
+    if (!this.mounted || identity === this.lastReadFeedback) return;
+    this.lastReadFeedback = identity;
+    const operation = this.presentation.operation;
+    if (this.presentation.loading || this.presentation.books.length === 0 ||
+      (operation?.fact !== 'refreshFailed' && operation?.fact !== 'partial')) return;
+    try { this.getUIContext().getPromptAction().showToast({ message: this.recovery().message, duration: 2200 }); } catch (_) {}
   }
 
   build() {
@@ -133,8 +154,10 @@ export struct DiscoverPage {
 
   @Builder
   private operationFeedback() {
-    ReaderRecoveryNotice({ view: this.recovery(),
-      onReconcile: (generation: number): void => this.onRetryRead(generation) });
+    if (this.presentation.books.length > 0 && this.recovery().canRetry) {
+      ReaderRecoveryAction({ label: '刷新内容', generation: this.recovery().generation,
+        onReconcile: (generation: number): void => this.onRetryRead(generation) });
+    }
   }
 
   private bottomContentInset(): number {
@@ -269,27 +292,10 @@ export struct DiscoverPage {
   private resultList() {
     Column({ space: 0 }) {
       if (this.presentation.books.length === 0) {
-        Stack({ alignContent: Alignment.Center }) {
-          Column({ space: TOK_SPACE_XS }) {
-            Text('暂无发现内容')
-              .fontFamily(TYPE_DISCOVER_STATE_TITLE.fontFamily)
-              .fontWeight(TYPE_DISCOVER_STATE_TITLE.fontWeight)
-              .fontSize(TYPE_DISCOVER_STATE_TITLE.fontSizeFp)
-              .lineHeight(TYPE_DISCOVER_STATE_TITLE.lineHeightFp as number)
-              .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-              .maxLines(1);
-            Text(this.presentation.statusMessage)
-              .fontFamily(TYPE_DISCOVER_STATUS.fontFamily)
-              .fontWeight(TYPE_DISCOVER_STATUS.fontWeight)
-              .fontSize(TYPE_DISCOVER_STATUS.fontSizeFp)
-              .lineHeight(TYPE_DISCOVER_STATUS.lineHeightFp as number)
-              .fontColor(readerAppColor('app.DiscoverPage.resultList.fontColor.FFA19A91', this.appThemeScheme))
-              .maxLines(1);
-          }
-          .alignItems(HorizontalAlign.Center);
-        }
-        .width('100%')
-        .height(200);
+        ReaderPageState({ title: this.presentation.loading ? '正在读取发现内容' : this.recovery().canRetry ? '内容读取失败' : '暂无发现内容',
+          message: this.presentation.loading ? '请稍候' : this.presentation.statusMessage,
+          loading: this.presentation.loading, actionLabel: this.recovery().canRetry ? '重试' : '',
+          onAction: (): void => this.onRetryRead(this.recovery().generation) });
       } else {
         ForEach(this.presentation.books, (book: DiscoverBook) => {
           this.resultRow(book);
@@ -298,8 +304,8 @@ export struct DiscoverPage {
       this.paginationRow();
     }
     .width('100%')
-    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
+    .backgroundColor(this.presentation.books.length > 0 ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent)
+    .border({ width: this.presentation.books.length > 0 ? TOK_BORDER_W : 0, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
     .borderRadius(8)
     .clip(true);
   }

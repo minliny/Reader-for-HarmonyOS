@@ -20,8 +20,11 @@ let bookshelfTemporaryGeneration: number = 0;
 export struct BookshelfShell {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @Prop recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
-  @Prop readRecovery: ReaderRecoveryView | undefined = undefined;
+  @Prop @Watch('onRecoveryChanged') recovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
+  @Prop recoveryBusy: boolean = false;
+  @Prop @Watch('onReadRecoveryChanged') readRecovery: ReaderRecoveryView | undefined = undefined;
+  onNoticeHeightChange: (height: number) => void = (_height: number): void => {};
+  private noticeHeight: number = 0;
   onRetryRead: (generation: number, navigation?: number) => void = (_generation: number): void => {};
   onReconcile: (generation: number, navigation?: number) => void = (_generation: number): void => {};
   @Prop canContinueRemoval: boolean = false;
@@ -39,6 +42,7 @@ export struct BookshelfShell {
   onImportRequested: () => void = (): void => {};
   onBatchManageRequested: () => void = (): void => {};
   onBookshelfSettingsRequested: () => void = (): void => {};
+  onDownloadsRequested: () => void = (): void => {};
   onCheckUpdatesRequested: () => void = (): void => {};
   onMainTab: (key: string, presentedNavigation?: number) => void = (_key: string): void => {};
   @BuilderParam content: () => void;
@@ -59,6 +63,8 @@ export struct BookshelfShell {
 
   aboutToAppear(): void {
     this.mounted = true;
+    this.onReadRecoveryChanged();
+    this.onRecoveryChanged();
     registerReaderShelfFonts(this.getUIContext().getFont());
     this.registerTemporaryBackGeneration();
   }
@@ -67,6 +73,7 @@ export struct BookshelfShell {
     const identity = this.temporaryBackIdentity;
     const generation = this.temporaryBackGeneration;
     this.mounted = false;
+    this.onNoticeHeightChange(0);
     this.temporaryBackIdentity = '';
     this.dismissMoreMenu();
     this.onTemporaryBackBridge(undefined, identity, generation);
@@ -149,18 +156,24 @@ export struct BookshelfShell {
   private shellHeader() {
     Column() {
       this.topBar();
-      if (this.recovery.visible) {
-        ReaderFixedHeaderHost({ kind: 'standard',
-          content: (): void => { this.recoveryNoticeContent(this.recovery, false); } });
-      } else if (this.readRecovery?.visible === true) {
-        ReaderFixedHeaderHost({ kind: 'standard',
-          content: (): void => { this.recoveryNoticeContent(this.readRecovery!, true); } });
-      }
     }.width('100%');
   }
 
   @Builder
   private shellOverlay() {
+    if (this.recovery.visible) {
+      Column() {
+        Column() { this.recoveryNoticeContent(this.recovery, false); }.width('100%')
+          .onAreaChange((_old: Area, area: Area): void => {
+            const height = this.numericAreaLength(area.height);
+            if (this.mounted && this.recovery.visible && Math.abs(height - this.noticeHeight) > .1) {
+              this.noticeHeight = height; this.onNoticeHeightChange(height);
+            }
+          });
+      }.width('100%')
+        .padding({ left: 17, right: 17, top: this.headerHeight + 14 })
+        .hitTestBehavior(HitTestMode.Transparent);
+    }
     if (this.moreMenuVisible) {
       BookshelfMoreMenu({
         anchorRight: this.moreAnchorRight - this.overlayOriginX,
@@ -184,6 +197,10 @@ export struct BookshelfShell {
           this.dismissMoreMenu();
           this.onBookshelfSettingsRequested();
         }),
+        onDownloadsRequested: this.moreIntentAction(this.moreSelectionId, (): void => {
+          this.dismissMoreMenu();
+          this.onDownloadsRequested();
+        }),
         onDismiss: this.moreIntentAction(this.moreSelectionId, (): void => this.dismissMoreMenu()),
       });
     }
@@ -193,22 +210,31 @@ export struct BookshelfShell {
   private recoveryNoticeContent(view: ReaderRecoveryView, read: boolean) {
     // Only the compact feedback actor changes identity; content stays mounted.
     ForEach([JSON.stringify([this.navigationGeneration, view.generation])], (identity: string): void => {
-      ReaderRecoveryNotice({ view, actionLabel: '刷新列表',
+      ReaderRecoveryNotice({ view, tag: '书架待处理', actionLabel: '核对操作结果', busy: !read && this.recoveryBusy,
+        secondaryActionLabel: !read && this.canContinueRemoval ? this.removalActionLabel : '',
+        onSecondaryAction: (generation: number): void => {
+          const tokens = JSON.parse(identity) as number[];
+          if (!this.mounted || generation !== tokens[1] || this.navigationGeneration !== tokens[0]) return;
+          this.onContinueRemoval(tokens[1], tokens[0]);
+        },
         onReconcile: (generation: number): void => {
           const tokens = JSON.parse(identity) as number[];
           if (generation !== tokens[1] || this.navigationGeneration !== tokens[0]) return;
-          if (read) this.onRetryRead(tokens[1], tokens[0]);
-          else this.onReconcile(tokens[1], tokens[0]);
+          if (read) this.onRetryRead(tokens[1], tokens[0]); else this.onReconcile(tokens[1], tokens[0]);
         } });
-      if (!read && this.canContinueRemoval) {
-        ReaderRecoveryAction({ label: this.removalActionLabel, generation: (JSON.parse(identity) as number[])[1],
-          onReconcile: (generation: number): void => {
-            const tokens = JSON.parse(identity) as number[];
-            if (!this.mounted || generation !== tokens[1] || this.navigationGeneration !== tokens[0]) return;
-            this.onContinueRemoval(tokens[1], tokens[0]);
-          } });
-      }
     }, (identity: string): string => identity);
+  }
+
+  private onRecoveryChanged(): void {
+    if (!this.recovery.visible) { this.noticeHeight = 0; this.onNoticeHeightChange(0); }
+  }
+  private lastReadFeedback: string = '';
+  private onReadRecoveryChanged(): void {
+    const view = this.readRecovery;
+    if (view?.visible !== true) { this.lastReadFeedback = ''; return; }
+    if (!this.mounted || !this.populated || view.message === this.lastReadFeedback) return;
+    this.lastReadFeedback = view.message;
+    try { this.getUIContext().getPromptAction().showToast({ message: view.message, duration: 2000 }); } catch (_) {}
   }
 
   @Builder

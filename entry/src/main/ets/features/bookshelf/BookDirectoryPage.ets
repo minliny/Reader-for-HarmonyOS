@@ -1,3 +1,4 @@
+import { ReaderPageState } from '../common/ReaderPageState';
 import { mangaDirectoryDisplay } from '../manga/MangaDirectoryDisplay';
 import { mangaDirectoryContextEntries, mangaDirectoryDownloadStatusWidth } from '../manga/MangaDirectoryState';
 import { LengthMetrics } from '@kit.ArkUI';
@@ -50,6 +51,7 @@ export struct BookDirectoryPage {
   @Prop @Watch('onRulesKindChanged') bookKind: string = '';
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   @Prop catalogMessage: string = '';
+  @Prop catalogBusy: boolean = false;
   @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
   onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
@@ -164,11 +166,11 @@ export struct BookDirectoryPage {
 
   @Builder
   private fontPreparationContent() {
-    Column({ space: 12 }) {
-      if (this.mangaFontsFailed) {
-        Text('目录暂时无法显示').fontSize(TYPE_FORM_STATE_BODY.fontSizeFp);
-        Button('重试').onClick((): void => this.prepareMangaPageFonts());
-      }
+    Column() {
+      ReaderPageState({ loading: !this.mangaFontsFailed,
+        title: this.mangaFontsFailed ? '目录暂时无法显示' : '正在准备目录…',
+        actionLabel: this.mangaFontsFailed ? '重试' : '',
+        onAction: (): void => this.prepareMangaPageFonts() });
     }.width('100%').height('100%').justifyContent(FlexAlign.Center);
   }
 
@@ -266,16 +268,13 @@ export struct BookDirectoryPage {
         }
       }, (identity: string): string => identity);
       if (this.projectedEntries.length === 0 && !this.navigationActive) {
-        Column({ space: 10 }) {
-          Text(this.emptyMessage())
-            .width('100%')
-            .fontFamily(TYPE_FORM_STATE_BODY.fontFamily as string).fontSize(TYPE_FORM_STATE_BODY.fontSizeFp)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .textAlign(TextAlign.Center);
-          if (this.catalogRetryVisible()) {
-            ReaderRecoveryAction({ label: '重试加载目录', generation: this.projectionGeneration,
-              actionEnabled: this.mounted, onReconcile: (): void => this.onRetryCatalog() });
-          }
+        Column() {
+          ReaderPageState({ title: this.emptyMessage(), loading: this.catalogLoading(),
+            actionLabel: this.searchQuery.trim().length > 0 ? '清除搜索' : this.catalogRetryVisible() ? '重试加载目录' : '',
+            onAction: (): void => {
+              if (this.searchQuery.trim().length > 0) { this.searchDraft = ''; this.applySearch(); }
+              else if (this.mounted) this.onRetryCatalog();
+            } });
         }
           .width('100%').height('100%')
           .justifyContent(FlexAlign.Center)
@@ -376,8 +375,8 @@ export struct BookDirectoryPage {
           .fontWeight(visual.bodyFontWeight).fontSize(visual.countFontSize).lineHeight(visual.countLineHeight).halfLeading(true).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).fontColor(mangaDirectoryColor('muted', this.appThemeScheme))
           .width('100%');
       }.width('100%').alignItems(HorizontalAlign.Start).margin({ bottom: visual.summaryBottom });
-      // Keep the sort control beside the compact query field. The detail
-      // directory uses the shared ascending/descending asset pair.
+      // The compact sort control keeps the manga accent family and its
+      // existing ascending/descending action.
       Row({ space: 5 }) {
         Row() {
           ReaderSearchField({ variant: 'readerDirectory', mode: 'live', text: this.searchDraft,
@@ -388,6 +387,9 @@ export struct BookDirectoryPage {
         }.layoutWeight(1).height(32);
         Stack() { Image(this.mangaSortIcon()).width(16).height(16); }
           .width(32).height(32).backgroundColor(mangaDirectoryColor('soft', this.appThemeScheme)).borderRadius(8)
+          .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.appThemeScheme))
+          .responseRegion({ x: -5, y: -6, width: 44, height: 44 })
+          .focusable(true).accessibilityRole(AccessibilityRoleType.BUTTON)
           .accessibilityText('切换排序').onClick((): void => this.toggleSort());
       }.width('100%').height(32).padding({ left: 0, right: 0 });
       Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween, alignItems: ItemAlign.Center, space: { main: LengthMetrics.vp(visual.toolsGap), cross: LengthMetrics.vp(visual.toolsGap) } }) {
@@ -421,8 +423,8 @@ export struct BookDirectoryPage {
 
   private mangaSortIcon(): Resource {
     if (this.appThemeScheme === 'night') return this.ascending ?
-      $r('app.media.reader_directory_sort_ascending_theme_night') : $r('app.media.reader_directory_sort_descending_theme_night');
-    return this.ascending ? $r('app.media.reader_directory_sort_ascending') : $r('app.media.reader_directory_sort_descending');
+      $r('app.media.manga_directory_sort_ascending_theme_night') : $r('app.media.manga_directory_sort_descending_theme_night');
+    return this.ascending ? $r('app.media.manga_directory_sort_ascending') : $r('app.media.manga_directory_sort_descending');
   }
 
   private mangaNarrow(): boolean {
@@ -521,23 +523,16 @@ export struct BookDirectoryPage {
 
   @Builder
   private mangaEmptyState() {
-    Column({ space: visual.quietEmptyGap }) {
-      Text(this.emptyMessage()).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(visual.bodyFontWeight)
-        .fontSize(visual.quietEmptyFontSize).lineHeight(visual.quietEmptyLineHeight).halfLeading(true)
-        .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale()))
-        .fontColor(mangaDirectoryColor('muted', this.appThemeScheme)).textAlign(TextAlign.Center);
-      if (this.searchQuery.trim().length > 0) {
-        Text('清除搜索').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(visual.bodyFontWeight)
-          .fontSize(visual.quietEmptyFontSize).lineHeight(visual.quietEmptyLineHeight).halfLeading(true)
-          .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale()))
-          .fontColor(mangaDirectoryColor('accent', this.appThemeScheme)).constraintSize({ minHeight: visual.quietEmptyClearHeight })
-          .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.appThemeScheme))
-          .onClick((): void => { this.searchDraft = ''; this.applySearch(); });
-      }
+    Column() {
+      ReaderPageState({ title: this.emptyMessage(), loading: this.catalogLoading(),
+        actionLabel: this.searchQuery.trim().length > 0 ? '清除搜索' : this.catalogRetryVisible() ? '重试加载目录' : '',
+        onAction: (): void => {
+          if (this.searchQuery.trim().length > 0) { this.searchDraft = ''; this.applySearch(); }
+          else if (this.mounted) this.onRetryCatalog();
+        } });
     }.width('100%').constraintSize({ minHeight: visual.quietEmptyMinHeight })
       .padding({ left: visual.quietEmptyPaddingX, right: visual.quietEmptyPaddingX,
-        top: visual.quietEmptyPaddingY, bottom: visual.quietEmptyPaddingY }).justifyContent(FlexAlign.Center)
-      .border({ width: { top: visual.borderWidth }, color: mangaDirectoryColor('line', this.appThemeScheme) });
+        top: visual.quietEmptyPaddingY, bottom: visual.quietEmptyPaddingY }).justifyContent(FlexAlign.Center);
   }
 
   @Builder
@@ -884,12 +879,13 @@ export struct BookDirectoryPage {
     return this.catalogMessage.trim().length > 0 ? this.catalogMessage : '暂无章节信息';
   }
 
+  private catalogLoading(): boolean { return this.catalogBusy; }
+
   private catalogRetryVisible(): boolean {
     if (this.searchQuery.length > 0 || this.navigationActive) return false;
-    const message = this.catalogMessage.trim();
     // Do not expose a retry action while the owner is still acquiring the
     // first catalog. Empty/error projections remain actionable in place.
-    return !/^正在|^加载|^读取/.test(message);
+    return !this.catalogBusy;
   }
 
   private contentFrame(): SurfaceHorizontalFrame {

@@ -1,4 +1,4 @@
-import { TYPE_FORM_BODY } from '../common/ReaderTypography';
+import { MESSAGE_BODY } from '../common/ReaderMessageStyle';
 import { ReaderWindowCoordinator } from '../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../common/ReaderFonts';
 import { readerAppColor } from '../common/ReaderThemeRegistry';
@@ -24,7 +24,7 @@ export struct BookRemovalDialog {
   build() {
     ReaderDialogSurface({
       specId: 'book-removal',
-      title: '移除书架',
+      title: '移出书架',
       actions: [
         new DialogActionView('cancel', '取消', 'default', true, true),
         new DialogActionView('confirm', '移除', 'danger', true, false),
@@ -47,8 +47,9 @@ export struct BookRemovalDialog {
     Scroll() {
       Text(this.message)
         .width('100%')
-        .fontFamily(TYPE_FORM_BODY.fontFamily).fontWeight(TYPE_FORM_BODY.fontWeight).fontSize(TYPE_FORM_BODY.fontSizeFp)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight).fontSize(MESSAGE_BODY.fontSizeFp)
+        .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
         .constraintSize({ minHeight: 50 })
         .onAreaChange((_old: Area, area: Area): void => {
           const height = typeof area.height === 'number' ? area.height :

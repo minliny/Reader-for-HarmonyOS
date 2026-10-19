@@ -670,7 +670,7 @@ export struct SearchPage {
   @Builder
   private searchBar() {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
-      ReaderIconButton({ icon: (this.appThemeScheme === 'night' ? $r('app.media.search_back_theme_night') : $r('app.media.search_back')),
+      ReaderIconButton({ icon: (this.appThemeScheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back')),
         specId: 'navigation-back', accessibilityLabel: '返回', onTap: (): void => this.onBack() });
 
       Row() {
