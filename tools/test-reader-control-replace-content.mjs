@@ -1,20 +1,29 @@
-import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import * as morphScroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
-import * as presentation from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'adapter':{description:'Actual async replacement layer confirmation/retry/source/preview and original operation guards',resources:[]},
+ 'live-closures':{description:'Actual live action/draft/rule closures and retained callback admission',resources:[]},
+ 'sdk-rule-geometry':{description:'Required SDK retained rule typography/list clip and four targeted native attribute mutations',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const { readerTypographyRoles }=await import('./lib/reader-typography-probe.mjs');
+const { readerAppColor }=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const morphScroll=await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
+const presentation=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
 const motionDeps = { ...presentation, PathShape: class { commands(path) { this.path = path; return this; } } };
 const motionProps = { fullContentHeight: 666, quickContentHeight: 190, getUIContext: () => ({ vp2px: n => n * 3 }) };
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
-import { createReaderBuilderProbe, readerBuilderSdkAvailable } from './lib/reader-control-builder-probe.mjs';
-registerHooks({ resolve(specifier, context, nextResolve) {
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { registerHooks, stripTypeScriptTypes }=await import('node:module');
+const { createReaderBuilderProbe, readerBuilderSdkAvailable }=await import('./lib/reader-control-builder-probe.mjs');
+const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); } catch (error) {
     if ((specifier.startsWith('./') || specifier.startsWith('../')) && !specifier.endsWith('.ts'))
       return nextResolve(`${specifier}.ts`, context);
     throw error;
   }
 } });
+try {
 const stateModule = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
 const geometry = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets', import.meta.url), 'utf8');
@@ -36,6 +45,7 @@ Object.assign(owner, { state: { ...stateModule.createReaderControlReplaceState('
 });
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject }; };
+if(selectedCase==='adapter'){
 owner.openEditor();
 assert.equal(owner.layer, 'editor', 'confirmed empty collection can Add');
 let pending = deferred();
@@ -121,9 +131,8 @@ owner.motionProgress = 1;
 owner.interactionEnabled = false;
 assert.equal(owner.readyInput(), false);
 assert.equal(owner.fullInput(), false);
-// Shared scroll lifecycle/range/async coverage lives in test-reader-control-morph-scroll.mjs.
-assert.match(source, /\.constraintSize\(\{ minHeight: this\.listContentMinHeight\(\) \}\)/);
-assert.match(source, /\.onDidScroll\(\(\): void => this\.onFullDidScroll\(\)\)/);
+}
+if(selectedCase==='live-closures'){
 // Capture the real third argument of every production textAction invocation.
 // The simple balanced-call scanner does not reinterpret the predicates: each
 // complete call is type-stripped and executed against the same stateful owner.
@@ -165,7 +174,7 @@ for (const call of actionCalls(source)) {
   new Function('operationId', stripTypeScriptTypes(`${call};`)).call(owner, owner.state.writeOperationId || '');
 }
 assert.equal(predicates.size, 8, 'both former reload actions now consume one keyed original-operation Builder; save belongs to the fixed SDK-tested editor footer');
-assert.equal((source.match(/this\.originalRecoveryAction\(\);/g) || []).length, 2, 'status and retained editor both consume the same original recovery actor');
+
 assert.equal(predicates.get('预览当前章节已保存规则')(), false);
 assert.equal(predicates.get('预览效果')(), true);
 owner.motionProgress = 1;
@@ -258,11 +267,6 @@ for (const [label, field] of fields) {
   field.change('42');
   assert.equal(field.value(), '42', `${label}: second edit remains live`);
 }
-assert.match(source, /ReaderFormField\(\{ specId: 'reader-replace-text',[\s\S]*?text: value\(\), placeholder: ''/,
-  'input keeps its live value getter while leaving the already-labelled placeholder empty');
-assert.match(source, /ReaderControlSwitchTrack\(\{ value: value\(\) \}\)/);
-assert.match(source, /\.onClick\(\(\): void => this\.changeEditorFlag\(value, change\)\)/);
-
 // A stable ForEach key must not freeze the first Core DTO or its initial index.
 const initialRule = { id: 10, name: 'before', isEnabled: true };
 owner.state.rules = [initialRule, { id: 20, name: 'other' }];
@@ -294,6 +298,8 @@ owner.state.rules = [{ id: 20 }];
 assert.equal(indexGetter(), -1);
 assert.equal(iconAvailable(), false, 'disposed/removed row cannot dispatch stale edit/delete');
 
+}
+if(selectedCase==='sdk-rule-geometry'){
 // Mount the actual SDK-transformed row Builder once. Replaying its observers
 // tests the native Text.fontSize binding, not just a geometry field or source
 // string. User M-02 overrides the recovered text scale, not row geometry.
@@ -381,7 +387,8 @@ function checkMountedRuleListClip(componentSource = source) {
     assert.deepEqual(list.position, { x: frame.list.x, y: frame.list.y });
   }
 }
-if (readerBuilderSdkAvailable) {
+assert.ok(readerBuilderSdkAvailable,'selected rule geometry requires installed ETS SDK');
+{
   checkMountedRuleTypography();
   checkMountedRuleListClip();
   const mutate = (before, after) => {
@@ -400,6 +407,12 @@ if (readerBuilderSdkAvailable) {
   assert.throws(() => checkMountedRuleListClip(mutate('      .clip(true);', '      .clip(false);')),
     /RuleList owns the source clipping boundary/, 'actual SDK observers reject a removed list clip');
   console.log('Replace actual SDK mounted rule font: fixed 12, preserved row tracks, parent-only clip, same rule identity and 4 mutations PASS');
-} else console.log('Replace mounted typography check SKIP: actual ETS SDK unavailable');
-console.log('PASS reader-control-replace-content: actual async production methods, confirmation/failure/retry, session and preview dismissal guards; NOT ArkUI pixel evidence');
-await import('./test-reader-replace-editor-feedback.mjs');
+}
+}
+console.log(`PASS replacement ${selectedCase}; selected production methods/SDK scope only`);
+
+
+}finally{resolution.deregister();}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

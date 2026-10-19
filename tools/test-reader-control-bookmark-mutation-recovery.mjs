@@ -1,16 +1,20 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { loadReaderControlBookmarkProjection, mergeReaderControlBookmarkProjection }
-  from '../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts';
-import * as sessionPolicy from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-
-const {fixture,bookmarkInput,deferred,until}=await import('./lib/reading-operation-durable-probe.mjs');
-const {makeIndex,settled}=await import('./lib/reading-directory-sdk-consumer.mjs');
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'durable-recovery':{description:'Actual bookmark Index/DirectoryHost exact receipt and committed-write reload recovery via existing Core CLI',resources:[]},
+ 'host-retry':{description:'Actual Host watchers error/Prop delivery order and explicit retry without Core',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
 const book={sourceId:'local',bookId:'book',title:'Book',author:'Author'};
 const row=(bookmarks=[],title='Chapter',downloadState='completed')=>({index:0,title,downloadState,bookmarks});
 const mark=time=>({time,chapterIndex:0,chapterOffset:12,chapterTitle:'Chapter',content:'saved'});
-async function actual(mode){const f=await fixture(true),x=makeIndex(f),h=x.idx;await h.loadControlBookmarks(book.sourceId,book.bookId,()=>true);
+if(selectedCase==='durable-recovery'){
+const {bookmarkFixture:fixture,deferred,until,cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/reading-operation-durable-probe.mjs');
+const {makeIndex,settledBookmarks:settled}=await import('./lib/reading-directory-sdk-consumer.mjs');
+console.log(JSON.stringify({kind:'reader-existing-tool-evidence',...durableFixtureToolEvidence()}));
+try {
+async function actual(mode){const f=await fixture(true),x=makeIndex(f,{domain:'bookmark'}),h=x.idx;await h.loadControlBookmarks(book.sourceId,book.bookId,()=>true);
  const seed=async(offset)=>{const r=await f.command('bookmark.create',{bookName:book.title,bookAuthor:book.author,chapterIndex:0,chapterPos:offset,chapterName:'Chapter',content:'saved'});return r.data.bookmark.time;};
  const times=mode==='delete'?[await seed(12)]:[];if(times.length)await h.loadControlBookmarks(book.sourceId,book.bookId,()=>true);
  const mutate=()=>{if(mode==='chapter')h.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});else if(mode==='delete')h.deleteDirectoryBookmarks(times);else h.toggleReaderPageBookmark({chapterIndex:0,chapterOffset:12,chapterTitle:'Chapter',bookText:'saved',bookmarkTimes:[]});};
@@ -54,13 +58,13 @@ for(const mode of ['chapter','position','delete']){
  await until(()=>t.f.writes().length===1);t.h.detailToc=[row([],'Converted title','queued')];gate.resolve();await settled(t.f);
  assert.equal(t.h.detailToc[0].title,'Converted title');assert.equal(t.h.detailToc[0].downloadState,'queued');assert.equal(t.h.detailToc[0].bookmarks[0].chapterOffset,12);
 }
+
+}finally{await cleanupDurableFixtures();}
+}else{
+const sessionPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
 // Execute real Host watchers/loading, including either ArkUI prop delivery order.
-const hostSource = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
-const hostMethods = hostSource.slice(hostSource.indexOf('  private loadControlBookmarks('),
-  hostSource.indexOf('  private async loadAppearanceSnapshot('));
-const HostProbe = new Function('readerControlContentLocation', 'hilog',
-  `${stripTypeScriptTypes(`class HostProbe { ${hostMethods} }`)}; return HostProbe;`)(
-  sessionPolicy.readerControlContentLocation, { warn() {} });
+const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+const HostProbe=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'ReadingExperience',['loadControlBookmarks','onControlBookmarkFailureChanged','onControlDirectoryDataChanged'],{readerControlContentLocation:sessionPolicy.readerControlContentLocation,hilog:{warn(){}}});
 const flush = () => new Promise(resolve => setImmediate(resolve));
 for (const messageFirst of [false, true]) {
   const owner = new HostProbe();
@@ -116,4 +120,8 @@ for (const messageFirst of [false, true]) {
   assert.doesNotThrow(() => owner.onControlBookmarkFailureChanged(), 'native toast exceptions remain contained');
   assert.equal(owner.controlBookmarkLoadFailed, true, 'toast availability cannot erase actionable error state');
 }
-console.log('Bookmark mutation recovery: actual Index CRUD/reload and Host error/retry functions PASS; not native acceptance');
+
+}
+console.log(`PASS bookmark ${selectedCase}: actual selected production methods; not native acceptance`);
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

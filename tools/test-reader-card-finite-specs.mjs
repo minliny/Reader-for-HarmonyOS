@@ -1,24 +1,11 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
-import { createRequire } from 'node:module';
-import { cardSdk } from './lib/reader-card-probe.mjs';
-import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import { syncIndexFixture } from './lib/sync-index-real-fixture.mjs';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
-import { createReaderBuilderProbe, readerBuilderChildProperties, readerBuilderChildPropertyCacheStats } from './lib/reader-control-builder-probe.mjs';
-import { pureModuleProbe, pureModuleProbeStats } from './lib/ets-pure-module-probe.mjs';
-import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
-const read=file=>readFileSync(file,'utf8'),golden=JSON.parse(read('tools/fixtures/reader-card-ui-baseline.json'));
-for(const entry of Object.values(golden.sources))assert.equal(createHash('sha256').update(entry.source).digest('hex'),entry.sha256,'frozen actual original source bytes');
-const common='entry/src/main/ets/features/common/',category='entry/src/main/ets/features/settings/CategorySection.ets',sync='entry/src/main/ets/features/sync/SyncPage.ets';
-const before=golden.sources[common+'ReaderCard.ets'].source;
-const sdk=resolveEtsLoaderRoot();
-const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
+async function probeCachesCase() {
+  const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+  const { ts, options } = installedEtsCompiler();
+  const { readerBuilderChildProperties, readerBuilderChildPropertyCacheStats } = await import('./lib/reader-control-builder-probe.mjs');
+  const { pureModuleProbe, pureModuleProbeStats } = await import('./lib/ets-pure-module-probe.mjs');
 // Repeated child metadata lookup still parses changed inputs with the actual
 // SDK. Only immutable names are shared; callers cannot mutate the next Set.
 {
@@ -70,6 +57,30 @@ const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/types
  assert.throws(()=>pureModuleProbe('export class State { value = ; }','CardCacheControl.ets',{input:2,onChange(){}},['State']),/actual pure module parses/);
  assert.equal(pureModuleProbeStats().compiles,before.compiles+6,'failed SDK diagnostics are never cached');
 }
+
+}
+async function cardCase(selectedCase) {
+  const { readFileSync } = await import('node:fs');
+  const { createHash } = await import('node:crypto');
+  const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+  const { virtualFilePath } = await import('./lib/tool-environment.mjs');
+  const { cardSdk } = await import('./lib/reader-card-probe.mjs');
+  const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { syncIndexFixture } = await import('./lib/sync-index-real-fixture.mjs');
+  const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+  const { readerFoundationTokens } = await import('./lib/reader-foundation-control-probe.mjs');
+  const { createReaderBuilderProbe, readerBuilderChildPropertyCacheStats } = await import('./lib/reader-control-builder-probe.mjs');
+  const metricsApi = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+  const fontFamilies = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+  const read = file => readFileSync(file, 'utf8');
+  const common='entry/src/main/ets/features/common/',category='entry/src/main/ets/features/settings/CategorySection.ets',sync='entry/src/main/ets/features/sync/SyncPage.ets';
+  const historical = selectedCase === 'historical-migration';
+  let golden, before;
+  if (historical) {
+    golden = JSON.parse(read('tools/fixtures/reader-card-ui-baseline.json'));
+    for (const entry of Object.values(golden.sources)) assert.equal(createHash('sha256').update(entry.source).digest('hex'), entry.sha256, 'historical source identity');
+    before = golden.sources[common+'ReaderCard.ets'].source;
+    const { ts, options } = installedEtsCompiler();
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const layout=JSON.parse(read('tools/fixtures/reader-card-page-layout-successor-20261014.json'));
 assert.equal(layout.schema,1);assert.equal(layout.page,sync);
@@ -127,6 +138,8 @@ for(const[from,to]of[["variant: 'sync'","variant: 'settings'"],['this.pageConten
 }
 assert.throws(()=>compareBodies(sync,read(sync).replace("return this.snapshot.facts?.canMutate ?? true;","return true;")),'unchanged body and callback contract is still strict');
 
+
+  }
 const originalSpec=read(common+'ReaderCardSpecs.ets');
 const methods=['webdavSection','manualActionsSection','autoBackupSection','emptyState','historyRow'];
 const entry={destination:'WebDAV',timestamp:'2026-10-04 08:00',summary:'原始备份结果',status:'success',detail:'保持原始信息',bookCount:2,sourceCount:3};
@@ -166,6 +179,8 @@ function parent({legacy=false,method='build',scheme='day',width=352,specSource=o
  return {shared,owner,card,outer:()=>shared.outer(card),contentCalls:()=>contentCalls,backupCalls:()=>backupCalls};
 }
 const physical=node=>Object.fromEntries(['width','constraintSize','backgroundColor','border','borderRadius'].map(key=>[key,node[key]]));
+
+if (historical) {
 let comparisons=0;
 const metadataBeforeComparisons=readerBuilderChildPropertyCacheStats();
 for(const method of ['build',...methods])for(const scheme of ['day','night'])for(const width of [0,152,352,800]){
@@ -183,6 +198,68 @@ for(const method of ['build',...methods])for(const scheme of ['day','night'])for
 }
 assert.ok(readerBuilderChildPropertyCacheStats().hits>metadataBeforeComparisons.hits,'real Card comparisons reuse identical child metadata');
 assert.ok(readerBuilderChildPropertyCacheStats().entries<=256,'child metadata storage stays bounded');
+
+return;
+}
+if (selectedCase === 'card-props') {
+let comparisons = 0;
+for (const method of ['build', ...methods]) for (const scheme of ['day', 'night']) for (const width of [0, 152, 352, 800]) {
+  const current = parent({ method, scheme, width });
+  const spec = current.shared.resolveReaderCardSpec(current.card.specId);
+  assert.equal(current.outer().width, width > 0 ? width : '100%');
+  assert.equal(current.outer().constraintSize.maxWidth, spec.maxWidth);
+  assert.equal(current.outer().border.width, spec.borderWidth);
+  assert.equal(current.outer().borderRadius, spec.radius);
+  assert.equal(current.outer().backgroundColor, readerAppColor(spec.backgroundRole, scheme));
+  assert.equal(current.outer().border.color, readerAppColor(spec.borderRole, scheme));
+  if (method === 'build') assert.equal(current.contentCalls(), 1, 'actual category Builder slot executes once');
+  comparisons++;
+}
+assert.equal(comparisons, 48, 'six actual consumer sites by two schemes and four width inputs');
+// The two semantic names resolve to the same object, not copies of a standard
+// tuple. Changing that one actual shared source reaches both real consumers.
+{
+ const base=cardSdk();assert.equal(base.resolveReaderCardSpec('settings-category'),base.resolveReaderCardSpec('sync-config'));
+ const changed=originalSpec.replace('radius: TOK_RADIUS_MD','radius: TOK_RADIUS_MD + 2');assert.notEqual(changed,originalSpec);
+ const category=parent({specSource:changed}),configuration=parent({method:'webdavSection',specSource:changed}),status=parent({method:'manualActionsSection',specSource:changed});
+ assert.equal(category.outer().borderRadius,10);assert.equal(configuration.outer().borderRadius,10);assert.equal(status.outer().borderRadius,13,'status variant isolated');
+ const other=originalSpec.replace('radius: 13','radius: 15');assert.notEqual(other,originalSpec);
+ for(const method of methods.slice(1))assert.equal(parent({method,specSource:other}).outer().borderRadius,15,'all four real status consumers share changed spec');
+ assert.equal(parent({specSource:other}).outer().borderRadius,8);assert.equal(parent({method:'webdavSection',specSource:other}).outer().borderRadius,8);
+}
+// Retained V1 Props update the actual native Card without remounting its body;
+// obsolete physical props have no setters and cannot alter the outer geometry.
+{
+ const p=parent(),body=p.contentCalls(),count=p.card.observers.length;
+ p.card.updateStateVars({specId:'sync-status',cardWidth:280});p.shared.properties.flush();
+ assert.equal(p.outer().borderRadius,13);assert.equal(p.outer().width,280);assert.equal(p.card.observers.length,count);assert.equal(p.contentCalls(),body);
+ p.card.updateStateVars({specId:'settings-category',cardWidth:0});p.shared.properties.flush();assert.equal(p.outer().borderRadius,8);assert.equal(p.outer().width,'100%');
+ p.card.radius=99;p.card.bg='private';p.card.cardBorder='private';p.card.replay();
+ assert.equal(p.outer().borderRadius,8);assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','day'));
+ p.card.appThemeScheme='night';p.shared.properties.flush();assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','night'));assert.equal(p.outer().border.color,readerAppColor('TOK_BORDER','night'),'actual retained StorageLink follows current theme');
+ p.owner.cardWidth=318;p.shared.flush(p.owner);assert.equal(p.outer().width,318,'parent measurement reaches real child Prop');
+ assert.equal(p.card.observers.length,count,'parent update retains one Card');
+}
+// Reusing emitted classes must not reuse any mounted fixture or its state.
+{
+ const first=parent({width:152}),second=parent({width:352});
+ assert.equal(first.shared,second.shared,'equal source/spec/theme inputs reuse the same SDK compilation');
+ for(const key of ['owner','card'])assert.notEqual(first[key],second[key],'each comparison constructs an independent '+key);
+ for(const key of ['nodes','observers','children','attributeCalls'])assert.notEqual(first.card[key],second.card[key],'native Card '+key+' stays fixture-local');
+ const firstTuple=structuredClone(physical(first.outer())),firstCalls=first.card.attributeCalls.length;
+ second.owner.cardWidth=280;second.shared.flush(second.owner);assert.equal(second.outer().width,280);
+ second.card.appThemeScheme='night';second.shared.properties.flush();
+ assert.deepEqual(physical(first.outer()),firstTuple,'another fixture width/theme update cannot alter retained native values');
+ assert.equal(first.card.attributeCalls.length,firstCalls,'another fixture update cannot replay retained observers');
+ assert.equal(first.card.appThemeScheme,'day');assert.equal(first.contentCalls(),1);assert.equal(second.contentCalls(),1);
+ const action=parent({method:'emptyState'}),otherAction=parent({method:'emptyState'});
+ const click=p=>p.shared.nodes(p.owner).find(node=>node.onClick&&node.create==='立即备份').onClick();
+ click(action);assert.equal(action.backupCalls(),1);assert.equal(otherAction.backupCalls(),0,'compiled callback code retains each owner\'s business closure');
+ click(otherAction);assert.equal(action.backupCalls(),1);assert.equal(otherAction.backupCalls(),1);
+}
+
+}
+if (selectedCase === 'page-measurement') {
 // The new owner is a real SDK page composition, not a normalization of the
 // old Stack into another local layout. Current page slots mount the original
 // four Card sections inside one shared Scroll. Native height/host-width
@@ -217,30 +294,9 @@ for(const[scheme,windowWidth,hostWidth,left,right,bottom]of[
  assert.deepEqual(shared.cards(owner),sectionCards,'shared measurement retains every original Card actor');
  assert.deepEqual(sectionCards.map(card=>card.observers.length),nativeCounts,'shared measurement retains Card body/native observers');
 }
-// The two semantic names resolve to the same object, not copies of a standard
-// tuple. Changing that one actual shared source reaches both real consumers.
-{
- const base=cardSdk();assert.equal(base.resolveReaderCardSpec('settings-category'),base.resolveReaderCardSpec('sync-config'));
- const changed=originalSpec.replace('radius: TOK_RADIUS_MD','radius: TOK_RADIUS_MD + 2');assert.notEqual(changed,originalSpec);
- const category=parent({specSource:changed}),configuration=parent({method:'webdavSection',specSource:changed}),status=parent({method:'manualActionsSection',specSource:changed});
- assert.equal(category.outer().borderRadius,10);assert.equal(configuration.outer().borderRadius,10);assert.equal(status.outer().borderRadius,13,'status variant isolated');
- const other=originalSpec.replace('radius: 13','radius: 15');assert.notEqual(other,originalSpec);
- for(const method of methods.slice(1))assert.equal(parent({method,specSource:other}).outer().borderRadius,15,'all four real status consumers share changed spec');
- assert.equal(parent({specSource:other}).outer().borderRadius,8);assert.equal(parent({method:'webdavSection',specSource:other}).outer().borderRadius,8);
+
 }
-// Retained V1 Props update the actual native Card without remounting its body;
-// obsolete physical props have no setters and cannot alter the outer geometry.
-{
- const p=parent(),body=p.contentCalls(),count=p.card.observers.length;
- p.card.updateStateVars({specId:'sync-status',cardWidth:280});p.shared.properties.flush();
- assert.equal(p.outer().borderRadius,13);assert.equal(p.outer().width,280);assert.equal(p.card.observers.length,count);assert.equal(p.contentCalls(),body);
- p.card.updateStateVars({specId:'settings-category',cardWidth:0});p.shared.properties.flush();assert.equal(p.outer().borderRadius,8);assert.equal(p.outer().width,'100%');
- p.card.radius=99;p.card.bg='private';p.card.cardBorder='private';p.card.replay();
- assert.equal(p.outer().borderRadius,8);assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','day'));
- p.card.appThemeScheme='night';p.shared.properties.flush();assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','night'));assert.equal(p.outer().border.color,readerAppColor('TOK_BORDER','night'),'actual retained StorageLink follows current theme');
- p.owner.cardWidth=318;p.shared.flush(p.owner);assert.equal(p.outer().width,318,'parent measurement reaches real child Prop');
- assert.equal(p.card.observers.length,count,'parent update retains one Card');
-}
+if (selectedCase === 'action-admission') {
 // A real business action still travels through the nested content slot to the
 // shipping common Button, with current disabled and unmount admission intact.
 {
@@ -249,22 +305,21 @@ for(const[scheme,windowWidth,hostWidth,left,right,bottom]of[
  button.updateStateVars(Object.assign(Object.fromEntries(['scheme','specId','label','primary','actionEnabled','layout','isBusy','availableWidth','actionAccessibilityLabel'].map(key=>[key,button[key]])),{actionEnabled:false}));p.shared.properties.flush();click.onClick();assert.equal(p.backupCalls(),1,'retained native action respects busy/disabled update');
  button.aboutToDisappear();click.onClick();assert.equal(p.backupCalls(),1,'old physical content action does not publish after unmount');
 }
-// Reusing emitted classes must not reuse any mounted fixture or its state.
-{
- const first=parent({width:152}),second=parent({width:352});
- assert.equal(first.shared,second.shared,'equal source/spec/theme inputs reuse the same SDK compilation');
- for(const key of ['owner','card'])assert.notEqual(first[key],second[key],'each comparison constructs an independent '+key);
- for(const key of ['nodes','observers','children','attributeCalls'])assert.notEqual(first.card[key],second.card[key],'native Card '+key+' stays fixture-local');
- const firstTuple=structuredClone(physical(first.outer())),firstCalls=first.card.attributeCalls.length;
- second.owner.cardWidth=280;second.shared.flush(second.owner);assert.equal(second.outer().width,280);
- second.card.appThemeScheme='night';second.shared.properties.flush();
- assert.deepEqual(physical(first.outer()),firstTuple,'another fixture width/theme update cannot alter retained native values');
- assert.equal(first.card.attributeCalls.length,firstCalls,'another fixture update cannot replay retained observers');
- assert.equal(first.card.appThemeScheme,'day');assert.equal(first.contentCalls(),1);assert.equal(second.contentCalls(),1);
- const action=parent({method:'emptyState'}),otherAction=parent({method:'emptyState'});
- const click=p=>p.shared.nodes(p.owner).find(node=>node.onClick&&node.create==='立即备份').onClick();
- click(action);assert.equal(action.backupCalls(),1);assert.equal(otherAction.backupCalls(),0,'compiled callback code retains each owner\'s business closure');
- click(otherAction);assert.equal(action.backupCalls(),1);assert.equal(otherAction.backupCalls(),1);
+
 }
-const compiledConsumers=[...parentKernels.values()].reduce((count,kernel)=>count+kernel.consumers.size,0);
-console.log(`PASS F08 actual installed-SDK Card: ${comparisons} original/current six-site day/night/width comparisons; one finite layout successor, three real shared-page slot/scroll/safe-geometry replays and vp measurements; real body/callbacks, retained Props, common propagation/variant isolation and removed free appearance setters; ${parentInstances} fresh parent fixtures from ${parentKernels.size} test-local SDK kernels/${compiledConsumers} consumer compilations with native/property/callback isolation. Native layout/device pixels remain separate.`);
+
+}
+const cases = {
+  'probe-caches': probeCachesCase,
+  'card-props': () => cardCase('card-props'),
+  'page-measurement': () => cardCase('page-measurement'),
+  'action-admission': () => cardCase('action-admission'),
+  'historical-migration': () => cardCase('historical-migration'),
+};
+for (const id of selectContractCases({
+  'probe-caches': { description: 'SDK child-property and pure-module cache identity/isolation tools only', resources: [] },
+  'card-props': { description: 'Current actual Card spec-to-native Props/theme/width and fixture isolation', resources: [] },
+  'page-measurement': { description: 'Current Sync shared page/header/safe-width measurement reaches retained Cards', resources: [] },
+  'action-admission': { description: 'Current actual nested common Button respects disabled/unmount admission', resources: [] },
+  'historical-migration': { description: 'Diagnostic-only old source/body/hash migration witness; not a release gate', resources: [] },
+})) { await cases[id](); recordContractCasePass(id); }

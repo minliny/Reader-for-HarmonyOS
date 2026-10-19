@@ -43,6 +43,7 @@ async function fixture(extended=false, controls=false) {
   const gateway=new exports.ReaderSettingsGateway(runtime);await gateway.update(initial);writes.length=0;
   const owner=Object.assign(new Owner(), {
     mounted:true,exitRequested:false,lifecycleToken:1,sourceId:'local',bookId:'book',readerSettingsMutationGeneration:0,
+    readerSettingsRecovery:{message:'',visible:false,canRetry:false,generation:0},
     readerSettingsSnapshot:initial,readerSettingsLoaded:true,
     bookTitle:'终宋',pageChromeClockText:'12:30',
     getUIContext:()=>({px2vp:n=>n/3,fp2px:n=>n*3,px2fp:n=>n/3,
@@ -70,8 +71,9 @@ for(const extended of [false,true])for(const controls of [false,true])for(const 
   const f=await fixture(extended,controls),oldTop=f.owner.readingLayout().contentTop,target=f.change(),gate=f.holdFlush();f.failFlush(failure);
   f.owner.commitReaderWindowSettings(target);await settle();
   assert.deepEqual(f.writes,[!extended]);assert.equal(f.measurements.length,1);
-  assert.equal(f.owner.readerSettingsRecovery.visible,true);assert.equal(f.owner.readerSettingsRecovery.canRetry,false,
-    'the real pending view cannot dispatch a second write before the original flush settles');
+  assert.equal(f.owner.readerSettingsRecovery.visible,false,
+    'an ordinary in-flight save is silent before an uncertain result exists');
+  assert.equal(f.owner.readerSettingsRecovery.canRetry,false,'no retry action is admitted before the original flush settles');
   assert.equal(f.measurements[0].top,oldTop,'cutout preference cannot create a second status-height information lane');assert.equal(f.measurements[0].anchor,173);
   gate.resolve();await settle();
   assert.deepEqual(f.owner.readerSettingsSnapshot,target,'native policy success is retained when Preferences confirmation is missing');

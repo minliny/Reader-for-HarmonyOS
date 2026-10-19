@@ -1,13 +1,128 @@
-import assert from 'node:assert/strict';
-import fs from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
-import { stripTypeScriptTypes } from 'node:module';
-import { createMangaAtomicPayloadReaderFixture } from './lib/manga-atomic-payload-probe.mjs';
-
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+export const CONTRACT_CASES = {
+  "identity": {
+    "description": "Actual ReadingImageDiskCache identity: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "migration": {
+    "description": "Actual ReadingImageDiskCache migration: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "retention": {
+    "description": "Actual ReadingImageDiskCache retention: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "grants": {
+    "description": "Actual ReadingImageDiskCache grants: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "inventory": {
+    "description": "Actual ReadingImageDiskCache inventory: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "download-derived-quota": {
+    "description": "Actual ReadingImageDiskCache download-derived-quota: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "original-derived-shared-inode": {
+    "description": "Actual ReadingImageDiskCache original-derived-shared-inode: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "unused-derived-classification": {
+    "description": "Actual ReadingImageDiskCache unused-derived-classification: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "quota": {
+    "description": "Actual ReadingImageDiskCache quota: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "dynamic-capacity": {
+    "description": "Actual ReadingImageDiskCache dynamic-capacity: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "free": {
+    "description": "Actual ReadingImageDiskCache free: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "liveness": {
+    "description": "Actual ReadingImageDiskCache liveness: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "pending-restart": {
+    "description": "Actual ReadingImageDiskCache pending-restart: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "pressure-order": {
+    "description": "Actual ReadingImageDiskCache pressure-order: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "restore-tombstones": {
+    "description": "Actual ReadingImageDiskCache restore-tombstones: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "restore-barrier": {
+    "description": "Actual ReadingImageDiskCache restore-barrier: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "download-version-actions": {
+    "description": "Actual ReadingImageDiskCache download-version-actions: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "download-chapter-inventory": {
+    "description": "Actual ReadingImageDiskCache download-chapter-inventory: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "delete-admission-fence": {
+    "description": "Actual ReadingImageDiskCache delete-admission-fence: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "download-derived-idle": {
+    "description": "Actual ReadingImageDiskCache download-derived-idle: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "download-derived-fence": {
+    "description": "Actual ReadingImageDiskCache download-derived-fence: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "download-derived-restore": {
+    "description": "Actual ReadingImageDiskCache download-derived-restore: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "download-derived-retry": {
+    "description": "Actual ReadingImageDiskCache download-derived-retry: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "download-derived-pressure": {
+    "description": "Actual ReadingImageDiskCache download-derived-pressure: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "expiry-foreground-interleave": {
+    "description": "Actual ReadingImageDiskCache expiry-foreground-interleave: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "expiry-read-clock-recheck": {
+    "description": "Actual ReadingImageDiskCache expiry-read-clock-recheck: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "foreground": {
+    "description": "Actual ReadingImageDiskCache foreground: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  },
+  "authority-batch-bounds": {
+    "description": "Actual ReadingImageDiskCache authority-batch-bounds: real private files/inodes, fake Core policy; no native build/device",
+    "resources": []
+  }
+};
+async function runCase(id) {
+const { default: assert } = await import('node:assert/strict');
+const { default: fs } = await import('node:fs/promises');
+const { readFileSync } = await import('node:fs');
+const { tmpdir } = await import('node:os');
+const { dirname, join, resolve } = await import('node:path');
+const { fileURLToPath } = await import('node:url');
+const { createHash } = await import('node:crypto');
+const { stripTypeScriptTypes } = await import('node:module');
+const { createMangaAtomicPayloadReaderFixture } = await import('./lib/manga-atomic-payload-probe.mjs');
 // Full production methods, real temporary files. The sparse quota fixtures
 // report their real stat.size without allocating gigabytes of test payload.
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -77,7 +192,9 @@ function derivedStorage(cache,files,events=[],beforeRemove=async()=>{}) {
     removeDerived:async(c,selected,current)=>{events.push(c.chapterId);await beforeRemove(c,selected,current);
       for(const f of selected){if(!(await current())||f.live)return false;if(await exists(f.path))await io.unlink(f.path);}return true;}});
 }
-try {
+
+const cases={
+'identity':async()=>{
   {
     const {dir,a,cache}=await fixture('identity');const c=chapter('A');const i=await seed(cache,a,c);
     const shifted={...c,chapterIndex:87}, shiftedImage={...i,chapterIndex:87,imageUrl:'manga:opaque'};
@@ -91,6 +208,9 @@ try {
     assert.equal(await cache.loadResource({...i,contentVersion:'another-version'}),undefined);
     pass('stable chapter ID survives ordinal movement and cold entry; exact version and same-size digest corruption remain isolated');
   }
+
+},
+'migration':async()=>{
   {
     const {a,cache}=await fixture('migration');const c=chapter('legacy'),i=image(c);a.register(c);
     const old={...i,chapterId:undefined};await cache.storeResource(old,bytes);await cache.markChapterComplete(old,[old]);
@@ -102,6 +222,9 @@ try {
     assert.equal(await exists(unknownBytes),true,'unknown old ordinal content is not deleted using the new candidate');
     pass('old ordinal migration requires the exact version, manifest and resource hash; unknown history remains protected');
   }
+
+},
+'retention':async()=>{
   {
     const {a,cache}=await fixture('retention');const images=new Map();
     for(const classification of ['cache','download','protected','unknown','missing']){
@@ -116,6 +239,9 @@ try {
     assert.equal(await cache.loadResource(novel),undefined);
     pass('ordinary clear preserves download, session, unknown, missing and live chapters; novel clear still removes its own data');
   }
+
+},
+'grants':async()=>{
   {
     const {a,cache}=await fixture('grants');const c=chapter('A'),i=await seed(cache,a,c);const path=await cache.resourcePath(i);
     let pinRejected=false,writeRejected=false;
@@ -129,6 +255,9 @@ try {
     assert.deepEqual(a.completed.map(c=>c.removed),[false,true]);
     pass('claim blocks new pins/writes, physical failure remains pending, and retry removes exact bytes before acknowledgement');
   }
+
+},
+'inventory':async()=>{
   {
     const {dir,a,cache}=await fixture('inventory');const c=chapter('derived'),i=await seed(cache,a,c);
     const path=join(dir,'derived','page.bin'),alias=join(dir,'derived','alias.bin');await fs.mkdir(dirname(path));await fs.writeFile(path,new Uint8Array(123));await fs.link(path,alias);
@@ -145,6 +274,9 @@ try {
     external[1].owners=[owner(c)];await cache.maintainMangaStorage('clear');assert.equal(await exists(path),false);assert.equal(await exists(temp),false);
     pass('original, derived, manifest and crash-temp bytes are counted; one physical inode is counted once and retained consumers prevent deletion');
   }
+
+},
+'download-derived-quota':async()=>{
   {
     const {dir,a,cache,setFree}=await fixture('download-derived-quota');const c=chapter('permanent');const i=await seed(cache,a,c,'download');
     assert.equal((await cache.mangaStorageUsage()).ordinaryBytes,0,'permanent originals and their manifest are outside ordinary cache');
@@ -166,6 +298,9 @@ try {
     assert.equal(await exists(await cache.resourcePath(i)),true);assert.equal(await exists(originalExtra),true);
     pass('download originals remain permanent outside ordinary quota but obey 512MiB free space; all downloaded derivatives obey 10GiB, foreground reserve and concurrent budgets');
   }
+
+},
+'original-derived-shared-inode':async()=>{
   {
     const {dir,a,cache}=await fixture('original-derived-shared-inode');const c=chapter('permanent'),i=await seed(cache,a,c,'download');
     const alias=join(dir,'display','original-alias.bin'),derived=join(dir,'display','derived.bin');await fs.mkdir(dirname(alias),{recursive:true});
@@ -174,6 +309,9 @@ try {
     assert.equal((await cache.mangaStorageUsage()).ordinaryBytes,123,'one physical file shared with an actual permanent original is excluded once; independent derived bytes count');
     pass('actual original/derived inode sharing honors permanent original ownership without exempting independent display files');
   }
+
+},
+'unused-derived-classification':async()=>{
   {
     const {dir,a,cache}=await fixture('unused-derived-classification');const c=chapter('derived-only');a.register(c,'download');
     const file=await derivedFile(dir,c,'page.bin',123);derivedStorage(cache,[file]);
@@ -200,6 +338,9 @@ try {
     assert.equal((await cache.mangaStorageUsage()).reservedBytes,0);
     pass('derived budget admission skips unused classify RPCs while mixed original ownership and physical inode accounting remain exact');
   }
+
+},
+'quota':async()=>{
   {
     const {dir,a,cache}=await fixture('quota');const c=chapter('new');a.register(c);
     const historical=join(dir,'external','unknown-history.bin');await sparse(historical,10*1024**3-32*1024**2);
@@ -213,6 +354,9 @@ try {
     assert.equal(await exists(historical),true);
     pass('real 10GiB byte quota includes derived files and concurrent reservations; background leaves 32MiB for foreground');
   }
+
+},
+'dynamic-capacity':async()=>{
   {
     // A total-size aware probe derives a small-VM budget and keeps the two
     // ordinary buckets separate.  The explicit cleanup entry can reclaim only
@@ -233,6 +377,9 @@ try {
     const retry=await cache.reserveExternalWrite(owner(c),2048,'foreground','derived');retry.release();
     pass('total-size probe derives small-VM original/derived budgets; storage_full/MANGA_CACHE_STORAGE_FULL is observable and derived-only cleanup restores admission without touching downloads');
   }
+
+},
+'free':async()=>{
   {
     const {a,cache,setFree}=await fixture('free',512*1024**2+48*1024**2);const c=chapter('A');a.register(c);
     await assert.rejects(cache.reserveExternalWrite(owner(c),32*1024**2,'background'),/MANGA_CACHE_STORAGE_FULL/);
@@ -244,6 +391,9 @@ try {
     await assert.rejects(cache.storeResource(image(c),bytes),/MANGA_CACHE_STORAGE_FULL/);
     pass('512MiB free reserve subtracts in-flight admission and foreground headroom; novel retains its existing 16MiB rule');
   }
+
+},
+'liveness':async()=>{
   {
     const {a,cache}=await fixture('liveness');const c=chapter('writing'),old=chapter('old'),i=image(c);a.register(c);await seed(cache,a,old);
     let entered,release;const reached=new Promise(r=>{entered=r;}),gate=new Promise(r=>{release=r;});let once=true;
@@ -255,6 +405,9 @@ try {
     assert.deepEqual(await cache.loadResource(i),bytes);assert.equal(await cache.isChapterComplete(c),false,'a partial resource never becomes a completion receipt');
     pass('write admission and book mutation do not deadlock maintenance; inflight and live partial chapters remain intact');
   }
+
+},
+'pending-restart':async()=>{
   {
     const {dir,a,cache}=await fixture('pending-restart');const c=chapter('pending'),i=await seed(cache,a,c);
     const grant={...owner(c),grantToken:'restart-grant'};a.pendingGrants.set(grant.grantToken,grant);
@@ -264,6 +417,9 @@ try {
     await cold.maintainMangaStorage('clear');assert.equal(a.pendingGrants.size,0);assert.equal(await exists(await cache.resourcePath(i)),false);
     pass('cold pending intent blocks reads/writes before admission and survives until physical cleanup acknowledgement');
   }
+
+},
+'pressure-order':async()=>{
   {
     const {dir,a,cache}=await fixture('pressure-order');const first=chapter('first'),second=chapter('second'),next=chapter('next');
     await seed(cache,a,first);const kept=await seed(cache,a,second);a.register(next);
@@ -273,6 +429,9 @@ try {
     assert.deepEqual(a.claims.map(c=>c.chapterId),[first.chapterId]);assert.equal(await exists(large),false);assert.deepEqual(await cache.loadResource(kept),bytes);
     pass('capacity uses Core candidate order and stops when actual released bytes suffice; it never sorts or evicts the active write owner');
   }
+
+},
+'restore-tombstones':async()=>{
   {
     const {a,cache}=await fixture('restore-tombstones');const c=chapter('retained'),i=await seed(cache,a,c),other=chapter('new-pending');const second=await seed(cache,a,other);
     a.chapters.delete(key(other));const stale=cache.captureValidity(c.sourceId,c.bookId);
@@ -286,6 +445,9 @@ try {
     await cache.maintainMangaStorage('clear');assert.equal(await exists(await cache.resourcePath(second)),false);assert.deepEqual(await cache.loadResource(i),bytes);
     pass('same-owner restore withdraws old failed tombstones, preserves new authoritative pending tokens, and fences pre-restore callbacks');
   }
+
+},
+'restore-barrier':async()=>{
   {
     const {a,cache}=await fixture('restore-barrier');const c=chapter('A'),i=await seed(cache,a,c),path=await cache.resourcePath(i),directory=await cache.chapterDirectory(c);
     const snapshot=new Map();for(const name of await fs.readdir(directory))snapshot.set(name,await fs.readFile(join(directory,name)));
@@ -301,6 +463,9 @@ try {
     await assert.rejects(cache.withMangaStorageRestore(async()=>{throw Error('restore rejected');}),/restore rejected/);assert.deepEqual(await cache.loadResource(i),bytes);
     pass('restore serializes behind a held physical delete, blocks admission, and reconciles authority even when its callback fails');
   }
+
+},
+'download-version-actions':async()=>{
   {
     const {dir,a,cache}=await fixture('download-version-actions');
     const completed=chapter('selected','manga','v1'),partial=chapter('selected','manga','v2'),ordinary=chapter('selected','manga','v3');
@@ -322,6 +487,9 @@ try {
     await assert.rejects(cache.listMangaDownloadVersions(completed,()=>false),/superseded/);
     pass('download actions list exact completed, partial and derived versions; release is separate; live files refuse deletion and failed grants retry');
   }
+
+},
+'download-chapter-inventory':async()=>{
   {
     const {dir,a,cache}=await fixture('download-chapter-inventory');const kept=chapter('present'),partial=chapter('removed-from-catalog'),partialNew={...partial,contentVersion:'v2'};
     await seed(cache,a,kept,'download');for(const item of [partial,partialNew]){a.register(item,'download');await cache.storeResource(image(item),bytes);}
@@ -339,6 +507,9 @@ try {
     a.classes.set(key(partial),'cache');a.classes.set(key(partialNew),'cache');assert.equal((await cache.listMangaDownloadChapters('source','manga')).some(c=>c.chapterId===partial.chapterId),false);
     pass('book download inventory includes partial, new-version, removed-catalog and derived-only chapters; exact identities deduplicate and unknown history is excluded');
   }
+
+},
+'delete-admission-fence':async()=>{
   {
     const {a,cache}=await fixture('delete-admission-fence');const c=chapter('selected'),i=await seed(cache,a,c);let current=true;
     a.setBeforeClaim(async candidate=>{assert.throws(()=>cache.pinMangaChapter(candidate),/MANGA_CACHE_EVICTING/);current=false;});
@@ -347,6 +518,9 @@ try {
     for(const classification of ['protected','unknown','missing']){const item=chapter(classification);const picture=await seed(cache,a,item,classification);assert.equal(await cache.deleteMangaVersion(owner(item)),false);assert.equal(await exists(await cache.resourcePath(picture)),true);}
     pass('explicit deletion fences new admission during claim, preserves a cancelled pending grant, and rejects protected or unknown identities');
   }
+
+},
+'download-derived-idle':async()=>{
   {
     const {dir,a,cache}=await fixture('download-derived-idle');const facts=policies(a);const now=Math.floor(Date.now()/1000),ttl=7*24*60*60;
     const idle=chapter('idle'),never=chapter('never'),recent=chapter('recent'),session=chapter('session'),partial=chapter('partial'),host=chapter('host'),live=chapter('live'),shared=chapter('shared'),other=chapter('other','another-book'),unknown=chapter('unknown');
@@ -368,6 +542,9 @@ try {
     assert.equal(await exists(alias),true);for(const i of originals)assert.deepEqual(await cache.loadResource(i),bytes);
     pass('idle download trim uses the actual seven-day read clock and book scope; active sessions, partial leases, Host pins/live files, unknown history and original inode aliases remain protected');
   }
+
+},
+'download-derived-fence':async()=>{
   {
     const {dir,a,cache}=await fixture('download-derived-fence');const c=chapter('selected');const original=await seed(cache,a,c,'download');const file=await derivedFile(dir,c,'page.bin');let calls=0;
     a.policy=async selected=>{assert.equal(key(selected),key(c));calls++;assert.throws(()=>cache.pinMangaChapter(selected),/MANGA_CACHE_EVICTING/);return{status:'download',inUse:calls>1,lastReadAt:null};};
@@ -378,6 +555,9 @@ try {
     await cache.maintainMangaStorage('expiry');assert.equal(removed,0);assert.equal(await exists(file.path),true);
     pass('derived trim fences new admission and rechecks newly acquired Core protection or renewed reading clocks before physical removal');
   }
+
+},
+'download-derived-restore':async()=>{
   {
     const {dir,a,cache}=await fixture('download-derived-restore');const c=chapter('selected'),original=await seed(cache,a,c,'download'),file=await derivedFile(dir,c,'page.bin');policies(a);
     let entered,release;const reached=new Promise(r=>{entered=r;}),gate=new Promise(r=>{release=r;});let restored=false;
@@ -388,6 +568,9 @@ try {
     assert.equal(cache.mangaClaiming.size,0);assert.equal(a.claims.length,0);
     pass('same-owner restore cancels a waiting derived removal guard before Core replacement, without an original tombstone or permanent admission block');
   }
+
+},
+'download-derived-retry':async()=>{
   {
     const {dir,a,cache}=await fixture('download-derived-retry');const c=chapter('selected'),original=await seed(cache,a,c,'download');policies(a);
     const first=await derivedFile(dir,c,'first.bin'),second=await derivedFile(dir,c,'second.bin'),metadata=await derivedFile(dir,c,'owner.json');const events=[];
@@ -397,6 +580,9 @@ try {
     assert.deepEqual(await cache.loadResource(original),bytes);assert.equal(a.claims.length,0);assert.equal(a.completed.length,0);
     pass('partial derived I/O failure retains ownership sidecars for retry, preserves original bytes and sends no Core eviction completion');
   }
+
+},
+'download-derived-pressure':async()=>{
   {
     const {dir,a,cache,setFree}=await fixture('download-derived-pressure');const ordinary=chapter('ordinary'),first=chapter('first'),second=chapter('second'),next=chapter('next');
     await seed(cache,a,ordinary);const originals=[await seed(cache,a,first,'download'),await seed(cache,a,second,'download')];a.register(next,'download');policies(a);
@@ -408,6 +594,9 @@ try {
     assert.equal((await cache.mangaStorageUsage()).reservedBytes,0);
     pass('capacity and low-space pressure first use Core ordinary LRU, then idle download derivatives, stopping immediately once actual released bytes suffice');
   }
+
+},
+'expiry-foreground-interleave':async()=>{
   {
     const {a,cache}=await fixture('expiry-foreground-interleave');const old=chapter('expired'),next=chapter('opening');const image=await seed(cache,a,old);a.register(next);
     let entered,release,calls=0;const atCandidates=new Promise(resolve=>{entered=resolve;}),held=new Promise(resolve=>{release=resolve;});
@@ -423,6 +612,9 @@ try {
     assert.equal(expiryGuard.ttlSeconds,7*24*60*60);assert.ok(Number.isSafeInteger(expiryGuard.nowSeconds));
     pass('idle expiry candidate enumeration releases the global mutation lane; foreground budget admission proceeds and simultaneous expiry checks coalesce');
   }
+
+},
+'expiry-read-clock-recheck':async()=>{
   {
     const {a,cache}=await fixture('expiry-read-clock-recheck');const c=chapter('recently-read'),image=await seed(cache,a,c);
     let entered,release;const atCandidates=new Promise(resolve=>{entered=resolve;}),held=new Promise(resolve=>{release=resolve;});
@@ -434,6 +626,9 @@ try {
     assert.deepEqual(await cache.loadResource(image),bytes);
     pass('expiry rechecks current read time and in-use policy after enumeration before the exact eviction claim');
   }
+
+},
+'foreground':async()=>{
   {
     const {a,cache}=await fixture('foreground');const c=chapter('expired');await seed(cache,a,c);
     let calls=0;const original=a.candidates;a.candidates=async(...args)=>{calls++;return original.call(a,...args);};
@@ -441,6 +636,9 @@ try {
     await cache.maintainMangaStorage('clear');assert.equal(calls,2);
     assert.equal(handles.size,0);pass('foreground expiry is checked once per 24h; explicit clear bypasses cadence and descriptors close');
   }
+
+},
+'authority-batch-bounds':async()=>{
   {
     // Core caps classifyBatch/policyBatch requests at 256 entries. Exercise
     // every production batch path with a 300-chapter shelf so a future caller
@@ -448,22 +646,26 @@ try {
     const {dir,a,cache}=await fixture('authority-batch-bounds');
     const chapters=Array.from({length:300},(_,index)=>chapter(`batch-${index}`));
     chapters.forEach(c=>a.register(c,'protected'));
-    const classifySizes=[],policySizes=[];
-    a.classifyBatch=async batch=>{classifySizes.push(batch.length);return batch.map(()=> 'protected');};
-    a.policyBatch=async batch=>{policySizes.push(batch.length);return batch.map(()=>({status:'protected',inUse:false,lastReadAt:null}));};
+    const classifySizes=[],policySizes=[],classifyRows=[],policyRows=[];
+    a.classifyBatch=async batch=>{classifySizes.push(batch.length);classifyRows.push(batch.map(owner));return batch.map(()=> 'protected');};
+    a.policyBatch=async batch=>{policySizes.push(batch.length);policyRows.push(batch.map(owner));return batch.map(()=>({status:'protected',inUse:false,lastReadAt:null}));};
     await cache.maintainMangaStorage('clear');
-    assert.deepEqual(classifySizes,[128,128,44], 'clear maintenance slices classifyBatch requests');
+    assert.deepEqual(classifyRows.flat(),chapters.map(owner),'clear batches cover the full ordered input exactly once');
     await cache.maintainMangaStorage('expiry');
-    assert.deepEqual(policySizes,[128,128,44], 'expiry maintenance slices policyBatch requests');
+    assert.deepEqual(policyRows.flat(),chapters.map(owner),'expiry batches cover the full ordered input exactly once');policyRows.length=0;
     const files=[];
     for(const c of chapters){const path=join(dir,'display',`${c.chapterId.split('/').at(-1)}.bin`);await fs.mkdir(dirname(path),{recursive:true});await fs.writeFile(path,new Uint8Array([1]));files.push({path,owners:[owner(c)],live:false});}
     a.policy=async()=>({status:'download',inUse:false,lastReadAt:null});
-    a.policyBatch=async batch=>{policySizes.push(batch.length);return batch.map(()=>({status:'download',inUse:false,lastReadAt:null}));};
+    a.policyBatch=async batch=>{policySizes.push(batch.length);policyRows.push(batch.map(owner));return batch.map(()=>({status:'download',inUse:false,lastReadAt:null}));};
     cache.setMangaExternalStorage({inventory:async()=>files,remove:async()=>false});
     await cache.mangaStorageSummary();
-    assert.deepEqual(policySizes.slice(-3),[128,128,44], 'storage summary slices cleanable policy requests');
-    assert.ok(Math.max(...classifySizes,...policySizes)<=128, 'no authority batch exceeds the Host safety ceiling');
+    assert.deepEqual(policyRows.flat(),chapters.map(owner),'summary batches cover the full ordered input exactly once');
+    assert.ok([...classifySizes,...policySizes].every(size=>size>0&&size<=256),'each request obeys the actual Core 256-entry protocol ceiling; Host partition size may change');
     pass('300-chapter classify, expiry policy and cleanable-summary paths stay within bounded Core requests');
   }
-  console.log(JSON.stringify({status:'PASS',productionSourceSha256:createHash('sha256').update(source).digest('hex'),checks},null,2));
-} finally {beforeSync=async()=>{};beforeUnlink=async()=>{};rejectUnlink=()=>false;await fs.rm(root,{recursive:true,force:true});}
+
+},
+};
+try {await cases[id]();} finally {beforeSync=async()=>{};beforeUnlink=async()=>{};rejectUnlink=()=>false;await fs.rm(root,{recursive:true,force:true});}
+}
+for(const id of selectContractCases(CONTRACT_CASES)){await runCase(id);recordContractCasePass(id);}

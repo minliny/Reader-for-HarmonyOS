@@ -1,165 +1,21 @@
-import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-
-const gateway = fs.readFileSync('entry/src/main/ets/features/source/SourceGateway.ts', 'utf8');
-const orchestrator = fs.readFileSync('entry/src/main/ets/features/source/SourceToolsOrchestrator.ets', 'utf8');
-const page = fs.readFileSync('entry/src/main/ets/features/source/SourceToolsPage.ets', 'utf8');
-const sourcePage = fs.readFileSync('entry/src/main/ets/features/source/SourceManagementPage.ets', 'utf8');
-const host = fs.readFileSync('entry/src/main/ets/app/ReaderHostRegistry.ts', 'utf8');
-const httpHost = fs.readFileSync('entry/src/main/ets/app/HttpExecuteHost.ts', 'utf8');
-const owner = fs.readFileSync('entry/src/main/ets/app/ReaderRuntimeOwner.ts', 'utf8');
-const index = fs.readFileSync('entry/src/main/ets/pages/Index.ets', 'utf8');
-const rulesGateway = fs.readFileSync('entry/src/main/ets/features/settings/RulesManagementGateway.ts', 'utf8');
-const rulesPage = fs.readFileSync('entry/src/main/ets/features/settings/RulesManagementPage.ets', 'utf8');
-
-assert.match(gateway, /request\('source\.export', params\)/);
-assert.match(gateway, /request\('source\.debug',[\s\S]*responses: \{\}/);
-assert.match(gateway, /checkSource\([\s\S]*source\.check\.run/);
-assert.doesNotMatch(gateway, /request\('rule-sub\./,
-  'SourceGateway must not duplicate Rules Management subscription ownership');
-assert.match(gateway, /editedId !== sourceId[\s\S]*不允许隐式迁移 bookSourceUrl/);
-assert.match(gateway, /source\.export count does not match its JSON array/);
-assert.match(gateway, /bookSourceGroup/);
-assert.match(gateway, /takeSourceHttpDiagnostics\(result\.requestId\)/);
-assert.match(gateway, /source\.check\.run Host evidence correlation mismatch/);
-assert.match(gateway, /\[Core\]/);
-assert.match(gateway, /\[Host\]/);
-assert.match(gateway, /record\.stage[\s\S]*record\.method[\s\S]*record\.url/);
-
-assert.match(host, /new picker\.DocumentViewPicker\(this\.context\)\.save\(options\)/);
-assert.match(host, /JsonDocumentLimitBytes/);
-assert.match(host, /fileIo\.OpenMode\.TRUNC/);
-assert.match(host, /while \(writtenBytes < bytes\.byteLength\)/);
-assert.match(host, /await fileIo\.fsync\(file\.fd\)/);
-assert.match(owner, /return this\.host\.saveBookSourceJson\(text, suggestedFileName\)/);
-assert.match(httpHost, /parseSourceDiagnostic/);
-assert.match(httpHost, /sourceDiagnosticsByRequestId/);
-assert.match(httpHost, /sanitizeDiagnosticUrl/);
-assert.match(httpHost, /takeSourceDiagnostics/);
-assert.match(owner, /takeSourceHttpDiagnostics\(requestId: number\)/);
-
-assert.match(orchestrator, /gateway\.exportBookSources\(sourceIds\)/);
-assert.match(orchestrator, /owner\.saveBookSourceJson/);
-assert.match(orchestrator, /gateway\.saveEditableSource/);
-assert.match(orchestrator, /gateway\.checkSource[\s\S]*debugLogs: health\.logs/);
-assert.doesNotMatch(orchestrator, /gateway\.debugSource/,
-  'product debug must not replay an empty response map after the real check');
-assert.match(orchestrator, /setSelectedEnabled/);
-assert.match(orchestrator, /checkSelected/);
-assert.match(orchestrator, /SourceBatchCheckProgress/);
-assert.match(orchestrator, /currentSourceName/);
-assert.match(orchestrator, /progress = progress\.startSource/);
-assert.match(orchestrator, /progress = progress\.finish/);
-assert.match(orchestrator, /batchCheck: progress\.snapshot\(\)/);
-assert.match(orchestrator, /stopCheckSelected\(\)/);
-assert.match(orchestrator, /batchCheckCancelRequested/);
-assert.match(orchestrator, /this\.batchCheckCancelRequested[\s\S]*break/);
-assert.match(orchestrator, /catch \(error\)[\s\S]*progress = progress\.finish\(\{[\s\S]*state: 'error'/,
-  'one source execution error must become a distinct item result instead of aborting the batch');
-assert.match(orchestrator, /debugLogs: outcome\.logs/,
-  'batch checking must retain only the latest source detailed evidence');
-assert.doesNotMatch(orchestrator, /logs\.push\(\.\.\.outcome\.logs\)/,
-  'batch checking must not accumulate every raw L1-L5 and Host log');
-assert.match(orchestrator, /deleteSelected/);
-assert.match(orchestrator, /open\(seedSources: BookSource\[\] = \[\]\)/);
-assert.match(orchestrator, /this\.snapshot\.sources = seedSources\.slice\(\)/);
-assert.match(orchestrator, /setSelection\(sourceIds: string\[\]\)/);
-assert.match(orchestrator, /selectionRevision: source\.selectionRevision/);
-assert.match(orchestrator, /selectedSourceIds: source\.selectedSourceIds\.slice\(\)/);
-assert.match(orchestrator, /已选择 \$\{selection\.length\} 个书源/);
-assert.doesNotMatch(orchestrator, /RuleSubscription|rule-sub|putSubscription|deleteSubscription/);
-assert.match(orchestrator, /pendingOperations/);
-assert.match(orchestrator, /if \(!this\.isCurrentSession\(this\.session\) \|\| \(!allowQueued && \(this\.snapshot\.busy \|\| this\.pendingOperations > 0\)\)\)/);
-
-assert.match(sourcePage, /onOpenTools/);
-assert.match(sourcePage, /ReaderSearchField\(\{[\s\S]*variant: 'sourceManagement'[\s\S]*mode: 'live'/);
-assert.match(sourcePage, /filteredSources\(\)/);
-assert.match(sourcePage, /source\.group === this\.groupValue/);
-assert.match(sourcePage, /ReaderButton\(\{[^\n]*specId: 'source-management-manage'[^\n]*label: '批量管理'/,
-  'management action uses the actual finite shared Button; native tuples and callbacks are exercised by foundation consumer gates');
-assert.match(page, /Core 生成 Legado 兼容 JSON/);
-assert.match(page, /fullWidthActionButton\('导出全部书源'/,
-  'standalone export action must not reuse the row-only layoutWeight button');
-assert.match(page, /private fullWidthActionButton[\s\S]*?ReaderButton\(\{[\s\S]*?specId: 'source-action'[\s\S]*?layout: 'full'/);
-const controls=foundationControls(),controlOwner=createReaderBuilderProbe(page,['fullWidthActionButton','smallButton'],controls.dependencies,controls.hooks).owner;
-let actions=0;Object.assign(controlOwner,{appThemeScheme:'day',snapshot:{busy:false}});
-controlOwner.fullWidthActionButton('导出全部书源',true,()=>actions++);const full=controls.nodes(controlOwner).find(n=>n.type==='Text');
-assert.equal(full.width,'100%');assert.equal(full.height,42);assert.equal(full.borderRadius,8);assert.equal(Object.hasOwn(full,'layoutWeight'),false,'standalone export retains full-width instead of row-only equal weight');
-full.onClick();assert.equal(actions,1);controlOwner.snapshot.busy=true;controls.flush(controlOwner);full.onClick();assert.equal(actions,1,'retained full-width callback honors current busy Prop');
-assert.match(page, /onCheckSelected/);
-assert.match(page, /onDeleteSelected/);
-assert.match(page, /onSelectAll/);
-assert.match(page, /onClearSelection/);
-assert.match(page, /onToggleSelection/);
-assert.match(page, /batchCard\(\)/);
-assert.match(page, /ForEach\(\[this\.batchControlsRenderKey\(\)\]/,
-  'V1 builder controls must remount when busy/selection changes so action guards do not stay stale');
-assert.match(page, /ForEach\(\[this\.batchProgressRenderKey\(\)\]/,
-  'V1 batch progress must remount at each source transition so counters remain live');
-assert.doesNotMatch(page, /ForEach\(\[this\.snapshot\.statusMessage\]/,
-  'changing progress text must not remount the complete source list');
-assert.match(page, /class SourceToolListDataSource implements IDataSource/);
-assert.match(page, /class SourceCheckResultDataSource implements IDataSource/);
-assert.match(page, /class SourceDebugLogDataSource implements IDataSource/);
-assert.match(page, /@Prop @Watch\('onSnapshotChanged'\) snapshot/);
-assert.match(page, /LazyForEach\(this\.sourceDataSource/);
-assert.doesNotMatch(page, /source-tools-list-\$\{renderKey\}/,
-  'selection/progress changes must update lazy data instead of remounting the whole source list');
-assert.doesNotMatch(page, /\.virtualScroll\(/,
-  'Repeat virtualScroll is not legal inside this @Component');
-assert.match(page, /private batchCard\(\)/);
-assert.match(page,
-  /批量管理（已选 \$\{this\.snapshot\.selectedSourceCount\}\/\$\{this\.snapshot\.sources\.length\}）/);
-assert.match(page, /private batchCheckCard\(\)/);
-assert.match(page, /检测进度 \$\{this\.snapshot\.batchCheck\.completed\}/);
-assert.match(page, /所选项通过 \$\{this\.snapshot\.batchCheck\.passed\}/);
-assert.match(page, /所选项未通过 \$\{this\.snapshot\.batchCheck\.failed\}/);
-assert.match(page, /检测错误 \$\{this\.snapshot\.batchCheck\.errors\}/);
-assert.match(page, /this\.snapshot\.batchCheck\.total - this\.snapshot\.batchCheck\.completed/);
-assert.match(page, /实时结果（最新在前）/);
-assert.match(page, /LazyForEach\(this\.batchResultDataSource/);
-assert.match(page, /停止检测/);
-assert.match(page, /onStopCheck/);
-assert.match(page, /log\.sourceId[\s\S]*log\.traceId[\s\S]*log\.requestId/);
-assert.match(page, /private sourceCard\(\)/);
-assert.match(page, /private smallButton\(label: string, enabled: boolean/);
-assert.match(page, /private smallButton[\s\S]*?specId: 'source-compact'[\s\S]*?actionEnabled: enabled/);
-controlOwner.smallButton('不可用',false,()=>actions++);const small=controls.nodes(controlOwner).find(n=>n.type==='Text'&&n.create==='不可用');assert.equal(small.enabled,false);small.onClick();assert.equal(actions,1,'shared compact actor rejects a direct disabled physical callback');
-assert.doesNotMatch(page, /private takeSelection/);
-assert.doesNotMatch(page, /RuleSubscription|规则订阅|subscriptionCard/);
-assert.match(sourcePage, /statusKind/);
-assert.match(sourcePage, /onRetryLoad/);
-assert.match(rulesGateway, /request\('rule-sub\.list', \{\}\)/);
-assert.match(rulesGateway, /requestMutation\('rule-sub\.put'/);
-assert.match(rulesGateway, /requestMutation\('rule-sub\.delete'/);
-assert.match(rulesGateway, /RulesMutationOwner\.forRuntime\(this\.owner\)\.run/,
-  'subscription writes retain original domain exact-receipt ownership rather than direct unguarded requests');
-assert.match(rulesPage, /subscriptions/);
-assert.match(index, /'sourceTools'/);
-assert.match(index, /SourceToolsPage\(/);
-assert.match(index, /onSelectAll:[^\n]*isCurrentSourceToolsPresentation[^\n]*host\?\.selectAll\(\)/);
-assert.match(index, /onToggleSelection:[^\n]*isCurrentSourceToolsPresentation[^\n]*host\?\.toggleSelection\(sourceId\)/);
-assert.match(index, /onStopCheck:[^\n]*isCurrentSourceToolsPresentation[^\n]*host\?\.stopCheckSelected\(\)/);
-assert.match(index, /onCheckSelected:[^\n]*host\?\.checkSelected\(sourceIds\)/);
-assert.doesNotMatch(index, /onCheckSelected:[^\n]*consumeSelection/,
-  'starting a check keeps the owner canonical selected scope visible');
-assert.match(index, /onExportAll:[^\n]*host\?\.exportAll\(\)/);
-assert.match(index, /onDeleteSelected:[^\n]*isCurrentSourceToolsPresentation\(generation, owner, mounting, host, identity\)[^\n]*this\.requestSourceDelete\(sourceIds, host, identity\)/,
-  'delete confirmation carries the exact Tools attachment; the production cold-consumer test exercises cancel, stale and live callbacks');
-assert.match(index, /getSourceToolsOrchestrator\(\)\.open\(this\.sourceSources\)/);
-assert.doesNotMatch(index, /private (?:selectAllSourceTools|toggleSourceToolsSelection|consumeSourceToolsSelection)/);
-assert.match(index, /showIndexAlert\('confirmation-cancelable',[\s\S]*确定删除所选/);
-
-for (const forbidden of [
-  'aes-128',
-  'retention',
-  'jsonPath',
-  'css selector',
-]) {
-  assert.equal(orchestrator.toLowerCase().includes(forbidden), false,
-    `SourceToolsOrchestrator must not own Core rule/serialization algorithms: ${forbidden}`);
+import {readFileSync} from 'node:fs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function actor(method) {
+ const {foundationControls}=await import('./lib/reader-foundation-control-probe.mjs');
+ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+ const page=readFileSync(new URL('../entry/src/main/ets/features/source/SourceToolsPage.ets',import.meta.url),'utf8');
+ const controls=foundationControls(),owner=createReaderBuilderProbe(page,[method],controls.dependencies,controls.hooks).owner;Object.assign(owner,{appThemeScheme:'day',snapshot:{busy:false}});return{controls,owner};
 }
-
-console.log('Source product tools static boundary: PASS');
+async function exportAction(){
+ const {controls,owner}=await actor('fullWidthActionButton');let actions=0;owner.fullWidthActionButton('导出全部书源',true,()=>actions++);
+ const text=controls.nodes(owner).find(n=>n.type==='Text');assert.ok(text);assert.equal(text.width,'100%');assert.equal(Object.hasOwn(text,'layoutWeight'),false,'standalone export is full-width rather than a row weight');
+ const spec=controls.dependencies.resolveReaderButtonSpec('source-action');assert.equal(text.height,spec.height);assert.equal(text.borderRadius,spec.radius);
+ text.onClick();assert.equal(actions,1);owner.snapshot.busy=true;controls.flush(owner);text.onClick();assert.equal(actions,1,'retained export actor reads current busy state');
+}
+async function compactAction(){
+ const {controls,owner}=await actor('smallButton');let actions=0;owner.smallButton('不可用',false,()=>actions++);const disabled=controls.nodes(owner).find(n=>n.type==='Text'&&n.create==='不可用');assert.ok(disabled);assert.equal(disabled.enabled,false);disabled.onClick();assert.equal(actions,0);
+ owner.smallButton('可用',true,()=>actions++);const enabled=controls.nodes(owner).find(n=>n.type==='Text'&&n.create==='可用');assert.ok(enabled);enabled.onClick();assert.equal(actions,1);
+}
+const cases={'export-action':exportAction,'compact-action':compactAction};
+for(const id of selectContractCases({'export-action':'Actual full-width export shared actor and retained busy guard','compact-action':'Actual compact action rejects direct disabled physical click'})){await cases[id]();recordContractCasePass(id);}

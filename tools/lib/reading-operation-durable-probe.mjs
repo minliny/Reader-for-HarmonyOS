@@ -1,7 +1,7 @@
+import { createHash } from 'node:crypto';
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import { coreCliPath } from './tool-environment.mjs';
 import { formatDownloadStorageBytes } from '../../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts';
-import {fixture as actualGeneralSettingsFixture} from './general-settings-persistence-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
@@ -42,8 +42,28 @@ export const cacheContext={sourceId:'source',bookId:'book'};
 export const session={acquisitionMode:'online',identity:cacheContext,detailUrl:'/detail',tocUrl:'/toc',book:{title:'Book',author:'Author'},continuationVariables:[],entries:[{index:0,title:'Chapter',url:'/chapter',variables:[]}],hostRequirements:[]};
 export function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};}
 export async function until(predicate){for(let i=0;i<200;i++){if(predicate())return;await new Promise(r=>setTimeout(r,2));}assert.fail('actual durable probe did not reach requested boundary');}
-export async function fixture(official=false,existing){
+
+// Own only roots created by this module; reopening an externally supplied root
+// never grants deletion authority. Callers clean up in finally, including FAIL.
+const ownedDurableRoots = new Set();
+export async function cleanupDurableFixtures({ retain = false } = {}) {
+ const roots = [...ownedDurableRoots];
+ if (retain) { ownedDurableRoots.clear(); return { retained: roots, removed: [] }; }
+ const removed = [];
+ for (const root of roots) { await fsp.rm(root, { recursive: true, force: true }); ownedDurableRoots.delete(root); removed.push(root); }
+ return { retained: [], removed };
+}
+export function durableFixtureToolEvidence() {
+ const cli = coreBinary;
+ return { cli, cliSha256: createHash('sha256').update(fs.readFileSync(cli)).digest('hex'),
+  compilerVersion: ts.version, identityBoundary: 'CLI hash identifies the existing executable; it is not source provenance. Use fixture.readCoreIdentity() explicitly for reported Core identity/capabilities.',
+  autoBuild: false };
+}
+
+export async function fixture(official=false,existing,{domain='all'}={}){
+ assert.ok(domain==='all'||domain==='bookmark'||domain==='directory','supported durable fixture domain');
  const root=existing?.root??await fsp.mkdtemp(resolve(tmpdir(),'reader-host-durable-')),files=resolve(root,'files'),core=resolve(root,'core');await fsp.mkdir(files,{recursive:true});
+ if (!existing?.root) ownedDurableRoots.add(root);
  const options={},calls=[],publications=[],io={finishes:0,failWrites:0,fsyncs:0};let installed,uuid=0;
  const Runtime=runtimeOwnerIdentityProbe(()=>installed);
  const fileIo={OpenMode:{READ_ONLY:fs.constants.O_RDONLY,READ_WRITE:fs.constants.O_RDWR},
@@ -77,6 +97,7 @@ export async function fixture(official=false,existing){
    const event=await command(method,params);
    if(options.afterMethod===method){options.afterMethod=undefined;throw Error('ACK lost after actual durable Core effect');}
    return options.transformMethod===method?{...event,data:options.transform(event.data)}:event;}};
+ if(domain!=='bookmark'){
  const journalPath=resolve(files,'settings-text-cleanup-v2-fixture.json');
  const textPersistence={async loadLegacyProtection(){return[];},async saveLegacyProtection(){},
   async loadSettingsTextCleanup(){try{const encoded=await fsp.readFile(journalPath,'utf8');return encoded===''?undefined:JSON.parse(encoded);}catch(error){if(error.code==='ENOENT')return undefined;throw error;}},
@@ -91,23 +112,33 @@ export async function fixture(official=false,existing){
  const textStorage=new Storage(runtime,storageDisk,textPersistence);
  runtime.clearTextRebuildableCache=(evidence,current)=>textStorage.cleanupSettingsText(evidence,current);
  runtime.readSettingsTextCleanup=()=>textStorage.readSettingsTextCleanup();
+ }
  installed=runtime;
  const dirDeps={ReaderWriteEvidence,projectPersistedReceipt,LocalReadingFlowGateway,LOCAL_SOURCE_ID,loadReaderControlBookmarkProjection};
  const Directory=compile('features/reading/ReaderDirectoryHost.ts','ReaderDirectoryHost',dirDeps,official);
- const Offline=compile('features/reading/ReadingOfflineHost.ts','ReadingOfflineHost',{ReaderWriteEvidence,projectPersistedReceipt,ReadingOfflineGateway,MangaDownloadActionsGateway},official);
- const SettingsGateway=compile('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',{CacheClearOperationIntentStore:types.CacheClearOperationIntentStore},official);
- const SettingsOwner=compile('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,formatDownloadStorageBytes,SettingsCacheGateway:SettingsGateway},official);
+ const bookmarkStore=new types.BookmarkOperationIntentStore(runtime,()=>Runtime.isCurrent(runtime));
+ const directory=Directory.forRuntime(runtime,()=>Runtime.isCurrent(runtime),undefined,bookmarkStore);
+ let Offline,SettingsGateway,SettingsOwner,SettingsHost,clearStore,offline,settings;
+ if(domain!=='bookmark'){
+ Offline=compile('features/reading/ReadingOfflineHost.ts','ReadingOfflineHost',{ReaderWriteEvidence,projectPersistedReceipt,ReadingOfflineGateway,MangaDownloadActionsGateway},official);
+ if(domain==='all'){
+ SettingsGateway=compile('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',{CacheClearOperationIntentStore:types.CacheClearOperationIntentStore},official);
+ SettingsOwner=compile('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,projectOperationFacts,formatDownloadStorageBytes,SettingsCacheGateway:SettingsGateway},official);
+ const {fixture:actualGeneralSettingsFixture}=await import('./general-settings-persistence-probe.mjs');
  const general=actualGeneralSettingsFixture();general.setActive(runtime);
  general.Runtime.isCurrent=owner=>Runtime.isCurrent(owner);general.Runtime.current=()=>Runtime.current();
  const generalHost=new general.Host(()=>{},()=>({autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true,developerMode:false}),()=>true,()=>runtime.getUIAbilityContext());
  assert.equal(generalHost.bindPresentation(runtime,'reading-cache-general-factory',()=>Runtime.isCurrent(runtime)),true);
- const SettingsHost=compile('features/settings/SettingsHost.ets','SettingsHost',{ReaderRuntimeOwner:Runtime,SettingsCacheCleanupOwner:SettingsOwner,SettingsOrchestrator:generalHost.orchestrator.constructor},official);
- const bookmarkStore=new types.BookmarkOperationIntentStore(runtime,()=>Runtime.isCurrent(runtime)),clearStore=new types.CacheClearOperationIntentStore(runtime,()=>Runtime.isCurrent(runtime));
- const directory=Directory.forRuntime(runtime,()=>Runtime.isCurrent(runtime),undefined,bookmarkStore),offline=Offline.forRuntime(runtime,()=>Runtime.isCurrent(runtime),undefined,clearStore),settings=SettingsOwner.forRuntime(runtime,v=>publications.push(structuredClone(v)));
+ SettingsHost=compile('features/settings/SettingsHost.ets','SettingsHost',{ReaderRuntimeOwner:Runtime,SettingsCacheCleanupOwner:SettingsOwner,SettingsOrchestrator:generalHost.orchestrator.constructor},official);
+ settings=SettingsOwner.forRuntime(runtime,v=>publications.push(structuredClone(v)));
+ }
+ clearStore=new types.CacheClearOperationIntentStore(runtime,()=>Runtime.isCurrent(runtime));
+ offline=Offline.forRuntime(runtime,()=>Runtime.isCurrent(runtime),undefined,clearStore);
+ }
  let entries=[{index:0,title:'Chapter',level:2,downloadState:'completed',bookmarks:[]}],route=true;
  const dirBinding={book,current:()=>route,currentEntries:()=>entries,emitEntries:v=>entries=v,emitOperation:v=>publications.push(structuredClone(v)),failed:e=>publications.push({error:e.message})};
  const offlineBinding={session,current:()=>route,currentEntries:()=>entries,emitEntries:v=>entries=v,emitOperation:v=>publications.push(structuredClone(v)),failed:e=>publications.push({error:e.message})};
- return{root,files,core,types,Runtime,runtime,options,io,calls,publications,command,bookmarkStore,clearStore,directory,offline,settings,SettingsOwner,SettingsGateway,SettingsHost,dirBinding,offlineBinding,Directory,Offline,
+ return{toolEvidence: durableFixtureToolEvidence, readCoreIdentity: () => command('core.info'), root,files,core,types,Runtime,runtime,options,io,calls,publications,command,bookmarkStore,clearStore,directory,offline,settings,SettingsOwner,SettingsGateway,SettingsHost,dirBinding,offlineBinding,Directory,Offline,
   entries:()=>entries,setEntries:v=>entries=v,retire:()=>{route=false;},unset:()=>{installed=undefined;},install:o=>{installed=o;},
   create:()=>directory.createPosition(bookmarkInput,dirBinding),clear:()=>offline.clearBook(offlineBinding),
   reads:()=>calls.filter(c=>c.method?.endsWith('.query')),writes:()=>calls.filter(c=>['bookmark.create','bookmark.delete','cache.clear','cache.storage.cleanup'].includes(c.method)),
@@ -124,3 +155,9 @@ export async function seedLegacySettingsClear(f) {
   data=>new f.SettingsGateway(f.runtime).decode(data),evidence,()=>true);}catch(issue){error=issue;}
  return{evidence,report,error};
 }
+
+/** Bookmark authority only: actual atomic journal/DirectoryHost and exact Core queries; no Settings/download owners. */
+export const bookmarkFixture=(official=true,existing)=>fixture(official,existing,{domain:'bookmark'});
+
+/** Directory/offline authority without Settings presentation or owner construction. */
+export const directoryFixture=(official=true,existing)=>fixture(official,existing,{domain:'directory'});

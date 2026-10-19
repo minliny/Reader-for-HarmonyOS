@@ -83,6 +83,7 @@ function readerFixture(file = lreFile) {
     ttsLanguage: 'zh-CN', ttsPerson: 0, ttsPauseOnInterruption: true, ttsAllowMixing: false,
     ttsFailurePolicy: 'stop', ttsFollowHighlight: true, ttsBackgroundPlayback: true, ttsKeepScreenOn: false,
     ttsVoiceOptions: [{ language: 'en-US', person: 7 }],
+    ttsPreferencesRecovery: { message: '', visible: false, canRetry: false, generation: 0 },
     controlsPresentedForWindow: () => false,
     applyReaderWindowPolicy: async () => { events.push(['window']); await nativeGate.promise; },
     ttsPreferencesGateway: { writeFacts: () => ({ pendingReconciliation: pendingPreferences }),
@@ -90,7 +91,7 @@ function readerFixture(file = lreFile) {
         return writeGate.promise.then(() => { pendingPreferences = false; }); } },
     logTtsFailure: (...args) => events.push(['error', ...args]),
   });
-  return { owner, events, writes, nativeGate, writeGate };
+  return { owner, events, writes, nativeGate, writeGate, setPending: value => { pendingPreferences = value; } };
 }
 function retire(f, boundary) {
   if (boundary === 'lifecycle') { f.owner.mounted = false; f.owner.lifecycleToken++; f.owner.mounted = true; }
@@ -123,9 +124,18 @@ async function runReaderCases(file = lreFile) {
     const f = readerFixture(file); f.owner[method](...args); f.nativeGate.resolve(); await settle();
     assert.equal(f.writes.length, 1, `${method}: active request reaches existing gateway`);
     assert.equal(f.writes[0].resetOwned, false); assert.equal(f.writes[0].admission(), true);
-    assert.equal(f.owner[field], value); assert.equal(f.owner.ttsPreferencesRecovery.visible, true);
-    assert.equal(f.owner.ttsPreferencesRecovery.canRetry, false, 'in-flight save has no duplicate retry');
+    assert.equal(f.owner[field], value); assert.equal(f.owner.ttsPreferencesRecovery.visible, false,'ordinary in-flight preference save stays quiet');
+    assert.equal(f.owner.ttsPreferencesRecovery.canRetry, false, 'quiet in-flight save has no duplicate retry');
     f.writeGate.resolve(); await settle(); assert.equal(f.owner.ttsPreferencesRecovery.visible, false);
+  }
+  for (const [method,args,field,value] of mutations) for (const pending of [false,true]) {
+    const f=readerFixture(file);f.owner[method](...args);f.nativeGate.resolve();await settle();
+    assert.equal(f.writes.length,1);assert.equal(f.owner.ttsPreferencesRecovery.visible,false);
+    f.setPending(pending);f.writeGate.reject(Error('current preference write failed'));await settle();
+    assert.equal(f.owner.ttsPreferencesRecovery.visible,true);assert.equal(f.owner.ttsPreferencesRecovery.canRetry,true);
+    assert.match(f.owner.ttsPreferencesRecovery.message,pending?/保存尚未确认/:/未能保存/);
+    assert.equal(f.owner[field],value,'failed save retains the current accepted selection');
+    assert.equal(f.writes.length,1,'feedback cannot replay a preference write');
   }
 }
 await runReaderCases();

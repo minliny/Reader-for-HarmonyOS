@@ -28,8 +28,27 @@ export function compile(p,name,deps,official=false,source=read(p)) {
 }
 export const deferred=()=>{let resolve,reject;const promise=new Promise((r,j)=>{resolve=r;reject=j;});return{promise,resolve,reject};};
 export const until=async check=>{for(let i=0;i<200;i++){if(check())return;await new Promise(r=>setTimeout(r,5));}throw Error('bounded wait failed');};
+
+// Own only roots created by this module; reopening an externally supplied root
+// never grants deletion authority. Callers clean up in finally, including FAIL.
+const ownedDurableRoots = new Set();
+export async function cleanupDurableFixtures({ retain = false } = {}) {
+ const roots = [...ownedDurableRoots];
+ if (retain) { ownedDurableRoots.clear(); return { retained: roots, removed: [] }; }
+ const removed = [];
+ for (const root of roots) { await fsp.rm(root, { recursive: true, force: true }); ownedDurableRoots.delete(root); removed.push(root); }
+ return { retained: [], removed };
+}
+export function durableFixtureToolEvidence() {
+ const cli = binary;
+ return { cli, cliSha256: createHash('sha256').update(fs.readFileSync(cli)).digest('hex'),
+  compilerVersion: ts.version, identityBoundary: 'CLI hash identifies the existing executable; it is not source provenance. Use fixture.readCoreIdentity() explicitly for reported Core identity/capabilities.',
+  autoBuild: false };
+}
+
 export async function fixture(official=false,existing,mutantSource) {
  const root=existing?.root??await fsp.mkdtemp(resolve(tmpdir(),'reader-rules-durable-')),files=resolve(root,'files'),core=resolve(root,'core');await fsp.mkdir(files,{recursive:true});
+ if (!existing?.root) ownedDurableRoots.add(root);
  const options={},calls=[],io={finishes:0,syncs:0,failWrites:0};let installed,uuid=0;
  const Runtime={isCurrent:o=>installed===o&&!o.closed,current:()=>{if(!installed)throw Error('Runtime unavailable');return installed;}};
  const fileIo={OpenMode:{READ_ONLY:fs.constants.O_RDONLY,READ_WRITE:fs.constants.O_RDWR},
@@ -62,7 +81,7 @@ export async function fixture(official=false,existing,mutantSource) {
  const quickTypes=compile('features/reading/ReaderReplaceQuickGateway.ts','*',commonReplace,official),Quick=quickTypes.ReaderReplaceQuickGateway;
  const fullTypes=compile('features/reading/ReaderControlReplaceGateway.ts','*',{...commonReplace,...quickTypes,RulesManagementGateway:Gateway},official),Full=fullTypes.ReaderControlReplaceGateway;
  const gateway=new Gateway(runtime),owner=Owner.forRuntime(runtime),store=new Store(runtime);
- return{root,core,files,options,calls,io,runtime,Runtime,Owner,Store,Gateway,Full,Quick,FullError:fullTypes.ReaderControlReplaceGatewayError,gateway,owner,store,command,sha256Hex,
+ return{toolEvidence: durableFixtureToolEvidence, readCoreIdentity: () => command('core.info'), root,core,files,options,calls,io,runtime,Runtime,Owner,Store,Gateway,Full,Quick,FullError:fullTypes.ReaderControlReplaceGatewayError,gateway,owner,store,command,sha256Hex,
   plan:()=>{try{return fs.readFileSync(resolve(files,'reader-rule-subscription-plan-v1.json'),'utf8');}catch(e){if(e.code==='ENOENT')return'';throw e;}},
   disk:()=>{try{return fs.readFileSync(resolve(files,'reader-rules-mutation-intent-v1.json'),'utf8');}catch(e){if(e.code==='ENOENT')return'';throw e;}},
   writes:()=>calls.filter(c=>c.method==='rules.mutation.apply'),retire:()=>{runtime.closed=true;installed=undefined;},install:o=>{installed=o;},

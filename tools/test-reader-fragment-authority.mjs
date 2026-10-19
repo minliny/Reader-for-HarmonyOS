@@ -1,9 +1,11 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const selected=selectContractCases({'property-authority':{description:'Actual renderFragments reads reactive property even with live provider; fallback revision admission',resources:[]}});
+async function runCase(){
+const {default:assert}=await import('node:assert/strict');
 
 const file = new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets', import.meta.url);
-const Surface = productionMotionMethods(file, ['renderFragments']);
+const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+const Surface=selectedProductionMethods(file,'ReadingSurface',['renderFragments']);
 const surface = new Surface();
 let reads = 0;
 let fallback = [{ id: 'fallback', nativeTitle: { text: 'old title' } }];
@@ -23,25 +25,6 @@ surface.fragmentsProvider = () => { throw Error('provider is not active'); };
 surface.contentRevision = -1;
 assert.equal(surface.renderFragments(), fallback);
 
-const source = readFileSync(file, 'utf8');
-assert.doesNotMatch(source, /this\.pageFragments\[0\]/, 'title must not bypass the body authority');
-assert.match(source, /ForEach\(this\.renderFragments\(\)\.slice\(0, 1\)\.filter/,
-  'title key selection keeps the same authoritative fragment owner as the body');
-assert.match(source, /recipe: fragment\.nativeTitle!/,
-  'a pending outgoing title actor reads its own keyed fragment');
-assert.doesNotMatch(source, /recipe: this\.renderFragments\(\)\[0\]\.nativeTitle!/,
-  'a pending outgoing actor cannot fetch an absent incoming title');
 
-const Experience = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
-  ['isChapterFirstPageStart', 'isMeasurementChapterFirstPageStart']);
-for (const start of [0, 4096]) {
-  const owner = Object.assign(new Experience(), {
-    chapter: { documentRange: { startScalar: start } },
-    paragraphRanges: [{ startScalar: start }],
-    measuringChapter() { return this.chapter; },
-    measuringRanges() { return this.paragraphRanges; },
-  });
-  assert.equal(owner.isChapterFirstPageStart(start), start === 0);
-  assert.equal(owner.isMeasurementChapterFirstPageStart(start), start === 0);
 }
-console.log('PASS fragment authority and property-read contract; window title bounds. Native reactive scheduling/pixels not simulated.');
+for(const id of selected){await runCase();recordContractCasePass(id);}

@@ -91,7 +91,11 @@ try {
   rmSync(join(vendor, 'escaped-input'));
   put(app, 'wrong native'); assert.match(run().stderr, /app native input does not match/); put(app, readFileSync(native).toString());
   put(join(vendor, 'Index.ts'), 'wrong SDK'); assert.match(run().stderr, /vendored SDK does not match/); put(join(vendor, 'Index.ts'), 'synthetic SDK');
-  values.sdk_smoke = 'skipped'; writeEvidence(); assert.match(run().stderr, /SDK smoke must pass/); values.sdk_smoke = 'pass'; writeEvidence();
+  values.sdk_smoke = 'skipped'; writeEvidence();
+  const invalidSmoke = run(); assert.equal(invalidSmoke.status, 0, 'test evidence does not rewrite compatible artifact identity');
+  assert.equal(JSON.parse(invalidSmoke.stdout).sdkSmoke, 'INVALID', 'invalid selected evidence stays incomplete, never NOT_RUN or PASS');
+  values.sdk_smoke = 'NOT_RUN'; writeEvidence(); assert.equal(run().status, 0, 'unrequested smoke does not bypass Native identity checks or block packaging');
+  values.sdk_smoke = 'pass'; writeEvidence();
   const data = JSON.parse(readFileSync(identity)); data.gitDirty = true; put(identity, data);
   values.core_build_identity_sha256 = sha(readFileSync(identity)); writeEvidence();
   put(join(core, 'crates/input.rs'), 'dirty source one'); put(snapshot, coreBuildSnapshot(core));

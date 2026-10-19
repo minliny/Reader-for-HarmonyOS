@@ -1,9 +1,43 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "controller-cas-lifecycle": {
+    "description": "Actual Controller/Gateway narrow entry, serialized CAS, restore, refresh and late release; no ETS SDK resolution",
+    "resources": []
+  },
+  "controller-refresh-preview": {
+    "description": "Actual Controller byte admission, exact mapping and bounded preview; fake Core/image ports",
+    "resources": []
+  },
+  "surface-cold-admission": {
+    "description": "Actual Surface narrow cold entry, removed chapter protection and unsaved refresh; selected SDK method extraction",
+    "resources": []
+  },
+  "adjacent-preparation": {
+    "description": "Actual adjacent Controller/Surface canonical identity, optional first image and cancellation; fake ports",
+    "resources": []
+  },
+  "directory-proof": {
+    "description": "Actual Surface/Gateway/Controller cached/live directory proof and historical resume; no pixel/device claim",
+    "resources": []
+  },
+  "source-cache-renew": {
+    "description": "Actual Surface source-rule renewal and changed-content reopen preserves canonical page/xy/CAS",
+    "resources": []
+  },
+  "retained-shell-catalog-sdk": {
+    "description": "Actual SDK Shell/Surface/property runtime late catalog and flat/proof selection identity; fake Core/image IO",
+    "resources": []
+  }
+};
+
+async function case_controller_cas_lifecycle() {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache-probe.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
 const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
 function load(name, dependencies = {}) {
   const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
@@ -184,56 +218,38 @@ console.log('PASS narrow cold entry: 3 of 10000 real page facts, no full manifes
  await assert.rejects(new Controller(broken).awaitPendingProgress('s','b'),/durable write failed/,'reopen observes prior failure');
 }
 console.log('PASS nonblocking disposal: pixel leases released immediately, admitted CAS survives owner close, rapid reopen waits, failed tail stays observable');
-// The actual surface opens narrow pixels before starting the slow cached catalog query.
-{
- const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const phases=[];let finishCatalog;
- const catalog=new Promise(resolve=>finishCatalog=resolve);
- const prepared={chapter:{...structuredClone(chapter),pageStart:0,totalPages:8,
-  manifest:{...structuredClone(chapter.manifest),pages:structuredClone(chapter.manifest.pages.slice(0,3))},resources:structuredClone(chapter.resources.slice(0,3))},
-  targetOrdinal:0,recoveryRequired:false,progress:{token:{epoch:1,revision:0},location:null}};
- const rt={supportsCoreCapability:()=>true,request:async(method)=>{assert.equal(method,'manga.entry.get');phases.push('entry');return {data:{entry:prepared}};},
-  loadReadingImage:async()=>{phases.push('pixels');return {fileUri:'file://entry',width:600,height:800,revision:'r'};},releaseReadingImage:()=>{},
-  bookAcquisitions:()=>({acquireBook:()=>{phases.push('catalog-start');return catalog;}})};
- const ControllerSurface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
- const controller=new Controller(rt);
- const surface=Object.assign(new ControllerSurface(),{mounted:true,controller,runtime:rt,sourceId:'s',bookId:'b',offline:false,
-  remoteBookSeed:{},opened:false,acquirePreparedCatalog:()=>{phases.push('catalog-start');return catalog;},publish:()=>phases.push('published'),restore:()=>phases.push('restored'),onRemoteSessionReady:()=>phases.push('catalog-ready')});
- await surface.open(controller);assert.equal(surface.opened,true);assert.ok(phases.indexOf('published')<phases.indexOf('catalog-start'));assert.equal(phases.includes('catalog-ready'),false);
- surface.mounted=false;controller.close();finishCatalog({});await new Promise(r=>setImmediate(r));assert.equal(phases.includes('catalog-ready'),false);
-}
-console.log('PASS actual surface first admits narrow pixels, then starts catalog; stale catalog cannot publish after disposal');
 
-// A removed saved chapter must not silently become chapter zero on cold resume.
-{
- const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const old={kind:'manga',chapter:{sourceId:'s',bookId:'b',chapterId:'/deleted-from-catalog'},manifestVersion:'old-manifest',
-  pageId:chapter.manifest.pages[2].pageId,pageOrdinalFallback:2,x:0.25,y:0.75,progressRevision:4};
- let persisted=structuredClone(old),writes=0;
- const rt={supportsCoreCapability:()=>true,request:async(method,params)=>{
-  if(method==='manga.entry.get')return {data:{entry:null}};
-  if(method==='manga.chapter.get')return {data:structuredClone(chapter)};
-  if(method==='reading.progress.get')return {data:{token:{epoch:12,revision:persisted.progressRevision},location:structuredClone(persisted)}};
-  assert.equal(method,'reading.progress.update');assert.equal(params.expectedRevision,persisted.progressRevision);
-  writes++;persisted=structuredClone(params.location);return {data:{token:{epoch:12,revision:persisted.progressRevision},location:structuredClone(persisted)}};
- },loadReadingImage:async()=>({fileUri:'file://resume',width:600,height:800,revision:'r'}),releaseReadingImage:()=>{}};
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
- const c=new Controller(rt);
- const surface=Object.assign(new Surface(),{mounted:true,controller:c,runtime:rt,sourceId:'s',bookId:'b',offline:false,
-  remoteSession:{identity:{sourceId:'s',bookId:'b'},contentKind:'manga',entries:[{index:0,url:'/c'}]},
-  publish:()=>{},restore:()=>{},updateViewport:()=>{},onRemoteSessionReady:()=>{}});
- await surface.open(c);assert.equal(surface.opened,true);assert.equal(surface.recovering,true);assert.equal(c.recoveryRequired,true);
- await assert.rejects(c.savePosition(0,0,0),/RECOVERY_REQUIRED/);assert.equal(writes,0);assert.deepEqual(persisted,old);
- await c.refreshChapter();assert.equal(c.recoveryRequired,true,'refreshing fallback pixels is not recovery consent');
- await assert.rejects(c.savePosition(0,0,0),/RECOVERY_REQUIRED/);assert.deepEqual(persisted,old);
- await c.selectPage(0);await c.savePosition(0,0,0.1);assert.equal(writes,1);assert.equal(persisted.chapter.chapterId,'/c');assert.equal(persisted.progressRevision,5);
- c.close();persisted=structuredClone(old);
- const explicit=new Controller(rt);surface.controller=explicit;surface.chapterIndex=0;
- await surface.open(explicit);assert.equal(explicit.recoveryRequired,false,'explicit directory/adjacent chapter navigation remains authorized');
- await explicit.savePosition(0,0,0.2);assert.equal(writes,2);explicit.close();
 }
-console.log('PASS removed-chapter cold resume retains old CAS position, rejects automatic/refresh save until confirmation, and preserves explicit chapter navigation');
 
+async function case_controller_refresh_preview() {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache-probe.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+function load(name, dependencies = {}) {
+  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
+}
+const MangaSessionGateway = load('MangaSessionGateway');
+const MangaResourceGateway = load('MangaResourceGateway');
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
+const chapter = { manifest: { chapter: {sourceId:'s', bookId:'b', chapterId:'/c'}, sourceRuleVersion:'r', manifestVersion:'v', decodeRevision:'identity-v1',
+  pages: Array.from({length:8}, (_,ordinal) => { const pageId=`mp1:${String(ordinal).padStart(64,'0')}`; return {ordinal,pageId,resourceRef:`manga:${pageId}`}; }) }, chapterIndex:0,chapterTitle:'chapter',cached:false,resources:[] };
+chapter.resources = chapter.manifest.pages.map(page => ({ resourceRef:page.resourceRef, request:{url:'https://test/repeated.jpg'} }));
+let revision=0, saved=null, pendingImage=null;const loaded=[], released=[], calls=[];
+const runtime={ supportsCoreCapability:()=>true,
+  async request(method, params){calls.push([method,params]);
+    if(method==='manga.chapter.get') return {data:structuredClone(chapter)};
+    if(method==='reading.progress.get') return {data:{token:{epoch:1,revision},location:saved}};
+    assert.equal(params.expectedRevision,revision); revision++; saved=params.location;
+    return {data:{token:{epoch:1,revision},location:saved}};
+  },
+  async loadReadingImage(...args){loaded.push(args); if(pendingImage) await pendingImage;return {fileUri:`file://${loaded.length}`,width:600,height:800,revision:'pixels'};},
+  releaseReadingImage(uri){released.push(uri);}
+};
 // Production gateway/controller entry must accept the implemented byte revision.
 {
  const bytes=structuredClone(chapter); bytes.manifest.decodeRevision='bytes-v1';
@@ -296,6 +312,86 @@ console.log('PASS byte-decode entry, exact refreshed global page and xy/CAS, sta
 }
 console.log('PASS contain preview controller uses one image row, bounds neighbors, forwards preview mode, keeps original geometry/CAS and restores full-resolution region when width mode returns');
 
+}
+
+async function case_surface_cold_admission() {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache-probe.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+function load(name, dependencies = {}) {
+  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
+}
+const MangaSessionGateway = load('MangaSessionGateway');
+const MangaResourceGateway = load('MangaResourceGateway');
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
+const chapter = { manifest: { chapter: {sourceId:'s', bookId:'b', chapterId:'/c'}, sourceRuleVersion:'r', manifestVersion:'v', decodeRevision:'identity-v1',
+  pages: Array.from({length:8}, (_,ordinal) => { const pageId=`mp1:${String(ordinal).padStart(64,'0')}`; return {ordinal,pageId,resourceRef:`manga:${pageId}`}; }) }, chapterIndex:0,chapterTitle:'chapter',cached:false,resources:[] };
+chapter.resources = chapter.manifest.pages.map(page => ({ resourceRef:page.resourceRef, request:{url:'https://test/repeated.jpg'} }));
+let revision=0, saved=null, pendingImage=null;const loaded=[], released=[], calls=[];
+const runtime={ supportsCoreCapability:()=>true,
+  async request(method, params){calls.push([method,params]);
+    if(method==='manga.chapter.get') return {data:structuredClone(chapter)};
+    if(method==='reading.progress.get') return {data:{token:{epoch:1,revision},location:saved}};
+    assert.equal(params.expectedRevision,revision); revision++; saved=params.location;
+    return {data:{token:{epoch:1,revision},location:saved}};
+  },
+  async loadReadingImage(...args){loaded.push(args); if(pendingImage) await pendingImage;return {fileUri:`file://${loaded.length}`,width:600,height:800,revision:'pixels'};},
+  releaseReadingImage(uri){released.push(uri);}
+};
+// The actual surface opens narrow pixels before starting the slow cached catalog query.
+{
+ const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+ const phases=[];let finishCatalog;
+ const catalog=new Promise(resolve=>finishCatalog=resolve);
+ const prepared={chapter:{...structuredClone(chapter),pageStart:0,totalPages:8,
+  manifest:{...structuredClone(chapter.manifest),pages:structuredClone(chapter.manifest.pages.slice(0,3))},resources:structuredClone(chapter.resources.slice(0,3))},
+  targetOrdinal:0,recoveryRequired:false,progress:{token:{epoch:1,revision:0},location:null}};
+ const rt={supportsCoreCapability:()=>true,request:async(method)=>{assert.equal(method,'manga.entry.get');phases.push('entry');return {data:{entry:prepared}};},
+  loadReadingImage:async()=>{phases.push('pixels');return {fileUri:'file://entry',width:600,height:800,revision:'r'};},releaseReadingImage:()=>{},
+  bookAcquisitions:()=>({acquireBook:()=>{phases.push('catalog-start');return catalog;}})};
+ const ControllerSurface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
+ const controller=new Controller(rt);
+ const surface=Object.assign(new ControllerSurface(),{mounted:true,controller,runtime:rt,sourceId:'s',bookId:'b',offline:false,
+  remoteBookSeed:{},opened:false,acquirePreparedCatalog:()=>{phases.push('catalog-start');return catalog;},publish:()=>phases.push('published'),restore:()=>phases.push('restored'),onRemoteSessionReady:()=>phases.push('catalog-ready')});
+ await surface.open(controller);assert.equal(surface.opened,true);assert.ok(phases.indexOf('published')<phases.indexOf('catalog-start'));assert.equal(phases.includes('catalog-ready'),false);
+ surface.mounted=false;controller.close();finishCatalog({});await new Promise(r=>setImmediate(r));assert.equal(phases.includes('catalog-ready'),false);
+}
+console.log('PASS actual surface first admits narrow pixels, then starts catalog; stale catalog cannot publish after disposal');
+
+// A removed saved chapter must not silently become chapter zero on cold resume.
+{
+ const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+ const old={kind:'manga',chapter:{sourceId:'s',bookId:'b',chapterId:'/deleted-from-catalog'},manifestVersion:'old-manifest',
+  pageId:chapter.manifest.pages[2].pageId,pageOrdinalFallback:2,x:0.25,y:0.75,progressRevision:4};
+ let persisted=structuredClone(old),writes=0;
+ const rt={supportsCoreCapability:()=>true,request:async(method,params)=>{
+  if(method==='manga.entry.get')return {data:{entry:null}};
+  if(method==='manga.chapter.get')return {data:structuredClone(chapter)};
+  if(method==='reading.progress.get')return {data:{token:{epoch:12,revision:persisted.progressRevision},location:structuredClone(persisted)}};
+  assert.equal(method,'reading.progress.update');assert.equal(params.expectedRevision,persisted.progressRevision);
+  writes++;persisted=structuredClone(params.location);return {data:{token:{epoch:12,revision:persisted.progressRevision},location:structuredClone(persisted)}};
+ },loadReadingImage:async()=>({fileUri:'file://resume',width:600,height:800,revision:'r'}),releaseReadingImage:()=>{}};
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
+ const c=new Controller(rt);
+ const surface=Object.assign(new Surface(),{mounted:true,controller:c,runtime:rt,sourceId:'s',bookId:'b',offline:false,
+  remoteSession:{identity:{sourceId:'s',bookId:'b'},contentKind:'manga',entries:[{index:0,url:'/c'}]},
+  publish:()=>{},restore:()=>{},updateViewport:()=>{},onRemoteSessionReady:()=>{}});
+ await surface.open(c);assert.equal(surface.opened,true);assert.equal(surface.recovering,true);assert.equal(c.recoveryRequired,true);
+ await assert.rejects(c.savePosition(0,0,0),/RECOVERY_REQUIRED/);assert.equal(writes,0);assert.deepEqual(persisted,old);
+ await c.refreshChapter();assert.equal(c.recoveryRequired,true,'refreshing fallback pixels is not recovery consent');
+ await assert.rejects(c.savePosition(0,0,0),/RECOVERY_REQUIRED/);assert.deepEqual(persisted,old);
+ await c.selectPage(0);await c.savePosition(0,0,0.1);assert.equal(writes,1);assert.equal(persisted.chapter.chapterId,'/c');assert.equal(persisted.progressRevision,5);
+ c.close();persisted=structuredClone(old);
+ const explicit=new Controller(rt);surface.controller=explicit;surface.chapterIndex=0;
+ await surface.open(explicit);assert.equal(explicit.recoveryRequired,false,'explicit directory/adjacent chapter navigation remains authorized');
+ await explicit.savePosition(0,0,0.2);assert.equal(writes,2);explicit.close();
+}
+console.log('PASS removed-chapter cold resume retains old CAS position, rejects automatic/refresh save until confirmation, and preserves explicit chapter navigation');
 // A failed newly selected page is an unsaved viewport intent, not permission to
 // navigate back to the old durable progress when a signed request expires.
 for (const mappingStatus of ['exact','unresolved']) {
@@ -351,6 +447,37 @@ for (const leave of ['select','close']) {
 }
 console.log('PASS automatic refresh updates actual horizontal surface with current anchor and is fenced by a later selection or close');
 
+}
+
+async function case_adjacent_preparation() {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache-probe.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+function load(name, dependencies = {}) {
+  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
+}
+const MangaSessionGateway = load('MangaSessionGateway');
+const MangaResourceGateway = load('MangaResourceGateway');
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
+const chapter = { manifest: { chapter: {sourceId:'s', bookId:'b', chapterId:'/c'}, sourceRuleVersion:'r', manifestVersion:'v', decodeRevision:'identity-v1',
+  pages: Array.from({length:8}, (_,ordinal) => { const pageId=`mp1:${String(ordinal).padStart(64,'0')}`; return {ordinal,pageId,resourceRef:`manga:${pageId}`}; }) }, chapterIndex:0,chapterTitle:'chapter',cached:false,resources:[] };
+chapter.resources = chapter.manifest.pages.map(page => ({ resourceRef:page.resourceRef, request:{url:'https://test/repeated.jpg'} }));
+let revision=0, saved=null, pendingImage=null;const loaded=[], released=[], calls=[];
+const runtime={ supportsCoreCapability:()=>true,
+  async request(method, params){calls.push([method,params]);
+    if(method==='manga.chapter.get') return {data:structuredClone(chapter)};
+    if(method==='reading.progress.get') return {data:{token:{epoch:1,revision},location:saved}};
+    assert.equal(params.expectedRevision,revision); revision++; saved=params.location;
+    return {data:{token:{epoch:1,revision},location:saved}};
+  },
+  async loadReadingImage(...args){loaded.push(args); if(pendingImage) await pendingImage;return {fileUri:`file://${loaded.length}`,width:600,height:800,revision:'pixels'};},
+  releaseReadingImage(uri){released.push(uri);}
+};
 // Next-chapter preparation shares canonical Core facts and the Host byte cache.
 // Only its manifest is prepared early; at the final two pages just its first
 // original image is persisted. A new controller consumes the normal entry path.
@@ -412,6 +539,37 @@ for(const scenario of ['close','clear']){
 }
 console.log('PASS optional adjacent work cannot survive session close or recapture a cleared content scope');
 
+}
+
+async function case_directory_proof() {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache-probe.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+function load(name, dependencies = {}) {
+  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
+}
+const MangaSessionGateway = load('MangaSessionGateway');
+const MangaResourceGateway = load('MangaResourceGateway');
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
+const chapter = { manifest: { chapter: {sourceId:'s', bookId:'b', chapterId:'/c'}, sourceRuleVersion:'r', manifestVersion:'v', decodeRevision:'identity-v1',
+  pages: Array.from({length:8}, (_,ordinal) => { const pageId=`mp1:${String(ordinal).padStart(64,'0')}`; return {ordinal,pageId,resourceRef:`manga:${pageId}`}; }) }, chapterIndex:0,chapterTitle:'chapter',cached:false,resources:[] };
+chapter.resources = chapter.manifest.pages.map(page => ({ resourceRef:page.resourceRef, request:{url:'https://test/repeated.jpg'} }));
+let revision=0, saved=null, pendingImage=null;const loaded=[], released=[], calls=[];
+const runtime={ supportsCoreCapability:()=>true,
+  async request(method, params){calls.push([method,params]);
+    if(method==='manga.chapter.get') return {data:structuredClone(chapter)};
+    if(method==='reading.progress.get') return {data:{token:{epoch:1,revision},location:saved}};
+    assert.equal(params.expectedRevision,revision); revision++; saved=params.location;
+    return {data:{token:{epoch:1,revision},location:saved}};
+  },
+  async loadReadingImage(...args){loaded.push(args); if(pendingImage) await pendingImage;return {fileUri:`file://${loaded.length}`,width:600,height:800,revision:'pixels'};},
+  releaseReadingImage(uri){released.push(uri);}
+};
 // Directory v2 proof crosses the production Surface, Gateway and Controller in
 // both cached and network entry paths. Core refusal cannot admit image pixels.
 {
@@ -453,6 +611,37 @@ console.log('PASS optional adjacent work cannot survive session close or recaptu
 }
 console.log('PASS real manga surface/gateway/controller carries exact directory proof on cached and live paths, rejection admits no pixels/writes, implicit resume retains historical image xy/CAS');
 
+}
+
+async function case_source_cache_renew() {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache-probe.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+function load(name, dependencies = {}) {
+  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
+}
+const MangaSessionGateway = load('MangaSessionGateway');
+const MangaResourceGateway = load('MangaResourceGateway');
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
+const chapter = { manifest: { chapter: {sourceId:'s', bookId:'b', chapterId:'/c'}, sourceRuleVersion:'r', manifestVersion:'v', decodeRevision:'identity-v1',
+  pages: Array.from({length:8}, (_,ordinal) => { const pageId=`mp1:${String(ordinal).padStart(64,'0')}`; return {ordinal,pageId,resourceRef:`manga:${pageId}`}; }) }, chapterIndex:0,chapterTitle:'chapter',cached:false,resources:[] };
+chapter.resources = chapter.manifest.pages.map(page => ({ resourceRef:page.resourceRef, request:{url:'https://test/repeated.jpg'} }));
+let revision=0, saved=null, pendingImage=null;const loaded=[], released=[], calls=[];
+const runtime={ supportsCoreCapability:()=>true,
+  async request(method, params){calls.push([method,params]);
+    if(method==='manga.chapter.get') return {data:structuredClone(chapter)};
+    if(method==='reading.progress.get') return {data:{token:{epoch:1,revision},location:saved}};
+    assert.equal(params.expectedRevision,revision); revision++; saved=params.location;
+    return {data:{token:{epoch:1,revision},location:saved}};
+  },
+  async loadReadingImage(...args){loaded.push(args); if(pendingImage) await pendingImage;return {fileUri:`file://${loaded.length}`,width:600,height:800,revision:'pixels'};},
+  releaseReadingImage(uri){released.push(uri);}
+};
 // Source-rule replacement cannot leave an online cold-entry cache miss using
 // an obsolete manifest forever. The real Surface renews only the failed,
 // descriptor-less target through one forced canonical catalog acquisition.
@@ -594,6 +783,37 @@ console.log('PASS actual Surface/Gateway/Controller cached entry renewal: change
 }
 console.log('PASS real Surface/Gateway/Controller failed changed-content reopen retries canonical page/xy, while ordinary failed chapter-first opening retries page zero without progress writes');
 
+}
+
+async function case_retained_shell_catalog_sdk() {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache-probe.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+function load(name, dependencies = {}) {
+  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
+}
+const MangaSessionGateway = load('MangaSessionGateway');
+const MangaResourceGateway = load('MangaResourceGateway');
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
+const chapter = { manifest: { chapter: {sourceId:'s', bookId:'b', chapterId:'/c'}, sourceRuleVersion:'r', manifestVersion:'v', decodeRevision:'identity-v1',
+  pages: Array.from({length:8}, (_,ordinal) => { const pageId=`mp1:${String(ordinal).padStart(64,'0')}`; return {ordinal,pageId,resourceRef:`manga:${pageId}`}; }) }, chapterIndex:0,chapterTitle:'chapter',cached:false,resources:[] };
+chapter.resources = chapter.manifest.pages.map(page => ({ resourceRef:page.resourceRef, request:{url:'https://test/repeated.jpg'} }));
+let revision=0, saved=null, pendingImage=null;const loaded=[], released=[], calls=[];
+const runtime={ supportsCoreCapability:()=>true,
+  async request(method, params){calls.push([method,params]);
+    if(method==='manga.chapter.get') return {data:structuredClone(chapter)};
+    if(method==='reading.progress.get') return {data:{token:{epoch:1,revision},location:saved}};
+    assert.equal(params.expectedRevision,revision); revision++; saved=params.location;
+    return {data:{token:{epoch:1,revision},location:saved}};
+  },
+  async loadReadingImage(...args){loaded.push(args); if(pendingImage) await pendingImage;return {fileUri:`file://${loaded.length}`,width:600,height:800,revision:'pixels'};},
+  releaseReadingImage(uri){released.push(uri);}
+};
 // Cold shelf entry admits narrow cached pixels before its background catalog.
 // Exercise the real SDK parent payload, retained child updater and property
 // runtime so a later catalog cannot be lost in a plain initializer field.
@@ -687,3 +907,11 @@ console.log('PASS real Surface/Gateway/Controller failed changed-content reopen 
  assert.equal(writes,0);assert.equal(controller.sessionContentCurrent(),true);controller.close();preparation.close();
 }
 console.log('PASS actual SDK Shell/retained Surface/property runtime plus cold Controller entry: later catalog updates directory and next chapter; flat/proof-backed picks reach existing Index guards, preserve proof and save ordering; no remount or user-data writes');
+
+}
+
+const implementations = {'controller-cas-lifecycle':case_controller_cas_lifecycle,'controller-refresh-preview':case_controller_refresh_preview,'surface-cold-admission':case_surface_cold_admission,'adjacent-preparation':case_adjacent_preparation,'directory-proof':case_directory_proof,'source-cache-renew':case_source_cache_renew,'retained-shell-catalog-sdk':case_retained_shell_catalog_sdk};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

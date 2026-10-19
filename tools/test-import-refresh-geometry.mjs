@@ -1,33 +1,39 @@
-import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync} from 'node:fs';
-import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"import-feedback": {"description": "当前真实picker18vp busy与结果消息测量", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const {createHash} = await import('node:crypto');
+const {boundedSurfaceSdk} = await import('./lib/bounded-surface-sdk-probe.mjs');
+const {default: assert} = await import('node:assert/strict');
+const {readFileSync,writeFileSync,existsSync} = await import('node:fs');
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+
 const root=new URL('../',import.meta.url);
 const source=readFileSync(new URL('entry/src/main/ets/features/bookshelf/LocalImportDialog.ets',root),'utf8');
 const {owner}=createReaderBuilderProbe(source,['resultSummary']);
 Object.assign(owner,{appThemeScheme:'day',summaryIcon:()=> 'app.media.import_success',allSucceeded:()=>true,
   summaryTitle:()=> '导入完成',resultCountText:()=> '1本已在书架'});
 owner.resultSummary();const records=[];
-const original=readFileSync(new URL('docs/ui-design/svg-provenance/figma-page-assets/import_refresh.svg',root),'utf8');
-const media=new URL('entry/src/main/resources/base/media/',root);
-const day=readFileSync(new URL('import_refresh.svg',media),'utf8');
-const night=readFileSync(new URL('import_refresh_theme_night.svg',media),'utf8');
-const paths=s=>s.match(/<path[^>]+>/g);
-assert.equal(paths(original).length,1,'live Figma 2657:819/820 contains one C arc, not a missing arrow');
-assert.deepEqual(paths(day),paths(original),'authored arc path, stroke, round caps are unchanged');
-assert.equal(night.replaceAll('#D2BD96','#2D4A3E'),day,'Night derives only the existing palette');
-assert.doesNotMatch(day,/<clipPath/,'rotated export clip is removed by established platform adapter');
-const stroke=Number(day.match(/stroke-width="([\d.]+)"/)[1]);
+// The actual current file-picker action owns native 18vp busy feedback.
+const sdk=boundedSurfaceSdk(),picker=sdk.consumer(source,['fileSelectionActions'],{}, {state:'pickerOpening',selectionEnabled:true});
+Object.assign(picker,{state:'pickerOpening',selectionEnabled:true});picker.fileSelectionActions();const choose=sdk.walk(picker).find(actor=>actor instanceof sdk.deps.ReaderRecoveryAction&&actor.label==='选择文件');
+assert.ok(choose);const pickerNodes=sdk.nodes(choose),loader=pickerNodes.find(node=>node.type==='LoadingProgress');
+assert.deepEqual([loader.width,loader.height],[18,18]);assert.equal(pickerNodes.find(node=>node.type==='Text').opacity,0);
+assert.equal(pickerNodes.find(node=>node.type==='Stack'&&node.onClick).enabled,false);
+// The historical SVG remains provenance, but approved result feedback is now
+// a plain, measured message count; its old decorative arc is not rendered.
 for(const scheme of ['day','night','day']){
   owner.appThemeScheme=scheme;owner.replay();
-  const n=[...owner.nodes.values()].find(n=>n.type==='Image'&&n.create.includes('import_refresh'));
-  const sx=n.scale?.x??1,sy=n.scale?.y??1;
-  assert.deepEqual([n.width,n.height],[18,18],'layout allocation remains authored 18vp');
-  assert.ok(Math.abs(n.width*sx-23.754)<0.001&&Math.abs(n.height*sy-23.754)<0.001,
-    'rotated SVG paint restores Figma bound, avoiding second 18/24 downscale');
-  assert.ok(Math.abs(stroke*n.width*sx/24-1.5)<0.001,'actual authored 1.5vp stroke restored');
-  assert.equal(n.create,`app.media.import_refresh${scheme==='night'?'_theme_night':''}`);
-  assert.equal(n.rotate,undefined,'rotation is baked into SVG and must not be applied again');
-  records.push({scheme,resource:n.create,layout:[n.width,n.height],scale:[sx,sy],paint:[n.width*sx,n.height*sy],stroke:stroke*n.width*sx/24});
+  const nodes=[...owner.nodes.values()],n=nodes.find(n=>n.type==='Text'&&n.create==='1本已在书架');
+  assert.ok(n,'the current result summary renders its real count');
+  assert.deepEqual([n.fontSize,n.lineHeight,n.width],[13,21,'100%']);
+  assert.equal(n.maxLines,undefined,'count remains available at large font scales');
+  assert.equal(nodes.some(n=>n.type==='Image'),false,'decorative refresh image was removed from this message');
+  assert.equal(typeof n.onAreaChange,'function','native summary measurement still feeds the bounded result geometry');
+  records.push({scheme,text:n.create,fontSize:n.fontSize,lineHeight:n.lineHeight,decorativeImage:false});
 }
-const i=process.argv.indexOf('--record');if(i>=0)writeFileSync(process.argv[i+1],JSON.stringify({sourceNodes:['2657:818','2657:819','2657:820'],layer:'actual SDK Builder retained paint calls; new device pixels OPEN',records},null,2)+'\n');
-console.log('PASS import refresh: Figma C arc/source unchanged, 18vp slot, 23.754vp paint, 1.5vp stroke; retained Day/Night/Day.');
+
+}

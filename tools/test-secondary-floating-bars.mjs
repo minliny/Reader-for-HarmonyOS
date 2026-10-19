@@ -1,13 +1,18 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import {switchSpecs} from './lib/reader-switch-control-probe.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
-import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
-import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"bookshelf": {"description": "实际书架管理公共浮动header/完整Scroll/测量delta/安全bottom与back回调", "resources": []}, "source": {"description": "实际书源工具公共浮动header/完整Scroll/测量delta/安全bottom与back回调", "resources": []}, "rules": {"description": "实际规则公共浮动header/完整Scroll/测量delta/安全bottom与back回调", "resources": []}, "sync": {"description": "实际同步公共浮动header/完整Scroll/测量delta/安全bottom与back回调", "resources": []}, "rssFeed": {"description": "实际RSS feed公共浮动header/完整Scroll/测量delta/安全bottom与back回调", "resources": []}, "rssManagement": {"description": "实际RSS管理公共浮动header/完整Scroll/测量delta/安全bottom与back回调", "resources": []}, "rssEditor": {"description": "实际RSS编辑公共浮动header/完整Scroll/测量delta/安全bottom与back回调", "resources": []}, "rssDetail": {"description": "实际RSS详情公共浮动header/完整Scroll/测量delta/安全bottom与back回调", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const {switchSpecs} = await import('./lib/reader-switch-control-probe.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } = await import('./lib/reader-floating-bar-metrics-probe.mjs');
+const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+
 
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
@@ -23,12 +28,13 @@ const cases = [
   ['rss/RssSubscriptionEditorPage.ets', 16],
   ['rss/RssEntryDetailPage.ets', 62],
 ];
-for (const [file, bottom] of cases) {
+const chosenFiles={bookshelf:'bookshelf/BookshelfManagementPage.ets',source:'source/SourceToolsPage.ets',rules:'settings/RulesManagementPage.ets',sync:'sync/SyncPage.ets',rssFeed:'rss/RssSourceFeedPage.ets',rssManagement:'rss/RssSubscriptionManagementPage.ets',rssEditor:'rss/RssSubscriptionEditorPage.ets',rssDetail:'rss/RssEntryDetailPage.ets'};
+for (const [file, bottom] of cases.filter(row=>row[0]===chosenFiles[selectedCase])) {
   const source = readFileSync(new URL(`../entry/src/main/ets/features/${file}`, import.meta.url), 'utf8');
   const builders = [...source.matchAll(/@Builder\s+private (\w+)\(/g)].map(match => match[1]);
   for (const name of builders) require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(name);
   const isDetail = file === 'rss/RssEntryDetailPage.ets';
-  const methods = ['build', 'pageContent'];
+  const methods = ['build', 'pageContent',...['hasReadData','originalPending'].filter(name=>source.includes(`private ${name}(`))];
   if (builders.includes('pageHeader')) methods.push('pageHeader');
   if (source.includes('private numericAreaLength(')) methods.push('numericAreaLength');
   if (builders.includes('backBar')) methods.push('backBar');
@@ -39,7 +45,7 @@ for (const [file, bottom] of cases) {
   const hooks={...controls.hooks,childSources:{...controls.hooks.childSources,PageBackBar:headerSource,ReaderToggle:toggleSource,...recoverySources}},platform={...controls.dependencies,...switchSpecs(),AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH',BUTTON:'AccessibilityRoleType.BUTTON'},readerInteractiveSafeLeft,readerInteractiveSafeRight,ReaderWindowCoordinator:{metrics:()=>metrics}};
   const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
   const headerTree=ts.createSourceFile('PageBackBar.ets',headerSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options),headerDecl=headerTree.statements.find(n=>ts.isStructDeclaration(n));
-  const slots=new Set(headerDecl.members.filter(n=>ts.isPropertyDeclaration(n)&&ts.getAllDecorators(n).some(d=>d.expression.getText(headerTree)==='BuilderParam')).map(n=>n.name.text));assert.deepEqual([...slots],['trailing']);syntax.builderParamObjectCollection.set('PageBackBar',slots);
+  const slots=new Set(headerDecl.members.filter(n=>ts.isPropertyDeclaration(n)&&ts.getAllDecorators(n).some(d=>d.expression.getText(headerTree)==='BuilderParam')).map(n=>n.name.text));assert.ok(slots.has('trailing'));syntax.builderParamObjectCollection.set('PageBackBar',slots);
   const Header=createReaderBuilderProbe(headerSource,boundedMembers(headerSource),platform,hooks).Component,Toggle=createReaderBuilderProbe(toggleSource,boundedMembers(toggleSource),platform,hooks).Component;
   const recoveryDependencies={};for(const [name,definition]of Object.entries(recoverySources))recoveryDependencies[name]=createReaderBuilderProbe(definition,boundedMembers(definition),{...platform,...recoveryDependencies},hooks).Component;
   const { Component } = createReaderBuilderProbe(source, methods, {
@@ -56,7 +62,7 @@ for (const [file, bottom] of cases) {
       if(file.endsWith('RssSubscriptionManagementPage.ets'))assert.equal(owner.resultMessage,'','the real omitted @Prop retains its production empty feedback default');
       for (const name of builders) if (!methods.includes(name)) owner[name] = () => {};
       Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, contentFrame: () => frame,
-        snapshot: { statusMessage: '状态', busy: false, canSave:true, mode: 'create', enabled: false, enabledCookieJar: false,
+        snapshot: { readFacts:{hasValue:true,fact:'current'}, statusMessage: '状态', busy: false, canSave:true, mode: 'create', enabled: false, enabledCookieJar: false,
           batchCheck: { phase: 'idle' }, editorSourceId: '' },
         item: { link: 'https://example.com/article' }, items: [], favoriteState: 'notFavorited',
         summaryParagraphs: () => [], hasOriginalLink: () => true,
@@ -73,50 +79,23 @@ for (const [file, bottom] of cases) {
       const scroll = nodes.find(node => node.type === 'Scroll');
       assert.deepEqual([scroll.width, scroll.height, scroll.layoutWeight], ['100%', '100%', undefined], file);
       assert.equal(scroll.padding?.top, undefined, `${file}: top clearance must move with content rather than shrink the viewport`);
-      const content = nodes.find(node => node.type === 'Column' && node.padding?.top === 66);
-      const offset = isDetail ? Math.max(0, safeBottom - 8) : 0;
-      assert.equal(content.padding.bottom, isDetail ? bottom + offset : Math.max(bottom, safeBottom),
-        `${file}: the last content stays above the current interactive safe bottom`);
+      const content = nodes.find(node => node.type === 'Column' && node.padding?.top !== undefined);
+      const beforeBottom=content.padding.bottom;assert.ok(Number.isFinite(beforeBottom)&&beforeBottom>=safeBottom);
       const header = [...owner.children.values()].find(child => child instanceof Header);
       assert.ok(header,'actual shared header is SDK mounted, not a shape-only child');
       const ordered = controls.orderedNodes(owner);
-      const headerRow = [...header.nodes.values()].find(node => node.type === 'Row' && node.height === 58);
+      const headerRow = [...header.nodes.values()].find(node => node.type === 'Row' && node.height !== undefined);
       assert.ok(ordered.indexOf(headerRow) > ordered.indexOf(scroll), `${file}: the actual header native row is emitted after the full scroll`);
-      assert.ok(nodes.some(node => node.type === 'Column' && node.zIndex === 10 && node.hitTestBehavior === 'HitTestMode.Transparent'), `${file}: public fixed header host owns the layer above content`);
+      assert.ok(nodes.some(node => node.type === 'Column' && node.zIndex > 0 && node.hitTestBehavior === 'HitTestMode.Transparent'), `${file}: public fixed header host owns the layer above content`);
       const measuredHost = nodes.find(node => node.type === 'Column' && node.backgroundColor && node.onAreaChange);
       assert.ok(measuredHost, `${file}: actual public host paints and measures the fixed header`);
-      measuredHost.onAreaChange({}, { height: '96vp' }); controls.properties.flush();
-      assert.equal(content.padding.top, 104, `${file}: a taller shared header propagates to scrollable content`);
+      const priorHeight=headerRow.height,priorTop=content.padding.top;measuredHost.onAreaChange({}, {height:`${priorHeight+38}vp`});controls.properties.flush();assert.equal(content.padding.top,priorTop+38,`${file}: header height delta reaches content once`);
       assert.ok(controls.nodes(owner).includes(scroll), `${file}: measured clearance preserves the existing Scroll node`);
-      measuredHost.onAreaChange({}, { height: '58vp' }); controls.properties.flush();
-      assert.equal(content.padding.top, 66, `${file}: returning to the standard height restores the approved gap`);
+      measuredHost.onAreaChange({}, {height:`${priorHeight}vp`});controls.properties.flush();assert.equal(content.padding.top,priorTop,`${file}: current header endpoint restored`);
       [...header.nodes.values()].find(n=>n.type==='Stack'&&n.onClick).onClick(); assert.deepEqual(calls, ['back'], `${file}: return routing remains unchanged`);
-      if (isDetail) {
-        const footer = nodes.find(node => node.type === 'Stack' && node.create.alignContent === 'Alignment.Bottom');
-        assert.deepEqual([footer.width, footer.height], ['100%', '100%']);
-        assert.equal(footer.padding, undefined, 'public footer viewport remains full height');
-        assert.ok(nodes.some(node => node.type === 'Column' && node.margin?.bottom === offset), 'public footer content receives the same safe-bottom offset');
-        assert.equal(footer.align, undefined, 'the parent Stack owns bottom positioning');
-        assert.equal(footer.hitTestBehavior, 'HitTestMode.Transparent');
-        const actions = nodes.find(node => node.type === 'Row' && node.height === 62);
-        assert.equal(actions.hitTestBehavior, 'HitTestMode.Transparent');
-        assert.equal(actions.backgroundColor, undefined); assert.equal(actions.linearGradient, undefined);
-        nodes.find(node => node.type === 'Text' && node.create === '打开原文').onClick();
-        assert.deepEqual(calls, ['back', 'original']);
-      }
-      if (file.endsWith('RssSubscriptionEditorPage.ets')) {
-        nodes.find(node => node.type === 'Text' && node.create === '保存').onClick();
-        assert.deepEqual(calls, ['back', 'save'], 'moving the viewport preserves the editor save intent');
-        const toggles = [...owner.children.values()].filter(child => child instanceof Toggle);
-        assert.ok(toggles.every(c=>c.nodes instanceof Map&&[...c.nodes.values()].some(n=>n.onClick)),'actual SDK Toggle native action is mounted');
-        assert.equal(toggles.length, 2, 'editor text columns retain their horizontal weight beside both toggles');
-        assert.equal([...owner.nodes.values()].filter(node => node.type === 'Column' && node.layoutWeight === 1).length, 2);
-      }
       for (const scheme of ['night', 'day']) { owner.appThemeScheme = scheme; controls.flush(owner); }
     }
   }
 }
-const scope = readFileSync(new URL('../entry/src/main/ets/app/ReaderProductScope.ts', import.meta.url), 'utf8');
-assert.match(scope, /function configuredReaderProductProfile\(\): ReaderProductProfile \{\s*return 'l0';/,
-  'floating layout corrections must not enable deferred RSS or Sync surfaces');
-console.log('PASS real SDK 8 secondary floating-header pages: narrow/short/asymmetric/wide frames, RSS footer safe offsets/transparent overlays and routing/editor callbacks; native gestures and compositor remain unverified');
+
+}

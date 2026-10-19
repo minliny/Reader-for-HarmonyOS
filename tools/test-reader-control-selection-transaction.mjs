@@ -1,11 +1,13 @@
-import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import {
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions=Object.fromEntries([['policy','Pure selection current reading versus UI owner/commit/recovery policy'],['feedback-owner','Actual inline feedback and exact optional recovery callback owner'],['commit-boundary','Actual Host commit method with stale and mismatching stored/visible receipts']].map(([id,description])=>[id,{description,resources:[]}]));
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const {
   readerControlSelectionMayClose,
   readerControlSelectionMayRecover,
   readerControlSelectionOwnsReading,
-} from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
+}=await import('../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts');
 
 const ticket = {
   sourceId: 'local', bookId: 'book-A', lifecycleToken: 4, selectionToken: 20,
@@ -21,6 +23,7 @@ const committed = {
   visibleChapterIndex: 10, visiblePageStartScalar: 123,
   storedChapterIndex: 10, storedChapterOffset: 123,
 };
+if(selectedCase==='policy'){
 assert.equal(readerControlSelectionMayClose(ticket, owner, committed), true);
 assert.equal(readerControlSelectionMayClose({ ...ticket, closeOnCommit: false }, owner, committed), false);
 assert.equal(readerControlSelectionOwnsReading({ ...ticket, closeOnCommit: false }, owner), true,
@@ -65,32 +68,10 @@ readerControlSelectionMayRecover(ticket, owner, true);
 assert.deepEqual({ ticket, owner, committed }, snapshot,
   'transaction policy decisions must not mutate business progress or UI ownership');
 
-// Additional wiring checks: they do not substitute for the production policy
-// execution above, an ArkTS compile, or real asynchronous UI integration.
-const host = fs.readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
-const select = host.match(/private selectChapterAnchor\(([\s\S]*?)\n  private controlSelectionOwner/)?.[1];
-assert.ok(select);
-assert.match(select, /if \(closeControlOnCommit && selectionControlRevision === this\.controlOpenRevision &&\s*this\.controlVisible\(\) && !this\.controlShellExitArmed\(\)\)\s*this\.hideControl\(\);/,
-  'discrete selection exposes loading immediately, preserving the original control owner and slider policy');
-assert.match(select, /controlOwnerRevision: number = -2/,
-  'deferred selection carries its original UI ownership instead of borrowing a reopened panel');
-assert.match(host, /this\.admitCommittedProgress\(stored\);\s*this\.completeControlSelectionAfterCommit\(stored, visiblePage, selectionToken, lifecycleToken\);/,
-  'a reading ticket completes only after the actual stored page anchor is admitted');
-const recovery = host.match(/private recoverControlSelectionFailure\(([\s\S]*?)\n  private captureMaterializedChapterContext/)?.[1];
-assert.ok(recovery);
-assert.match(recovery, /reconcileReaderControlSelectionProgress/);
-assert.match(recovery, /this\.restoreMaterializedChapterContext\(display\.context, true\)/);
-assert.match(recovery, /this\.chapterSelectionToken \+= 1;/);
-assert.match(recovery, /this\.resetForChapterSelection\(\);/,
-  'timeout recovery invalidates the failed load before restoring its committed origin');
-assert.match(recovery, /this\.phase = 'ready'/);
-assert.match(recovery, /this\.showReaderRecovery\(/, 'recoverable failure is projected through the inline recovery state');
-assert.doesNotMatch(recovery, /this\.showReaderAlert\(|showAlertDialog\(/,
-  'automatic selection recovery cannot claim a modal dialog');
-assert.doesNotMatch(recovery, /this\.onReadingFailure\(|this\.beginExit\(|this\.hideControl\(|resolveAndUpdateProgress\(/,
-  'recoverable failure restores the display without external exit, hiding, or rolling back Core');
-assert.match(host, /if \(this\.recoverControlSelectionFailure\(error, lifecycleToken\)\) return;/);
-
+}
+if(selectedCase==='feedback-owner'){
+const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+const productionMotionMethods=(file,names,deps)=>selectedProductionMethods(file,'ReadingExperience',[...names,'readerRecoveryOwnerKey'],{...deps,readingFailureHint:()=> 'fixture-classified failure',remoteReadingFailureKindOf:()=> 'UNKNOWN'});
 const FeedbackHost = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
   ['showControlSelectionFailure', 'showReaderRecovery'], { readerControlSelectionOwnsReading, hilog: { error() {} } });
 for (const changed of [{}, {bookId:'book-B'}, {sourceId:'remote'}, {lifecycleToken:5},
@@ -121,3 +102,25 @@ for (const changed of [{}, {bookId:'book-B'}, {sourceId:'remote'}, {lifecycleTok
   }
 }
 console.log('reader control selection transaction: production ownership/commit policy passed');
+
+}
+if(selectedCase==='commit-boundary'){
+ const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+ const Commit=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'ReadingExperience',
+  ['completeControlSelectionAfterCommit'],{readerControlSelectionMayClose});
+ for(const changed of [{},{storedChapterOffset:0},{visibleSelectionToken:19},{controlOpenRevision:7},{closeOnCommit:false}]){
+  let closes=0;const currentOwner={...owner,...('controlOpenRevision' in changed?{controlOpenRevision:changed.controlOpenRevision}:{})};
+  const pending={...ticket,...('closeOnCommit' in changed?{closeOnCommit:changed.closeOnCommit}:{})};
+  const subject=Object.assign(new Commit(),{pendingControlSelection:pending,pendingControlSelectionRetry:{},
+   phase:'ready',materializedChapterSelectionToken:20,visiblePageSelectionToken:changed.visibleSelectionToken??20,
+   chapter:{chapterIndex:10},controlSelectionOwner:()=>currentOwner,hideControl:()=>closes++});
+  subject.completeControlSelectionAfterCommit({chapterIndex:10,chapterOffset:changed.storedChapterOffset??123},{startScalar:123},19,4);
+  assert.equal(subject.pendingControlSelection,pending,'old commit cannot settle current ticket');assert.equal(closes,0);
+  subject.completeControlSelectionAfterCommit({chapterIndex:10,chapterOffset:changed.storedChapterOffset??123},{startScalar:123},20,4);
+  assert.equal(subject.pendingControlSelection,undefined);assert.equal(subject.pendingControlSelectionRetry,undefined);
+  assert.equal(closes,Object.keys(changed).length===0?1:0,'only current exact stored/visible page receipt may close original UI');
+ }
+}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

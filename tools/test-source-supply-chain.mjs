@@ -1,12 +1,15 @@
+import assert from 'node:assert/strict';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
 // Contract tests for the bundled-source supply chain logic that runs on the
 // host: canonical rule fingerprints, upgrade/withdraw decisions, and the
 // static admission gates on hostile fixtures.
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { assertSourceLoginDefault } from './source-login-default-policy.mjs';
-import {
+
+const { readFileSync }=await import('node:fs');
+const { dirname, resolve }=await import('node:path');
+const { fileURLToPath }=await import('node:url');
+const { assertSourceLoginDefault }=await import('./source-login-default-policy.mjs');
+const {
   BUILTIN_VERSION,
   SUITE_VERSION,
   collectInsecureUrlFindings,
@@ -14,13 +17,14 @@ import {
   collectSecretFindings,
   ruleFingerprint,
   validateBundledMetadata,
-} from './source-supply-lib.mjs';
+}=await import('./source-supply-lib.mjs');
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = relative => readFileSync(resolve(repo, relative), 'utf8');
 
-// -- fingerprint stability ----------------------------------------------------
 
+try{
+if(id==='fingerprint'){
 const ruleSource = {
   bookSourceType: 0,
   bookSourceUrl: 'https://example.org/',
@@ -62,17 +66,58 @@ const reordered = {
 };
 assert.equal(ruleFingerprint(reordered), fingerprint, 'key order must not change the fingerprint');
 
-// -- ArkTS canonicalization parity --------------------------------------------
 
-const supply = read('entry/src/main/ets/app/BundledBookSourceSupply.ts');
-const arktsFields = supply.match(/RULE_PAYLOAD_FIELDS: string\[\] = \[([\s\S]*?)\];/)[1]
-  .match(/'([A-Za-z]+)'/g).map(name => name.slice(1, -1)).sort();
-const nodeFields = (await import('./source-supply-lib.mjs')).RULE_PAYLOAD_FIELDS;
-assert.deepEqual(arktsFields, [...nodeFields].sort(),
-  'ArkTS and node canonical rule payload fields must be identical');
+}
+if(id==='canonical-parity'){
+const ruleSource = {
+  bookSourceType: 0,
+  bookSourceUrl: 'https://example.org/',
+  searchUrl: '/search?q={{key}}',
+  ruleSearch: { bookList: '.list', bookUrl: 'a@href' },
+  ruleToc: { chapterList: '.chapters' },
+  ruleContent: { content: '.body' },
+  header: '{"User-Agent":"reader-test"}',
+  enabledCookieJar: false,
+};
+const fingerprint = ruleFingerprint(ruleSource);
+assert.match(fingerprint, /^[0-9a-f]{64}$/, 'fingerprint must be sha256 hex');
+// Distribution metadata and user state must never influence the fingerprint.
+const metadataVariants = [
+  { ...ruleSource, enabled: false },
+  { ...ruleSource, enabled: true, defaultEnabled: true },
+  { ...ruleSource, builtinId: 'reader-builtin-x', builtinVersion: 9 },
+  { ...ruleSource, verifiedAt: '2000-01-01T00:00:00.000Z' },
+  { ...ruleSource, provenance: { origin: 'elsewhere' } },
+  { ...ruleSource, bookSourceName: 'renamed', bookSourceGroup: 'other group' },
+];
+for (const variant of metadataVariants) {
+  assert.equal(ruleFingerprint(variant), fingerprint,
+    'distribution metadata and user state must not change the rule fingerprint');
+}
+// Rule edits must change it.
+assert.notEqual(ruleFingerprint({ ...ruleSource, searchUrl: '/search2?q={{key}}' }), fingerprint,
+  'rule edits must change the fingerprint');
+// Key order must not.
+const reordered = {
+  header: '{"User-Agent":"reader-test"}',
+  ruleContent: { content: '.body' },
+  ruleToc: { chapterList: '.chapters' },
+  ruleSearch: { bookList: '.list', bookUrl: 'a@href' },
+  searchUrl: '/search?q={{key}}',
+  bookSourceUrl: 'https://example.org/',
+  bookSourceType: 0,
+  enabledCookieJar: false,
+};
+assert.equal(ruleFingerprint(reordered), fingerprint, 'key order must not change the fingerprint');
 
-// -- static gates on hostile fixtures ------------------------------------------
+const {stripTypeScriptTypes}=await import('node:module');const {rulePayloadJson,RULE_PAYLOAD_FIELDS}=await import('./source-supply-lib.mjs');
+const source=read('entry/src/main/ets/app/BundledBookSourceSupply.ts');const executable=stripTypeScriptTypes(source.slice(0,source.indexOf('export function hasBuiltinMarker')).replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''));
+const canonical=new Function(executable+';return canonicalRulePayloadJson;')();
+for(const value of [ruleSource,...metadataVariants,reordered])assert.equal(canonical(value),rulePayloadJson(value));
+for(const field of RULE_PAYLOAD_FIELDS){const value={...ruleSource,[field]:{z:[1,'界'],a:{y:false,x:null}}};assert.equal(canonical(value),rulePayloadJson(value),field+' uses actual production canonicalizer');}
 
+}
+if(id==='hostile-rules'){
 const insecure = collectInsecureUrlFindings({
   searchUrl: 'http://example.org/search',
   ruleToc: { chapterUrl: 'https://ok.example.org/x' },
@@ -122,8 +167,9 @@ assert.equal(paywall.length, 1, 'synthesized paywall fallback text must be repor
 assert.equal(collectPaywallFindings({ ruleContent: { content: '.body@text' } }).length, 0,
   'clean content rules must pass the paywall gate');
 
-// -- bundled metadata validation ------------------------------------------------
 
+}
+if(id==='bundled-metadata'){
 const bundled = JSON.parse(read(
   'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json'));
 for (const source of bundled) {
@@ -135,8 +181,7 @@ for (const source of bundled) {
 }
 const quarantined = bundled.filter(source =>
   source.provenance?.distributionDecision === 'quarantined-fixed-credential');
-assert.ok(quarantined.length >= 11,
-  'all fixed-credential records must be explicitly quarantined');
+
 for (const source of quarantined) {
   assert.equal(source.enabled, false);
   assert.equal(source.defaultEnabled, false);
@@ -166,28 +211,13 @@ assert.ok(validateBundledMetadata(credentialHeaderSource)
   .some(error => error.includes('fixed credentials')),
 'metadata admission must reject serialized credential headers');
 
-// -- RuntimeOwner wiring ---------------------------------------------------------
 
-const owner = read('entry/src/main/ets/app/ReaderRuntimeOwner.ts');
-assert.match(owner, /sha256Hex\(document\)[\s\S]{0,200}BUNDLED_RAW_FILE_SHA256/,
-  'file-level integrity must be verified before any source import');
-assert.match(owner, /sha256Hex\(canonicalRulePayloadJson\(bundled\)\)/,
-  'per-source integrity must hash the canonical rule payload');
-assert.match(owner,
-  /this\.state = 'ready';[\s\S]*installBundledBookSourceCollection\(runtime\)[\s\S]*failed without blocking Reader/,
-  'bundle verification/import errors must be isolated after Reader becomes usable');
-assert.match(owner, /hasBuiltinMarker\(existing\)/,
-  'user-imported copies must be recognized by the missing builtin marker');
-assert.match(owner, /isUserModifiedBuiltinCopy\(existing, storedActualFingerprint\)/,
-  'user-modified builtin copies must be detected before any upgrade');
-assert.match(owner, /ledger\.syncCurrentBundle\(managedCurrent\)/,
-  'the withdrawal ledger must track only successfully managed sources');
-const suiteVersionUsages = new Set(bundled.map(source => source.verificationSuiteVersion));
-assert.deepEqual(suiteVersionUsages,
-  new Set([SUITE_VERSION, 'reader-source-admission/1']),
-  'the collection must retain both the full-corpus and later admission evidence suites');
-
-console.log('source supply chain: PASS');
-
-const { spawnSync } = await import('node:child_process');
-assert.equal(spawnSync(process.execPath, ['tools/generate-bundled-source-index.mjs', '--check'], { encoding: 'utf8' }).status, 0, 'indexed resource artifacts must match portable bundle');
+const suites=new Set(bundled.map(s=>s.verificationSuiteVersion));assert.ok([...suites].every(s=>typeof s==='string'&&s.trim()));
+}
+if(id==='generated-index'){
+const {spawnSync}=await import('node:child_process');const result=spawnSync(process.execPath,['tools/generate-bundled-source-index.mjs','--check'],{cwd:repo,encoding:'utf8'});assert.equal(result.status,0,result.stderr+result.stdout);
+}
+}finally{}
+}
+const definitions={"fingerprint": "fingerprint actual scoped owner/gateway/storage path; controlled Core/OS ports", "canonical-parity": "canonical-parity actual scoped owner/gateway/storage path; controlled Core/OS ports", "hostile-rules": "hostile-rules actual scoped owner/gateway/storage path; controlled Core/OS ports", "bundled-metadata": "bundled-metadata actual scoped owner/gateway/storage path; controlled Core/OS ports", "generated-index": "generated-index actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

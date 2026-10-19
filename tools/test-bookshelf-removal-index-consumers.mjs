@@ -45,7 +45,7 @@ function render(f,index) {
  const shell=sdk.consumer(read('features/bookshelf/BookshelfShell.ets'),boundedMembers(read('features/bookshelf/BookshelfShell.ets')),
   {bookshelfTemporaryGeneration:0,registerReaderShelfFonts:()=>{},...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics}},params);
  shell.aboutToAppear();shell.recoveryNoticeContent(shell.recovery,false);
- const nodes=()=>sdk.nodes(shell),action=label=>nodes().find(n=>n.type==='Text'&&n.create===label&&n.height===36);
+ const nodes=()=>sdk.nodes(shell),action=label=>{const actor=sdk.walk(shell).find(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label===label);return actor&&sdk.nodes(actor).find(n=>n.type==='Stack'&&n.constraintSize?.minHeight===28&&n.onClick);};
  return{parent,params,sdk,shell,nodes,action};
 }
 async function unknown(before=true) {
@@ -54,12 +54,33 @@ async function unknown(before=true) {
  await view.owner.recoverRemoval({readingState:'all',sourceKind:'all'},()=>true);
  return{f:cold,...view,original:JSON.parse(cold.disk())};
 }
+
+{
+ const f=await unknown(),idle=render(f.f,f.index);
+ const check=(view,busy)=>{
+  assert.equal(view.params.recoveryBusy,busy,'actual Index forwards only reconcileBusy');
+  const actor=view.sdk.walk(view.shell).find(c=>c instanceof view.sdk.deps.ReaderRecoveryAction&&c.label==='核对操作结果');assert.ok(actor,'native action remains rendered');
+  const nodes=view.sdk.nodes(actor),label=nodes.find(n=>n.type==='Text'&&n.create==='核对操作结果'),hit=nodes.find(n=>n.type==='Stack'&&n.onClick);
+  assert.equal(label.opacity,busy?0:1,'label keeps its geometry while native loader covers it');
+  assert.equal(hit.constraintSize.minHeight,28);assert.equal(hit.enabled,!busy);
+  const loaders=nodes.filter(n=>n.type==='LoadingProgress');assert.equal(loaders.length,busy?1:0);
+  if(busy)assert.deepEqual([loaders[0].width,loaders[0].height],[18,18]);
+  return hit;
+ };
+ const first=check(idle,false),gate=deferred();f.f.options.pauseMethod='bookshelf.management.mutation.query';f.f.options.gate=gate;
+ first.onClick();await until(()=>f.owner.current().reconcileBusy&&f.f.options.pauseMethod===undefined);
+ const during=render(f.f,f.index);assert.equal(during.params.recovery.canRetry,false,'busy retry admission closes without removing its action');
+ const busy=check(during,true),queries=f.f.queries().length;busy.onClick();assert.equal(f.f.queries().length,queries,'busy physical action cannot dispatch another query');
+ assert.equal(f.f.writes().length,0);gate.resolve();await until(()=>!f.owner.current().reconcileBusy);
+ const after=render(f.f,f.index);check(after,false);assert.equal(after.params.recovery.visible,true,'still unconfirmed is quiet after the query settles');
+ assert.equal(f.f.writes().length,0);cases++;
+}
 {
  const f=await unknown(),p=render(f.f,f.index);
  assert.equal(f.index.shelfOperation.receipt.receipt.confirmation,'unknown');assert.equal(f.index.hasUnknownShelfWrite(),true);
  assert.ok(f.index.shelfOperation.receipt.value.shelf.books.some(b=>b.bookId==='a'),'unknown original delete does not suppress usable current book');
  assert.match(p.params.recovery.message,/原删除/);assert.equal(p.params.canContinueRemoval,true);
- const readAction=p.action('刷新列表'),continueAction=p.action('继续原删除操作');assert.ok(readAction);assert.ok(continueAction);
+ const readAction=p.action('核对操作结果'),continueAction=p.action('继续原删除操作');assert.ok(readAction);assert.ok(continueAction);
  readAction.onClick();await until(()=>!f.owner.current().reconcileBusy);assert.equal(f.f.writes().length,0);assert.equal(f.f.cleanup.length,0);
  const actor=p.sdk.walk(p.shell).find(c=>c instanceof p.sdk.deps.ReaderRecoveryAction&&c.label==='继续原删除操作');
  assert.ok(actor);continueAction.onClick();continueAction.onClick();await until(()=>!f.owner.current().busy);
@@ -70,7 +91,7 @@ async function unknown(before=true) {
 {
  const f=await unknown(false),p=render(f.f,f.index);assert.equal(f.index.shelfOperation.receipt.receipt.confirmation,'confirmed');
  assert.equal(f.index.hasUnknownShelfWrite(),true,'confirmed Core with retained cleanup still blocks unrelated mutation');
- assert.ok(p.action('完成原删除清理'));const writes=f.f.writes().length;p.action('刷新列表').onClick();await until(()=>!f.owner.current().reconcileBusy);
+ assert.ok(p.action('完成原删除清理'));const writes=f.f.writes().length;p.action('核对操作结果').onClick();await until(()=>!f.owner.current().reconcileBusy);
  assert.equal(f.f.cleanup.length,0);assert.equal(f.f.writes().length,writes);
  p.action('完成原删除清理').onClick();await until(()=>!f.owner.current().busy);assert.deepEqual(f.f.cleanup,['a']);assert.equal(f.f.writes().length,writes);cases++;
 }

@@ -1,88 +1,25 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"local-resource-host": {"description": "实际EPUB locator路径准入/单entry读取与取消", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const {default: assert} = await import('node:assert/strict');
+const {selectedProductionMethods,selectedProductionValues} = await import('./lib/selected-production-methods.mjs');
 
-const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
-const registry = read('entry/src/main/ets/app/ReaderHostRegistry.ts');
-const importGateway = read('entry/src/main/ets/features/bookshelf/LocalBookImportGateway.ts');
-const runtimeOwner = read('entry/src/main/ets/app/ReaderRuntimeOwner.ts');
-const coreGateway = read('entry/src/main/ets/app/ReaderCoreGateway.ts');
-const resourceHost = read('entry/src/main/ets/app/LocalEpubResourceHost.ts');
-const imageHost = read('entry/src/main/ets/app/ReadingBodyImageHost.ts');
-const chapterWindow = read('entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
-const documentProjection = read('entry/src/main/ets/features/reading/ReadingDocumentProjection.ts');
-const sessionFlow = read('entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const readingExperience = read('entry/src/main/ets/features/reading/LocalReadingExperience.ets');
-const pageSurface = read('entry/src/main/ets/features/reading/ReadingSurface.ets');
-const continuousStage = read('entry/src/main/ets/features/reading/ReaderContinuousReadingStage.ets');
+const file=new URL('../entry/src/main/ets/app/LocalEpubResourceHost.ts',import.meta.url);
+const values=selectedProductionValues(file,['LOCAL_EPUB_SCHEME','LOCAL_MOBI_SCHEME','MAX_READING_IMAGE_BYTES','MAX_LOCAL_IMAGE_BOOK_ID_BASE64_CHARS','MAX_LOCAL_IMAGE_PATH_BASE64_CHARS','MAX_LOCAL_IMAGE_LOCATOR_CHARS']);
+const decoder={create:(_encoding,options)=>({decodeToString:bytes=>new TextDecoder('utf-8',options).decode(bytes)})};
+const util={TextDecoder:decoder,Type:{BASIC_URL_SAFE:'url'},Base64Helper:class{decodeSync(value){return new Uint8Array(Buffer.from(value,'base64url'));}}};
+let current=true;const reads=[],accesses=[];let accessCount=0;
+const Owner=selectedProductionMethods(file,'LocalEpubResourceHost',['parseLocator','assertSafeArchivePath','assertCurrent','readResource','load'],{...values,util,
+ fileIo:{access:async path=>{accesses.push(path);return ++accessCount!==1;}},readLocalEpubEntryAsync:async(...args)=>{reads.push(args);return new Uint8Array([1,2]);},
+ ReadingBodyImageHost:{instance:{loadResource:async(_key,read,admitted)=>{assert.equal(admitted(),true);return read(()=>current);}}}});
+const owner=Object.assign(new Owner(),{context:{filesDir:'/private-fixture'}}),hash='a'.repeat(64),encode=text=>Buffer.from(text).toString('base64url'),locator=path=>'reader-local-epub://'+encode('local:'+hash)+'/'+encode(path);
+assert.deepEqual(owner.parseLocator(locator('images/a.png')),{hash,archivePath:'images/a.png'});
+for(const path of ['../secret','images/../secret','./a','a//b','/root','a\\b','a\0b','']) assert.throws(()=>owner.parseLocator(locator(path)));
+await owner.load(locator('images/a.png'),()=>current);assert.equal(reads.length,1);assert.equal(reads[0][0],'/private-fixture/reader-import/books/'+hash+'.epub');assert.equal(reads[0][1],'images/a.png');assert.equal(reads[0][2],values.MAX_READING_IMAGE_BYTES);
+current=false;const before=reads.length;await assert.rejects(()=>owner.load(locator('images/a.png'),()=>current),/cancelled/);assert.equal(reads.length,before);
 
-assert.match(registry, /stagedPath: string;[\s\S]*assetKind: 'source' \| 'epub' \| 'none';/,
-  'the picker stage must remain a Host-only input until import commits');
-assert.match(registry, /async commitLocalBookInput\(/);
-assert.match(registry, /reader-import\/books/);
-assert.match(registry, /const finalPath = `\$\{this\.localBookAssetDirectory\(\)\}\/\$\{hash\}\.source`/,
-  'a committed EPUB must retain its original archive outside the Core snapshot');
-assert.match(registry, /async rollbackLocalBookAsset\([\s\S]*commit\.created/,
-  'a failed new import must roll back only the Host asset it created');
-assert.match(registry, /async releaseLocalBookAsset\(bookId: string\)[\s\S]*\$\{hash\}\.epub/,
-  'a successful Core local-book deletion must have one deterministic Host asset release');
-assert.doesNotMatch(registry, /LocalBookRawImportLimitBytes|bytesBase64: string|encodeToString\(bytes\)/,
-  'production local-book import must not retain the Base64 transport limit');
-assert.match(registry,
-  /HashChunkBytes = 1024 \* 1024[\s\S]*copyAndHashLocalBook\(uri, stagePath\)/,
-  'Host staging must hash the selected book during its single bounded copy pass');
-assert.match(registry,
-  /private async copyAndHashLocalBook\([\s\S]*fileIo\.read\([\s\S]*digest\.update\([\s\S]*fileIo\.write\(/,
-  'the one-pass staging stream must read, hash, and write each bounded chunk');
-assert.match(importGateway, /filePath: input\.stagedPath/,
-  'the JSON control plane must carry only the Host-authorized staging path');
-assert.doesNotMatch(importGateway, /bytesBase64/,
-  'the production gateway must not send whole local books through JSON Base64');
-
-const commitIndex = importGateway.indexOf('commitLocalBookInput(selection.input)');
-const shelfIndex = importGateway.indexOf('this.bookshelf.upsertBook(shelfParams)');
-assert.ok(commitIndex >= 0 && shelfIndex > commitIndex,
-  'Host asset commit must complete before the visible bookshelf commit');
-assert.match(importGateway, /rollbackLocalBookAsset\(assetCommit\)/);
-assert.match(importGateway, /discardLocalBookInput\(selection\.input\)/);
-
-assert.match(resourceHost, /reader-local-epub:\/\//);
-assert.match(resourceHost, /readLocalEpubEntryAsync\([\s\S]*locator\.archivePath[\s\S]*MAX_READING_IMAGE_BYTES/,
-  'Rust Core must asynchronously read only the requested bounded ZIP entry');
-assert.doesNotMatch(resourceHost, /@ohos\.zlib|decompressFile|getOriginalSize|cacheDir/,
-  'the Host must not expand a whole EPUB or retain an extracted copy');
-assert.match(resourceHost, /segment === '\.' \|\| segment === '\.\.'/,
-  'Host resource reads must reject path traversal independently of Core');
-assert.match(resourceHost, /ReadingBodyImageHost\.instance\.loadResource/,
-  'local image resources must share the existing live display-file owner');
-assert.match(resourceHost, /this\.readResource\(locator, current\), isCurrent/,
-  'local EPUB decoding must retain independent borrower cancellation');
-assert.match(imageHost, /async loadBytes\(/);
-assert.match(imageHost, /materializeDisplayFile\(/,
-  'validated bytes must become an ArkUI-readable display file');
-assert.match(imageHost, /pixelMap: undefined,[\s\S]*fileUri,/,
-  'production payloads must publish the validated file URI without retaining the decode PixelMap');
-assert.doesNotMatch(imageHost, /dataUri: `data:|encodeToStringSync\(bytes/,
-  'the image adapter must not retain or recreate Base64 data URIs');
-assert.match(chapterWindow, /fileUri: string/);
-assert.doesNotMatch(chapterWindow, /dataUri/,
-  'the bounded chapter window must not retain Base64 image payloads');
-assert.match(runtimeOwner, /sourceId === 'local' && \(imageUrl\.startsWith\('reader-local-epub:\/\/'\) \|\| imageUrl\.startsWith\('reader-local-mobi:\/\/'\)\)/);
-assert.match(runtimeOwner, /localEpubResourceHost\.load\(imageUrl, isCurrent\)/,
-  'the runtime owner must propagate cancellation into local EPUB resource decoding');
-assert.match(documentProjection, /block\['kind'\] === 'image'[\s\S]*projectedText !== '\\uFFFC'/,
-  'Core image blocks must remain anchored to one canonical object scalar');
-assert.match(sessionFlow, /state: 'ready',[\s\S]*fileUri: payload\.fileUri/,
-  'the resolved Host file must enter the shared reading-session image shape');
-assert.match(readingExperience, /bodyImage\.state === 'ready' \? bodyImage\.fileUri : undefined/,
-  'physical pagination must retain the resolved body-image file URI');
-assert.match(pageSurface, /Image\(fragment\.fileUri\)[\s\S]*objectFit\(ImageFit\.Contain\)/,
-  'paged reading must mount the resolved local EPUB file URI');
-assert.match(continuousStage, /Image\(fragment\.fileUri\)[\s\S]*objectFit\(ImageFit\.Contain\)/,
-  'continuous reading must mount the same resolved local EPUB file URI');
-assert.match(coreGateway, /request\('bookshelf\.remove'/);
-assert.match(coreGateway, /releaseLocalBookAsset\(bookId\)/,
-  'Host archive release must happen only through the Core-backed bookshelf gateway');
-assert.doesNotMatch(resourceHost, /http\.execute|source\.imageRequest|pagination|chapterWindow/,
-  'the local resource Host must not become a second downloader or reader');
-
-console.log('local EPUB resource architecture: PASS');
+}

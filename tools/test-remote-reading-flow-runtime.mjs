@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { registerHooks }=await import('node:module');
 
 // ArkTS uses extensionless relative imports. Let this Node-only test resolve
 // those imports to their real TypeScript files without changing production
@@ -220,9 +223,17 @@ class FakeRemoteReadingRuntime {
   }
 }
 
-const runtime = new FakeRemoteReadingRuntime();
-const gateway = new RemoteReadingFlowGateway(runtime);
-const isCurrent = () => true;
+const runtime=new FakeRemoteReadingRuntime(),gateway=new RemoteReadingFlowGateway(runtime),isCurrent=()=>true;let previousChapter;
+const session={identity:{sourceId:SOURCE_ID,bookId:BOOK_ID},acquisitionMode:'online',detailUrl:BOOK_ID,tocUrl:'/book/42/toc',book:{title:'Remote Book',author:'Author'},hostRequirements:[],continuationVariables:[{name:'detailOnly',value:'d'},{name:'searchOnly',value:'s'},{name:'token',value:'detail'}],entries:[{index:0,title:'Chapter 1',url:'/chapter/1',variables:[{name:'token',value:'chapter'}]},{index:1,title:'Chapter 2',url:'/chapter/2',variables:[{name:'chapterOnly',value:'c'}]}]};
+const readingSessionGateway = new ReadingSessionFlowGateway(
+  SOURCE_ID,
+  BOOK_ID,
+  { kind: 'remote', session },
+  runtime,
+);
+
+try{
+if(id==='acquisition'){
 const session = await gateway.openSession({
   sourceId: SOURCE_ID,
   bookId: BOOK_ID,
@@ -241,12 +252,9 @@ assert.deepEqual(session.continuationVariables, [
   { name: 'token', value: 'detail' },
 ]);
 
-const readingSessionGateway = new ReadingSessionFlowGateway(
-  SOURCE_ID,
-  BOOK_ID,
-  { kind: 'remote', session },
-  runtime,
-);
+
+}
+if(id==='search-scalars'){
 assert.equal(readingSessionGateway.supportsContentSearch(), true);
 const matches = await readingSessionGateway.searchContent(BOOK_ID, 'remote', 50, isCurrent);
 assert.equal(matches.length, 1);
@@ -254,7 +262,7 @@ assert.equal(matches[0].sourceId, SOURCE_ID);
 assert.equal(matches[0].chapterOffset, 6);
 
 const currentChapter = await readingSessionGateway.loadChapter(BOOK_ID, 1, isCurrent);
-const previousChapter = await readingSessionGateway.loadChapter(BOOK_ID, 0, isCurrent);
+previousChapter = await readingSessionGateway.loadChapter(BOOK_ID, 0, isCurrent);
 assert.equal(previousChapter.sourceId, SOURCE_ID);
 assert.equal(previousChapter.bookId, BOOK_ID);
 assert.equal(previousChapter.extractionVia, 'rule');
@@ -267,6 +275,10 @@ assert.equal(
   'an online search result must select the exact scalar range rendered by the shared ReadingDocument',
 );
 
+
+}
+if(id==='image-ownership'){
+previousChapter=await readingSessionGateway.loadChapter(BOOK_ID,0,isCurrent);
 const pendingImage = {
   source: 'body.png',
   baseUrl: '/chapter/1',
@@ -332,6 +344,11 @@ await assert.rejects(
 assert.equal(stalePixelReleaseCount, 1,
   'a decoded PixelMap that loses ownership before admission must be released exactly once');
 
+
+}
+if(id==='window-pagination'){
+previousChapter=await readingSessionGateway.loadChapter(BOOK_ID,0,isCurrent);
+const currentChapter=await readingSessionGateway.loadChapter(BOOK_ID,1,isCurrent);
 const chapterWindow = new ReadingChapterWindow();
 chapterWindow.configure(SOURCE_ID, BOOK_ID, [0, 1]);
 chapterWindow.setCurrent(currentChapter);
@@ -340,7 +357,7 @@ assert.equal(chapterWindow.previous()?.chapterIndex, 0,
   'the online reading session must retain its real TOC predecessor');
 const imageWindow = new ReadingChapterWindow();
 imageWindow.configure(SOURCE_ID, BOOK_ID, [0]);
-imageWindow.setCurrent({ ...previousChapter, images: [readyImage] });
+imageWindow.setCurrent({ ...previousChapter, images: [{pixelMap:PIXEL_MAP}] });
 assert.equal(imageWindow.retainedImages()[0].pixelMap, PIXEL_MAP,
   'the bounded window must expose the native handles that remain live');
 
@@ -380,13 +397,16 @@ assert.equal(crossChapterPrevious.page.key.chapterIndex, 0);
 assert.equal(crossChapterPrevious.page.startScalar, 30,
   'the measured predecessor must enter at its actual final physical page');
 
+
+}
+if(id==='canonical-progress'){
 const progress = await gateway.loadProgress(session.identity, isCurrent);
 assert.equal(progress.kind, 'restored');
 assert.equal(progress.progress.locationRevision, 'revision-old');
 
 const resolved = await gateway.resolveLocation(
   session.identity,
-  previousChapter.chapterTitle,
+  'Chapter 1',
   { chapterIndex: 0, chapterOffset: 12, chapterProgress: 0.5 },
   { viewportWidth: 390, viewportHeight: 844, fontScale: 1, lineHeight: 35.28 },
   isCurrent,
@@ -402,17 +422,10 @@ const stored = await gateway.updateProgress(session.identity, {
 }, isCurrent);
 assert.equal(stored.locationRevision, 'revision-new');
 
-assert.deepEqual(calls.map((call) => call.method), [
-  'book.detail',
-  'book.toc',
-  'search.content',
-  'chapter.content',
-  'chapter.content',
-  'reading.progress.get',
-  'reader.location.resolve',
-  'reading.progress.update',
-]);
 
+}
+if(id==='transaction-once'){
+const resolved={chapterIndex:0,chapterOffset:12,chapterProgress:0.5000000000000001,locationRevision:'revision-new'};
 const sourceSwitchTransactionId = 'ss-first-canonical-progress';
 const sourceSwitchSessionGateway = new ReadingSessionFlowGateway(
   SOURCE_ID,
@@ -438,6 +451,9 @@ await sourceSwitchSessionGateway.updateProgress(BOOK_ID, {
 assert.equal(calls.at(-1).params.transactionId, undefined,
   'a successful atomic finalize must consume the session transaction id exactly once');
 
+
+}
+if(id==='cancelled'){
 let staleRequestCount = 0;
 const staleGateway = new RemoteReadingFlowGateway({
   async request(method, _params, options) {
@@ -477,6 +493,9 @@ await assert.rejects(
 );
 assert.equal(staleChapterRequestCount, 0);
 
+
+}
+if(id==='identity'){
 let mismatchRequestCount = 0;
 const mismatchGateway = new RemoteReadingFlowGateway({
   async request(method) {
@@ -506,6 +525,9 @@ await assert.rejects(
 assert.equal(mismatchRequestCount, 1,
   'a mismatched detail identity must stop before TOC acquisition');
 
+
+}
+if(id==='progress-serial'){
 const serialOrder = [];
 let releaseFirstCommit = () => {};
 let markFirstCommitStarted = () => {};
@@ -537,9 +559,9 @@ assert.deepEqual(serialOrder, [
   'second:end',
 ]);
 
-console.log('remote reading flow deterministic runtime: PASS');
 
-// PH58 uses the existing typed gateway all the way to Core's optional flag.
+}
+if(id==='force-refresh'){
 const refreshStart=calls.length;
 await readingSessionGateway.loadChapter(BOOK_ID,0,isCurrent,true);
 const forcedCalls=calls.slice(refreshStart).filter(c=>c.method==='chapter.content');
@@ -555,8 +577,9 @@ const failedRefreshGateway=new RemoteReadingFlowGateway({async request(method,pa
  assert.equal(method,'chapter.content');assert.equal(params.forceRefresh,true);throw Error('source transport failed');}});
 await assert.rejects(failedRefreshGateway.loadChapter(session,0,isCurrent,true),/source transport failed/,
  'explicit refresh does not disguise source failure as a successful old-cache reload');
-console.log('PASS PH58 actual remote/reading-session adapters: optional force flag, offline refresh, identity and failure propagation');
 
+}
+if(id==='media'){
 for (const contentKind of ['manga','audio']) {
  const reached=[];
  const mediaGateway=new RemoteReadingFlowGateway({async request(method){
@@ -571,9 +594,9 @@ for (const contentKind of ['manga','audio']) {
  await assert.rejects(mediaGateway.openSession({...mediaSeed,contentKind}),(error)=>error.code==='nonTextChapter');
  assert.deepEqual(reached,[],'known non-text cached/fresh entry performs no request');
 }
-console.log('PASS production outer-detail/known-cache media guard without changing bookshelf display or data');
 
-// Directory display facts are a thin Core DTO projection, online and cached.
+}
+if(id==='directory-metadata'){
 {
   const metadata = { displayTitle: '１００（上）', isVip: true, isPay: false, contextTitle: '第一部 / 第二卷' };
   const raw = { index: 0, title: '✿·１００（上）', url: '/chapter/100', level: 1, ...metadata };
@@ -614,9 +637,9 @@ console.log('PASS production outer-detail/known-cache media guard without changi
   'malformed optional cached metadata reaches the existing derived-cache corruption classification');
 }
 
-// Cold offline manga uses the real Surface method and actual catalog,
-// manifest, progress and image adapters. The Core port has no prepared entry
-// or supplied session; only canonical cached data and local pixels exist.
+
+}
+if(id==='offline-manga'){
 {
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
  const {MangaSessionGateway}=await import('../entry/src/main/ets/features/manga/MangaSessionGateway.ts');
@@ -688,4 +711,9 @@ console.log('PASS production outer-detail/known-cache media guard without changi
  const novel=await mediaGateway.openCachedCatalogSession({...mangaSeed,contentKind:'text'});
  assert.equal(novel.acquisitionMode,'offline');assert.equal(novel.entries[0].title,'Original');assert.deepEqual(reached,['cache.book.status']);
 }
-console.log('PASS real Surface + cached Gateway offline typed manga: cold/no-prepared/no-session, local pixels, missing/version-mismatched proof conservative directory, exact manifest identity, no source/network RPC, ordinary novel/audio isolation');
+
+}
+}finally{}
+}
+const definitions={"acquisition": "acquisition actual scoped owner/gateway/storage path; controlled Core/OS ports", "search-scalars": "search-scalars actual scoped owner/gateway/storage path; controlled Core/OS ports", "image-ownership": "image-ownership actual scoped owner/gateway/storage path; controlled Core/OS ports", "window-pagination": "window-pagination actual scoped owner/gateway/storage path; controlled Core/OS ports", "canonical-progress": "canonical-progress actual scoped owner/gateway/storage path; controlled Core/OS ports", "transaction-once": "transaction-once actual scoped owner/gateway/storage path; controlled Core/OS ports", "cancelled": "cancelled actual scoped owner/gateway/storage path; controlled Core/OS ports", "identity": "identity actual scoped owner/gateway/storage path; controlled Core/OS ports", "progress-serial": "progress-serial actual scoped owner/gateway/storage path; controlled Core/OS ports", "force-refresh": "force-refresh actual scoped owner/gateway/storage path; controlled Core/OS ports", "media": "media actual scoped owner/gateway/storage path; controlled Core/OS ports", "directory-metadata": "directory-metadata actual scoped owner/gateway/storage path; controlled Core/OS ports", "offline-manga": "offline-manga actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

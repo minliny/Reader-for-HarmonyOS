@@ -35,9 +35,11 @@ export function nativeSdkRoot(env = process.env, cwd = process.cwd()) {
   if (configured) return realpathSync(configured);
   throw new Error(`Set ${SDK_KEYS.join(', ')} or OHOS_NATIVE_HOME to the host-compatible SDK`);
 }
-export function assertWorkspaceLayout(root, env = process.env) {
+export function assertWorkspaceLayout(root, env = process.env, { requireUI = false } = {}) {
   const result = {};
-  for (const [name, key] of [['Reader-Core','READER_CORE_ROOT'], ['Reader-for-HarmonyOS','READER_HARMONY_ROOT'], ['Reader-UI','READER_UI_ROOT']]) {
+  const repositories = [['Reader-Core','READER_CORE_ROOT'], ['Reader-for-HarmonyOS','READER_HARMONY_ROOT']];
+  if (requireUI) repositories.push(['Reader-UI','READER_UI_ROOT']);
+  for (const [name, key] of repositories) {
     const adjacent = join(root, name), selected = resolve(root, env[key] || name);
     if (!directory(adjacent) || !directory(selected)) throw new Error(`Missing ${name} in the adjacent Reader workspace layout`);
     if (realpathSync(selected) !== realpathSync(adjacent)) throw new Error(`${key} must identify the adjacent ${name}; full development/HAP gates do not support split repository layouts`);

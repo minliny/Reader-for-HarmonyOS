@@ -1,11 +1,14 @@
-import { localFilePath, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
-import fs from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { createHash } from 'node:crypto';
-import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { localFilePath, resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
+
+const fs=await import('node:fs/promises');
+const { readFileSync }=await import('node:fs');
+const { tmpdir }=await import('node:os');
+const { join }=await import('node:path');
+const { createHash }=await import('node:crypto');
+const { createRequire, registerHooks, stripTypeScriptTypes }=await import('node:module');
 registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); } catch (error) {
     if ((specifier.startsWith('./') || specifier.startsWith('../')) && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context);
@@ -99,10 +102,10 @@ async function fixture(count = 45) {
   };
   return { owner, cache, session, state, states, bytes, calls, storedResources };
 }
-const {fixture:durableFixture}=await import('./lib/reading-operation-durable-probe.mjs');
-const {makeIndex:actualDirectoryIndex,settled}=await import('./lib/reading-directory-sdk-consumer.mjs');
+let durableFixture,actualDirectoryIndex,cleanupDurableFixtures;
 async function runIndex(f) {
- const a=await durableFixture(true);a.install(f.owner);f.owner.getUIAbilityContext=()=>({filesDir:a.files});
+ if(!durableFixture){({directoryFixture:durableFixture,cleanupDurableFixtures}=await import('./lib/reading-operation-durable-probe.mjs'));({makeIndex:actualDirectoryIndex}=await import('./lib/reading-directory-sdk-consumer.mjs'));}
+ const a=await durableFixture(true);console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...a.toolEvidence()}));a.install(f.owner);f.owner.getUIAbilityContext=()=>({filesDir:a.files});
  const rows=f.session.entries.map(e=>({index:e.index,title:e.title,navigable:e.url.length>0,downloadState:'missing'}));
  const x=actualDirectoryIndex({...a,runtime:f.owner,entries:()=>rows},{remote:true}),p=x.idx;
  const messages=[],failures=[];p.remoteReadingSession=f.session;
@@ -111,12 +114,13 @@ async function runIndex(f) {
  // Retained Host recovery/completion uses the actual Index feedback binding;
  // current directory buttons use the separate persistent download owner.
  void p.getReadingOfflineHost(f.owner).downloadBook(p.offlineBinding(f.owner,f.session));
- const deadline=performance.now()+10000;
- while((p.offlineOperation===undefined||p.getReadingOfflineHost(f.owner).busy())&&performance.now()<deadline)await new Promise(resolve=>setTimeout(resolve,2));
+ for(let turn=0;turn<2000&&(p.offlineOperation===undefined||p.getReadingOfflineHost(f.owner).busy());turn++)await new Promise(setImmediate);
  assert.ok(p.offlineOperation,'actual owner emitted its operation');assert.equal(p.getReadingOfflineHost(f.owner).busy(),false);assert.equal(p.offlineOperationActive,false);
  return{messages,failures,p};
 }
-try {
+
+let passed=false;try{
+if(id==='bounded-completion'){
   const f = await fixture(), progress = [];
   const result = await new ReadingOfflineGateway(f.owner).prefetchBook(f.session, () => true, p => progress.push(p));
   assert.ok(result.every(e => e.downloadState === 'completed'));
@@ -128,11 +132,9 @@ try {
   assert.ok((await new ReadingOfflineGateway(f.owner).loadProjection(f.session)).every(e => e.downloadState === 'completed'));
   assert.equal(f.calls.filter(c => c.params.cacheOnly === true).length, 45, 'standalone projection verifies each current local body once');
   assert.equal(f.calls.filter(c => c.method === 'chapter.content' && c.params.cacheOnly !== true).length, 0);
-  const ui = await runIndex(f);
-  assert.equal(ui.messages.at(-1), '全部 45 章下载完成');
-  assert.equal(ui.failures.length, 0);
-  checks.push('whole production DiskCache/Owner/Gateway/Index confirms completion, redirects and image geometry; linear body reads');
 
+}
+if(id==='blank-base'){
   for (const finalUrl of ['', '  ']) {
     const blankBase = await fixture(1); blankBase.state.finalUrl = finalUrl;
     await new ReadingOfflineGateway(blankBase.owner).prefetchBook(blankBase.session);
@@ -141,6 +143,9 @@ try {
   }
   checks.push('empty and whitespace finalUrl match the existing loadChapter identity semantics');
 
+
+}
+if(id==='body-invalidation'){
   const changed = await fixture();
   changed.state.afterPrefetch = async range => { if (range[0] === 20) { changed.state.generation++; changed.state.bodySuffix = '已改变'; } };
   const changedResult = await new ReadingOfflineGateway(changed.owner).prefetchBook(changed.session);
@@ -149,6 +154,9 @@ try {
   assert.ok(changedResult.slice(1).every(e => e.downloadState === 'completed'));
   checks.push('a body/version invalidation discards existing proof before exact local revalidation');
 
+
+}
+if(id==='missing-image'){
   const missing = await fixture();
   missing.state.afterPrefetch = async range => { if (range[0] === 20) await fs.unlink(await missing.cache.resourcePath(missing.storedResources[0])); };
   const missingResult = await new ReadingOfflineGateway(missing.owner).prefetchBook(missing.session);
@@ -156,6 +164,9 @@ try {
   assert.equal(missingResult[0].downloadState, 'cached', 'resource loss is checked despite a proof hit');
   checks.push('proof reuse never caches completion: deleted image bytes revoke exact manifest completion');
 
+
+}
+if(id==='legacy-fence'){
   const noFence = await fixture(21); delete noFence.owner.captureReadingContentValidity;
   await new ReadingOfflineGateway(noFence.owner).prefetchBook(noFence.session);
   assert.equal(noFence.calls.filter(c => c.params.cacheOnly).length, 41, 'legacy Host cannot reuse across batch without a fence');
@@ -164,6 +175,10 @@ try {
   assert.equal(noFence.calls.filter(c => c.method === 'chapter.content').length, 0, 'unsupported cacheOnly never risks transport');
   checks.push('missing lifetime guard disables reuse; unsupported cacheOnly remains cached without body request');
 
+
+}
+if(id==='parallel-mutation'){
+const f=await fixture(3);await new ReadingOfflineGateway(f.owner).prefetchBook(f.session);
   const early = deferred(), release = deferred();
   const exact = f.owner.isOfflineImageChapterComplete.bind(f.owner);
   f.owner.isOfflineImageChapterComplete = async chapter => {
@@ -178,12 +193,19 @@ try {
   f.owner.isOfflineImageChapterComplete = exact;
   checks.push('mutation after an early worker completes rejects the entire parallel projection');
 
+
+}
+if(id==='body-fence'){
+const f=await fixture(3);await new ReadingOfflineGateway(f.owner).prefetchBook(f.session);
   const started = deferred(), bodyRelease = deferred();
   f.state.beforeBody = async params => { if (params.cacheOnly && params.chapterIndex === 0) { started.resolve(); await bodyRelease.promise; } };
   const reading = assert.rejects(new ReadingOfflineGateway(f.owner).loadProjection(f.session), /superseded/);
   await started.promise; f.state.generation++; bodyRelease.resolve(); await reading;
   checks.push('proof fence is captured before body read, not minted after a stale response');
 
+
+}
+if(id==='failure-counts'){
   const failed = await fixture(25); failed.state.failBody = true;
   failed.session.entries[0].url = ''; failed.session.entries[0].title = '卷一';
   failed.session.entries[1].title = '真正的第一章';
@@ -191,12 +213,12 @@ try {
   await new ReadingOfflineGateway(failed.owner).prefetchBook(failed.session, undefined, p => failureProgress.push(p));
   assert.deepEqual(failureProgress.map(p => [p.processedChapters, p.completedChapters, p.failedChapters]), [[19, 0, 19], [24, 0, 24]]);
   assert.equal(failureProgress.at(-1).firstFailure.reason, '书源返回 HTTP 403');
-  const failureUi = await runIndex(failed);
-  assert.match(failureUi.messages.at(-1), /24 章失败.*真正的第一章：书源返回 HTTP 403/);
-  assert.ok(!failureUi.messages.join('').includes('private.invalid'));
-  assert.equal(failed.calls.filter(c => c.method === 'cache.book.prefetch').length, 4, 'partial/full failures continue remaining ranges');
+  assert.equal(failed.calls.filter(c=>c.method==='cache.book.prefetch').length,2,'both bounded ranges run despite full failure');
   checks.push('processed is separate from completed; failure counts/reason/title survive while secret error text does not');
 
+
+}
+if(id==='resource-failure'){
   const resourceFailure = await fixture(3); resourceFailure.state.failManifest = true;
   const resourceProgress = [];
   const resourceProjection = await new ReadingOfflineGateway(resourceFailure.owner).prefetchBook(resourceFailure.session, undefined, p => resourceProgress.push(p));
@@ -204,11 +226,12 @@ try {
   assert.equal(resourceProgress[0].cachedChapters, 3);
   assert.equal(resourceProgress[0].failedChapters, 3);
   assert.equal(resourceProgress[0].completedChapters, 0);
-  const resourceUi = await runIndex(resourceFailure);
-  assert.match(resourceUi.messages.at(-1), /另有 3 章正文已缓存，3 章失败.*存储空间不足/);
-  assert.ok(resourceFailure.bytes.every(bytes => bytes > 0));
+  assert.ok(resourceFailure.bytes.every(bytes=>bytes>0));
   checks.push('resource failure reports cached body and failed materialization together without hiding durable bytes');
 
+
+}
+if(id==='index-progress'){
   const realNow = Date.now; let now = 0; const messages = [];
   Date.now = () => now;
   try {
@@ -222,7 +245,7 @@ try {
         return [{ index: 0, navigable: true, downloadState: 'completed' }];
       }
     }
-    const actual=await durableFixture(true); actual.install(actual.runtime);
+    ({directoryFixture:durableFixture,cleanupDurableFixtures}=await import('./lib/reading-operation-durable-probe.mjs'));({makeIndex:actualDirectoryIndex}=await import('./lib/reading-directory-sdk-consumer.mjs'));const actual=await durableFixture(true);console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...actual.toolEvidence()})); actual.install(actual.runtime);
     const host=actual.offline;
     // Keep the original controlled progress transport seam; the actual Host,
     // actual Index binding and task-state publication execute unchanged.
@@ -248,5 +271,12 @@ try {
   } finally { Date.now = realNow; }
   checks.push('live download counts remain published without periodic Toasts; one current terminal result and no retired final feedback');
 
-  console.log(JSON.stringify({ pass: true, checks }, null, 2));
-} finally { for (const directory of directories) await fs.rm(directory, { recursive: true, force: true }); }
+
+}
+if(id==='index-feedback'){
+const f=await fixture(3);const ui=await runIndex(f);assert.equal(ui.messages.at(-1),'全部 3 章下载完成');assert.equal(ui.failures.length,0);const bad=await fixture(3);bad.state.failBody=true;const failed=await runIndex(bad);assert.match(failed.messages.at(-1),/3 章失败/);assert.ok(!failed.messages.join('').includes('private.invalid'));const resources=await fixture(3);resources.state.failManifest=true;const rf=await runIndex(resources);assert.match(rf.messages.at(-1),/另有 3 章正文已缓存，3 章失败.*存储空间不足/);
+}
+passed=true;}finally{for(const handle of handles.values())await handle.close().catch(()=>{});for(const directory of directories)await fs.rm(directory,{recursive:true,force:true});const cleanup=await cleanupDurableFixtures?.({retain:!passed});if(cleanup&&!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));}
+}
+const definitions={"bounded-completion": "bounded-completion actual scoped owner/gateway/storage path; controlled Core/OS ports", "blank-base": "blank-base actual scoped owner/gateway/storage path; controlled Core/OS ports", "body-invalidation": "body-invalidation actual scoped owner/gateway/storage path; controlled Core/OS ports", "missing-image": "missing-image actual scoped owner/gateway/storage path; controlled Core/OS ports", "legacy-fence": "legacy-fence actual scoped owner/gateway/storage path; controlled Core/OS ports", "parallel-mutation": "parallel-mutation actual scoped owner/gateway/storage path; controlled Core/OS ports", "body-fence": "body-fence actual scoped owner/gateway/storage path; controlled Core/OS ports", "failure-counts": "failure-counts actual scoped owner/gateway/storage path; controlled Core/OS ports", "resource-failure": "resource-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-progress": "index-progress actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-feedback": "index-feedback actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

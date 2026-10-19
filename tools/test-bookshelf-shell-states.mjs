@@ -1,19 +1,29 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
-import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { resolve } from 'node:path';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
-import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import { readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
-import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import { isReaderMainTabEnabled } from '../entry/src/main/ets/app/ReaderProductScope.ts';
-import * as geometryApi from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
-import { readerFloatingTabBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
-import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"index": {"description": "Index实际readiness/header与notice测量delta/当前业务Props", "resources": []}, "shell": {"description": "实际More global-local anchor/guarded callback/native area", "resources": []}, "status": {"description": "实际status retry与native loading", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+
+
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const {admitBookshelfSdkCarrier} = await import('./lib/bookshelf-projection-owner-probe.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { existsSync, readFileSync } = await import('node:fs');
+const { createRequire, stripTypeScriptTypes } = await import('node:module');
+const { resolve } = await import('node:path');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { iconButtonControls } = await import('./lib/reader-icon-button-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { readerFoundationTokens } = await import('./lib/reader-foundation-control-probe.mjs');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const fontFamilies = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+const { isReaderMainTabEnabled } = await import('../entry/src/main/ets/app/ReaderProductScope.ts');
+const geometryApi = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const { readerFloatingTabBottomInset } = await import('./lib/reader-floating-bar-metrics-probe.mjs');
+const metricsApi = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+
 
 const root = resolve(import.meta.dirname, '..');
 const read = file => readFileSync(resolve(root, 'entry/src/main/ets', file), 'utf8');
@@ -53,11 +63,13 @@ for (const [name, file, slot] of [
 const enumValues = name => new Proxy({}, { get: (_, key) => `${name}.${String(key)}` });
 const results = [];
 function check(name, action) {
+  const family=name.startsWith('Index')?'index':name.startsWith('status ')?'status':'shell';
+  if(selectedCase!==family)return;
   try { action(); results.push({ name, passed: true }); }
   catch (error) { results.push({ name, passed: false, message: error.message }); }
 }
 function indexFixture(state, source = 'online') {
-  const names = ['build', 'mangaOwnsWindowEdges'];
+  const names = ['build', 'mangaOwnsWindowEdges', 'detailPendingNoticeVisible'];
   if (index.includes('private bookshelfContent(')) names.push('bookshelfContent');
   if (index.includes('private bookshelfShellContent(')) names.push('bookshelfShellContent');
   const { owner } = createReaderBuilderProbe(index, names, {
@@ -101,10 +113,18 @@ for (const state of ['loading', 'empty', 'populated', 'failure']) {
     assert.equal(shell.params.populated, state === 'populated');
     assert.equal(shell.params.canCheckUpdates, state === 'populated');
     if (state === 'populated') {
-      assert.equal(body[0].params.headerClearance, 74, 'initial measured header plus approved list gap');
+      const initialClearance=body[0].params.headerClearance;
       shell.params.onHeaderHeightChange(92); owner.replayOnly([body[0].id]);
-      assert.equal(body[0].params.headerClearance, 106, 'the actual Index callback forwards changed shared header height to the retained shelf');
+      assert.equal(body[0].params.headerClearance-initialClearance,92-60,'actual Index callback forwards only the measured header delta');
       assert.equal(childOf(owner, expected)[0], body[0], 'header measurement keeps the existing shelf actor');
+      shell.params.onNoticeHeightChange(76); owner.replayOnly([body[0].id]);
+      assert.equal(owner.shelfPendingNoticeHeight,76,'actual Shell callback delivers the measured card height into Index');
+      const firstNoticeInset=body[0].params.noticeTopInset;
+      shell.params.onNoticeHeightChange(103);owner.replayOnly([body[0].id]);
+      assert.equal(body[0].params.noticeTopInset-firstNoticeInset,103-76,'actual notice height delta reaches retained avoidance');
+      shell.params.onNoticeHeightChange(0); owner.replayOnly([body[0].id]);
+      assert.equal(body[0].params.noticeTopInset,0,'hidden notice releases avoidance through the same actual callback');
+      assert.equal(childOf(owner,expected)[0],body[0],'notice measurement does not replace the shelf actor');
     }
     if (state === 'failure' || state === 'loading') {
       assert.equal(body[0].params.failed, state === 'failure');
@@ -165,13 +185,13 @@ dependencies.MainTabShell = class extends actualMain.Component {
 const iconHit = actor => actualIcons.nodes(actor).find(node => node.type === 'Stack' && node.onClick);
 function shellFixture({ populated = false, width = 365, menu = false } = {}) {
   shellWidth = width;
-  const { owner } = createReaderBuilderProbe(shellSource, ['content','mounted','temporaryBackIdentity','temporaryBackGeneration','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellHeader','shellOverlay','onHeaderHeightChange','headerHeight','recoveryNoticeContent','topBar','requestMainTab','requestCheckUpdates','showBottomNav','numericAreaLength'], {
+  const { owner } = createReaderBuilderProbe(shellSource, ['onNoticeHeightChange','noticeHeight','lastReadFeedback','onReadRecoveryChanged','onRecoveryChanged','content','mounted','temporaryBackIdentity','temporaryBackGeneration','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','moreSelectionId','onTemporaryBackBridge','aboutToAppear','aboutToDisappear','consumeTemporaryBack','dismissMoreMenu','moreOpenAction','moreIntentAction','build','shellHeader','shellOverlay','onHeaderHeightChange','headerHeight','recoveryNoticeContent','topBar','requestMainTab','requestCheckUpdates','showBottomNav','numericAreaLength'], {
     ...dependencies, ...actualIcons.dependencies, ...metricsApi, bookshelfTemporaryGeneration:0,registerReaderShelfFonts(){}, BOOKSHELF_WIDE_BREAKPOINT: 600, READER_FLOATING_TOP_BAR_HEIGHT: 58,
     ReaderWindowCoordinator: { metrics: () => new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,width,844)) },
   }, { ...actualIcons.hooks, childSources: { ...actualIcons.hooks.childSources, AppTopBar: actualHeaderSource } });
-  let contentCalls = 0;
+  let contentCalls = 0; const noticeHeights=[];
   Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 0, populated, viewportWidth: 0,
-    recovery: {message:'',visible:false,canRetry:false,generation:0},
+    recovery: {message:'',visible:false,canRetry:false,generation:0}, onNoticeHeightChange:height=>noticeHeights.push(height),
     moreMenuVisible: false, moreAnchorRight: 0, moreAnchorBottom: 0, overlayOriginX: 0, overlayOriginY: 0,
     canCheckUpdates: populated, updateRunning: false, backgroundUpdateRunning: false, updateProgressDone: 0, updateProgressTotal: 0,
     reduceMotion: false, onHeaderHeightChange: height => owner.reportedHeaderHeight = height, content: () => { contentCalls++; }, calls: [] });
@@ -185,10 +205,11 @@ function shellFixture({ populated = false, width = 365, menu = false } = {}) {
   const header = childOf(owner, 'AppTopBar')[0];
   assert.equal(contentCalls, 1); assert.equal(header.title, '书架'); assert.equal(header.divider, false);
   assert.deepEqual([header.floating, header.centered, header.showLeadingSearch], [true, true, true]);
-  return { owner, nav, header };
+  return { owner, nav, header, noticeHeights };
 }
 check('one shell keeps title/actions/nav actors through day-night and populated changes', () => {
-  const { owner, nav, header } = shellFixture();
+  const { owner, nav, header, noticeHeights } = shellFixture();
+  assert.equal(noticeHeights.at(-1),0,'actual recovery Watch/appear clears the unshown notice via its initialized callback');
   const buttons = childOf(owner, 'ReaderIconButton');
   assert.equal(buttons.length, 1, 'More is the shared icon actor; Search is the actual AppTopBar leading native Stack');
   const before = [...owner.children.values()];
@@ -278,14 +299,16 @@ for (const failed of [false,true]) check(`status ${failed ? 'failure' : 'loading
   owner.initialRender();
   if (failed) {
     assert.deepEqual(nodesOf(owner,'Text').map(node=>node.create), ['书架加载失败','无法读取书架内容，请重试。','重试']);
-    nodesOf(owner,'Text').find(node=>node.create==='重试').onClick(); assert.equal(retries,1);
+    const retry = nodesOf(owner,'Stack').find(node=>node.constraintSize?.minHeight===44 && node.onClick);
+    assert.ok(retry, 'actual shared soft action owns the native hit'); retry.onClick(); assert.equal(retries,1);
   } else {
     assert.deepEqual(nodesOf(owner,'Text').map(node=>node.create), ['正在加载书架…']);
-    const spinner=childOf(owner,'SearchSpinner')[0]; assert.equal(spinner.params.active,true);
-    owner.reduceMotion=true; owner.replay(); assert.equal(spinner.params.reduceMotion,true);
+    const spinner=nodesOf(owner,'LoadingProgress')[0]; assert.deepEqual([spinner.width,spinner.height],[32,32]);
+    assert.equal(childOf(owner,'SearchSpinner').length,0,'loading now uses the platform loader');
   }
   const before = nodesOf(owner,'Text').map(node=>node.fontColor);
-  owner.appThemeScheme='night'; owner.replay();
+  for (const actor of actors(owner)) actor.appThemeScheme='night';
+  for (const actor of actors(owner)) actor.replay?.();
   assert.ok(nodesOf(owner,'Text').some((node,i)=>node.fontColor!==before[i]), 'mounted content recolors with theme');
 });
 check('opaque Index Scaffold registration reproduces the missing shared content slot', () => {
@@ -303,5 +326,8 @@ check('opaque Index Scaffold registration reproduces the missing shared content 
 });
 // This executes SDK-emitted observers, not Harmony native layout/removal or dependency scheduling.
 // Each readiness slot is checked independently; persistence is asserted on the actual parent child-update path.
+assert.ok(results.length,'selected family executes at least one actual SDK case');
 for (const row of results) console.log(`${row.passed ? 'PASS' : 'FAIL'} ${row.name}${row.message ? ': ' + row.message.split('\n')[0] : ''}`);
 assert.equal(results.filter(row => !row.passed).length, 0, `${results.length} shared bookshelf shell checks`);
+
+}

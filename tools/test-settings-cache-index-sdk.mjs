@@ -1,15 +1,18 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {fixture,until,seedLegacySettingsClear} from './lib/reading-operation-durable-probe.mjs';
-import {makeIndex as makeDirectory,settled} from './lib/reading-directory-sdk-consumer.mjs';
-import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
-import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
-import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const {readFileSync}=await import('node:fs');
+const {fixture:productionFixture,until,seedLegacySettingsClear,cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/reading-operation-durable-probe.mjs');
+const {makeIndex: makeDirectory,settled}=await import('./lib/reading-directory-sdk-consumer.mjs');
+const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
+const {ReaderNativeAlertOwner}=await import('./lib/reader-native-alert-sdk-probe.mjs');
+const {readerRecoveryView}=await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 function makeSettings(f,{mount=1}={}){
  const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),pageSource=read('features/settings/SettingsPage.ets');
  const pageNames=['operation','cacheCleanup','onReconcile','onRetryAccepted','onReconcileCache','onContinueCache','onClearCache',
-  'operationFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind','recoveryActionGeneration','recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction',
+  'operationFeedback','pendingFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind','recoveryActionGeneration','recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction',
   'clearTextCache','applyCacheCleanup','onCacheCleanupChanged','mounted','themeOwner','temporaryBackIdentity','resetMessage','cacheCleanupInFlight','cacheActionLabel'];
  const pageDeps={ReaderRuntimeOwner:f.Runtime,readerRecoveryView,ReaderNativeAlertOwner};p.hooks.childSources.SettingsPage=pageSource;
  const leaf=p.consumer(pageSource,pageNames,pageDeps).constructor;
@@ -19,12 +22,17 @@ function makeSettings(f,{mount=1}={}){
   rssInstanceIdentity:1,settingsPresentationIdentity:'',settingsSnapshot:{autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true,developerMode:false},settingsOperation:{action:'load'},settingsSection:'general'});
  const host=new f.SettingsHost(()=>{},()=>idx.settingsSnapshot,()=>idx.route==='settings',()=>f.runtime.getUIAbilityContext(),()=>{},(snapshot,owner)=>{if(idx.isCurrentRuntime(owner)&&idx.route==='settings')idx.settingsCacheCleanup=snapshot;});
  idx.settingsHost=host;assert.equal(idx.bindSettingsPresentation(),true);
- let rendered=false;const render=()=>{if(!rendered){idx.settingsContent();rendered=true;}else idx.replay();const page=[...idx.children.values()].find(c=>c instanceof leaf);Object.assign(page,{mounted:true,themeOwner:f.runtime,temporaryBackIdentity:'settings:'+mount,appThemeScheme:'day'});page.operationFeedback();return page;};
+ let rendered=false;const render=()=>{if(!rendered){idx.settingsContent();rendered=true;}else idx.replay();const page=[...idx.children.values()].find(c=>c instanceof leaf);Object.assign(page,{mounted:true,themeOwner:f.runtime,temporaryBackIdentity:'settings:'+mount,appThemeScheme:'day'});page.operationFeedback();page.pendingFeedback();return page;};
  const actors=page=>p.walk(page).filter(c=>c instanceof p.deps.ReaderRecoveryAction);
- const native=(page,label)=>{const a=actors(page).find(c=>c.label===label);assert.ok(a,label);const n=[...a.nodes.values()].find(n=>n.onClick);assert.equal(n.height,36);assert.equal(n.borderRadius,6);return n.onClick;};
+ const native=(page,label)=>{const a=actors(page).find(c=>c.label===(label==='核对清理结果'?'核对':label));assert.ok(a,label);const n=[...a.nodes.values()].find(n=>n.onClick);assert.equal(n.type,'Stack');return n.onClick;};
  return{idx,host,p,render,actors,native};
 }
 const checks=[];
+
+const fixture=async(...a)=>{const f=await productionFixture(...a);console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...f.toolEvidence()}));return f;};let passed=false;
+
+try{
+if(id==='safe-unknown'){
 for(const boundary of ['before','after']){
  const f=await fixture(true),s=makeSettings(f);f.options[boundary==='before'?'beforeMethod':'afterMethod']='cache.storage.cleanup';
  await s.idx.clearTextCache();assert.equal(s.idx.settingsCacheCleanup.confirmation,'unknown');
@@ -34,14 +42,18 @@ for(const boundary of ['before','after']){
  const page=s.render();assert.equal(s.actors(page).some(actor=>actor.label==='继续原操作'),false,'unknown safe cleanup has no blind replay actor');
  checks.push('actual-Settings-safe-text-ACK-'+boundary+'-pure-private-read-no-replay');
 }
+}
+if(id==='retained-action'){
 {
  const f=await fixture(true),s=makeSettings(f);f.options.beforeMethod='cache.storage.cleanup';await s.idx.clearTextCache();
- const page=s.render(),actor=s.actors(page).find(c=>c.label==='核对清理结果'),old=s.native(page,'核对清理结果');
+ const page=s.render(),actor=s.actors(page).find(c=>c.label==='核对'),old=s.native(page,'核对清理结果');
  const before=f.calls.length;s.idx.navigationGeneration++;old();await new Promise(setImmediate);assert.equal(f.calls.length,before,'old Index page callback cannot borrow new navigation');
  s.idx.navigationGeneration--;page.temporaryBackIdentity='settings:new';page.replay();old();await new Promise(setImmediate);assert.equal(f.calls.length,before,'retained actor never adopts new physical presentation');
  assert.notEqual(actor.generation,undefined);f.unset();old();await new Promise(setImmediate);assert.equal(f.calls.length,before);
  checks.push('actual-settings-close-reopen-V1-retained-physical-and-runtime-unset');
 }
+}
+if(id==='legacy-global'){
 for(const boundary of ['before','after']){
  const warm=await fixture(true);warm.options[boundary==='before'?'beforeMethod':'afterMethod']='cache.clear';await seedLegacySettingsClear(warm);
 const original=JSON.parse(warm.disk('cacheClear'));
@@ -65,4 +77,8 @@ const original=JSON.parse(warm.disk('cacheClear'));
  assert.equal(directory.idx.offlineOperation.projection.receipt.confirmation,'unknown','absence of original intent changes capacity only, never invents this book ACK');
  checks.push('cold-original-global-intent-other-book-capacity-and-original-settings-authority-'+boundary);
 }
-console.log(JSON.stringify({status:'PASS',checks,scope:'actual installed SDK emit / actual CacheClear atomic store + cold Core SQLite / Index Page and native shared actions; native scheduling/layout/visual acceptance separate'}));
+}
+passed=true;}finally{const cleanup=await cleanupDurableFixtures({retain:!passed});if(!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));}
+}
+const definitions={"safe-unknown": "safe-unknown actual scoped owner/gateway/storage path; controlled Core/OS ports", "retained-action": "retained-action actual scoped owner/gateway/storage path; controlled Core/OS ports", "legacy-global": "legacy-global actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

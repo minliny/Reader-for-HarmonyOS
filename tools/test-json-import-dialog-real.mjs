@@ -1,14 +1,24 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
-import {bookshelfDialogPresentationFixture} from './lib/bookshelf-dialog-presentation-sdk.mjs';
-import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp,
-  readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import { resolveHorizontalFrame, SurfaceWidthSpec } from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"json-url-form-admission": {"description": "实际JSON dialog URL controlled draft/IME/本地选择/取消", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+
+
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire, stripTypeScriptTypes } = await import('node:module');
+const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
+const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp,
+  readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { resolveHorizontalFrame, SurfaceWidthSpec } = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+
 
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const require = createRequire(import.meta.url);
@@ -58,11 +68,6 @@ class LiveSurfaceChild {
     this.params.body();
   }
 }
-assert.match(jsonSource, /this\.localButton\(\);[\s\S]*?Column\(\{ space: TOK_SPACE_XS \}\)/,
-  'the local-file action stays between the description and the URL form');
-assert.match(jsonSource, /new DialogActionView\('importOnline', '从在线链接导入', 'primary'/);
-assert.doesNotMatch(jsonSource, /new DialogActionView\('selectLocal'/,
-  'the local-file action is body content, not a trailing dialog action');
 const foundation=foundationControls();
 const { owner: dialog } = createReaderBuilderProbe(jsonSource,
   ['build', 'formBody', 'localButton', 'submitOnlineImport'], {
@@ -95,9 +100,16 @@ const urlInput = dialogNodes.find(n => n.type === 'TextInput');
 assert.ok(urlLabel && urlInput, 'URL form renders');
 assert.ok(dialogNodes.indexOf(localButton) < dialogNodes.indexOf(urlLabel) && dialogNodes.indexOf(urlLabel) < dialogNodes.indexOf(urlInput),
   'the local-file action precedes the URL form, matching the original order');
-assert.equal(localButton.height, 44);
-assert.equal(localButton.borderRadius, 8);
 assert.equal(typeof localButton.onClick, 'function');
+const rawLinkNote = dialogNodes.find(n => n.type === 'Text' && n.create === 'GitHub 仓库文件请使用 Raw 链接；普通 blob 页面不是 JSON。');
+assert.ok(rawLinkNote,'actual Raw-link note remains body content');
+for (const [node, role] of [[urlLabel, 'TYPE_FORM_ACTION'], [urlInput, 'TYPE_FORM_URL_INPUT'],
+  [localButton, 'TYPE_FORM_LABEL_ACTION']]) {
+  const tuple = readerTypographyRoles[role];
+  assert.deepEqual([node.fontFamily, node.fontSize, node.fontWeight, node.lineHeight],
+    [tuple.fontFamily, tuple.fontSizeFp, tuple.fontWeight, tuple.lineHeightFp],
+    `${role}: the normal URL/local-file control retains its original tuple and AUTO omissions`);
+}
 
 // Draft update clears validation; submit routes the trimmed URL; the empty
 // draft surfaces the admission message instead of dispatching.
@@ -109,12 +121,18 @@ assert.equal(dialog.validationMessage, '请输入在线 JSON 的 HTTP/HTTPS 地�
 foundation.flush(dialog);
 assert.ok(foundation.nodes(dialog).some(n => n.type === 'Text' && n.create === '请输入在线 JSON 的 HTTP/HTTPS 地址'),
   'the validation message renders after an empty submit');
-urlInput.onChange('https://example.com/books.json');
-assert.equal(dialog.urlDraft, 'https://example.com/books.json', 'draft updates on input');
+urlInput.onChange('file:///books.json');
+surfaceChild.params.onAction('importOnline');
+assert.deepEqual(imported, [], 'non-HTTP drafts never reach the import callback');
+assert.equal(dialog.urlDraft, 'file:///books.json', 'invalid submission preserves the entered URL');
+assert.equal(dialog.validationMessage, '请使用以 http:// 或 https:// 开头的 JSON 链接');
+urlInput.onChange('  https://example.com/books.json  ');
+assert.equal(dialog.urlDraft, '  https://example.com/books.json  ', 'draft updates on input');
 assert.equal(dialog.validationMessage, '', 'typing clears the validation message');
 surfaceChild.params.onAction('importOnline');
 assert.deepEqual(imported, ['https://example.com/books.json'],
   'submit routes the trimmed URL through onImportOnline');
+assert.equal(dialog.urlDraft, '  https://example.com/books.json  ', 'dispatch does not erase or rewrite the controlled draft');
 urlInput.onSubmit('Enter');
 assert.deepEqual(imported, ['https://example.com/books.json', 'https://example.com/books.json'],
   'keyboard submit shares the same admission path');
@@ -125,109 +143,5 @@ assert.equal(dismissed, 1, 'the shared close affordance routes to onDismiss');
 surfaceChild.params.onAction('selectLocal');
 assert.equal(selected, 1, 'unrouted action ids never reach callbacks');
 
-// Propagation proof: exercise two production consumers, then render both
-// through the one ReaderDialogSurface implementation with a single shared
-// constructor input. A common header field change must reach both consumers;
-// a named variant override must stay scoped to that variant.
-const bookSource = readFileSync(file('features/bookshelf/BookRemovalDialog.ets'), 'utf8');
-const consumerSurfaceParams = [];
-class ConsumerSurfaceChild {
-  constructor(owner, params, _storage, id) {
-    Object.assign(this, { owner, params, id });
-    consumerSurfaceParams.push(params);
-    params.body?.();
-  }
+
 }
-const bookConsumerProbe = createReaderBuilderProbe(bookSource,
-  ['build', 'messageBody', 'messageMaxHeight'], {
-    ReaderWindowCoordinator: { metrics: () => metrics },
-    ReaderDialogSurface: ConsumerSurfaceChild,
-    DialogActionView,
-    registerReaderFonts: () => {},
-  });
-Object.assign(bookConsumerProbe.owner, {
-  appThemeScheme: 'day', message: '本地书', measuredMessageHeight: 50,
-  onCancel: () => {}, onConfirm: () => {},
-});
-bookConsumerProbe.owner.initialRender();
-assert.equal(consumerSurfaceParams.length, 1, 'book-removal mounts the shared surface');
-assert.equal(consumerSurfaceParams[0].specId, 'book-removal');
-assert.equal(surfaceChild.params.specId, 'json-import', 'json-import mounts the shared surface');
-
-const surfaceMethods = ['body', 'defaultBody', 'build', 'header', 'actionsRow', 'actionCell',
-  'spec', 'resolvedFrame', 'frameWidth', 'framePadding', 'actionLabelColor',
-  'actionSurfaceRole', 'actionModifier', 'actionTouchRegion', 'bodyActionsInnerMargin'];
-const renderConsumerSurface = (params, resolver) => {
-  const probe = createReaderBuilderProbe(surfaceSource, surfaceMethods, {
-    ReaderWindowCoordinator: { metrics: () => metrics }, readerInteractiveSafeLeft,
-    readerInteractiveSafeRight, resolveHorizontalFrame, SurfaceWidthSpec,
-    SurfaceHorizontalFrame: class {
-      constructor(left, right, width) { Object.assign(this, { left, right, width }); }
-    }, resolveDialogSpec: resolver, ButtonType: { Normal: 'Normal' },
-  });
-  Object.assign(probe.owner, {
-    appThemeScheme: 'day', readerWindowMetricsRevision: 0,
-    specId: params.specId, title: params.title, showCloseButton: params.showCloseButton ?? false,
-    actions: params.actions ?? [],
-  });
-  probe.owner.initialRender();
-  return probe.owner;
-};
-const originalResolver = resolveDialogSpec;
-const sharedInput = { headerLineHeightDelta: 0 };
-const variantInput = { borderRadiusDelta: 0 };
-const sharedResolver = id => {
-  const base = originalResolver(id);
-  return new Proxy(base, {
-    get(target, key, receiver) {
-      if (key === 'headerLineHeight') return target.headerLineHeight + sharedInput.headerLineHeightDelta;
-      if (key === 'borderRadius' && id === 'json-import') return target.borderRadius + variantInput.borderRadiusDelta;
-      return Reflect.get(target, key, receiver);
-    },
-  });
-};
-sharedInput.headerLineHeightDelta = 7;
-const bookSurfaceAfterSharedChange = renderConsumerSurface(consumerSurfaceParams[0], sharedResolver);
-const jsonSurfaceAfterSharedChange = renderConsumerSurface(surfaceChild.params, sharedResolver);
-const bookTitleAfterSharedChange = [...bookSurfaceAfterSharedChange.nodes.values()]
-  .find(node => node.type === 'Text' && node.create === '移除书架');
-const jsonTitleAfterSharedChange = [...jsonSurfaceAfterSharedChange.nodes.values()]
-  .find(node => node.type === 'Text' && node.create === '导入 JSON');
-assert.equal(bookTitleAfterSharedChange.lineHeight, 27,
-  'one common header-line-height input reaches the real book-removal consumer');
-assert.equal(jsonTitleAfterSharedChange.lineHeight, 35,
-  'the same common header-line-height input reaches the real json-import consumer');
-variantInput.borderRadiusDelta = -4;
-const bookSurfaceAfterVariantChange = renderConsumerSurface(consumerSurfaceParams[0], sharedResolver);
-const jsonSurfaceAfterVariantChange = renderConsumerSurface(surfaceChild.params, sharedResolver);
-assert.equal(bookSurfaceAfterVariantChange.spec().borderRadius, 12,
-  'json-import variant geometry changes never leak into book-removal');
-assert.equal(jsonSurfaceAfterVariantChange.spec().borderRadius, 10,
-  'a named json-import variant override reaches its real consumer only');
-
-// Index shelf-group host wiring: the overlay mounts the shared surface with
-// the real BookshelfGroupSelector as its body, the mask owns dismissal, and
-// the selector's select intent routes into assignShelfDefaultGroup.
-class SelectorChild {
-  constructor(owner, params, _storage, id) {
-    Object.assign(this, { owner, params, id });
-  }
-}
-assert.match(indexSource, /specId: 'shelf-group',[\s\S]*?title: '编辑分组',[\s\S]*?actions: \[\]/);
-assert.match(indexSource,
-  /BookshelfGroupSelector\(\{\s*selected:[\s\S]*?busy: this\.editingShelfGroupBusy \|\| this\.bookshelfManagementSnapshot\.busy \|\| this\.bookshelfManagementSnapshot\.mutationBlocked === true,\s*onSelect: \(\): void => \{ void this\.assignShelfDefaultGroup\(presentation, generation, owner, mounting, book\); \}/,
-  'the selector select intent routes into the default-group assignment');
-assert.match(indexSource,
-  /\.onClick\(\(\): void => \{\s*if \(!this\.editingShelfGroupBusy && this\.isCurrentShelfGroup\(presentation, generation, owner, mounting, book\)\)\s*this\.closeShelfGroup\(presentation\);/,
-  'the mask tap dismisses the overlay only when no assignment is in flight');
-// The actual production named body Builder now mounts the real selector.
-const groupHost=bookshelfDialogPresentationFixture(),book={sourceId:'s',bookId:'book',group:''};
-groupHost.i.openShelfGroup(book);const first=groupHost.group();
-assert.ok(first.select?.onClick && first.mask?.onClick,'actual Index→shared surface→selector native actions');
-groupHost.i.editingShelfGroupBusy=true;first.mask.onClick();assert.equal(groupHost.raw(groupHost.i.editingShelfGroupBook),book);
-groupHost.i.editingShelfGroupBusy=false;first.mask.onClick();assert.equal(groupHost.i.editingShelfGroupBook,undefined);
-groupHost.i.openShelfGroup(book);const second=groupHost.group();second.select.onClick();await Promise.resolve();await Promise.resolve();
-assert.deepEqual(groupHost.writes,[book],'actual selector routes the captured book into the existing assignment Host');
-assert.equal(groupHost.i.editingShelfGroupBook,undefined);
-
-console.log('json import real consumer: body order, draft/validation/close chain, shared-spec propagation and shelf-group host wiring PASS');

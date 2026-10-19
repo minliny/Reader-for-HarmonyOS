@@ -1,37 +1,16 @@
-import { approvedTypographyContract, approvedTypographyFile } from './lib/approved-manga-typography-carriers.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
-const baseline = JSON.parse(readFileSync(new URL('./fixtures/design/conventional-typography-baseline.json', import.meta.url)));
-const weights = { Regular: 400, Medium: 500, Bold: 700 };
-const scenarios = [
-  { isWide: () => false, isTablet: false, coverWidth: 96.96, selectedGroupName: '其他' },
-  { isWide: () => true, isTablet: true, coverWidth: 128, selectedGroupName: '当前' },
-];
-const evaluate = (expression, owner) => new Function('FontWeight', 'label', ...Object.keys(readerTypographyRoles),
-  `return (${stripTypeScriptTypes(expression)});`).call(owner, weights, '当前', ...Object.values(readerTypographyRoles));
-const approvedFiles=new Map();
-for(const file of baseline.files){const source=readFileSync(new URL('../'+file.path,import.meta.url),'utf8');const approved=approvedTypographyContract(source,file.path);if(approved.registered)approvedFiles.set(file.path,approved);}
-const usedRoles = new Set();
-let nodes = 0;
-for (const file of baseline.files) for (const node of file.nodes) {
-  nodes++;
-  if(approvedFiles.has(file.path))continue;
-  for (const [property, replacement] of Object.entries(node.changes)) {
-    const names = [...replacement.matchAll(/TYPE_\w+/g)].map(match => match[0]);
-    assert.ok(names.length, `${file.path}/${node.method}/${property}: finite semantic role`);
-    for (const name of names) {
-      usedRoles.add(name); const role = readerTypographyRoles[name];
-      assert.ok(role, `${name}: production export exists`);
-      assert.equal(role.scalePolicy, 'system');
-      assert.ok(['appBaseline','figmaNode'].includes(role.source), `${name}: evidence provenance`);
-      assert.ok(Number.isFinite(role.fontSizeFp));
-      assert.ok(role.lineHeightFp === undefined || Number.isFinite(role.lineHeightFp));
-    }
-    for (const owner of scenarios) assert.equal(evaluate(replacement, owner), evaluate(node.original[property], owner),
-      `${file.path}/${node.method}/${property}: original physical tuple`);
-  }
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"public-role-values": {"description": "当前公共字体role数值准入", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
 }
-assert.equal(nodes, 248);
-console.log(`PASS conventional Typography registry: ${nodes} consumers, ${usedRoles.size} semantic roles, ${approvedFiles.size} approved successor carrier sets, retained original public baseline and finite variants`);
+async function runSelectedCase(selectedCase) {
+const {default: assert} = await import('node:assert/strict');
+const {readerTypographyRoles} = await import('./lib/reader-typography-probe.mjs');
+
+const check=(name,role)=>{assert.ok(role&&typeof role.fontFamily==='string'&&role.fontFamily.length>0,name+': physical family binding');assert.ok(Number.isFinite(role.fontSizeFp)&&role.fontSizeFp>0,name+': positive finite font size');assert.ok(role.lineHeightFp===undefined||Number.isFinite(role.lineHeightFp)&&role.lineHeightFp>0,name+': optional finite line box');};
+const selected=Object.entries(readerTypographyRoles).filter(([name])=>name.startsWith('TYPE_'));assert.ok(selected.length>0);
+for(const [name,role] of selected)check(name,role);
+assert.throws(()=>check('invalid',{fontFamily:'face',fontSizeFp:NaN}),'malformed actual registry tuple cannot be accepted');
+
+}

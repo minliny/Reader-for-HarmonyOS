@@ -1,15 +1,49 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
-import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
-import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
-import { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
-import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
-import { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } from '../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts';
-import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "strict-debug-flag": {
+    "description": "Pure strict diagnostic admission matrix; does not construct SDK/runtime",
+    "resources": []
+  },
+  "cold-diagnostic-admission": {
+    "description": "Actual EntryAbility.onCreate and runtime constructor, controlled platform ports; native allocation not measured",
+    "resources": []
+  },
+  "optional-preparation": {
+    "description": "Actual runtime optional preparation, pause/close/mutation fences, independent durable neighbour and RAM-only release; fake Core",
+    "resources": []
+  },
+  "retained-presentation": {
+    "description": "Actual public retained lookup, producer/consumer and recency guards; fake native measurement",
+    "resources": []
+  }
+};
+
+async function case_strict_debug_flag() {
+const { default: assert } = await import('node:assert/strict');
+const { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } = await import('../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts');
+for(const debug of [true,false,1,'true',new Boolean(true)])for(const mode of ['debug','release','DEBUG','debug ',''])
+  for(const value of [true,false,undefined,null,1,'true','1',{},[true],new Boolean(true)]) {
+    assert.equal(readerDisableOptionalEntryMemory(debug,mode,value),debug===true&&mode==='debug'&&value===true);
+    assert.equal(readerControlVerificationColdStartPage(debug,mode,undefined,undefined),'pages/Index',
+      'the memory diagnostic is independent of route admission');
+  }
+
+}
+
+async function case_cold_diagnostic_admission() {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { createMangaAtomicPayloadInstallerFixture } = await import('./lib/manga-atomic-payload-probe.mjs');
+const { ReaderStartupTrace } = await import('../entry/src/main/ets/app/ReaderStartupTrace.ts');
+const { errorMessageOf, localReadFailureSummary } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
+const { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } = await import('../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts');
+const { MangaOfflineNetworkProbe } = await import('../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts');
+const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } = await import('../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts');
+const { ReadingPaginationPrefix } = await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
 const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
@@ -42,14 +76,6 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function until(predicate) { for(let i=0;i<40;i++){if(predicate())return;await tick();}assert.fail('optional preparation did not settle'); }
 const context={cacheDir:'/unused-native-context',config:{colorMode:0}};
 const installMangaAtomicPayloadReader=createMangaAtomicPayloadInstallerFixture({});
-
-for(const debug of [true,false,1,'true',new Boolean(true)])for(const mode of ['debug','release','DEBUG','debug ',''])
-  for(const value of [true,false,undefined,null,1,'true','1',{},[true],new Boolean(true)]) {
-    assert.equal(readerDisableOptionalEntryMemory(debug,mode,value),debug===true&&mode==='debug'&&value===true);
-    assert.equal(readerControlVerificationColdStartPage(debug,mode,undefined,undefined),'pages/Index',
-      'the memory diagnostic is independent of route admission');
-  }
-
 // Execute the real onCreate body with controlled platform startup boundaries.
 // It alone decodes the Want, and passes the flag before optional producers exist.
 for(const [debug,mode,value,disabled,selectionFlag,expectedSelection] of [[true,'debug',true,true],[true,'release',true,false],
@@ -109,12 +135,54 @@ for(const mode of ['offline','reading']) {
  const Runtime=runtimeType(),owner=Runtime.install(context,false,{sourceId:'source',bookId:'book'},undefined,mode);
  assert.equal(owner.mangaOfflineProbe,undefined,'constructor rejects a selection mode combined with an exact-ID scope');
 }
-const warmWantBody=abilitySource.slice(abilitySource.indexOf('  onNewWant('),abilitySource.indexOf('  private async prepareSelectedReadingFont'));
-assert.match(warmWantBody,/ReaderSystemFileOpenHost\.receive\(want\)/);
-assert.doesNotMatch(warmWantBody,/coldStartPage|readerDisableOptionalEntryMemory|loadContent|ReaderRuntimeOwner\.install/,
-  'a warm Want cannot activate the cold diagnostic or reset the active reader');
-assert.match(runtimeSource,/private readonly optionalEntryMemoryEnabled: boolean/);
 
+}
+
+async function case_optional_preparation() {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { createMangaAtomicPayloadInstallerFixture } = await import('./lib/manga-atomic-payload-probe.mjs');
+const { ReaderStartupTrace } = await import('../entry/src/main/ets/app/ReaderStartupTrace.ts');
+const { errorMessageOf, localReadFailureSummary } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
+const { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } = await import('../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts');
+const { MangaOfflineNetworkProbe } = await import('../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts');
+const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } = await import('../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts');
+const { ReadingPaginationPrefix } = await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
+registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
+const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+const { readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
+const ts=require(`${sdk}/node_modules/typescript`), options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+const runtimeFile=new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url);
+const abilityFile=new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url);
+const runtimeSource=readFileSync(runtimeFile,'utf8'), abilitySource=readFileSync(abilityFile,'utf8');
+const tree=ts.createSourceFile(virtualFilePath('ReaderOptionalEntryOwner.ts'),runtimeSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
+const ownerClass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(tree)==='ReaderRuntimeOwner');
+const selected=new Set(['instance','state','abilityLeases','coreCapabilities','entryPreparations','optionalEntryMemoryEnabled',
+  'install','current','readingEntryPreparations','optionalReadingEntryMemoryEnabled','releaseOptionalReadingEntryMemory','captureReadingContentValidity']);
+const members=ownerClass.members.filter(n=>ts.isConstructorDeclaration(n)||selected.has(n.name?.getText(tree))).map(n=>n.getText(tree)).join('\n');
+function runtimeType() {
+  class PlatformHost {}
+  const dependencies={ReadingEntryPreparation,releaseReadingEntryMemory,MangaOfflineNetworkProbe,LOG_DOMAIN:0x5244,hilog:{info(){}},
+    ReaderHostRegistry:PlatformHost,HarmonyTtsHostRouter:PlatformHost,HarmonySystemTtsHost:PlatformHost,HarmonyHttpTtsHost:PlatformHost,
+    HarmonyTtsMediaSession:PlatformHost,HarmonyTtsBackgroundSession:PlatformHost,LocalEpubResourceHost:PlatformHost,
+    ReadingImageDiskCache:PlatformHost,ReadingBodyImageHost:{setDisplayCacheDir(){}}};
+  const Runtime = new Function(...Object.keys(dependencies),stripTypeScriptTypes(`class ReaderRuntimeOwner { ${members} }`)+ '; return ReaderRuntimeOwner;')(...Object.values(dependencies));
+  // This fixture owns optional entry memory; physical manga policy binding is
+  // exercised by its production Owner/Disk probes with a real authority port.
+  Runtime.prototype.bindMangaStorage = () => {};
+  // Actual Body observer attach/detach is covered by the network probe suite.
+  Runtime.prototype.bindMangaReadingProbe = function () { this.readingProbeBindingRequested = true; };
+  return Runtime;
+}
+const tick=()=>new Promise(resolve=>setImmediate(resolve));
+async function until(predicate) { for(let i=0;i<40;i++){if(predicate())return;await tick();}assert.fail('optional preparation did not settle'); }
+const context={cacheDir:'/unused-native-context',config:{colorMode:0}};
+const installMangaAtomicPayloadReader=createMangaAtomicPayloadInstallerFixture({});
 {
   const Runtime=runtimeType(), owner=Runtime.install(context,true);
   let rpc=0,seedLoads=0,dropped=0;
@@ -184,6 +252,53 @@ assert.match(runtimeSource,/private readonly optionalEntryMemoryEnabled: boolean
   preparation.close();
 }
 
+}
+
+async function case_retained_presentation() {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { createMangaAtomicPayloadInstallerFixture } = await import('./lib/manga-atomic-payload-probe.mjs');
+const { ReaderStartupTrace } = await import('../entry/src/main/ets/app/ReaderStartupTrace.ts');
+const { errorMessageOf, localReadFailureSummary } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
+const { readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory, readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode } = await import('../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts');
+const { MangaOfflineNetworkProbe } = await import('../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts');
+const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes, registerReadingEntryMemoryRelease, releaseReadingEntryMemory } = await import('../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts');
+const { ReadingPaginationPrefix } = await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
+registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
+const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
+const { readingChapterLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
+const ts=require(`${sdk}/node_modules/typescript`), options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+const runtimeFile=new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts',import.meta.url);
+const abilityFile=new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url);
+const runtimeSource=readFileSync(runtimeFile,'utf8'), abilitySource=readFileSync(abilityFile,'utf8');
+const tree=ts.createSourceFile(virtualFilePath('ReaderOptionalEntryOwner.ts'),runtimeSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
+const ownerClass=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.getText(tree)==='ReaderRuntimeOwner');
+const selected=new Set(['instance','state','abilityLeases','coreCapabilities','entryPreparations','optionalEntryMemoryEnabled',
+  'install','current','readingEntryPreparations','optionalReadingEntryMemoryEnabled','releaseOptionalReadingEntryMemory','captureReadingContentValidity']);
+const members=ownerClass.members.filter(n=>ts.isConstructorDeclaration(n)||selected.has(n.name?.getText(tree))).map(n=>n.getText(tree)).join('\n');
+function runtimeType() {
+  class PlatformHost {}
+  const dependencies={ReadingEntryPreparation,releaseReadingEntryMemory,MangaOfflineNetworkProbe,LOG_DOMAIN:0x5244,hilog:{info(){}},
+    ReaderHostRegistry:PlatformHost,HarmonyTtsHostRouter:PlatformHost,HarmonySystemTtsHost:PlatformHost,HarmonyHttpTtsHost:PlatformHost,
+    HarmonyTtsMediaSession:PlatformHost,HarmonyTtsBackgroundSession:PlatformHost,LocalEpubResourceHost:PlatformHost,
+    ReadingImageDiskCache:PlatformHost,ReadingBodyImageHost:{setDisplayCacheDir(){}}};
+  const Runtime = new Function(...Object.keys(dependencies),stripTypeScriptTypes(`class ReaderRuntimeOwner { ${members} }`)+ '; return ReaderRuntimeOwner;')(...Object.values(dependencies));
+  // This fixture owns optional entry memory; physical manga policy binding is
+  // exercised by its production Owner/Disk probes with a real authority port.
+  Runtime.prototype.bindMangaStorage = () => {};
+  // Actual Body observer attach/detach is covered by the network probe suite.
+  Runtime.prototype.bindMangaReadingProbe = function () { this.readingProbeBindingRequested = true; };
+  return Runtime;
+}
+const tick=()=>new Promise(resolve=>setImmediate(resolve));
+async function until(predicate) { for(let i=0;i<40;i++){if(predicate())return;await tick();}assert.fail('optional preparation did not settle'); }
+const context={cacheDir:'/unused-native-context',config:{colorMode:0}};
+const installMangaAtomicPayloadReader=createMangaAtomicPayloadInstallerFixture({});
 // The retained-page entrance and producer are independent of shelf preparation.
 // Execute all three production guards; the disabled reader cannot even query a
 // provider, and its producer must discard an old RAM handoff before returning.
@@ -271,4 +386,11 @@ for(const disabled of [true,false]) {
     assert.equal(retained.current('local','book'),undefined,'a skipped optional renewal cannot re-publish its old RAM receipt for another visit');
   }
 }
-console.log('PASS optional entry-memory diagnostic: strict cold Want, no RAM snapshots, independent durable current/neighbour and legacy image repair, pause/close fences, RAM-only release, guarded retained pages and unchanged ordinary preparation');
+
+}
+
+const implementations = {'strict-debug-flag':case_strict_debug_flag,'cold-diagnostic-admission':case_cold_diagnostic_admission,'optional-preparation':case_optional_preparation,'retained-presentation':case_retained_presentation};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

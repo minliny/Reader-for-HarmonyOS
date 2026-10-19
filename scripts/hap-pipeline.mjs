@@ -32,8 +32,8 @@ import { acquireBuildLease, acquireBuildWorkspace } from '../../Reader-Core/scri
 import { assertWorkspaceLayout } from '../../Reader-Core/scripts/lib/development-environment.mjs';
 import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate, verifyPublishedCoreGate, targetReadiness } from './lib/hap-delivery-evidence.mjs';
 import { hapStageReceipt } from './lib/hap-stage-receipt.mjs';
-import { reconcileIdeNativeCache } from './lib/ide-native-cache.mjs';
-import { contractTests, contractSelection, MAX_CONTRACT_TIMEOUT_MS } from '../tools/run-contract-tests.mjs';
+import { selectBundledSources } from '../tools/verify-bundled-test-book-sources-live.mjs';
+import { contractTests, contractSelection, explicitContractTests, contractCaseSelection, MAX_CONTRACT_TIMEOUT_MS } from '../tools/run-contract-tests.mjs';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), '..');
@@ -604,7 +604,7 @@ function archiveEntryRecord(hapPath, entryPath) {
   return { path: entryPath, bytes: bytes.length, sha256: sha256Bytes(bytes) };
 }
 
-function inspectHap(hapPath, kind, publicPath = basename(hapPath), requiredResources) {
+export function inspectHap(hapPath, kind, publicPath = basename(hapPath), requiredResources) {
   const names = archiveNames(hapPath);
   const nativeEntries = names.filter((name) => name.startsWith('libs/')).sort();
   if (JSON.stringify(nativeEntries) !== JSON.stringify(EXPECTED_NATIVE_ENTRIES)) {
@@ -943,8 +943,6 @@ export function preflightIdeNative(env = process.env) {
   const lease = acquireBuildLease(env);
   const buildEnv = ideNativeBuildEnvironment(lease.env);
   try {
-    const recovery = reconcileIdeNativeCache(REPO_ROOT);
-    if (recovery.removed.length) console.log(`Reader DevEco: recovered ${recovery.removed.length} identical numbered Native cache copies; receipt: ${join(recovery.recoveryDirectory, 'receipt.json')}`);
     return prepareIdeNativeInputs({
       check() {
         const state = ideNativeInputState(Object.values(nativeInputPaths(CORE_ROOT, buildEnv)),
@@ -1042,15 +1040,25 @@ function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCom
 }
 
 export function buildContractScope(options, root = REPO_ROOT) {
-  const allowed = ['--class', '--signing', '--live-sources', '--keep-runs', '--artifact-root', '--contracts-scope', '--core-gate-receipt'];
+  const allowed = ['--class', '--signing', '--live-sources', '--live-source-ids', '--keep-runs', '--artifact-root', '--contracts-scope', '--core-gate-receipt', '--rationale'];
   for (const key of options.keys()) if (!allowed.includes(key)) fail(`unknown build argument: ${key}`, 2);
   const buildClass = option(options, '--class', 'iteration');
   if (!['iteration', 'acceptance'].includes(buildClass)) fail('--class must be iteration or acceptance', 2);
-  const scope = options.has('--contracts-scope') ? requiredOption(options, '--contracts-scope') : undefined;
-  if (scope !== undefined && (buildClass !== 'iteration' || !['manga-image-cache', 'search-return-runtime'].includes(scope))) {
-    fail('--contracts-scope manga-image-cache|search-return-runtime is only supported for iteration builds', 2);
+  if (options.get('--live-sources') === true) fail('--live-sources no longer starts the whole collection. Use --live-source-ids with exact IDs and --rationale, or run the explicit all-source tool plan separately.', 2);
+  if (options.has('--live-source-ids') && !option(options, '--rationale', '').trim()) fail('Selected live sources require --rationale.', 2);
+  if (options.has('--live-source-ids')) selectBundledSources(JSON.parse(readFileSync(resolve(root, 'entry/src/main/resources/rawfile/reader-tested-book-source-collection.json'), 'utf8')), requiredOption(options, '--live-source-ids').split(','));
+  const requested = option(options, '--contracts-scope', 'none');
+  if (!['none', 'full', 'manga-image-cache', 'search-return-runtime'].includes(requested)) {
+    fail('--contracts-scope must be none, full, manga-image-cache, or search-return-runtime', 2);
   }
-  contractTests(root, 'full', scope);
+  const scope = requested === 'full' ? undefined : requested;
+  if (scope !== 'none') {
+    if (!option(options, '--rationale', '').trim()) fail('Contract execution requires --rationale after reviewing the necessary test items; full additionally requires an explicit user request.', 2);
+    const selection = contractTests(root, 'full', scope);
+    // Selection admission reads literal nested imports before any build lease
+    // or dispatcher starts; invalid scope metadata must not leave a resource hold.
+    explicitContractTests(root, selection.selected);
+  }
   return scope;
 }
 
@@ -1060,8 +1068,17 @@ export function remainingContractBudget(started, reserveMs = 0, deadlineMs = MAX
   return remaining;
 }
 
+export function admitBuildContractChecks(options, root = REPO_ROOT) {
+  const scope=buildContractScope(options);
+  if(scope!=='none') {
+    const selection=contractTests(root,'full',scope);
+    try { contractCaseSelection(root,selection.selected,{}); }
+    catch(error) { throw new Error(`${error.message}. Use exact gate-index case IDs independently; HAP builds use --contracts-scope none. No build has started.`); }
+  }
+  return scope;
+}
 function build(options) {
-  buildContractScope(options); // Invalid CLI arguments are not build attempts.
+  admitBuildContractChecks(options); // Reject unsupported broad selections before snapshots, signing or build work.
   activeBuildAttempt = hapStageReceipt(resolve(REPO_ROOT, '.reader-artifacts/hap-attempts'), {});
   try {
     activeBuildAttempt.bindInputs({ harmony: gitRecord(REPO_ROOT), core: gitRecord(CORE_ROOT), coreBuildInputs: coreBuildSnapshot(CORE_ROOT), source: sourceSnapshot(), controller: controllerSnapshot() });
@@ -1102,7 +1119,7 @@ function buildImpl(options) {
   const coreGit = gitRecord(CORE_ROOT);
   requireCleanAcceptance(buildClass, harmonyGit, coreGit, signingMode);
   const coreGateFile = option(options, '--core-gate-receipt', process.env.READER_CORE_GATE_RECEIPT);
-  if (buildClass === 'acceptance') currentCoreGate(coreGateFile, CORE_ROOT);
+  if (buildClass === 'acceptance' && coreGateFile) currentCoreGate(coreGateFile, CORE_ROOT);
   const requiredResources = requiredHapResources(REPO_ROOT);
 
   const buildLease = acquireBuildWorkspace({ create: () => mkdtempSync(join(tmpdir(), 'reader-hap-build-')), remove: path => rmSync(path, { recursive: true, force: true }) });
@@ -1121,65 +1138,56 @@ function buildImpl(options) {
     console.log(JSON.stringify({ stage: 'artifactRetention', keepRuns, ...retention }));
     const harmonyGateBefore = controllerSnapshot();
     const contractPolicy = JSON.parse(readFileSync(resolve(REPO_ROOT, CONTRACT_EVIDENCE_POLICY_INPUT), 'utf8'));
-    if (contractPolicy.schemaVersion !== 1 || contractPolicy.name !== 'reader-harmony-contract-evidence-policy' ||
-        contractPolicy.contractsReceiptRequired !== true || !controllerRequiresContractEvidence(harmonyGateBefore)) {
+    if (contractPolicy.schemaVersion !== 2 || contractPolicy.name !== 'reader-harmony-contract-evidence-policy' ||
+        contractPolicy.contractsReceiptRequired !== 'when-executed' || contractPolicy.defaultScope !== 'none' ||
+        !controllerRequiresContractEvidence(harmonyGateBefore)) {
       fail('current HAP controller requires the contract evidence policy');
     }
     const workspaceContractBefore = workspaceContractSnapshot();
-    const contractToolchainBefore = contractToolchainSnapshot();
+    const contractToolchainBefore = contractsScope === 'none' ? contentSnapshot(WORKSPACE_ROOT, []) : contractToolchainSnapshot();
     const sourceBefore = sourceSnapshot(REPO_ROOT);
     const sourceGitBefore = gitRecord(REPO_ROOT);
     const coreGitBefore = gitRecord(CORE_ROOT);
     if (sourceGitBefore.commit !== harmonyGit.commit || coreGitBefore.commit !== coreGit.commit) {
       fail('repository HEAD changed before the build snapshot was captured');
     }
-    const contractScopeBudget = contractTests(REPO_ROOT, 'full', contractsScope).scopePolicy?.timeoutMs;
-    contractGateState = { started: performance.now(), scope: contractsScope ?? 'full' };
-    const contractBudget = (reserveMs = 0) => remainingContractBudget(contractGateState.started, reserveMs, contractScopeBudget);
-    console.log(JSON.stringify({ stage: 'harmonyContracts', event: 'start', scope: contractGateState.scope,
-      deadlineMs: contractScopeBudget ?? null, startedAt: new Date().toISOString() }));
-    run(process.execPath, [resolve(WORKSPACE_ROOT, 'scripts/check-hap-build-system.mjs')], {
-      cwd: WORKSPACE_ROOT,
-      stdio: 'inherit',
-      env: buildLease.env,
-      timeoutMs: contractsScope === undefined ? undefined : contractBudget(),
-    });
     const contractsResultPath = resolve(sandboxRoot, 'contracts-results.json');
-    const contractEnvironment = { ...buildLease.env, READER_CONTRACT_RESULTS_FILE: contractsResultPath,
-      READER_CONTRACT_TEST_TIMEOUT_MS: String(MAX_CONTRACT_TIMEOUT_MS) };
-    if (contractsScope === undefined) {
+    let contractResults;
+    if (contractsScope !== 'none') {
+      const contractScopeBudget = contractTests(REPO_ROOT, 'full', contractsScope).scopePolicy?.timeoutMs;
+      contractGateState = { started: performance.now(), scope: contractsScope ?? 'full' };
+      const contractBudget = (reserveMs = 0) => remainingContractBudget(contractGateState.started, reserveMs, contractScopeBudget);
+      console.log(JSON.stringify({ stage: 'harmonyContracts', event: 'start', scope: contractGateState.scope,
+        rationale: option(options, '--rationale'), deadlineMs: contractScopeBudget ?? null, startedAt: new Date().toISOString() }));
+      const contractEnvironment = { ...buildLease.env, READER_CONTRACT_RESULTS_FILE: contractsResultPath,
+        READER_CONTRACT_TEST_TIMEOUT_MS: String(MAX_CONTRACT_TIMEOUT_MS) };
+      if (contractsScope !== undefined) contractEnvironment.READER_CONTRACT_SCOPE_TIMEOUT_MS = String(contractBudget(2_000));
       contractsDispatched = true;
-      run(process.execPath, [resolve(REPO_ROOT, 'scripts/check-local.mjs')], { cwd: REPO_ROOT, stdio: 'inherit', env: contractEnvironment });
-    } else {
-      run(process.execPath, ['tools/generate-theme-registry.mjs', '--check'], { cwd: REPO_ROOT, stdio: 'inherit',
-        env: buildLease.env,
-        timeoutMs: contractBudget() });
-      // Leave time for TERM/KILL cleanup and the input fences within the same
-      // declared scope budget. The standalone CLI uses the same policy limit.
-      contractEnvironment.READER_CONTRACT_SCOPE_TIMEOUT_MS = String(contractBudget(2_000));
-      contractsDispatched = true;
-      run(process.execPath, ['tools/run-contract-tests.mjs', '--scope', contractsScope],
+      run(process.execPath, ['tools/run-contract-tests.mjs', ...(contractsScope === undefined ? ['--full'] : ['--scope', contractsScope]),
+        '--rationale', option(options, '--rationale')],
         { cwd: REPO_ROOT, stdio: 'inherit', env: contractEnvironment,
-          timeoutMs: contractBudget() });
+          timeoutMs: contractsScope === undefined ? undefined : contractBudget() });
+      contractResults = JSON.parse(readFileSync(contractsResultPath, 'utf8'));
+      assertSnapshotUnchanged(sourceBefore, sourceSnapshot(REPO_ROOT), 'source inputs during contracts');
+      assertSnapshotUnchanged(harmonyGateBefore, controllerSnapshot(), 'Harmony controller inputs during contracts');
+      assertSnapshotUnchanged(workspaceContractBefore, workspaceContractSnapshot(), 'workspace inputs during contracts');
+      assertSnapshotUnchanged(contractToolchainBefore, contractToolchainSnapshot(), 'contract toolchain inputs during contracts');
+      assertGitRecordUnchanged(sourceGitBefore, gitRecord(REPO_ROOT), 'Harmony source during contracts');
+      assertGitRecordUnchanged(coreGitBefore, gitRecord(CORE_ROOT), 'Core source during contracts');
+      contractResults.pipelineGateMilliseconds = Math.ceil(performance.now() - contractGateState.started);
+      checkContractResults(contractResults, contractTests(REPO_ROOT, 'full', contractsScope), contractsScope);
+      console.log(JSON.stringify({ stage: 'harmonyContracts', event: 'end', scope: contractGateState.scope,
+        status: contractsScope === undefined ? 'PASS' : 'PARTIAL', selectedStatus: 'PASS',
+        fullSuite: contractsScope === undefined ? 'PASS' : 'NOT_RUN', milliseconds: contractResults.pipelineGateMilliseconds }));
+      contractGateState = null;
+    } else {
+      console.log(JSON.stringify({ stage: 'harmonyContracts', status: 'NOT_RUN', scope: 'none', fullSuite: 'NOT_RUN' }));
     }
-    const contractResults = JSON.parse(readFileSync(contractsResultPath, 'utf8'));
-    assertSnapshotUnchanged(sourceBefore, sourceSnapshot(REPO_ROOT), 'source inputs during contracts');
-    assertSnapshotUnchanged(harmonyGateBefore, controllerSnapshot(), 'Harmony controller inputs during contracts');
-    assertSnapshotUnchanged(workspaceContractBefore, workspaceContractSnapshot(), 'workspace inputs during contracts');
-    assertSnapshotUnchanged(contractToolchainBefore, contractToolchainSnapshot(), 'contract toolchain inputs during contracts');
-    assertGitRecordUnchanged(sourceGitBefore, gitRecord(REPO_ROOT), 'Harmony source during contracts');
-    assertGitRecordUnchanged(coreGitBefore, gitRecord(CORE_ROOT), 'Core source during contracts');
-    contractResults.pipelineGateMilliseconds = Math.ceil(performance.now() - contractGateState.started);
-    checkContractResults(contractResults, contractTests(REPO_ROOT, 'full', contractsScope), contractsScope);
-    console.log(JSON.stringify({ stage: 'harmonyContracts', event: 'end', scope: contractGateState.scope,
-      status: contractsScope === undefined ? 'PASS' : 'PARTIAL', selectedStatus: 'PASS',
-      fullSuite: contractsScope === undefined ? 'PASS' : 'NOT_RUN', milliseconds: contractResults.pipelineGateMilliseconds }));
-    contractGateState = null;
-    if (options.get('--live-sources') === true) {
+    if (options.has('--live-source-ids')) {
       const liveStarted = performance.now();
       console.log(JSON.stringify({ stage: 'liveBookSources', event: 'start', deadlineMs: MAX_CONTRACT_TIMEOUT_MS }));
       try {
-        run(process.execPath, ['tools/verify-bundled-test-book-sources-live.mjs'], {
+        run(process.execPath, ['tools/verify-bundled-test-book-sources-live.mjs', '--source-ids', requiredOption(options, '--live-source-ids'), '--rationale', requiredOption(options, '--rationale')], {
           cwd: REPO_ROOT, stdio: 'inherit', env: buildLease.env, timeoutMs: MAX_CONTRACT_TIMEOUT_MS,
         });
         console.log(JSON.stringify({ stage: 'liveBookSources', event: 'end', status: 'PASS', milliseconds: Math.ceil(performance.now() - liveStarted) }));
@@ -1228,7 +1236,7 @@ function buildImpl(options) {
     if (!existsSync(sharedHvigorTools)) {
       fail(`prepared Hvigor wrapper tools are missing: ${sharedHvigorTools}`);
     }
-    const packageManager = assertBuildTools(sharedHvigorTools);
+    const packageManager = assertBuildTools(sharedHvigorTools, { profile: buildClass === 'acceptance' ? 'release' : 'development' });
     const isolatedHvigorTools = resolve(hvigorUserHome, 'wrapper/tools');
     mkdirSync(isolatedHvigorTools, { recursive: true });
     cpSync(sharedHvigorTools, isolatedHvigorTools, { recursive: true, preserveTimestamps: true, verbatimSymlinks: true });
@@ -1270,7 +1278,7 @@ function buildImpl(options) {
     );
     assertGitRecordUnchanged(sourceGitBefore, gitRecord(REPO_ROOT), 'Harmony source worktree');
     assertGitRecordUnchanged(coreGitBefore, gitRecord(CORE_ROOT), 'Core source worktree');
-    assertSnapshotUnchanged(contractToolchainBefore, contractToolchainSnapshot(), 'contract toolchain inputs');
+    if (contractsScope !== 'none') assertSnapshotUnchanged(contractToolchainBefore, contractToolchainSnapshot(), 'contract toolchain inputs');
 
     const outputDir = resolve(sandboxRepo, 'entry/build/default/outputs/default');
     const builtNames = findBuiltHaps(outputDir, signingMode);
@@ -1308,7 +1316,7 @@ function buildImpl(options) {
     writeJson(resolve(runDir, 'controller-snapshot.json'), harmonyGateBefore);
     writeJson(resolve(runDir, 'workspace-contract-snapshot.json'), workspaceContractBefore);
     writeJson(resolve(runDir, 'contract-toolchain-snapshot.json'), contractToolchainBefore);
-    const contracts = publishContractEvidence(runDir, contractResults, contractsScope, {
+    const contracts = contractsScope === 'none' ? publishUnrunContractEvidence(runDir) : publishContractEvidence(runDir, contractResults, contractsScope, {
       source: snapshotDescriptor(sourceBefore, 'source-snapshot.json'),
       controller: snapshotDescriptor(harmonyGateBefore, 'controller-snapshot.json'),
       workspace: snapshotDescriptor(workspaceContractBefore, 'workspace-contract-snapshot.json'),
@@ -1342,7 +1350,7 @@ function buildImpl(options) {
       nativeProvenance,
       runId,
       buildClass,
-      acceptanceEligible: buildClass === 'acceptance',
+      acceptanceEligible: buildClass === 'acceptance' && contractsScope === undefined && Boolean(coreGateFile),
       startedAt,
       finishedAt,
       source: {
@@ -1362,9 +1370,9 @@ function buildImpl(options) {
         vendoredCoreNapi: vendoredNapi,
       },
       gates: {
-        coreDevelopment: buildClass === 'acceptance' ? publishCoreGate(coreGateFile, runDir, CORE_ROOT) : { status: 'NOT_RUN' },
+        coreDevelopment: buildClass === 'acceptance' && coreGateFile ? publishCoreGate(coreGateFile, runDir, CORE_ROOT) : { status: 'NOT_RUN' },
         requiredResourceBytes: 'PASS',
-        harmonyContracts: contractsScope === undefined ? 'PASS' : 'PARTIAL',
+        harmonyContracts: contractsScope === 'none' ? 'NOT_RUN' : contractsScope === undefined ? 'PASS' : 'PARTIAL',
         contracts,
         contractToolchainInputs: snapshotDescriptor(contractToolchainBefore, 'contract-toolchain-snapshot.json'),
         controllerInputs: {
@@ -1377,7 +1385,9 @@ function buildImpl(options) {
           fileCount: workspaceContractBefore.fileCount,
           snapshot: 'workspace-contract-snapshot.json',
         },
-        liveBookSources: options.get('--live-sources') === true ? 'PASS' : 'NOT_RUN',
+        liveBookSources: options.has('--live-source-ids') ? 'PASS' : 'NOT_RUN',
+        selectedLiveBookSourceIds: options.has('--live-source-ids') ? requiredOption(options, '--live-source-ids').split(',') : [],
+        fullLiveBookSourceCollection: 'NOT_RUN',
         liveBookSourceEvidence: {
           transport: 'reader-cli/ureq',
           scope: 'Core CLI L1-L5 diagnostic',
@@ -1500,6 +1510,15 @@ function checkContractResults(report, selection, scope) {
   }
 }
 
+function publishUnrunContractEvidence(runDir) {
+  const inventory = readdirSync(resolve(REPO_ROOT, 'tools')).filter(name => /^test-.*\.mjs$/.test(name) && !/-server\.mjs$/.test(name)).sort();
+  mkdirSync(resolve(runDir, 'contracts'), { recursive: true });
+  const path = resolve(runDir, 'contracts/policy.json');
+  copyFileSync(resolve(REPO_ROOT, CONTRACT_EVIDENCE_POLICY_INPUT), path);
+  return { scope: 'none', selectedStatus: 'NOT_RUN', fullSuite: 'NOT_RUN', selected: [], omitted: inventory,
+    inventoryCount: inventory.length, policy: fileRecord(path, 'contracts/policy.json') };
+}
+
 export function publishContractEvidence(runDir, report, scope, inputs, root = REPO_ROOT) {
   const selection = contractTests(root, 'full', scope);
   checkContractResults(report, selection, scope);
@@ -1546,6 +1565,25 @@ export function verifyContractEvidence(directory, manifest) {
     'controller-snapshot.json', 'contract controller');
   const receiptRequired = controllerRequiresContractEvidence(controller);
   const contracts = manifest.gates?.contracts;
+  if (contracts?.scope === 'none') {
+    const policyRecord = controller.files.find(file => file.path === CONTRACT_EVIDENCE_POLICY_INPUT);
+    const policyPath = verifiedContractFile(directory, contracts.policy, 'contracts/policy.json');
+    const policy = JSON.parse(readFileSync(policyPath, 'utf8'));
+    const inventory = controller.files.map(file => file.path).filter(path => /^tools\/test-[^/]+\.mjs$/.test(path) && !/-server\.mjs$/.test(path)).map(path => path.slice(6)).sort();
+    if (!policyRecord || policyRecord.sha256 !== contracts.policy.sha256 || policyRecord.bytes !== contracts.policy.bytes ||
+        policy.schemaVersion !== 2 || policy.name !== 'reader-harmony-contract-evidence-policy' ||
+        policy.defaultScope !== 'none' || policy.contractsReceiptRequired !== 'when-executed' ||
+        !['iteration', 'acceptance'].includes(manifest.buildClass) || manifest.acceptanceEligible !== false ||
+        manifest.gates.harmonyContracts !== 'NOT_RUN' || contracts.selectedStatus !== 'NOT_RUN' || contracts.fullSuite !== 'NOT_RUN' ||
+        !Array.isArray(contracts.selected) || contracts.selected.length !== 0 || contracts.evidence !== undefined ||
+        JSON.stringify(contracts.omitted) !== JSON.stringify(inventory) || contracts.inventoryCount !== inventory.length) {
+      fail('Unrun contracts must be bound to the explicit-only controller policy and cannot claim PASS or acceptance.');
+    }
+    const unusedToolchain = verifySnapshotIdentity(directory, manifest.gates.contractToolchainInputs,
+      'contract-toolchain-snapshot.json', 'unused contract toolchain');
+    if (unusedToolchain.files.length !== 0) fail('Unrun contracts cannot claim executed contract toolchain inputs.');
+    return;
+  }
   if (contracts === undefined) {
     // Pre-policy v2 controllers produced full receipts with no detailed test
     // ledger. Preserve that format only when its actual snapshot proves it.
@@ -1556,11 +1594,12 @@ export function verifyContractEvidence(directory, manifest) {
   }
   if (!receiptRequired) fail('contract receipt is not bound to its controller policy');
   if (!['full', 'manga-image-cache', 'search-return-runtime'].includes(contracts.scope) ||
-      !['iteration', 'acceptance'].includes(manifest.buildClass) || manifest.acceptanceEligible !== (manifest.buildClass === 'acceptance')) {
+      !['iteration', 'acceptance'].includes(manifest.buildClass) ||
+      manifest.acceptanceEligible !== (manifest.buildClass === 'acceptance' && contracts.scope === 'full' && manifest.gates.coreDevelopment?.status === 'PASS')) {
     fail('contract evidence build class is inconsistent');
   }
   const scope = contracts.scope === 'full' ? undefined : contracts.scope;
-  if (scope !== undefined && (manifest.buildClass !== 'iteration' || manifest.acceptanceEligible !== false)) {
+  if (scope !== undefined && manifest.acceptanceEligible !== false) {
     fail('scoped contracts cannot be acceptance evidence');
   }
   if (contracts.selectedStatus !== 'PASS' || contracts.fullSuite !== (scope === undefined ? 'PASS' : 'NOT_RUN') ||
@@ -1650,7 +1689,10 @@ function verifyManifest(path) {
   if (deliveryController && loaded.manifest.deliveryEvidenceVersion !== 1) fail('Current controller requires delivery evidence version 1');
   if (loaded.manifest.deliveryEvidenceVersion === 1) {
     if (loaded.manifest.gates.requiredResourceBytes !== 'PASS') fail('Required resource evidence is missing');
-    if (loaded.manifest.buildClass === 'acceptance') {
+    if (loaded.manifest.gates.coreDevelopment?.status === 'NOT_RUN' && loaded.manifest.acceptanceEligible !== false) {
+      fail('Unrun Core tests cannot claim acceptance eligibility.');
+    }
+    if (loaded.manifest.buildClass === 'acceptance' && loaded.manifest.gates.coreDevelopment?.status !== 'NOT_RUN') {
       const coreReceipt = verifyPublishedCoreGate(loaded.directory, loaded.manifest.gates.coreDevelopment);
       if (coreReceipt.inputs.gitCommit !== loaded.manifest.source.core.commit) fail('Core gate and acceptance source commit differ');
     }
@@ -1908,7 +1950,7 @@ function installDeployment(options) {
 
 function usage() {
   console.error(`Usage:
-  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--contracts-scope manga-image-cache|search-return-runtime] [--signing auto|local|unsigned] [--live-sources] [--keep-runs 10] [--core-gate-receipt <receipt.json>]
+  node scripts/hap-pipeline.mjs build [--class iteration|acceptance] [--contracts-scope none|full|manga-image-cache|search-return-runtime] [--rationale <reviewed-item-reasons>] [--signing auto|local|unsigned] [--live-source-ids <exact IDs> --rationale <necessity>] [--keep-runs 10] [--core-gate-receipt <receipt.json>]
   node scripts/hap-pipeline.mjs prune [--artifact-root <directory>] [--keep-runs 10] [--apply]
   node scripts/hap-pipeline.mjs sync-signing [--profile <private-local-profile.json5>]
   node scripts/hap-pipeline.mjs sync-native [sync-core alias]

@@ -1,15 +1,25 @@
-import { installContentSearchOwnerProbe } from './lib/reader-content-search-owner-probe.mjs';
-import { installReaderLayoutOwners } from './lib/reader-measurement-owner-fixture.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
-registerHooks({ resolve(specifier, context, nextResolve) {
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'host-lifecycle':{description:'Actual SDK Host reopen/import/reload, old generation and internal-owner regressions',resources:[]},
+ 'cold-recovery':{description:'Actual existing CLI/atomic journal original receipt recovery and SDK physical recovery actor',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const { installContentSearchOwnerProbe }=await import('./lib/reader-content-search-owner-probe.mjs');
+const { installReaderLayoutOwners }=await import('./lib/reader-measurement-owner-fixture.mjs');
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { registerHooks, stripTypeScriptTypes }=await import('node:module');
+const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); } catch (error) {
     if ((specifier.startsWith('./') || specifier.startsWith('../')) && !specifier.endsWith('.ts'))
       return nextResolve(specifier + '.ts', context);
     throw error;
   }
 } });
+const {cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');
+try {
+console.log(JSON.stringify({kind:'reader-existing-tool-evidence',...durableFixtureToolEvidence()}));
 const { readerReplaceSdkFixture, compileReaderReplaceSdkMethods, untilReaderReplaceSdk, mountReaderReplaceRecoveryActor } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
 const actualSdk = await readerReplaceSdkFixture();
 const RulesMutationOwner = actualSdk.Owner;
@@ -103,6 +113,7 @@ function closeReopen(host) {
   host.visible = true; // the reader opened the initial Home before entering Replace
   host.openQuickReplace();
 }
+if(selectedCase==='host-lifecycle'){
 {
   const host = owner();
   host.bookTitle = '真实阅读书名'; host.sourceId = 'https://real-source.example';
@@ -270,6 +281,8 @@ for (const operation of ['save', 'delete']) {
   assert.deepEqual(host.controlReplaceState.rules.map(r => r.id), [9]);
   assert.equal(host.reloadBookCalls, 0);
 }
+}
+if(selectedCase==='cold-recovery'){
 // The historical Promise/lifecycle matrix above remains intact. Qualify its
 // current exact-recovery carrier with complete production Owner/Gateway and
 // real cold SQLite IO, including null-query versus original accepted payload.
@@ -318,4 +331,9 @@ for (const phase of ['beforeMethod', 'afterMethod']) {
   assert.equal(cold.owner.snapshot().confirmation, 'confirmed');
   assert.equal(cold.disk(), '', 'local intent clears only after exact receipt and AtomicFile ACK');
 }
-console.log('PASS Replace Host actual methods: reopen/import canonical read, stale reads, write ownership, uncertainty and Promise rejection; NOT device acceptance');
+}
+console.log(`PASS Replace Host ${selectedCase}: actual SDK methods and selected IO boundary`);
+}finally{await cleanupDurableFixtures();resolution.deregister();}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

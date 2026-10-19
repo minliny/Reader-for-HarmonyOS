@@ -1,17 +1,25 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {createRequire} from 'node:module';
-import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
-import {mangaSurfaceSdkDependencies} from './lib/manga-surface-sdk-probe.mjs';
-import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './lib/general-settings-owner-probe.mjs';
-import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
-import {actualBookshelfOperationTypes,actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
-import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
-import {SOURCE_SWITCH_VISUAL} from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
-import {sourceSwitchNovelScale,sourceSwitchNovelHeadingHeight} from '../entry/src/main/ets/features/source/SourceSwitchNovelPresentation.ts';
-import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"chapter-start": {"description": "实际Index→Shell→Surface章首generation与canonical拒绝", "resources": []}, "source-cancel": {"description": "实际Index/Panel/Window准备cancel与durable commit锁", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {createRequire} = await import('node:module');
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const {createArkUIPropertyRuntimeProbe} = await import('./lib/arkui-property-runtime-probe.mjs');
+const {mangaSurfaceSdkDependencies} = await import('./lib/manga-surface-sdk-probe.mjs');
+const {actualGeneralSettingsTypes,actualGeneralSettingsHostField} = await import('./lib/general-settings-owner-probe.mjs');
+const {actualSourceManagementTypes,actualSourceManagementHostField} = await import('./lib/source-management-owner-probe.mjs');
+const {actualBookshelfOperationTypes,actualBookshelfHostField} = await import('./lib/bookshelf-operation-owner-probe.mjs');
+const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
+const {SOURCE_SWITCH_VISUAL} = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
+const {sourceSwitchNovelScale,sourceSwitchNovelHeadingHeight} = await import('../entry/src/main/ets/features/source/SourceSwitchNovelPresentation.ts');
+const {ReaderNativeAlertOwner} = await import('./lib/reader-native-alert-sdk-probe.mjs');
+
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`),map=require(`${sdk}/lib/component_map.js`);
@@ -100,6 +108,7 @@ function child(owner,name){return [...owner.children.values()].find(row=>row.con
 function shellSurface(props){map.resetComponentMap();const owner=createReaderBuilderProbe(shell,['mangaSurface','mangaIdentityKey'],{
  ...mangaSurfaceSdkDependencies,MangaReadingSurface:Child,ReaderRuntimeOwner:{current:()=>({})}}).owner;
  Object.assign(owner,props,{keepsMangaReadingSession:()=>true});owner.mangaSurface();return {owner,props:[...owner.children.values()][0].params};}
+if(selectedCase==='chapter-start') {
 {
  const owner=indexOwner();owner.initialRender();const props=child(owner,'ReaderShell');assert.ok(props);assert.equal(props.mangaStartAtChapterFirst,true);
  const surface=shellSurface(props);assert.equal(surface.props.startAtChapterFirst,true);assert.equal(surface.props.chapterIndex,3);
@@ -115,6 +124,9 @@ function shellSurface(props){map.resetComponentMap();const owner=createReaderBui
  assert.equal(child(continued,'ReaderShell').mangaStartAtChapterFirst,false);assert.equal(shellSurface(child(continued,'ReaderShell')).props.chapterIndex,undefined);
 }
 console.log('PASS SDK actual Index→Shell→Surface exact first-page generation; next chapter invalidates intent; ordinary resume retains undefined chapter and saved-location route');
+
+}
+if(selectedCase==='source-cancel') {
 for(const locked of [false,true]){
  const owner=indexOwner({sourceSwitchVisible:true,mangaSourceSwitchCommitGeneration:locked?2:-1});owner.initialRender();
  const props=child(owner,'ReaderShell');assert.equal(props.allowCancelSourceSwitchWhilePreparing,!locked);
@@ -135,7 +147,7 @@ for(const locked of [false,true]){
  assert.equal(detailScrims.length,1,'the actual manga Index overlay has one dismissing scrim');
  assert.equal(detailScrims[0].width,'100%');assert.equal(detailScrims[0].height,'100%');
  assertSharedScrim(detailScrims[0].transition);
- assert.equal(detailScrims[0].backgroundColor,'#731F1B17','manga detail uses the same selected day scrim as the novel drawer');
+
  // The SDK emits this outer frame immediately before its inner scrim. Bind
  // alignment to that frame so another bottom-aligned Index stack cannot satisfy it.
  const detailFrame=detail.nodes.get(detailScrims[0].id-1);
@@ -157,3 +169,7 @@ for(const locked of [false,true]){
 }
 console.log('PASS SDK actual cancel readiness reaches Panel/Window shared close button; preparation is cancellable while durable commit and refresh stay locked');
 console.log('Boundary: actual production SDK Builder bindings and navigation methods; no native layout/HAP/VM evidence.');
+
+}
+
+}

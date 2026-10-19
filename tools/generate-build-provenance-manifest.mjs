@@ -18,6 +18,7 @@ import {
 import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { verifyCoreBuildSnapshot } from '../../Reader-Core/scripts/build-input-snapshot.mjs';
+import { sdkSmokeEvidence } from '../scripts/lib/sdk-smoke-evidence.mjs';
 
 function parseArgs(argv) {
   const values = new Map();
@@ -269,9 +270,7 @@ if (sourceInputs.some(path => canonicalPath(path) === outputCanonical)) {
 if (buildEvidence.values['core_input_snapshot_sha256'] !== coreInputArtifact.sha256) {
   throw new Error('Core build evidence does not bind the actual source input snapshot');
 }
-if (buildEvidence.values['sdk_smoke'] !== 'pass') {
-  throw new Error('Native SDK smoke must pass; missing or skipped is not compatible evidence');
-}
+const sdkSmoke = sdkSmokeEvidence(buildEvidence.values['sdk_smoke']);
 if (buildEvidence.values['artifact_sha256'] !== nativeSo.sha256 ||
     buildEvidence.values['artifact_bytes'] !== String(nativeSo.bytes) ||
     buildEvidence.values['core_build_identity_sha256'] !== identityArtifact.sha256) {
@@ -298,8 +297,8 @@ if (packageNative === undefined || packageNative.sha256 !== nativeSo.sha256 || p
 if (preflight) {
   writeJsonAtomic(outputPath, { schemaVersion: 1, name: 'reader-native-preflight',
     coreGit, harmonyGit, coreInputArtifact, coreInputFingerprint: coreInputSnapshot.fingerprint,
-    buildId: coreIdentity.buildId, nativeSo, vendor, napiPackage });
-  console.log(JSON.stringify({ status: 'PASS', output: outputPath, nativeInputSha256: nativeSo.sha256 }));
+    buildId: coreIdentity.buildId, nativeSo, vendor, napiPackage, sdkSmoke: sdkSmoke.status, sdkSmokeEvidence: sdkSmoke });
+  console.log(JSON.stringify({ status: 'PASS', evidenceLayer: 'native-input-compatibility', output: outputPath, nativeInputSha256: nativeSo.sha256, sdkSmoke: sdkSmoke.status, sdkSmokeEvidence: sdkSmoke }));
   process.exit(0);
 }
 const embeddedNative = archiveEntryRecord(hapPath, 'libs/arm64-v8a/libreader_core_napi.so');
@@ -312,7 +311,9 @@ const manifest = {
   schemaVersion: 1,
   name: 'reader-harmonyos-build-provenance',
   generatedAt: new Date().toISOString(),
-  acceptanceEligible: !coreGit.dirty && !harmonyGit.dirty && !coreIdentity.gitDirty,
+  acceptanceEligible: sdkSmoke.acceptanceEligible && !coreGit.dirty && !harmonyGit.dirty && !coreIdentity.gitDirty,
+  sdkSmoke: sdkSmoke.status,
+  sdkSmokeEvidence: sdkSmoke,
   core: {
     git: coreGit,
     buildIdentity: coreIdentity,

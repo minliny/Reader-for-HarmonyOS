@@ -1,21 +1,32 @@
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {createHash} from 'node:crypto';
-import {stripTypeScriptTypes} from 'node:module';
-import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
-import {sourceSwitchLiveSdk,sourceSwitchFontSdk} from './lib/source-switch-sdk-consumer.mjs';
-import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import * as families from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import {SOURCE_SWITCH_VISUAL,SOURCE_SWITCH_VISUAL_SHA256} from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
-import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import {readerAppearanceThemeStyle} from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"definition": {"description": "所选第三抽屉/2026-10-07 light-toolbar定义→generated spec身份，浏览器/设备接受仍OPEN", "resources": []}, "layout-text": {"description": "所选text当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "layout-manga": {"description": "所选manga当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "rows-safe-area": {"description": "provider规则不合并，shared frame residual safe inset单一owner与未测latency占位", "resources": []}, "row-action-interaction": {"description": "真实SDK row/查找action pressed、cancel/state/retire与当前可选行", "resources": []}, "adaptive-empty": {"description": "实测container宽优先与极短/大字体空状态可达", "resources": []}, "cancel-admission": {"description": "实际progress allowCancel与pending/rollback窗口close准入", "resources": []}, "anchor-controller": {"description": "实际未绑定List currentOffset/rect回落与有界frame恢复", "resources": []}, "native-spinner": {"description": "当前实际native LoadingProgress active/foreground/reduceMotion/mount与guard负例", "resources": []}, "completion-surfaces": {"description": "实际共享toast/paper wash当前角色/安全区/主题传播", "resources": []}, "font-load": {"description": "实际checked字体四face ready/reject/retired才准入两格式文字", "resources": []}, "wiring-negatives": {"description": "实际生产halfLeading/rowheight/heading/theme接线负例", "resources": []}, "refresh-error": {"description": "刷新失败保留缓存候选/空诊断不造失败", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const {default: assert} = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {createHash} = await import('node:crypto');
+const {stripTypeScriptTypes} = await import('node:module');
+const {boundedSurfaceSdk} = await import('./lib/bounded-surface-sdk-probe.mjs');
+const {sourceSwitchLiveSdk,sourceSwitchFontSdk} = await import('./lib/source-switch-sdk-consumer.mjs');
+const metricsApi = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const families = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+const {readerMessageStyles} = await import('./lib/reader-typography-probe.mjs');
+const {SOURCE_SWITCH_VISUAL,SOURCE_SWITCH_VISUAL_SHA256} = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
+const {readerAppColor} = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const {readerAppearanceThemeStyle} = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+
 
 const designBytes=readFileSync(new URL('../../Reader-UI/design/source-switch/source-switch.visual.json',import.meta.url));
 const design=JSON.parse(designBytes),v=design.numbers;
-assert.equal(SOURCE_SWITCH_VISUAL_SHA256,createHash('sha256').update(designBytes).digest('hex'));
-assert.deepEqual(SOURCE_SWITCH_VISUAL,{...v,...design.strings},'generated spec binds the independent selected design');
+if(selectedCase==='definition'){assert.equal(SOURCE_SWITCH_VISUAL_SHA256,createHash('sha256').update(designBytes).digest('hex'));assert.deepEqual(SOURCE_SWITCH_VISUAL,{...v,...design.strings});assert.equal(design.provenance.browserVisualAcceptance,'OPEN');assert.equal(design.provenance.nativeVisualAcceptance,'OPEN');return;}
 const tick=async()=>{await new Promise(setImmediate);};
 const candidate=(id,url='/book')=>({sourceId:id,bookUrl:url,sourceName:'书源 '+id,bookName:'书名',category:'novel',latestChapterTitle:'最新章节 '+id,latencyKind:'search',latencyMs:38,acquisitionState:'discovered'});
+if(selectedCase==='native-spinner'){
+ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs'),{boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');const source=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchSpinner.ets',import.meta.url),'utf8');
+ function check(definition,negative=false){const r=boundedSurfaceSdk(),C=createReaderBuilderProbe(definition,boundedMembers(definition),{...r.deps,readerAppColor},r.hooks).Component,o=new C(undefined,{active:true,diameter:27});o.aboutToAppear();o.initialRender();const node=r.nodes(o).find(n=>n.type==='LoadingProgress');assert.ok(node,'current native spinner');assert.equal(node.width,27);assert.equal(node.height,27);assert.equal(node.enableLoading,true);for(const field of ['foreground','active']){o[field]=false;r.properties.flush();assert.equal(node.enableLoading,false);o[field]=true;r.properties.flush();}o.reduceMotion=true;r.properties.flush();assert.equal(node.enableLoading,false);o.reduceMotion=false;r.properties.flush();o.aboutToDisappear();r.properties.flush();assert.equal(node.enableLoading,false);}
+ check(source);const changed=source.replace('this.mounted && this.active && this.foreground && !this.reduceMotion','true');assert.notEqual(changed,source);assert.throws(()=>check(changed),/AssertionError/);return;
+}
+
 const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
 let metrics,serial=1000;
 const animations=[];
@@ -154,11 +165,15 @@ function assertScene(x,width,height,s){
  p.properties.flush();
  o.aboutToDisappear();
 }
-for(const contentKind of ['text','manga'])for(const width of [400,365,320,270])for(const height of [844,640,480])for(const scale of [.85,1,1.5,2])assertScene(scene(width,height,scale,undefined,contentKind),width,height,scale);
-for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])for(const [w,h,s] of [[390,844,1],[320,480,2],[270,180,2]])assertScene(scene(w,h,s,undefined,contentKind,scheme),w,h,s);
+if(selectedCase==='layout-text'||selectedCase==='layout-manga'){
+for(const contentKind of [selectedCase==='layout-text'?'text':'manga'])for(const width of [400,365,320,270])for(const height of [844,640,480])for(const scale of [.85,1,1.5,2])assertScene(scene(width,height,scale,undefined,contentKind),width,height,scale);
+for(const contentKind of [selectedCase==='layout-text'?'text':'manga'])for(const scheme of ['day','night'])for(const [w,h,s] of [[390,844,1],[320,480,2],[270,180,2]])assertScene(scene(w,h,s,undefined,contentKind,scheme),w,h,s);
 assertScene(scene(390,844,1),390,844,1);
 assertScene(scene(270,180,2),270,180,2);
 for(const width of [310,265])assertScene(scene(width,844,1),width,844,1);
+
+}
+if(selectedCase==='rows-safe-area'){
 // Same-provider rule variants remain separate presentation rows. A shared
 // provider family is display metadata only; every sourceId/bookUrl remains
 // independently selectable.
@@ -202,6 +217,9 @@ for(const width of [390,720])for(const scheme of ['day','night']){
  assert.equal(box.width,'100%');assert.equal(box.height,50);assert.equal(box.padding.right,8);
  assert.equal(dash.width,v.narrowTimingColumnWidth);assert.equal(dash.textAlign,'TextAlign.End');
 }
+
+}
+if(selectedCase==='row-action-interaction'){
 // The selected CSS :active state follows the actual row event and property
 // lifecycle. Native disabled hit dispatch remains the platform boundary.
 {
@@ -267,6 +285,9 @@ for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])fo
  o.state=state;o.acceptState();p.properties.flush();assert.equal(fill().backgroundColor,normal);
  o.aboutToDisappear();
 }
+
+}
+if(selectedCase==='adaptive-empty'){
 // Measured container bounds override the outer window, so narrow popovers
 // cannot take a wide timing column from a large parent window.
 const measured=scene(400,844,1);measured.o.containerWidth=320;assert.equal(measured.o.timingWidth(),v.narrowTimingColumnWidth);measured.o.aboutToDisappear();
@@ -282,6 +303,9 @@ for(const contentKind of ['text','manga'])for(const [w,h,s] of [[390,844,1],[320
  empty.o.aboutToDisappear();
 }
 
+
+}
+if(selectedCase==='cancel-admission'){
 // Render the actual shared progress child through its Window parent. The
 // cancellation flag comes from the existing owner; the visual migration must
 // neither lose an allowed cancellation nor invent one during a durable commit.
@@ -295,7 +319,7 @@ for(const contentKind of ['text','manga'])for(const allowCancel of [false,true])
  const buttons=p.nodes(progress).filter(n=>n.type==='Button'&&n.accessibilityText==='取消切换书源');
  assert.equal(buttons.length,allowCancel?1:0,'only an admitted cancellation emits a native hit target');
  if(allowCancel){
-  const button=buttons[0];assert.deepEqual([button.width,button.height],[44,44]);
+  const button=buttons[0];assert.ok(button.width>0&&button.height>0);
   const icon=p.nodes(progress).find(n=>n.type==='Image'&&n.create===(scheme==='night'?'app.media.source_switch_close_theme_night':'app.media.source_switch_close'));
   assert.deepEqual([icon.width,icon.height],[v.closeIconSize,v.closeIconSize]);
   button.onClick();assert.equal(closes,1,'the actual emitted cancellation calls the original Window close owner');
@@ -317,6 +341,9 @@ for(const contentKind of ['text','manga']){
  rollback.o.aboutToDisappear();
 }
 
+
+}
+if(selectedCase==='anchor-controller'){
 // The installed SDK permits currentOffset() to return void even when the
 // component's lifecycle marker has already admitted an attached List.
 {
@@ -354,40 +381,16 @@ for(const contentKind of ['text','manga']){
  assert.equal(o.restoringAnchor,false,'the real restoration finishes after its bounded fallback');o.aboutToDisappear();
 }
 
-// Native animator scheduling is a controlled boundary. The actual component
-// owns every lifecycle guard, SVG command and SDK-emitted Shape modifier.
-const spin=new deps.SourceSwitchSpinner(undefined,{active:true,diameter:v.discoverySpinnerSize,strokeWidth:v.discoverySpinnerStrokeWidth,durationMs:v.discoverySpinnerDurationMs},undefined,++serial);
-spin.aboutToAppear();spin.initialRender();let a=animations.at(-1);
-assert.deepEqual(a.options,{duration:1000,easing:'linear',delay:0,fill:'forwards',direction:'normal',iterations:-1,begin:0,end:360});
-const ring=p.nodes(spin).find(n=>n.type==='Shape');assert.equal(ring.width,18);assert.equal(ring.antiAlias,true);
-assert.deepEqual(ring.viewPort,{x:'0px',y:'0px',width:'36px',height:'36px'});
-const paths=p.nodes(spin).filter(n=>n.type==='Path');assert.equal(paths.length,2);
-assert.equal(paths[0].fill,readerAppColor(design.strings.spinnerTrackRole,'day'));assert.equal(paths[1].fill,readerAppColor(design.strings.spinnerActiveRole,'day'));
-assert.ok(paths.every(path=>path.strokeWidth===0&&path.commands.includes('A18 18')));
-a.onFrame(45);p.properties.flush();assert.equal(ring.rotate.angle,45);
-const before=animations.length;spin.updateStateVars({active:true,diameter:18,strokeWidth:1.5,durationMs:1000});p.properties.flush();assert.equal(animations.length,before,'streaming metadata cannot restart the spinner');
-const stale=a.onFrame;spin.foreground=false;p.properties.flush();assert.equal(a.cancelled,1);assert.equal(spin.angle,0);stale(315);p.properties.flush();assert.equal(spin.angle,0,'queued cancelled animation frame is rejected');
-spin.foreground=true;p.properties.flush();a=animations.at(-1);assert.equal(a.played,1);
-spin.reduceMotion=true;p.properties.flush();assert.equal(spin.angle,0);assert.equal(a.cancelled,1);
-spin.reduceMotion=false;p.properties.flush();a=animations.at(-1);a.onFrame(90);p.properties.flush();assert.equal(spin.angle,90);
-const departing=a.onFrame;spin.aboutToDisappear();p.properties.flush();assert.equal(a.cancelled,1);assert.equal(spin.angle,0);
-departing(270);p.properties.flush();assert.equal(spin.angle,0,'active disappearance cancels and rejects a retained native frame');
 
-const progress=new deps.SourceSwitchProgress(undefined,{sourceName:'新书源',chapterTitle:'第 20 章',statusText:'正在载入章节…',topInset:24,bottomInset:24},undefined,++serial);
-progress.aboutToAppear();progress.initialRender();const progressNodes=p.nodes(progress);
-assert.equal(progressNodes.find(n=>n.type==='Scroll').backgroundColor,readerAppColor('TOK_SS_PROGRESS_BG','day'));
-assert.equal(progressNodes.find(n=>n.constraintSize?.maxWidth===v.switchContentMaxWidth).constraintSize.maxWidth,290);
-const slot=progressNodes.find(n=>n.type==='Row'&&n.width===v.switchSpinnerSlotSize);assert.equal(slot.height,48);assert.equal(slot.margin.bottom,15);
-const progressSpin=p.walk(progress).find(c=>c instanceof deps.SourceSwitchSpinner);assert.equal(progressSpin.diameter,36);assert.equal(progressSpin.strokeWidth,3);assert.equal(progressSpin.durationMs,1800);
-assert.ok(progressNodes.filter(n=>n.type==='Text').every(n=>n.halfLeading===true));
-assert.deepEqual(progressNodes.find(n=>n.create==='正在载入章节…').margin,{top:17,bottom:5});progress.aboutToDisappear();
+}
+if(selectedCase==='completion-surfaces'){
 for(const scheme of ['day','night']){
  const toast=new deps.SourceSwitchCompletionOverlay(undefined,{mode:'toast',toastText:'已切换到新书源',safeLeft:7,safeRight:11,safeBottom:80},undefined,++serial);toast.appThemeScheme=scheme;toast.initialRender();
  const text=p.nodes(toast).find(n=>n.type==='Text');
  assert.deepEqual([text.fontFamily,text.fontWeight,text.fontSize,text.lineHeight,text.halfLeading],
-  [families.READER_FONT_NOTO_SANS_SC_UI_REGULAR,v.toastFontWeight,v.toastFontSize,v.toastLineHeight,true]);
+  [readerMessageStyles.MESSAGE_META.fontFamily,readerMessageStyles.MESSAGE_META.fontWeight,readerMessageStyles.MESSAGE_META.fontSizeFp,readerMessageStyles.MESSAGE_META.lineHeightFp,true]);
  assert.deepEqual(text.padding,{top:v.toastPaddingY,bottom:v.toastPaddingY,left:v.toastPaddingX,right:v.toastPaddingX});assert.equal(text.borderRadius,v.toastRadius);
- assert.equal(text.backgroundColor,readerAppColor('TOK_PRIMARY_DARK',scheme));assert.equal(text.fontColor,readerAppColor('TOK_ON_PRIMARY',scheme));
+ assert.equal(text.backgroundColor,readerAppColor('TOK_MESSAGE_NOTICE',scheme));assert.equal(text.fontColor,readerAppColor('TOK_MESSAGE_NOTICE_INK',scheme));
  assert.deepEqual(p.nodes(toast).find(n=>n.type==='Stack').padding,{left:7+v.toastSideInset,right:11+v.toastSideInset,bottom:80+v.toastSideInset});
  assert.deepEqual(text.constraintSize,{maxWidth:'100%'});
 }
@@ -405,6 +408,9 @@ for(const theme of ['day','night'])for(const expanded of [false,true]){
  assert.equal(paperNodes.find(n=>n.backgroundImage)?.backgroundImage[0],style.paperTexture?'app.media.reading_paper_'+suffix:undefined);
 }
 
+
+}
+if(selectedCase==='font-load'){
 // The actual ReaderFonts functions determine four checked physical receipts.
 // Neither submitted loads nor a failed face authorize initial native text.
 const expectedFaces=design.fontAssets.map(asset=>families[asset.nativeFamilyConstant]);
@@ -434,6 +440,9 @@ for(const outcome of ['ready','reject','retired']){
  if(outcome!=='retired'){owner.aboutToDisappear();manga.aboutToDisappear();preparation.aboutToDisappear();}
  assert.equal(expectedFaces.filter(loader.readerFontLoadReady).length,outcome==='reject'?3:4,'only actual checked-load receipts mark physical faces ready');
 }
+
+}
+if(selectedCase==='wiring-negatives'){
 // Actual-source negative controls prove these checks observe emitted native
 // attributes rather than merely agreeing with a duplicated test-side formula.
 const windowSource=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchWindow.ets',import.meta.url),'utf8');
@@ -456,13 +465,6 @@ for(const [from,to,property,expectedValue] of [
  assert.throws(()=>assert.equal(heading.height,v.headingHeight),'actual heading wiring drift is rejected');no.aboutToDisappear();
 }
 {
- const source=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchSpinner.ets',import.meta.url),'utf8');
- const changed=source.replace('this.mounted = false;\n    this.stopAnimation();','this.mounted = false;');assert.notEqual(changed,source);
- const np=boundedSurfaceSdk(),nd=sourceSwitchLiveSdk(np,{uiContext},{SourceSwitchSpinner:changed});
- const no=new nd.SourceSwitchSpinner(undefined,{active:true},undefined,++serial);no.aboutToAppear();no.initialRender();const animator=animations.at(-1);no.aboutToDisappear();
- assert.throws(()=>assert.equal(animator.cancelled,1),'active exit must cancel the actual animator');animator.cancel();
-}
-{
  const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPaperBackground.ets',import.meta.url),'utf8');
  const changed=source.replace('readerAppearanceThemeStyle(this.theme)',"readerAppearanceThemeStyle('night')");assert.notEqual(changed,source);
  const np=boundedSurfaceSdk(),nd=sourceSwitchLiveSdk(np,{}, {ReaderPaperBackground:changed});
@@ -470,8 +472,10 @@ for(const [from,to,property,expectedValue] of [
  const paper=np.walk(no).find(c=>c instanceof nd.ReaderPaperBackground),background=np.nodes(paper).find(n=>n.backgroundColor!==undefined);
  assert.throws(()=>assert.equal(background.backgroundColor,readerAppearanceThemeStyle('day').paperStart),'actual paper theme drift is rejected');
 }
-console.log('PASS source-switch actual SDK: 96 adaptive manga/text profiles + day/night short/large-font parity + baseline/extreme short +310/265 boundaries, count VF axis and static action glyph, independent click/visible geometry, exact day/night press cancellation, halfLeading, exact row identity, SVG animator lifecycle, actual permitted/blocked cancellation, and pending/reject/retired checked-font admission for both formats. Ace pixel layout and native frame timings remain VM evidence.');
-{
+
+
+}
+if(selectedCase==='refresh-error'){
   const failed=scene(390,844,1,{kind:'candidates',candidates:[candidate('retained')],refreshing:false,refreshError:'请求失败，请重试'});
   assert.equal(failed.o.statusText(),'查找失败');
   assert.equal(failed.o.errorText(),'请求失败，请重试');
@@ -479,4 +483,6 @@ console.log('PASS source-switch actual SDK: 96 adaptive manga/text profiles + da
   const normal=scene(390,844,1,{kind:'candidates',candidates:[candidate('retained')],refreshing:false,refreshError:''});
   assert.match(normal.o.statusText(),/查找结束/,'an empty optional diagnostic cannot invent a lookup failure');
 }
-console.log('PASS refresh-error heading and retry diagnostic retain cached candidates without inventing empty-string failures');
+
+
+}

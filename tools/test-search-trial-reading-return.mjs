@@ -1,26 +1,31 @@
-import {actualBookshelfOperationTypes,actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
-import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
-import assert from 'node:assert/strict';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import {compileHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
-import {fixture as sourceFixture,setCurrentRuntime,gatewayExports} from './lib/source-switch-owner-probe.mjs';
-import {sourceSwitchMethods} from './lib/source-switch-sdk-consumer.mjs';
-import { registerHooks } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"late-candidates": {"description": "晚到搜索候选只合并缓存且不重置detail/reader", "resources": []}, "route-guard": {"description": "实际Index route/前台/search parent接纳边界", "resources": []}, "timing-version": {"description": "实际known candidate时延只复用当前sourceVersion/非负duration", "resources": []}, "preview-return": {"description": "首源preview→reader→detail→原search对象/anchor", "resources": []}, "failed-replacement": {"description": "首源失败后实际换源owner接纳替代且回原search", "resources": []}, "repeat-replacement": {"description": "多次替代不改变原search parent", "resources": []}, "late-admission": {"description": "迟到首源失败不能替换新preview", "resources": []}, "late-success": {"description": "离开preview拒绝迟到换源成功", "resources": []}, "late-failure": {"description": "离开preview拒绝迟到换源失败", "resources": []}, "reader-rollback": {"description": "reader换源失败保留原身份/诊断私有", "resources": []}, "shelf-resume": {"description": "书架直接续读返回书架，不产生预览写入", "resources": []}, "shelf-info": {"description": "书架显式详情→阅读→详情→书架", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const {actualBookshelfOperationTypes,actualBookshelfHostField} = await import('./lib/bookshelf-operation-owner-probe.mjs');
+const {actualSourceManagementTypes,actualSourceManagementHostField} = await import('./lib/source-management-owner-probe.mjs');
+const {default: assert} = await import('node:assert/strict');
+const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
+const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+const {compileHost,setRuntime} = await import('./lib/reading-entry-owner-probe.mjs');
+const {fixture: sourceFixture,setCurrentRuntime,gatewayExports} = await import('./lib/source-switch-owner-probe.mjs');
+const {sourceSwitchMethods} = await import('./lib/source-switch-sdk-consumer.mjs');
+const { registerHooks } = await import('node:module');
+const { SearchViewState } = await import('../entry/src/main/ets/features/search/SearchViewState.ts');
+const { readBookAuthorIdentity } = await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
+
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const {resolveBookshelfBook}=await import('../entry/src/main/ets/features/bookshelf/BookshelfBookIdentity.ts');
 const { searchCandidateRank } = await import('../entry/src/main/ets/features/search/SearchCandidatePolicy.ts');
 const readingEvidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
 const {captureRemotePositionContext}=await import('../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts');
 const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-import { SearchViewState } from '../entry/src/main/ets/features/search/SearchViewState.ts';
-import { readBookAuthorIdentity } from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
 
 // The acquisition boundary and Core persistence are fakes. Execute the actual
 // Index methods through the project's SDK parser, including both acquisition
 // phases and the preview-switch dispatch. Candidate selection/body admission
 // itself is covered with the real coordinator in test-search-candidate-acquisition.
-const source = process.env.READER_TRIAL_RETURN_INDEX_SOURCE ??
-  new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url);
+const source=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
 const settle = async () => { for (let i = 0; i < 4; i++) await new Promise(resolve => setImmediate(resolve)); };
 const deferred = () => {
   let resolve, reject;
@@ -172,10 +177,9 @@ async function pick(t,book){
   assert.equal(t.calls.filter(value=>value===acquisition).length,before+1,
     'late acquisition fixtures leave only after the actual owner has qualified and dispatched acquisition');
 }
-const outcomes = [];
+const caseNames={"late-candidates": "search journey keeps late candidates in detail and reading without restarting the session", "route-guard": "search journey route guard remains active through detail, reader and directory only", "timing-version": "first source-switch opening reuses only version-bound ordinary search timings", "preview-return": "first source parses: search -> preview -> reading -> detail -> exact search state", "failed-replacement": "failed first source -> replacement source -> trial -> detail -> original search", "repeat-replacement": "repeated preview replacements keep the original search parent", "late-admission": "late failed first admission cannot replace a new preview or its return target", "late-success": "leaving preview during replacement rejects late success without changing the new route", "late-failure": "late replacement failure cannot reopen an old detail or replace a newer search", "reader-rollback": "a failed replacement keeps the original identity and search parent in the reader", "shelf-resume": "shelf direct resume retains its own return semantics", "shelf-info": "shelf explicit info retains its own return semantics"};
 async function check(name, test) {
-  try { await test(); outcomes.push({ name, status: 'PASS' }); }
-  catch (error) { outcomes.push({ name, status: 'FAIL', error: error.message }); }
+  if(name!==caseNames[selectedCase])return;await test();
 }
 function noUnexpectedWrites(t) {
   assert.deepEqual(t.calls.filter(value => value.startsWith('UNEXPECTED.')), [],
@@ -254,8 +258,7 @@ await check('search journey keeps late candidates in detail and reading without 
 });
 
 await check('search journey route guard remains active through detail, reader and directory only', async () => {
-  const t = fixture();
-  t.h.detailReturnRoute = 'search';
+  const C=selectedProductionMethods(source,'Index',['searchJourneyActive']);const t={h:Object.assign(new C(),{detailReturnRoute:'search'})};
   for (const route of ['detail', 'reading', 'directory']) {
     t.h.route = route; t.h.searchAppForeground = true;
     assert.equal(t.h.searchJourneyActive(), true, `${route} continues the originating search journey`);
@@ -265,8 +268,7 @@ await check('search journey route guard remains active through detail, reader an
 });
 
 await check('first source-switch opening reuses only version-bound ordinary search timings', async () => {
-  const t = fixture();
-  t.h.detailReturnRoute = 'search';
+  const C=selectedProductionMethods(source,'Index',['knownSearchSourceCandidates'],{searchCandidateRank});const b=(sourceId,bookId)=>({sourceId,bookId,sourceRuleVersion:'v1',title:'鸣龙',author:'关关公子'}),t={h:new C(),first:b('first-source','first-book'),second:b('second-source','second-book'),third:b('third-source','third-book')};t.h.detailReturnRoute='search';
   const measuredAt = Date.now();
   const timed = book => ({ ...book, acquisition: { schemaVersion: 2, sourceVersion: 'v1',
     searchTiming: { kind: 'search', sourceVersion: 'v1', durationMs: 427, measuredAt } } });
@@ -350,5 +352,5 @@ for (const info of [false, true]) {
   });
 }
 
-console.log(JSON.stringify({ source: String(source), evidenceLayer: 'production methods parsed by Harmony SDK; no device or Core I/O', outcomes }, null, 2));
-assert.equal(outcomes.filter(outcome => outcome.status === 'FAIL').length, 0, 'trial-reading return flow regressions');
+
+}

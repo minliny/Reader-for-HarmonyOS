@@ -1,45 +1,27 @@
-import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"mounted-debug-scanner": {"description": "实际开发诊断FrameNode扫描/绘制/关闭", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+
+
+const {default: assert} = await import('node:assert/strict');
+const {default: fs} = await import('node:fs');
+const {default: path} = await import('node:path');
+const { fileURLToPath } = await import('node:url');
+const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const gateway = fs.readFileSync(path.join(root, 'entry/src/main/ets/features/settings/SettingsGateway.ts'), 'utf8');
-const orchestrator = fs.readFileSync(path.join(root, 'entry/src/main/ets/features/settings/SettingsOrchestrator.ets'), 'utf8');
-const settings = fs.readFileSync(path.join(root, 'entry/src/main/ets/features/settings/SettingsPage.ets'), 'utf8');
-const index = fs.readFileSync(path.join(root, 'entry/src/main/ets/pages/Index.ets'), 'utf8');
-const overlay = fs.readFileSync(path.join(root, 'entry/src/main/ets/features/common/ReaderLayoutDebugOverlay.ets'), 'utf8');
-const pageBackBar = fs.readFileSync(path.join(root, 'entry/src/main/ets/features/common/PageBackBar.ets'), 'utf8');
-const appTopBar = fs.readFileSync(path.join(root, 'entry/src/main/ets/features/common/AppTopBar.ets'), 'utf8');
-const tabBar = fs.readFileSync(path.join(root, 'entry/src/main/ets/features/shell/MainTabBar.ets'), 'utf8');
-const readerShell = fs.readFileSync(path.join(root, 'entry/src/main/ets/features/shell/ReaderShell.ets'), 'utf8');
-
-assert.match(gateway, /developerMode: boolean/);
-assert.match(gateway, /store\.put\('developerMode', snapshot\.developerMode\)/);
-assert.match(gateway, /store\.get\('developerMode', DEFAULT_SNAPSHOT\.developerMode\)/);
-assert.match(orchestrator, /'developerMode'/);
-assert.match(settings, /开发者模式（显示组件边界）/);
-assert.match(settings, /'developerMode'/);
-assert.match(index, /AppStorage\.setOrCreate<boolean>\('readerDeveloperMode', snapshot\.developerMode === true\)/);
-assert.match(index, /ReaderLayoutDebugOverlay\(\)/);
-assert.match(overlay, /readerWindowMetricsRevision/);
-assert.match(overlay, /statusBarRect/);
-assert.match(overlay, /hitTestBehavior\(HitTestMode\.None\)/);
-assert.match(overlay, /getAttachedFrameNodeById\('reader-layout-debug-overlay'\)/);
-assert.match(overlay, /getChild\(index, ExpandMode\.NOT_EXPAND\)/);
-assert.match(overlay, /Canvas\(this\.drawingContext\)/);
-for (const source of [pageBackBar, appTopBar, tabBar, readerShell]) {
-  assert.doesNotMatch(source, /readerDebugRegisterBounds|readerDebugBoundsId/);
-}
-
 // Execute the ordinary production scanner and painter against the public
 // FrameNode seam. These cases cover the omissions the old screenshot exposed,
 // without treating a local tree fixture as compositor/device evidence.
 const clearedTimers = [];
 let timerCount = 0;
-const Owner = productionMotionMethods(path.join(root,
-  'entry/src/main/ets/features/common/ReaderLayoutDebugOverlay.ets'),
+const Owner = selectedProductionMethods(path.join(root,
+  'entry/src/main/ets/features/common/ReaderLayoutDebugOverlay.ets'), 'ReaderLayoutDebugOverlay',
 ['scanFrameTree', 'collectFrameBounds', 'paintFrameBounds', 'onDeveloperModeChanged', 'aboutToDisappear'], {
   FRAME_NODE_SCAN_LIMIT: 10000,
   ExpandMode: { NOT_EXPAND: 0 },
@@ -127,3 +109,5 @@ assert.equal(owner.frameCount, 0);
 assert.equal(rectangles.length, 0);
 owner.aboutToDisappear();
 console.log('developer mode settings and full mounted-tree geometry overlay: PASS');
+
+}

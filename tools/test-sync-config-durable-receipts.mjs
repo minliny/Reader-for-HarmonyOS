@@ -1,10 +1,12 @@
-import { resolveOpenHarmonySdkRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
-import { ReaderWriteEvidence } from '../entry/src/main/ets/app/ReaderWriteEvidence.ts';
-import { syncIndexFixture as f } from './lib/sync-index-real-fixture.mjs';
-const tick=async predicate=>{for(let i=0;i<2000;i++){if(predicate())return;await new Promise(r=>setTimeout(r,1));}throw Error('actual Asset dispatch not reached');};
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { resolveOpenHarmonySdkRoot }=await import("./lib/tool-environment.mjs");
+const { readFileSync }=await import("node:fs");
+const { randomUUID }=await import("node:crypto");
+const { ReaderWriteEvidence }=await import("../entry/src/main/ets/app/ReaderWriteEvidence.ts");
+const { syncIndexFixture: f }=await import("./lib/sync-index-real-fixture.mjs");
+const tick=async predicate=>{for(let i=0;i<2000;i++){if(predicate())return;await new Promise(setImmediate);}throw Error('actual Asset dispatch not reached');};
 const adds=()=>f.asset.calls.filter(c=>c==='add').length;
 const op=x=>x.snapshot().facts.operation;
 const open=async x=>{x.owner.open();await x.settle();};
@@ -12,11 +14,9 @@ const save=async x=>{x.owner.saveConfig(f.config.url,f.config.user,'','',f.confi
 const retry=async x=>{const action=x.page().action;assert.ok(action,'actual SDK shared native recovery');action.onClick();action.onClick();await x.settle();};
 const continueOriginal=async x=>{const action=x.page().continueAction;assert.ok(action,'actual SDK original continuation');action.onClick();action.onClick();await x.settle();};
 const encode=value=>new TextEncoder().encode(JSON.stringify(value));
-// UUID generation is delegated to the installed platform; test injection uses
-// Node's standard UUID factory and never implements random generation.
-const utilApi=readFileSync(resolveOpenHarmonySdkRoot() + '/ets/api/@ohos.util.d.ts','utf8');
-assert.match(utilApi,/function generateRandomUUID\(entropyCache\??: boolean\): string/);
-assert.match(f.source('features/sync/SyncGateway.ts'),/util\.generateRandomUUID\(true\)/);
+
+try {
+if(id==='committed-identity'){
 {
  const x=f.fixture();await open(x);assert.equal(op(x),undefined,'old v2 envelope loads without inventing historic receipt');
  assert.equal(await x.store.hasSaveReceipt(randomUUID()),false,'matching legacy fields are not an exact operation receipt');
@@ -29,9 +29,11 @@ assert.match(f.source('features/sync/SyncGateway.ts'),/util\.generateRandomUUID\
  assert.doesNotMatch(JSON.stringify(x.snapshot()),/transient-secret|independent-secret/);
  assert.equal(await x.store.hasSaveReceipt(randomUUID()),false,'another ID cannot match the committed save');
  const reboot=f.fixture({preserveAsset:true});await open(reboot);
- assert.equal(op(reboot).operationId,unknown.operationId,'new process/owner rehydrates only actual committed ID');
+ assert.equal(op(reboot).operationId,unknown.operationId,'new Store/runtime/owner rehydrates only actual committed ID');
  assert.equal(op(reboot).projection.receipt.confirmation,'confirmed');assert.equal(adds(),0,'startup never replays previous save');
 }
+}
+if(id==='unknown-barrier'){
 {
  const x=f.fixture();await open(x);f.asset.beforeAdd=()=>{throw Error('dispatch rejected before commit');};await save(x);const unknown=op(x);
  assert.equal(unknown.projection.receipt.confirmation,'unknown');assert.ok(unknown.operationId);
@@ -43,17 +45,23 @@ assert.match(f.source('features/sync/SyncGateway.ts'),/util\.generateRandomUUID\
  const reboot=f.fixture({preserveAsset:true});await open(reboot);assert.equal(op(reboot).operationId,unknown.operationId);assert.notEqual(op(reboot).operationId,laterId,'restart retains original intent and blocks a new identity');
  reboot.owner.continueConfigSave(op(reboot).projection.facts.generation,f.config.url,f.config.user,f.config.password,f.config.backupPassword,f.config.directory);await reboot.settle();assert.equal(op(reboot).completed,true);assert.equal(op(reboot).operationId,unknown.operationId);
 }
+}
+if(id==='query-failure'){
 {
  const x=f.fixture();await open(x);f.asset.failAdd=true;await save(x);f.asset.failQuery=true;await retry(x);
  assert.equal(op(x).projection.receipt.confirmation,'unknown','failed exact receipt read remains unknown');assert.equal(adds(),1);
  await retry(x);assert.equal(op(x).projection.receipt.confirmation,'unknown');await continueOriginal(x);assert.equal(op(x).projection.receipt.fact,'confirmedCurrent');assert.equal(adds(),1);
 }
+}
+if(id==='retired-delivery'){
 {
  const x=f.fixture();await open(x);const gate=f.pause();f.asset.beforeAdd=()=>gate.promise;
  x.owner.saveConfig(f.config.url,f.config.user,'','',f.config.directory);await tick(()=>adds()===1);x.close();gate.resolve();await x.settle();
  const receipt=(await x.store.loadConfigIntent()).operationId;
  const reboot=f.fixture({preserveAsset:true});await open(reboot);assert.equal(op(reboot).operationId,receipt);assert.equal(op(reboot).projection.receipt.confirmation,'unknown');assert.equal(adds(),0,'retired staging rehydrates original identity without committing a head');await continueOriginal(reboot);assert.equal(op(reboot).completed,true);
 }
+}
+if(id==='clear-evidence'){
 {
  const x=f.fixture();await open(x);const id=randomUUID();await x.store.save(f.config,undefined,undefined,id);
  const remove=f.asset.remove;f.asset.remove=async()=>{await remove.call(f.asset);throw Error('lost clear ACK');};const evidence=new ReaderWriteEvidence();
@@ -66,6 +74,8 @@ assert.match(f.source('features/sync/SyncGateway.ts'),/util\.generateRandomUUID\
  const denied=new ReaderWriteEvidence();await assert.rejects(next.store.clear(denied,()=>false),/retired/);assert.equal(denied.confirmation(),'undispatched');
  await next.store.save(f.config);assert.ok((await next.store.loadSerializedState()).saveOperationId,'clear failure does not poison subsequent explicit save queue');
 }
+}
+if(id==='add-not-found'){
 {
  const x=f.fixture({empty:true});const id=randomUUID(),evidence=new ReaderWriteEvidence();
  f.asset.beforeAdd=()=>{throw {code:f.asset.ErrorCode.NOT_FOUND};};
@@ -75,8 +85,14 @@ assert.match(f.source('features/sync/SyncGateway.ts'),/util\.generateRandomUUID\
  assert.equal(await x.store.hasSaveReceipt(id),false,'exact query uses secure read only');x.store.loadBookshelfViewMode=prepare;
  await assert.rejects(x.store.save(f.config,undefined,undefined,id),/previous configuration intent/);await x.store.continueConfigIntent(id,undefined,undefined,f.config);assert.equal(await x.store.hasSaveReceipt(id),true,'explicit same intent still uses original queue');
 }
+}
+if(id==='invalid-metadata'){
 {
  const x=f.fixture();f.asset.record=encode({formatVersion:2,config:f.config,saveOperationId:'bad-ID'});await assert.rejects(x.store.loadSerializedState(),/identity is invalid/);
  assert.throws(()=>x.store.hasSaveReceipt(''),/identity is invalid/);assert.equal(adds(),0,'malformed metadata never triggers normalization writes');
 }
-console.log('PASS exact config identity/receipt: actual immutable secure ID payload, lost ACK preparation, old/matching/wrong ID rejection, pure query plus explicit continuation, read failure, retired delivery, original restart barrier, clear unknown/NOT_FOUND, migration/queue and no secret snapshot. Target persistence/HAP/VM/device remain separate OPEN tiers.');
+}
+}finally{f.cleanup();}
+}
+const definitions={"committed-identity": "committed-identity; actual production methods with explicit controlled platform ports", "unknown-barrier": "unknown-barrier; actual production methods with explicit controlled platform ports", "query-failure": "query-failure; actual production methods with explicit controlled platform ports", "retired-delivery": "retired-delivery; actual production methods with explicit controlled platform ports", "clear-evidence": "clear-evidence; actual production methods with explicit controlled platform ports", "add-not-found": "add-not-found; actual production methods with explicit controlled platform ports", "invalid-metadata": "invalid-metadata; actual production methods with explicit controlled platform ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

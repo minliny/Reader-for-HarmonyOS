@@ -195,7 +195,7 @@ function selectionFixture(mode='success',catalog=selectionTarget){
  const originalSession={contentKind:'manga',identity:{sourceId:'old',bookId:'a'},book:{title:original.title,author:original.author},entries:[{index:8,title:'Saved Chapter',url:'/old'}]};
  const originalToc=[{index:8,title:'Saved Chapter',downloadState:'unknown'}];
  const candidate={sourceId:'target',bookUrl:'b',bookName:'Target Manga',author:'Target Author',sourceVersion:'s',category:'comic',sourceName:'Target source'};
- const installed=[],fetches=[],starts=[];
+ const installed=[],fetches=[],starts=[],messages=[];
  class Shelf {async loadShelfBook(source){return source==='old'?(committed?undefined:original):
   (committed?{sourceId:'target',bookId:'b',title:'Target Manga',author:'Target Author',contentKind:'manga'}:undefined);}}
  const {Constructor:SourceSwitchHost}=sourceOwnerFixture({open:false});
@@ -221,6 +221,7 @@ function selectionFixture(mode='success',catalog=selectionTarget){
   readingSessionActive:true,route:'reading',detailInBookshelf:true,sourceSwitchVisible:true,
   sourceSwitchState:{kind:'candidates',candidates:[candidate]},sourceSwitchFailureMessage:'',navigationGeneration:0,
   mangaSourceSwitchSelectionVisible:false,mangaSourceSwitchSelectionBusy:false,
+  getUIContext:()=>({getPromptAction:()=>({showToast:value=>messages.push(value.message)})}),
   getSourceSwitchGateway:()=>preparation,
   getSourceSwitchHost:()=>switchHost,
   refreshBookshelf:()=>refresh++,readingDetailForShelf:book=>book,
@@ -232,7 +233,7 @@ function selectionFixture(mode='success',catalog=selectionTarget){
  });
  const start=owner.switchMangaSource.bind(owner);
  owner.switchMangaSource=(...args)=>{const task=start(...args);starts.push(task);return task;};
- return {f,owner,original,originalSession,originalToc,candidate,catalog,installed,fetches,
+ return {f,owner,original,originalSession,originalToc,candidate,catalog,installed,fetches,messages,
   begin:()=>{owner.onPickSource(candidate);assert.ok(starts.length>0);return starts.at(-1);},
   latest:()=>starts.at(-1),setRevision:value=>revision=value,setRegistryRevision:value=>registryRevision=value,committed:()=>committed,refresh:()=>refresh,
   imageGate,commitGate,imageStarted,commitStarted};
@@ -384,10 +385,10 @@ for(const mode of ['success','lost-response','invalid-ack','commit-rejected','im
 }
 {
  const s=selectionFixture('readback-failed');await s.begin();await s.owner.selectMangaSourceSwitchChapter(3);
- assert.equal(s.committed(),true);assert.equal(s.installed.length,0);assert.match(s.owner.notice.message,/已保存/);
+ assert.equal(s.committed(),true);assert.equal(s.installed.length,0);assert.equal(s.owner.notice,undefined);assert.match(s.messages[0],/换源已保存.*从书架重新打开/);assertOriginal(s);
  assert.equal(s.owner.sourceSwitchHost.hasUnconfirmedMangaWrite(s.original),false);
- s.owner.notice.action();await new Promise(setImmediate);
- assert.equal(s.owner.recoveredBook.sourceId,'target');assert.equal(s.installed.length,0,'readback recovery opens current progress, not the stale proposal');
+ const currentBook=await s.owner.sourceSwitchHost.readMangaShelf('target','b',()=>true);
+ assert.equal(currentBook.sourceId,'target');assert.equal(s.installed.length,0,'ordinary shelf read retains current saved progress and does not install the stale proposal');
  assert.equal(s.f.calls.filter(([method])=>method==='manga.sourceSwitch.commit').length,1);
 }
 {

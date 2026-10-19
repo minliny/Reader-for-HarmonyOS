@@ -1,13 +1,15 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import { RssPresentationProjection } from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
-import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { RssWriteEvidence as ReaderWriteEvidence, RealRssRouteHost as RssRouteOperationHost, pendingRssError } from './lib/rss-operation-fixture.mjs';
-import { isReaderCoreTransactionPendingError } from '../entry/vendor/core-harmony/sdk/reader_core.ts';
-import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { resolveEtsLoaderRoot }=await import("./lib/tool-environment.mjs");
+const { RssPresentationProjection }=await import("../entry/src/main/ets/features/rss/RssPresentationProjection.ts");
+const {runtimeOwnerIdentityProbe}=await import("./lib/reader-runtime-admission-probe.mjs");
+const { readFileSync }=await import("node:fs");
+const { createRequire, stripTypeScriptTypes }=await import("node:module");
+const { RssWriteEvidence: ReaderWriteEvidence, RealRssRouteHost: RssRouteOperationHost, pendingRssError }=await import("./lib/rss-operation-fixture.mjs");
+const { isReaderCoreTransactionPendingError }=await import("../entry/vendor/core-harmony/sdk/reader_core.ts");
+const {boundedSurfaceSdk,boundedMembers}=await import("./lib/bounded-surface-sdk-probe.mjs");
+const { createReaderBuilderProbe }=await import("./lib/reader-control-builder-probe.mjs");
 const source = name => readFileSync(new URL(`../entry/src/main/ets/${name}`, import.meta.url), 'utf8');
 // Execute complete production owners and protocol decoders, replacing platform imports only.
 const ordinary = text => stripTypeScriptTypes(text.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm, '').replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^export /gm, ''));
@@ -79,16 +81,24 @@ function fixture(runtime=rpc()){
     Object.assign(owner,refresh(),{operation:clone(child.params.operation),readFacts:clone(child.params.readFacts),appThemeScheme:'day'});
     owner.operationFeedback();
     const recoveryChild=[...owner.children.values()].find(child=>child instanceof ManagementChild);
-    if(recoveryChild){const recovery=createReaderBuilderProbe(recoverySource,['build']).owner;Object.assign(recovery,{actionEnabled:true},recoveryChild.params,{appThemeScheme:'day'});recovery.initialRender();
+    if(recoveryChild){const recovery=surfaceSdk.consumer(recoverySource);Object.assign(recovery,recoveryChild.params,{appThemeScheme:'day'});recovery.initialRender();
       for(const [id,node] of recovery.nodes)owner.nodes.set(-id,node);}
     return owner;
   };
   return {runtime,index,orchestrator,refresh,page,child};
 }
-const textNode=page=>[...page.nodes.values()].find(n=>n.type==='Text'&&n.fontSize===10);
-const retryNode=page=>[...page.nodes.values()].find(n=>n.type==='Text'&&n.height===36);
+const textNode=page=>[...page.nodes.values()].find(n=>n.type==='Text'&&n.create===page.feedbackMessage());
+const retryNode=page=>[...page.nodes.values()].find(n=>n.type==='Stack'&&n.constraintSize?.minHeight===44&&n.onClick);
 
 // Actual Gateway -> Index -> SDK child Prop update -> actual SDK page recovery closure.
+function retainedView(owner, identity, active = () => true) {
+  const values=[],operations=[],reads=[];
+  assert.equal(owner.attachPresentation(identity,v=>values.push(clone(v)),active,
+    o=>operations.push(clone(o)),f=>reads.push(clone(f)),()=>true),true);
+  return {values,operations,reads};
+}
+const key=id;
+if(key==='readback'){
 for(const [action,command] of [['toggle','rss.subscription.persist'],['refresh','rss.feed.refresh'],['remove','rss.subscription.remove']]){
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);assert.equal(f.page().feedbackMessage(),'');
   f.runtime.readFailures.push(new Error('list unavailable'));
@@ -98,7 +108,7 @@ for(const [action,command] of [['toggle','rss.subscription.persist'],['refresh',
   await settle(f.orchestrator);
   assert.equal(f.index.rssManagementOperation.action,action);assert.equal(f.index.rssManagementOperation.projection.receipt.fact,'confirmedRefreshFailed');
   assert.equal(f.refresh().items.length,2,'read failure retains prior rows');
-  const page=f.page();assert.match(textNode(page).create,/已确认，刷新失败：list unavailable/);assert.equal(retryNode(page).create,'刷新列表');
+  const page=f.page();assert.match(textNode(page).create,/已确认，刷新失败：list unavailable/);assert.ok([...page.nodes.values()].some(n=>n.type==='Text'&&n.create==='刷新列表'));assert.ok(retryNode(page));
   retryNode(page).onClick();retryNode(page).onClick();await settle(f.orchestrator);
   assert.equal(f.runtime.count(command),1,'double retry never replays write');assert.equal(f.runtime.count('rss-source.list'),3,'double retry admits one read');
   assert.equal(f.index.rssManagementOperation.projection.receipt.fact,'confirmedCurrent');
@@ -109,6 +119,8 @@ for(const [action,command] of [['toggle','rss.subscription.persist'],['refresh',
   assert.match(textNode(page).create,/different failure/,'mounted SDK text reads live Props');retryNode(f.page()).onClick();await settle(f.orchestrator);
   assert.equal(f.index.rssManagementOperation.projection.receipt.fact,'confirmedCurrent');
 }
+}
+if(key==='first-read'){
 {
   const f=fixture();f.runtime.readFailures.push(new Error('first read failed'));f.orchestrator.open();await settle(f.orchestrator);
   assert.equal(f.index.rssManagementRead.fact,'failed');const p=f.page();assert.match(textNode(p).create,/订阅源加载失败/);
@@ -117,6 +129,8 @@ for(const [action,command] of [['toggle','rss.subscription.persist'],['refresh',
   f.runtime.readFailures.push(new Error('later read failed'));f.orchestrator.open();await settle(f.orchestrator);
   assert.equal(f.index.rssManagementRead.fact,'refreshFailed');assert.equal(f.refresh().items.length,2);assert.match(textNode(f.page()).create,/保留上次读取结果/);
 }
+}
+if(key==='import'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);f.runtime.readFailures.push(new Error('import read failed'));
   const completed=[],failed=[];f.orchestrator.importSources(false,v=>completed.push(v),e=>failed.push(e));await settle(f.orchestrator);
@@ -126,6 +140,8 @@ for(const [action,command] of [['toggle','rss.subscription.persist'],['refresh',
   f.orchestrator.importSources(false,v=>completed.push(v),e=>failed.push(e));await settle(f.orchestrator);
   assert.equal(completed.at(-1),undefined);assert.equal(f.index.rssManagementOperation,prior,'picker cancellation dispatches no write');
 }
+}
+if(key==='unknown'){
 for(const action of ['toggle','import']){
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);f.runtime.writeFailure=new Error('ack lost');
   if(action==='toggle')f.orchestrator.toggleSubscription('a',false);
@@ -138,17 +154,23 @@ for(const action of ['toggle','import']){
   assert.equal(f.runtime.count('rss.subscription.persist'),action==='toggle'?1:0);assert.equal(f.runtime.count('rss-source.import'),action==='import'?1:0);
   assert.equal(f.index.rssManagementOperation.projection.receipt.confirmation,'unknown','subsequent intent cannot overwrite unresolved receipt');
 }
+}
+if(key==='picker-failure'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);
   f.runtime.selectRssSourceJson=async()=>{throw new Error('picker denied');};
   const failures=[];f.orchestrator.importSources(false,()=>assert.fail('picker failure cannot import'),e=>failures.push(e.message));await settle(f.orchestrator);
   assert.deepEqual(failures,['picker denied']);assert.equal(f.index.rssManagementOperation,undefined);assert.equal(f.runtime.count('rss-source.import'),0);
 }
+}
+if(key==='typed-read'){
 {
   const f=fixture();f.runtime.readFailures.push(pendingRssError());
   f.orchestrator.open();await settle(f.orchestrator);
   assert.equal(f.index.rssManagementRead.fact,'current');assert.equal(f.runtime.count('runtime.status'),1);assert.equal(f.runtime.count('rss-source.list'),2,'typed read gate waits and retries a read only');
 }
+}
+if(key==='picker-retirement'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);
   const pause=deferred();let selecting=false;
@@ -158,6 +180,8 @@ for(const action of ['toggle','import']){
   f.index.route='rss';pause.resolve();await settle(f.orchestrator);
   assert.equal(f.runtime.count('rss-source.import'),0,'closing before late selection cannot dispatch replace import');
 }
+}
+if(key==='runtime-replacement'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);
   const pause=deferred();let waiting=false;
@@ -166,6 +190,8 @@ for(const action of ['toggle','import']){
   const next=fixture(rpc()),newer=next.orchestrator;assert.throws(()=>f.index.getRssOrchestrator(),/退役/);newer.open();await settle(newer);const current=clone(next.index.rssPresentation);
   pause.resolve();await settle(f.orchestrator);assert.deepEqual(next.index.rssPresentation,current,'old owner late ACK cannot publish into new owner');
 }
+}
+if(key==='route-close'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);const pause=deferred();let waiting=false;
   f.runtime.beforeRequest=async method=>{if(method==='rss.subscription.persist'){waiting=true;await pause.promise;}};
@@ -177,6 +203,8 @@ for(const action of ['toggle','import']){
   assert.equal(f.runtime.count('rss.subscription.persist'),1,'closed page action ignored');assert.equal(f.runtime.count('rss-source.import'),0);
   f.index.route='rssSubscriptionManagement';f.orchestrator.open();await settle(f.orchestrator);assert.equal(f.refresh().items[0].enabled,false);
 }
+}
+if(key==='stale-generation'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);f.runtime.readFailures.push(new Error('failed'));f.orchestrator.toggleSubscription('a',false);await settle(f.orchestrator);
   const stale=clone(f.index.rssManagementOperation);f.orchestrator.open();await settle(f.orchestrator);const reads=f.runtime.count('rss-source.list');
@@ -185,6 +213,8 @@ for(const action of ['toggle','import']){
   f.orchestrator.toggleSubscription('b',false);await settle(f.orchestrator);assert.equal(f.runtime.count('rss.subscription.persist'),1,'retired owner cannot dispatch');
   const nextReads=replacement.count('rss-source.list');newer.reconcileManagementOperation(stale);await settle(newer);assert.equal(replacement.count('rss-source.list'),nextReads,'owner replacement invalidates recovery');
 }
+}
+if(key==='queued-reentry'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);const pause=deferred();let waiting=false;
   f.runtime.beforeRequest=async method=>{if(method==='rss.subscription.persist'){waiting=true;await pause.promise;}};
@@ -193,7 +223,8 @@ for(const action of ['toggle','import']){
   assert.deepEqual(f.runtime.calls.map(c=>c[0]),['rss-source.list','rss.subscription.persist','rss-source.list','rss-source.list'],'unsent retired-session intent is dropped; accepted write and re-entry share one chain');
   assert.equal(f.index.rssManagementOperation.subscriptionId,'a');assert.equal(f.refresh().items[0].enabled,false);
 }
-// Actual Index factories and SDK child callbacks must consume that retained lane.
+}
+if(key==='index-transfer'){
 {
   const first=fixture();first.orchestrator.open();await settle(first.orchestrator);
   const oldToggle=first.refresh().onToggle,oldRetry=first.refresh().onRetryRead;
@@ -213,6 +244,8 @@ for(const action of ['toggle','import']){
   assert.equal(next.refresh().items[0].enabled,false,'actual SDK successor receives readback');
   assert.equal(next.refresh().operation.projection.receipt.fact,'confirmedCurrent');
 }
+}
+if(key==='index-unknown'){
 {
   const first=fixture();first.orchestrator.open();await settle(first.orchestrator);
   first.runtime.writeFailure=Error('actual lost ACK');first.refresh().onToggle('a',false);await settle(first.orchestrator);
@@ -223,6 +256,8 @@ for(const action of ['toggle','import']){
   assert.equal(first.runtime.count('rss.subscription.persist'),1,'actual successor action cannot replace unresolved original write');
   assert.equal(next.refresh().operation.projection.receipt.fact,'pendingReconciliation');
 }
+}
+if(key==='route-publication'){
 {
   const f=fixture();f.orchestrator.open();await settle(f.orchestrator);
   const oldRead=clone(f.index.rssManagementRead),oldOperation=clone(f.index.rssManagementOperation);
@@ -232,14 +267,8 @@ for(const action of ['toggle','import']){
   assert.deepEqual(f.index.rssManagementRead,oldRead);assert.deepEqual(f.index.rssManagementOperation,oldOperation,'management-only publication cannot leak into another route');
   currentOwner=undefined;assert.throws(()=>f.index.getRssOrchestrator(),/退役/);
 }
-// The actual complete Gateway/Orchestrator survives same-Runtime physical view
-// replacement. Controlled RPC answers are IO fixtures, never Core receipts.
-function retainedView(owner, identity, active = () => true) {
-  const values=[],operations=[],reads=[];
-  assert.equal(owner.attachPresentation(identity,v=>values.push(clone(v)),active,
-    o=>operations.push(clone(o)),f=>reads.push(clone(f)),()=>true),true);
-  return {values,operations,reads};
 }
+if(key==='accepted-transfer'){
 {
   const runtime=rpc();currentOwner=runtime;
   const owner=RssOrchestrator.forRuntime(runtime), first=retainedView(owner,'first');
@@ -262,6 +291,8 @@ function retainedView(owner, identity, active = () => true) {
   assert.equal(newer.values.at(-1)[0].enabled,false,'replacement receives the same canonical readback');
   assert.equal(newer.reads.at(-1).fact,'current');
 }
+}
+if(key==='queued-transfer'){
 {
   const runtime=rpc();currentOwner=runtime;
   const owner=RssOrchestrator.forRuntime(runtime);retainedView(owner,'queued-old');
@@ -271,6 +302,8 @@ function retainedView(owner, identity, active = () => true) {
   retainedView(owner,'queued-new');pause.resolve();await settle(owner);
   assert.equal(runtime.count('rss.subscription.persist'),0,'old physical queued intent cannot acquire new delivery admission');
 }
+}
+if(key==='unknown-transfer'){
 {
   const runtime=rpc();currentOwner=runtime;
   const owner=RssOrchestrator.forRuntime(runtime);retainedView(owner,'unknown-old');
@@ -283,6 +316,8 @@ function retainedView(owner, identity, active = () => true) {
   assert.equal(runtime.count('rss.subscription.persist'),1,'warm remount never replays or replaces an unknown mutation');
   assert.equal(next.operations.at(-1).projection.receipt.fact,'pendingReconciliation','matching read is not ACK proof');
 }
+}
+if(key==='runtime-cache'){
 {
   const oldRuntime=rpc();currentOwner=oldRuntime;
   const old=RssOrchestrator.forRuntime(oldRuntime);retainedView(old,'retired');
@@ -300,6 +335,8 @@ function retainedView(owner, identity, active = () => true) {
   currentOwner=undefined;assert.equal(RssOrchestrator.forRuntime(newRuntime),undefined);
   assert.equal(current.attachPresentation('unavailable',()=>{},()=>true,()=>{},()=>{},()=>true),false);
 }
+}
+if(key==='throwing-admission'){
 {
   const runtime=rpc();currentOwner=runtime;
   const owner=RssOrchestrator.forRuntime(runtime);
@@ -307,6 +344,8 @@ function retainedView(owner, identity, active = () => true) {
   owner.open();owner.toggleSubscription('a',false);await settle(owner);
   assert.equal(runtime.count('rss.subscription.persist'),0);
 }
+}
+if(key==='throwing-diagnostics'){
 {
   const ThrowingDiagnosticOwner = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','RssRouteOperationHost','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts',
     ordinary(source('features/rss/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,
@@ -320,4 +359,7 @@ function retainedView(owner, identity, active = () => true) {
   await assert.rejects(owner.runSerialized(async()=>{throw Error('independent operation failed');}),/independent operation failed/);
   let ran=false;await owner.runSerialized(async()=>{ran=true;});assert.equal(ran,true,'logger cannot poison the serial tail');
 }
-console.log('RSS actual Gateway -> Index -> SDK Props/feedback + same-Runtime retained lane: PASS (write/read/unknown/retry/close/re-entry/owner/concurrency).');
+}
+}
+const definitions={"readback": {"description": "readback actual production owner/SDK scope", "resources": []}, "first-read": {"description": "first-read actual production owner/SDK scope", "resources": []}, "import": {"description": "import actual production owner/SDK scope", "resources": []}, "unknown": {"description": "unknown actual production owner/SDK scope", "resources": []}, "picker-failure": {"description": "picker-failure actual production owner/SDK scope", "resources": []}, "typed-read": {"description": "typed-read actual production owner/SDK scope", "resources": []}, "picker-retirement": {"description": "picker-retirement actual production owner/SDK scope", "resources": []}, "runtime-replacement": {"description": "runtime-replacement actual production owner/SDK scope", "resources": []}, "route-close": {"description": "route-close actual production owner/SDK scope", "resources": []}, "stale-generation": {"description": "stale-generation actual production owner/SDK scope", "resources": []}, "queued-reentry": {"description": "queued-reentry actual production owner/SDK scope", "resources": []}, "index-transfer": {"description": "index-transfer actual production owner/SDK scope", "resources": []}, "index-unknown": {"description": "index-unknown actual production owner/SDK scope", "resources": []}, "route-publication": {"description": "route-publication actual production owner/SDK scope", "resources": []}, "accepted-transfer": {"description": "accepted-transfer actual production owner/SDK scope", "resources": []}, "queued-transfer": {"description": "queued-transfer actual production owner/SDK scope", "resources": []}, "unknown-transfer": {"description": "unknown-transfer actual production owner/SDK scope", "resources": []}, "runtime-cache": {"description": "runtime-cache actual production owner/SDK scope", "resources": []}, "throwing-admission": {"description": "throwing-admission actual production owner/SDK scope", "resources": []}, "throwing-diagnostics": {"description": "throwing-diagnostics actual production owner/SDK scope", "resources": []}};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

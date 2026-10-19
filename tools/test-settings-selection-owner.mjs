@@ -31,7 +31,7 @@ function fixture(tablet, overlay = overlaySource) {
     childSources: { ...choice.hooks.childSources, SettingsSelectOverlay: overlay } };
   const { owner } = createReaderBuilderProbe(source, pageMembers,
     { ...platform, ReaderNativeAlertOwner, SettingsSelectOverlay: actualOverlay.Component, settingsSelectionGeneration: 0 }, hooks);
-  Object.assign(owner, { mounted: true, isTablet: tablet, anchorRight: 200, anchorBottom: 180 });
+  Object.assign(owner, { mounted: true, operation: {}, isTablet: tablet, anchorRight: 200, anchorBottom: 180 });
   owner.toggleSelection('language'); owner.buildOverlay(); choice.properties.flush();
   const child = [...owner.children.values()][0];
   assert.equal(child.constructor, actualOverlay.Component, 'actual Page creates the complete SDK overlay');

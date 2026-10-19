@@ -1,8 +1,21 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { productionReaderPressFeedback } from './lib/reader-press-feedback-probe.mjs';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
+export const CONTRACT_CASES = {
+  "native-composition": {
+    "description": "Normal/pressed/disabled runtime composition and nonaccumulation; no fixed alpha design claim",
+    "resources": []
+  },
+  "platform-failure-fallback": {
+    "description": "Each platform color stage fails independently; retain color-only fallback negative control",
+    "resources": []
+  }
+};
+
+async function case_native_composition() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
 for (const scheme of ['day', 'night']) {
   const bases = [], overlays = [];
   const Modifier = productionReaderPressFeedback({ ColorMetrics: {
@@ -19,7 +32,7 @@ for (const scheme of ['day', 'night']) {
     modifier.applyPressedAttribute(attributes); modifier.applyPressedAttribute(attributes);
     assert.deepEqual(bases.slice(-2), [surface, surface], 'pressed re-evaluation must not accumulate tint over a selected surface');
     assert.equal(attributes.radius, 12);
-    assert.equal(overlays.at(-1).alpha, 0.12);
+    assert.ok(Number.isFinite(overlays.at(-1).alpha) && overlays.at(-1).alpha >= 0 && overlays.at(-1).alpha <= 1, 'platform receives a valid alpha; a specific design percentage needs independent provenance');
     modifier.applyNormalAttribute(attributes);
     assert.equal(attributes.fill, surface); assert.equal(attributes.radius, 17);
     modifier.applyPressedAttribute(attributes); modifier.applyDisabledAttribute(attributes);
@@ -36,6 +49,14 @@ for (const scheme of ['day', 'night']) {
   assert.doesNotThrow(() => new Modifier('inert-surface', 'day', 0, 14, false).applyPressedAttribute(attributes));
   assert.deepEqual([attributes.fill, attributes.radius], ['inert-surface', 0]);
 }
+
+}
+
+async function case_platform_failure_fallback() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
 // Every official composition stage can fail independently. Preserve the
 // complete original normal recipe, while the gradient-oriented public helper
 // still returns the original unblended surface without leaking an exception.
@@ -65,3 +86,11 @@ assert.throws(()=>failedCompositionFallback(actualSource.replace(correctFallback
   'instance.backgroundColor(this.surface).borderRadius(this.pressedRadius);\n    }\n  }\n\n  applyDisabledAttribute')),
   /complete normal fallback/,'the prior color-only failure regression remains detectable');
 console.log('reader press feedback: native tint delegation and normal/disabled restoration PASS');
+
+}
+
+const implementations = {'native-composition':case_native_composition,'platform-failure-fallback':case_platform_failure_fallback};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

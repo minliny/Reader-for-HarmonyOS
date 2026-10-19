@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-
-import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
-
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const {ReaderTtsSessionCoordinator}=await import('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts');const owned=[];const createCoordinator=(...args)=>{const c=new ReaderTtsSessionCoordinator(...args);owned.push(c);return c;};
 const chapter = { sourceId: 'source-1', bookId: 'book-1', chapterIndex: 0, chapterTitle: '第一章' };
 const content = '第一句。\n\n￼\n\n第二句。';
 const plan = {
@@ -113,24 +113,23 @@ class FakeHost {
 }
 
 function captureConsoleError() {
-  const captured = [];
+  const captured = [], waiters=[];
   const original = console.error;
-  console.error = (...args) => { captured.push(args.map(String).join(' ')); };
+  console.error = (...args) => { const line=args.map(String).join(' ');captured.push(line);for(const waiter of waiters)if(waiter.predicate(line))waiter.resolve(); };
   return {
     lines: captured,
+    when(predicate){if(captured.some(predicate))return Promise.resolve();return new Promise(resolve=>waiters.push({predicate,resolve}));},
     restore() { console.error = original; },
   };
 }
 
-const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
 
-// ---------------------------------------------------------------------------
-// A. Probe lifecycle: uninitialized -> probing -> idle, with preserved reasons.
-// ---------------------------------------------------------------------------
+let restoreClock=()=>{};try{
+if(id==='probe'){
 {
   const gateway = new FakeGateway();
   const host = new FakeHost();
-  const coordinator = new ReaderTtsSessionCoordinator(gateway, host);
+  const coordinator = createCoordinator(gateway, host);
   assert.equal(coordinator.getState().status, 'uninitialized');
   assert.equal(await coordinator.probeAvailability(), true);
   assert.equal(coordinator.getState().status, 'idle');
@@ -154,11 +153,8 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
   assert.equal(coordinator.getState().status, 'idle');
   assert.equal(coordinator.getState().errorMessage, undefined);
 }
-
-// ---------------------------------------------------------------------------
-// B. Transactional start: any RPC / audio-session / Host failure rolls back
-//    into a retryable error, never a wedged preparing.
-// ---------------------------------------------------------------------------
+}
+if(id==='start-failures'){
 {
   const scenarios = [
     { name: 'getConfig', gatewayFail: new Error('config rpc failed') },
@@ -170,7 +166,7 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
   for (const scenario of scenarios) {
     const gateway = new FakeGateway();
     const host = new FakeHost();
-    const coordinator = new ReaderTtsSessionCoordinator(gateway, host);
+    const coordinator = createCoordinator(gateway, host);
     if (scenario.gatewayFail !== undefined) {
       gateway.failPoints.set(scenario.point ?? 'getConfig', scenario.gatewayFail);
     }
@@ -204,7 +200,7 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
     const gateway = new FakeGateway();
     const host = new FakeHost();
     host.probeResult = { available: false, reason: '系统不支持朗读：detail-2' };
-    const coordinator = new ReaderTtsSessionCoordinator(gateway, host);
+    const coordinator = createCoordinator(gateway, host);
     await coordinator.start(startInput());
     const state = coordinator.getState();
     assert.equal(state.status, 'unavailable');
@@ -219,7 +215,7 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
     const gateway = new FakeGateway();
     const host = new FakeHost();
     host.failPoints.set('activateAudioSession', new Error('focus denied'));
-    const coordinator = new ReaderTtsSessionCoordinator(gateway, host);
+    const coordinator = createCoordinator(gateway, host);
     await coordinator.start(startInput());
     const state = coordinator.getState();
     assert.equal(state.status, 'error');
@@ -234,7 +230,7 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
     const gateway = new FakeGateway();
     const host = new FakeHost();
     host.failPoints.set('speak', new Error('synth failed'));
-    const coordinator = new ReaderTtsSessionCoordinator(gateway, host);
+    const coordinator = createCoordinator(gateway, host);
     await coordinator.start(startInput());
     const state = coordinator.getState();
     assert.equal(state.status, 'error');
@@ -242,15 +238,13 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
     await coordinator.dispose();
   }
 }
-
-// ---------------------------------------------------------------------------
-// C. speak accepted but no onStart: watchdog lands in error, panel-visible,
-//    retry and engine selection stay reachable, late start cannot fake playing.
-// ---------------------------------------------------------------------------
+}
+if(id==='watchdog'){
 {
+  const nativeSet=globalThis.setTimeout,nativeClear=globalThis.clearTimeout,timers=new Map();let sequence=0;globalThis.setTimeout=(callback,delay)=>{const id=++sequence;timers.set(id,{callback,delay});return id;};globalThis.clearTimeout=id=>timers.delete(id);restoreClock=()=>{globalThis.setTimeout=nativeSet;globalThis.clearTimeout=nativeClear;};
   const gateway = new FakeGateway();
   const host = new FakeHost();
-  const coordinator = new ReaderTtsSessionCoordinator(
+  const coordinator = createCoordinator(
     gateway,
     host,
     async () => {},
@@ -262,6 +256,7 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
   const started = coordinator.whenStarted();
   assert.equal(coordinator.getState().status, 'preparing');
   assert.equal(coordinator.getState().audioStarted, false);
+  assert.equal(timers.size,1);const pending=[...timers.values()][0];assert.equal(pending.delay,60);timers.clear();pending.callback();
   assert.equal(await started, false, 'no onStart within the deadline must resolve whenStarted(false)');
   const state = coordinator.getState();
   assert.equal(state.status, 'error');
@@ -284,17 +279,15 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
   assert.equal(await retriedStarted, true);
   await coordinator.dispose();
 }
-
-// ---------------------------------------------------------------------------
-// D. Callback queue failures: structured log, state update, no ghost playing.
-// ---------------------------------------------------------------------------
+}
+if(id==='callback-failures'){
 {
   const consoleCapture = captureConsoleError();
   try {
     const gateway = new FakeGateway();
     const host = new FakeHost();
     gateway.failPoints.set('reportCallback', new Error('core down'));
-    const coordinator = new ReaderTtsSessionCoordinator(gateway, host);
+    const coordinator = createCoordinator(gateway, host);
     await coordinator.start(startInput());
     host.emit({ type: 'start', requestId: host.requests.at(-1).requestId });
     await coordinator.whenSettled();
@@ -310,15 +303,16 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
     // Detached transport intents log rejections instead of crashing silently.
     const detachedGateway = new FakeGateway();
     const detachedHost = new FakeHost();
-    const detached = new ReaderTtsSessionCoordinator(detachedGateway, detachedHost);
+    const detached = createCoordinator(detachedGateway, detachedHost);
     await detached.start(startInput({ contentVersion: 2 }));
     detachedHost.emit({ type: 'start', requestId: detachedHost.requests.at(-1).requestId });
     await detached.whenSettled();
     assert.equal(detached.getState().status, 'playing');
     detachedGateway.failPoints.set('pause', new Error('pause rpc failed'));
+    const logged=consoleCapture.when(line=>line.includes('mediaControl.pause'));
     detachedHost.emit({ type: 'mediaControl', action: 'pause' });
     await detached.whenSettled();
-    await sleep(10);
+    await logged;
     assert.ok(
       consoleCapture.lines.some(line => line.includes('mediaControl.pause')),
       'detached media-control failures must be logged',
@@ -328,16 +322,14 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
     consoleCapture.restore();
   }
 }
-
-// ---------------------------------------------------------------------------
-// E. Shared listener owner isolation: page A teardown must not drop page B.
-// ---------------------------------------------------------------------------
+}
+if(id==='listener-owner'){
 {
   const host = new FakeHost();
   const gatewayA = new FakeGateway();
   const gatewayB = new FakeGateway();
-  const coordinatorA = new ReaderTtsSessionCoordinator(gatewayA, host);
-  const coordinatorB = new ReaderTtsSessionCoordinator(gatewayB, host);
+  const coordinatorA = createCoordinator(gatewayA, host);
+  const coordinatorB = createCoordinator(gatewayB, host);
   const ownerAfterB = host.listenerOwner;
   assert.ok(ownerAfterB !== undefined);
 
@@ -355,14 +347,12 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
   assert.equal(host.listener, undefined,
     'disposing the current owner must clear the listener');
 }
-
-// ---------------------------------------------------------------------------
-// F. Real onStart gates `playing`; slice auto-advance keeps flowing.
-// ---------------------------------------------------------------------------
+}
+if(id==='audible-advance'){
 {
   const gateway = new FakeGateway();
   const host = new FakeHost();
-  const coordinator = new ReaderTtsSessionCoordinator(gateway, host);
+  const coordinator = createCoordinator(gateway, host);
   await coordinator.start(startInput());
   // Core already reports a `playing` queue, but no engine callback arrived yet.
   assert.equal(coordinator.getState().status, 'preparing',
@@ -388,14 +378,12 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
     'draining the queue with no next chapter must complete the session');
   await coordinator.dispose();
 }
-
-// ---------------------------------------------------------------------------
-// G. Background / foreground and audio-interruption transitions.
-// ---------------------------------------------------------------------------
+}
+if(id==='background'){
 {
   const gateway = new FakeGateway();
   const host = new FakeHost();
-  const coordinator = new ReaderTtsSessionCoordinator(gateway, host);
+  const coordinator = createCoordinator(gateway, host);
   await coordinator.start(startInput());
   host.emit({ type: 'start', requestId: host.requests.at(-1).requestId });
   await coordinator.whenSettled();
@@ -427,5 +415,8 @@ const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
   await coordinator.dispose();
   assert.equal(coordinator.getState().status, 'idle');
 }
-
-console.log('reader TTS state machine transactions and isolation: PASS');
+}
+}finally{for(const c of owned)await c.dispose();restoreClock();}
+}
+const definitions={"probe": "probe actual coordinator; controlled Core/audio ports", "start-failures": "start-failures actual coordinator; controlled Core/audio ports", "watchdog": "watchdog actual coordinator; controlled Core/audio ports", "callback-failures": "callback-failures actual coordinator; controlled Core/audio ports", "listener-owner": "listener-owner actual coordinator; controlled Core/audio ports", "audible-advance": "audible-advance actual coordinator; controlled Core/audio ports", "background": "background actual coordinator; controlled Core/audio ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

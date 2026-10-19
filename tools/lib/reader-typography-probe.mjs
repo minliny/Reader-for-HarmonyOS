@@ -21,4 +21,18 @@ export function loadReaderTypographyRoles(source = readFileSync(new URL(
     ...Object.values(fontFamilies), DOWNLOAD_VISUAL, MANGA_DIRECTORY_VISUAL);
 }
 
-export const readerTypographyRoles = loadReaderTypographyRoles();
+const typography = loadReaderTypographyRoles();
+// Execute the approved scoped message roles from their production module,
+// rather than duplicating tuples in every focused SDK fixture.
+const messageSource = readFileSync(new URL(
+  '../../entry/src/main/ets/features/common/ReaderMessageStyle.ets', import.meta.url), 'utf8');
+const messageNames = [...messageSource.matchAll(/^export const (MESSAGE_\w+)\s*=/gm)].map(match => match[1]);
+const typographySource = readFileSync(new URL(
+  '../../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
+const classSource = typographySource.slice(typographySource.indexOf('export class ReaderTextStyle'),
+  typographySource.indexOf('\nexport class ReaderInheritedTextStyle'));
+const ReaderTextStyle = new Function(`${stripTypeScriptTypes(classSource).replace(/^export /gm, '')}; return ReaderTextStyle;`)();
+export const readerMessageStyles = new Function('ReaderTextStyle', ...Object.keys(fontFamilies),
+  `${stripTypeScriptTypes(messageSource).replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '')}; return {${messageNames.join(',')}};`)(
+  ReaderTextStyle, ...Object.values(fontFamilies));
+export const readerTypographyRoles = { ...typography, ...readerMessageStyles };

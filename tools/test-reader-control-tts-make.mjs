@@ -1,11 +1,19 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
-import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
-import * as paint from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
-import * as tts from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'clip-difference':{description:'Pure Timer minus painted Speed clip sets across source/scroll/reversal',resources:[]},
+ 'preset-controls':{description:'Actual SDK timer/rate preset and stepper callbacks, ranges and retained admission',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const geometry=await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
+const actors=await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
+const paint=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+const tts=await import('../entry/src/main/ets/features/reading/ReaderTtsState.ts');
 
+
+if(selectedCase==='clip-difference'){
 const inside = (rects, x, y) => rects.some(r => x > r.x && x < r.x + r.width && y > r.y && y < r.y + r.height);
 const intersection = (a, b) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
   Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
@@ -37,6 +45,9 @@ for (const delta of [-24, 0, 120]) for (const offset of [0, 300, 565, 1200]) {
 }
 assert.ok(crossed && clippedSpeed, 'test covers both real crossing and invisible occluders');
 
+
+}else{
+const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlTtsContent.ets', import.meta.url), 'utf8');
 const methods = ['p', 'fullInput', 'sharedInput', 'effectiveRate', 'timerSummary', 'timerCaption', 'twoDigits',
   'timerPresetSelected', 'timerPresetLabel', 'timerPresetIsSelected', 'chooseTimerPreset', 'timerPreset',
@@ -83,4 +94,8 @@ for (const [kind, a, b] of commands) {
   if (kind === 'timer') assert.ok(a >= 0 && a <= 180 && b >= 0 && b <= 59);
   else assert.ok(a >= .5 && a <= 2 && Math.abs(a * 20 - Math.round(a * 20)) < 1e-8);
 }
-console.log('PASS Make TTS: scroll-aware crossing occlusion, reverse poses, narrow layout, explicit timer modes, five-minute range and precise speed callbacks');
+
+
+}
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

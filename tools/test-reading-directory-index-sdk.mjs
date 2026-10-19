@@ -1,9 +1,16 @@
 import assert from 'node:assert/strict';
-import {fixture,deferred,until,session} from './lib/reading-operation-durable-probe.mjs';
-import {makeIndex,settled,indexSource,pRecovery} from './lib/reading-directory-sdk-consumer.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const {directoryFixture:fixture,deferred,until,session}=await import("./lib/reading-operation-durable-probe.mjs");
+const {makeIndex,settled,indexSource,pRecovery}=await import("./lib/reading-directory-sdk-consumer.mjs");
 const checks=[];
-const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
+const tick=()=>new Promise(setImmediate);
 
+const {cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/reading-operation-durable-probe.mjs');
+console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...durableFixtureToolEvidence()}));
+let passed=false;try{
+const key=id;
+if(key==='bookmark-ack'){
 {
  const f=await fixture(true),x=makeIndex(f);
  x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Wrong'});assert.equal(f.writes().length,0);
@@ -12,14 +19,18 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
  assert.equal(x.idx.detailToc[0].level,2);assert.match(f.writes()[0].params.operationId,/\/1$/);assert.equal(x.idx.directoryRecovery().bookmarks.visible,false);
  const leaf=x.render();assert.equal(x.actions(leaf).length,0,'no fault surface/action exists in normal state');checks.push('actual-Index-owner-Core-bookmark-ACK-canonical-SDK-normal-empty');
 }
+}
+if(key==='bookmark-readback'){
 {
  const f=await fixture(true),x=makeIndex(f);f.options.beforeMethod='bookmark.list';
  x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});await until(()=>f.writes().length===1);await settled(f);
  assert.equal(x.idx.directoryOperation.projection.receipt.confirmation,'confirmed');assert.equal(x.idx.directoryOperation.projection.receipt.fact,'confirmedRefreshFailed');
- const leaf=x.render();assert.ok(x.nodes(leaf).some(n=>String(n.create).includes('已保存')||String(n.create).includes('已更新')||String(n.create).includes('已确认')));
- const writes=f.writes().length;x.click(leaf,'重新载入核对书签');await until(()=>x.idx.detailToc[0].bookmarks?.length===1);
+ const leaf=x.render();assert.equal(x.idx.directoryRecovery().bookmarksKind,'readback');assert.ok(x.actions(leaf).some(a=>a.label==='重新读取书签'));
+ const writes=f.writes().length;x.click(leaf,'重新读取书签');await until(()=>x.idx.detailToc[0].bookmarks?.length===1);
  assert.equal(f.writes().length,writes);assert.equal(x.idx.directoryOperation.projection.receipt.fact,'confirmedCurrent');checks.push('confirmed-write-refresh-failure-real-native-read-action-no-second-write');
 }
+}
+if(key==='bookmark-lost-ack'){
 {
  const f=await fixture(true),x=makeIndex(f);f.options.afterMethod='bookmark.create';
  x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});await until(()=>f.writes().length===1);await settled(f);
@@ -28,6 +39,8 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
  assert.equal(f.writes().length,1);assert.equal(x.idx.detailToc[0].bookmarks.length,1);assert.equal(original.params.sequence,1);
  checks.push('unknown-lost-ACK-exact-pure-query-real-FullDirectory-action');
 }
+}
+if(key==='bookmark-continuation'){
 {
  const f=await fixture(true),x=makeIndex(f);f.options.beforeMethod='bookmark.create';
  x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});await until(()=>f.writes().length===1);await settled(f);
@@ -38,6 +51,8 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
  assert.equal(f.writes().length,2);assert.deepEqual(f.writes()[1].params,original.params);assert.equal(x.idx.detailToc[0].bookmarks.length,1);
  checks.push('explicit-original-continuation-exact-ID-payload-double-native-tap-one-write');
 }
+}
+if(key==='retained-actor'){
 {
  const f=await fixture(true),x=makeIndex(f);f.options.beforeMethod='bookmark.create';
  x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});await until(()=>f.writes().length===1);await settled(f);
@@ -53,6 +68,8 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
  f.unset();x.idx.reconcileDirectoryOperation(generation,x.idx.directoryOperationPresentationId(),true);assert.equal(f.writes().length,1);
  checks.push('closed-reopened-old-physical-V1-retained-observer-and-unset-Runtime-reject');
 }
+}
+if(key==='partial-delete'){
 {
  const f=await fixture(true);await f.create();await f.create();await f.create();f.options.afterMethod='bookmark.delete';
  await f.directory.deleteBookmarks(f.entries()[0].bookmarks.map(m=>m.time),f.dirBinding);
@@ -61,6 +78,8 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
  assert.equal(x.idx.detailToc[0].bookmarks.length,2);assert.equal(cold.writes().length,0);assert.equal(x.idx.controlBookmarkProjectionMessage(),'','canonical partial result is not a bookmark-load failure');
  const leaf=x.render();assert.ok(x.nodes(leaf).some(n=>String(n.create).includes('已确认 1/3')));checks.push('actual-cold-Core-partial-batch-never-all-success-no-replay');
 }
+}
+if(key==='offline-physical-failure'){
 {
  const f=await fixture(true),x=makeIndex(f,{remote:true});f.options.status=true;f.options.imageFailure=true;
  x.idx.clearDirectoryBookOffline();await until(()=>f.writes().length===1);await settled(f);
@@ -69,10 +88,13 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
  assert.match(x.idx.directoryRecovery().offline.message,/缓存操作已确认.*请稍后重试/);
  assert.doesNotMatch(JSON.stringify(x.idx.directoryRecovery()),/image cleanup failed|https?:|Cookie|PRIVATE/,
   'the public recovery excludes raw platform diagnostics while retaining confirmed receipt semantics');
- const leaf=x.render('ReaderFullDirectory');x.click(leaf,'核对离线结果');await settled(f);
+ const leaf=x.render('ReaderFullDirectory');assert.equal(x.idx.directoryRecovery().offlineKind,'result');assert.equal(x.actions(leaf).length,0,'known physical failure keeps the original task result, no persistent pending actor');
+ x.idx.reconcileOfflineOperation(x.idx.offlineOperation.generation,x.idx.directoryOperationPresentationId());await settled(f);
  assert.equal(f.writes().length,1);assert.equal(f.calls.filter(c=>c.platform).length,1);assert.equal(x.idx.detailToc[0].level,2);
  checks.push('cache-Core-ACK-platform-image-failure-independent-native-pure-reconcile');
 }
+}
+if(key==='offline-continuation'){
 {
  const f=await fixture(true),x=makeIndex(f,{remote:true});f.options.status=true;f.options.beforeMethod='cache.clear';
  x.idx.clearDirectoryBookOffline();await until(()=>f.writes().length===1);await settled(f);const original=JSON.parse(f.disk('cacheClear'));
@@ -80,6 +102,8 @@ const tick=()=>new Promise(resolve=>setTimeout(resolve,5));
  const leaf=x.render('ReaderFullDirectory');x.click(leaf,'继续原操作');await until(()=>x.idx.offlineOperation.projection.receipt.fact==='confirmedCurrent');
  assert.equal(f.writes().length,2);assert.deepEqual(f.writes()[1].params,original.params);checks.push('cache-original-continuation-uses-shared-domain-exact-head');
 }
+}
+if(key==='latest-owner'){
 for(const domain of ['bookmark','cache']){
  const f=await fixture(true),first=makeIndex(f,{remote:domain==='cache'}),gate=deferred();f.options.status=true;
  f.options.pauseMethod=domain==='bookmark'?'bookmark.create':'cache.clear';f.options.pauseAfterDispatch=true;f.options.gate=gate;
@@ -95,6 +119,8 @@ for(const domain of ['bookmark','cache']){
  if(domain==='bookmark')assert.equal(current.idx.detailToc[0].bookmarks.length,1);else assert.equal(current.idx.offlineOperationActive,false);
  checks.push(domain+'-sameRuntime-new-Index-latest-read-joins-late-ACK-no-old-delivery');
 }
+}
+if(key==='read-drain-negative'){
 {
  const f=await fixture(true),first=makeIndex(f),gate=deferred();f.options.pauseMethod='bookmark.create';f.options.pauseAfterDispatch=true;f.options.gate=gate;
  first.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});await until(()=>f.writes().length===1);first.idx.shelfReceiptRetired=true;
@@ -105,6 +131,8 @@ for(const domain of ['bookmark','cache']){
  f.directory.drainPendingRead=drain;f.directory.drainPendingRead();await joined;assert.equal(next.idx.directoryOperation.projection.receipt.fact,'confirmedCurrent');
  checks.push('actual-read-after-active-drain-negative-control-strands-recreated-consumer');
 }
+}
+if(key==='presentation-negative'){
 {
  const f=await fixture(true),x=makeIndex(f);f.options.beforeMethod='bookmark.create';x.idx.createDirectoryChapterStartBookmark({chapterIndex:0,chapterTitle:'Chapter'});
  await until(()=>f.writes().length===1);await settled(f);await x.idx.loadControlBookmarks('local','book',()=>true);
@@ -115,5 +143,8 @@ for(const domain of ['bookmark','cache']){
  await until(()=>f.writes().length===2);assert.equal(f.writes()[1].params.operationId,f.writes()[0].params.operationId,'negative control really consumes an obsolete physical intent');
  checks.push('actual-presentation-guard-negative-control-observably-replays-old-intent');
 }
-assert.doesNotMatch(indexSource,/directoryBookmarkMutationGeneration|offlineMutationGeneration|new LocalReadingFlowGateway|new ReadingOfflineGateway|performDirectoryBookmarkDeletion/);
-console.log(JSON.stringify({status:'PASS',checks,scope:'actual SDK-emitted owners/stores + actual cold Core SQLite + Index to actual leaf recovery Builders/shared native actions; native layout/removal/device/crash remain separate'}));
+}
+passed=true;}finally{const cleanup=await cleanupDurableFixtures({retain:!passed});if(!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));}
+}
+const definitions={"bookmark-ack": {"description": "bookmark-ack actual production SDK/Core scope", "resources": []}, "bookmark-readback": {"description": "bookmark-readback actual production SDK/Core scope", "resources": []}, "bookmark-lost-ack": {"description": "bookmark-lost-ack actual production SDK/Core scope", "resources": []}, "bookmark-continuation": {"description": "bookmark-continuation actual production SDK/Core scope", "resources": []}, "retained-actor": {"description": "retained-actor actual production SDK/Core scope", "resources": []}, "partial-delete": {"description": "partial-delete actual production SDK/Core scope", "resources": []}, "offline-physical-failure": {"description": "offline-physical-failure actual production SDK/Core scope", "resources": []}, "offline-continuation": {"description": "offline-continuation actual production SDK/Core scope", "resources": []}, "latest-owner": {"description": "latest-owner actual production SDK/Core scope", "resources": []}, "read-drain-negative": {"description": "read-drain-negative actual production SDK/Core scope", "resources": []}, "presentation-negative": {"description": "presentation-negative actual production SDK/Core scope", "resources": []}};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

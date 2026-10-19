@@ -40,7 +40,8 @@ function semantics(actor, enabled) {
 }
 const branches = [['button', 'source-action', 'Text'], ['button', 'sync-action', 'Stack'],
   ['labeled', 'rss-feed', 'Stack'], ['labeled', 'rss-manage', 'Row'],
-  ['recovery', 'compact', 'Text'], ['recovery', 'rssManagement', 'Text']];
+  ['recovery', 'compact', 'Stack'], ['recovery', 'rssManagement', 'Stack'],
+  ['recovery', 'notice', 'Stack'], ['recovery', 'text', 'Stack']];
 let groups = 0;
 for (const [kind, variant, type] of branches) {
   const a = open(kind, variant); assert.equal(a.hit.type, type, kind + ':' + variant + ' actual native branch');
@@ -48,12 +49,12 @@ for (const [kind, variant, type] of branches) {
   a.update({ actionEnabled: false, label: '禁用动作' }); semantics(a, false); retained(); assert.equal(a.count(), 1, 'retained disabled callback never dispatches');
   a.update({ actionEnabled: true, label: '当前动作' }); semantics(a, true); retained(); assert.equal(a.count(), 2, 'retained current eligible Prop still dispatches original intent');
   if (kind !== 'recovery') { a.owner.aboutToDisappear(); retained(); assert.equal(a.count(), 2, 'existing mounted producer guard preserved'); }
-  const oldSource = sources[kind].replaceAll('.accessibilityRole(AccessibilityRoleType.BUTTON)', '').replaceAll('.focusable(this.actionEnabled)', '');
+  const oldSource = sources[kind].replaceAll('.accessibilityRole(AccessibilityRoleType.BUTTON)', '').replaceAll('.focusable(this.actionEnabled)', '').replaceAll('.focusable(this.actionEnabled && !this.isBusy)', '');
   const old = open(kind, variant, oldSource), current = open(kind, variant);
   assert.deepEqual(current.nodes().map(tuple), old.nodes().map(tuple), 'required semantic attrs are the only physical/AUTO difference');
   const noRole = open(kind, variant, sources[kind].replaceAll('.accessibilityRole(AccessibilityRoleType.BUTTON)', ''));
   assert.throws(() => semantics(noRole, true), /actual native button role/, 'deleting actual role must break SDK proof');
-  const alwaysFocus = open(kind, variant, sources[kind].replaceAll('.focusable(this.actionEnabled)', '.focusable(true)'));
+  const alwaysFocus = open(kind, variant, sources[kind].replaceAll('.focusable(this.actionEnabled)', '.focusable(true)').replaceAll('.focusable(this.actionEnabled && !this.isBusy)', '.focusable(true)'));
   alwaysFocus.update({ actionEnabled: false });
   assert.throws(() => semantics(alwaysFocus, false), /native focus follows/, 'focusable=true on disabled actual node must break SDK proof');
   groups++;

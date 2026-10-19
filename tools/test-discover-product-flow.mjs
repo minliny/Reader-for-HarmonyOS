@@ -1,52 +1,23 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (path) => readFileSync(resolve(repo, path), 'utf8');
-
-const gateway = read('entry/src/main/ets/features/discover/DiscoverGateway.ts');
-const orchestrator = read('entry/src/main/ets/features/discover/DiscoverOrchestrator.ets');
-const page = read('entry/src/main/ets/features/discover/DiscoverPage.ets');
-const index = read('entry/src/main/ets/pages/Index.ets');
-
-assert.match(gateway, /request\('source\.exploreKinds', \{ sourceId \}, \{ canDispatch: current, canContinue: current \}\)/);
-assert.match(gateway, /request\('source\.explore', \{ sourceId, url, page \}, \{ canDispatch: current, canContinue: current \}\)/);
-assert.match(gateway, /page must be a positive safe integer/);
-assert.match(gateway, /const name = this\.string\(obj, 'title'\)/,
-  'Core source.explore books use the stable BookSearchBookData title field');
-assert.doesNotMatch(gateway, /const name = this\.string\(obj, 'name'\)/,
-  'Harmony must not filter valid Core explore books by a non-existent name field');
-assert.match(gateway, /url\.trim\(\)\.length === 0/,
-  'Legado explore group headings with blank URLs must never be dispatched as categories');
-assert.match(orchestrator, /source\.enabled && source\.enabledExplore/);
-assert.match(orchestrator, /private operationTail: Promise<void> = Promise\.resolve\(\)/);
-assert.match(orchestrator, /loadPage\(session, index, 1, false\)/);
-assert.match(orchestrator, /this\.presentation\.page \+ 1/);
-assert.match(orchestrator, /this\.presentation\.page - 1/);
-assert.match(orchestrator, /probingNext && books\.length === 0/);
-assert.doesNotMatch(page, /@State private activeCategory/);
-assert.match(page, /onSelectKind: \(index: number\) => void/);
-assert.match(page, /onPreviousPage: \(\) => void/);
-assert.match(page, /onNextPage: \(\) => void/);
-assert.match(page, /onTap: \(\): void => this\.onRefresh\(\)/);
-assert.match(page, /点击切换书源/);
-for (const asset of [
-  'discover_refresh',
-  'discover_source_stack',
-  'discover_source_chevron',
-  'discover_filter',
-  'discover_filter_chevron',
-  'discover_apply',
-]) {
-  assert.ok(page.includes(`app.media.${asset}`), `Discover must use Figma-specific icon ${asset}`);
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"explore-wire-admission": {"description": "真实Discover gateway分类/书籍wire解码与准入", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
 }
-for (const alias of ['rss_refresh', 'rss_source', 'bookshelf_filter', 'reader_chevron_right', 'import_success']) {
-  assert.ok(!page.includes(`app.media.${alias}`), `Discover must not reuse unrelated icon ${alias}`);
-}
-assert.match(index, /getDiscoverOrchestrator\(\)\.open\(\)/);
-assert.match(index, /isCurrentDiscoverPresentation\(generation, owner, mounting, host\)\) host\?\.selectKind\(index\)/);
-assert.doesNotMatch(index, /private async loadDiscover/);
+async function runSelectedCase(selectedCase) {
+const {default: assert} = await import('node:assert/strict');
+const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
 
-console.log('discover source filter and pagination contract: PASS');
+const Gateway=selectedProductionMethods(new URL('../entry/src/main/ets/features/discover/DiscoverGateway.ts',import.meta.url),'DiscoverGateway',['loadExploreKinds','loadExplore','string']);
+const calls=[];let payload;const gateway=Object.assign(new Gateway(),{runtimeOwner:{async request(...args){calls.push(args);return {data:payload};}}});
+const current=()=>true;
+payload={kinds:[{title:'分组',url:'  '},{title:'分类',url:'/category'},null]};let malformed;
+assert.deepEqual(await gateway.loadExploreKinds('s',n=>malformed=n,current),[{title:'分类',url:'/category'}]);assert.equal(malformed,1);
+assert.equal(calls.at(-1)[2].canDispatch,current);assert.equal(calls.at(-1)[2].canContinue,current);
+payload={books:[{bookId:'b',title:'有效标题'},{bookId:'b',title:'重复'},{sourceId:'foreign',bookId:'x',title:'错书源'},{bookId:'n',name:'错误wire字段'}]};
+assert.deepEqual(await gateway.loadExplore('s','/category',2,'manga',n=>malformed=n,current),[{sourceId:'s',bookId:'b',name:'有效标题',author:'',coverUrl:'',intro:'',category:'manga'}]);assert.equal(malformed,3);
+assert.deepEqual(calls.at(-1).slice(0,2),['source.explore',{sourceId:'s',url:'/category',page:2}]);
+const count=calls.length;for(const p of [0,-1,NaN,1.5,Number.MAX_SAFE_INTEGER+1])await assert.rejects(()=>gateway.loadExplore('s','/category',p));assert.equal(calls.length,count,'invalid pages never dispatch');
+payload={books:{}};await assert.rejects(()=>gateway.loadExplore('s','/category',1));
+
+}

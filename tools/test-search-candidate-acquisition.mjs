@@ -1,8 +1,12 @@
-import { ProductionHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const ownedPages=[];
+let ProductionHost,setRuntime;if(id.startsWith('index-'))({ProductionHost,setRuntime}=await import('./lib/reading-entry-owner-probe.mjs'));
+
+const { readFileSync }=await import('node:fs');
+const { registerHooks, stripTypeScriptTypes }=await import('node:module');
+let productionMotionMethods;if(id.startsWith('index-')||id==='visible-range')({productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs'));
 registerHooks({resolve(s,c,n){try{return n(s,c)}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e}}});
 const {resolveBookshelfBook}=await import('../entry/src/main/ets/features/bookshelf/BookshelfBookIdentity.ts');
 const base=new URL('../entry/src/main/ets/',import.meta.url);
@@ -17,7 +21,7 @@ const {sameRemoteSessionEvidence,preparedRemoteChapterMatches,preparedRemoteChap
 const {captureRemotePositionContext}=await import(path('features/reading/RemoteReadingPositionMigration.ts'));
 const {errorMessageOf}=await import(path('app/ErrorMessage.ts'));
 const {readerSourceCategoryIsText}=await import(path('features/source/ReaderSourceCategory.ts'));
-const pause=()=>new Promise(r=>setTimeout(r,0));
+const pause=()=>new Promise(r=>setImmediate(r));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject}};
 async function until(p){for(let i=0;i<300;i++){if(p())return;await pause()}assert.fail('did not settle')}
 const seed=(i,s='s1')=>({sourceId:s,bookId:`/b${i}`,detailUrl:`/b${i}`,title:'鸣龙',author:'关关公子',sourceVersion:'v1'});
@@ -72,7 +76,21 @@ function fixture({cooperativeCancellation=false}={}){
  return {runtime,owner:{bookAcquisitions:()=>runtime,request:(...a)=>runtime.request(...a)},calls,rows,catalogs,modes,gates,detailAuthors,detailProofs,key,setVersion:v=>version=v};
 }
 const outcomes=[];
-async function check(name,body){try{await body();outcomes.push({name,status:'PASS'})}catch(error){outcomes.push({name,status:'FAIL',error:error.stack})}}
+async function check(name,body){await body();outcomes.push({name,status:'PASS'});}
+const authorProof=(raw,version='v1',field='search')=>({schemaVersion:1,sourceVersion:version,field,raw,label:raw.slice(1),rule:'author-nickname-at-v1'});
+function indexFixture(f){
+ setRuntime(f.owner);
+ const SearchVisibility=productionMotionMethods(path('features/search/SearchHost.ets'),['visibilityChanged']);
+ const searchHost=Object.assign(new SearchVisibility(),{publication:{shelfAt:()=>[]},updateShelf(){}});
+ const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['refreshDetailAcquisitionProjection','installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{ resolveBookshelfBook,BookAcquisitionProjectionGateway,
+ sameRemoteSessionEvidence,preparedRemoteChapterMatches,preparedRemoteChapterPositionMatches,captureRemotePositionContext,withPreparedRemoteChapter,copyRemoteReadingSession,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteChapterCacheRefreshError,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,ReadingEntryHost:ProductionHost,searchCandidateRank,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},
+ ReadingOfflineGateway:class{},ReaderCoreGateway:class{async loadShelfBook(){return undefined}},LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{warn(){},error(){},info(){}}});
+ const page=Object.assign(new Index(),{mountedRuntimeOwner:f.owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),route:'search',searchPublication:{shelfAt:()=>[]},searchHost,searchPublicationRevision:0,shelfBooks:[],searchDetailCandidates:[],navigationGeneration:0,remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},showReadingFailure:(...a)=>errors.push(a),loadRemoteDirectoryProjection:async(_a,_b,s)=>s.entries});ownedPages.push(page);return{page,errors};
+}
+const timed=['deadline','cancel-wait','orphan-cancel','shared-consumer','same-book-reopen','change-notification'].includes(id),clock=timed?(await import('./fixtures/flows/controlled-timers.mjs')).controlledTimers():undefined,savedNow=Date.now,epoch=savedNow();if(clock)Date.now=()=>epoch+clock.now;
+
+try{
+if(id==='catalog-contract'){
 for(const sample of [
  {name:'empty',toc:[],code:'emptyToc'},
  {name:'volume-only',toc:[{index:0,title:'第一卷',url:'',variables:{}}],code:'emptyToc'},
@@ -96,6 +114,8 @@ for(const sample of [
   return true;
  });
 });
+}
+if(id==='volume-fallback'){
 await check('unreadable volume-only catalog continues to a valid same-book candidate',async()=>{
  const f=fixture();try{f.modes.set(f.key('s1','/b0'),'volume-only');
  const admitted=await f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')]);
@@ -103,6 +123,8 @@ await check('unreadable volume-only catalog continues to a valid same-book candi
  assert.deepEqual(f.calls.filter(call=>call.method==='book.toc').map(call=>call.params.sourceId),['s1','s2']);
  }finally{f.runtime.close()}
 });
+}
+if(id==='superseded-catalog'){
 await check('a genuinely superseded readable catalog stops fallback and is never admitted or marked source-failed',async()=>{
  const f=fixture();try{f.modes.set(f.key('s1','/b0'),'superseded');
  await assert.rejects(f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')]),error=>error.code==='sourceVersionChanged');
@@ -111,6 +133,8 @@ await check('a genuinely superseded readable catalog stops fallback and is never
  assert.equal(f.runtime.prepared.size,0);
  }finally{f.runtime.close()}
 });
+}
+if(id==='visible-budget'){
 await check('visible groups cap six, concurrency two; speculative work has no progress/body/verdict-success',async()=>{
  const f=fixture();try{const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);f.gates.set(`book.detail:${f.key('s1','/b1')}`,gate);
  f.runtime.prepareGroups(Array.from({length:2000},(_,i)=>[candidate(i)]));await until(()=>f.calls.filter(c=>c.method==='book.detail').length===2);
@@ -118,11 +142,15 @@ await check('visible groups cap six, concurrency two; speculative work has no pr
  assert.equal(f.calls.filter(c=>c.method==='book.toc').length,6);assert.equal(f.calls.some(c=>['chapter.content','reading.progress.get','search-book.put'].includes(c.method)),false);
  }finally{f.runtime.close()}
 });
+}
+if(id==='visible-fallback'){
 await check('visible failed catalog tries another same-book candidate without body work',async()=>{
  const f=fixture();try{f.modes.set(f.key('s1','/b0'),'empty');f.runtime.prepareGroups([[candidate(0),candidate(0,'s2')]]);await until(()=>f.runtime.preparationActive===0);
  assert.deepEqual(f.calls.filter(c=>c.method==='book.toc').map(c=>c.params.sourceId),['s1','s2']);assert.equal(f.calls.some(c=>c.method==='chapter.content'),false);
  }finally{f.runtime.close()}
 });
+}
+if(id==='preempt'){
 await check('foreground preempts unrelated started preparation, propagates cancellation and resumes it without unhealthy proof',async()=>{
  const f=fixture();try{const background=deferred(),foreground=deferred();
  f.gates.set(`book.detail:${f.key('s1','/b0')}`,background);f.gates.set(`book.detail:${f.key('s2','/b1')}`,foreground);
@@ -136,6 +164,8 @@ await check('foreground preempts unrelated started preparation, propagates cance
  foreground.resolve();await requested;await until(()=>f.calls.filter(c=>c.method==='book.detail'&&c.params.sourceId==='s1').length===2&&f.runtime.preparationActive===0);
  }finally{f.runtime.close()}
 });
+}
+if(id==='same-book-join'){
 await check('foreground joins same prepared book instead of cancelling its only active request',async()=>{
  const f=fixture();try{const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);
  f.runtime.prepareGroups([[candidate(0)]]);await until(()=>f.calls.some(c=>c.method==='book.detail'));
@@ -144,6 +174,8 @@ await check('foreground joins same prepared book instead of cancelling its only 
  assert.equal(f.calls.filter(c=>c.method==='book.detail').length,1);
  }finally{f.runtime.close()}
 });
+}
+if(id==='candidate-budget'){
 await check('only background rounds cap unknown candidates; foreground fourth source succeeds',async()=>{
  const f=fixture();try{for(const s of ['s1','s2','s3','s4'])f.modes.set(f.key(s,'/b0'),'empty');
  await assert.rejects(f.runtime.acquireCandidateGroup(['s1','s2','s3','s4'].map(s=>candidate(0,s)), {}, 'background'));assert.equal(f.calls.filter(c=>c.method==='book.toc').length,3);
@@ -155,17 +187,23 @@ await check('only background rounds cap unknown candidates; foreground fourth so
  assert.equal(result.session.identity.sourceId,'s5');assert.equal(f.calls.length,0,'already-successful candidate is neither blocked nor re-fetched');
  }finally{f.runtime.close()}
 });
+}
+if(id==='fatal-fallback'){
 for(const code of ['cancelled','identityMismatch','sourceVersionChanged','storageFailure']){
  await check(`${code} stops group fallback`,async()=>{const f=fixture();try{f.modes.set(f.key('s1','/b0'),new RemoteReadingGatewayError(code,'blocked','book.detail'));
  await assert.rejects(f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')]),e=>e.code===code);
  assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
  }finally{f.runtime.close()}});
 }
+}
+if(id==='capability-fallback'){
 await check('source-local capability failure tries independent same-book source',async()=>{
  const f=fixture();try{f.modes.set(f.key('s1','/b0'),new RemoteReadingGatewayError('unsupportedHostCapability','blocked','book.detail'));
  const admitted=await f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')]);assert.equal(admitted.session.identity.sourceId,'s2');
  }finally{f.runtime.close()}
 });
+}
+if(id==='environment'){
 await check('proxy/DNS environment failure stops source churn without candidate health penalty',async()=>{
  const f=fixture();try{f.modes.set(f.key('s1','/b0'),new RemoteReadingGatewayError('networkEnvironment','代理路由暂不可用','book.detail',undefined,undefined,undefined,'NETWORK_ENVIRONMENT'));
  await assert.rejects(f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')]),e=>e.category==='NETWORK_ENVIRONMENT');
@@ -173,18 +211,24 @@ await check('proxy/DNS environment failure stops source churn without candidate 
  assert.equal(f.calls.some(c=>c.method==='search-book.put'),false,'environment failure never publishes a bad-source fact');
  }finally{f.runtime.close()}
 });
+}
+if(id==='deadline'){
 await check('whole foreground deadline includes waiting; process completion cannot publish late catalog',async()=>{
  const f=fixture();try{const gate=deferred(),catalogs=[];f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);
- const start=Date.now();await assert.rejects(f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')],{budgetMs:30,onCatalog:s=>catalogs.push(s)}),e=>e.code==='cancelled'&&/超时/.test(e.message));
- assert.ok(Date.now()-start<500);assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);gate.resolve();await pause();await pause();assert.equal(catalogs.length,0);
+ const rejected=assert.rejects(f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')],{budgetMs:30,onCatalog:s=>catalogs.push(s)}),e=>e.code==='cancelled'&&/超时/.test(e.message));await until(()=>f.calls.some(c=>c.method==='book.detail'));await clock.advance(31);await rejected;
+ assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);gate.resolve();await pause();await pause();assert.equal(catalogs.length,0);
  }finally{f.runtime.close()}
 });
+}
+if(id==='cancel-wait'){
 await check('cancel waiting foreground releases consumer promptly and does not try next source',async()=>{
  const f=fixture();try{const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);let current=true;
  const admission=f.runtime.acquireCandidateGroup([candidate(0),candidate(0,'s2')],{isCurrent:()=>current});await until(()=>f.calls.some(c=>c.method==='book.detail'));current=false;
- await assert.rejects(admission,e=>e.code==='cancelled');gate.resolve();assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
+ const rejected=assert.rejects(admission,e=>e.code==='cancelled');await clock.advance(101);await rejected;gate.resolve();assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
  }finally{f.runtime.close()}
 });
+}
+if(id==='orphan-cancel'){
 for(const reason of ['user','deadline'])await check(`${reason} cancels orphan foreground Core work, frees slots and allows another book`,async()=>{
  const f=fixture({cooperativeCancellation:true});try{
   const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);let current=true;
@@ -192,7 +236,7 @@ for(const reason of ['user','deadline'])await check(`${reason} cancels orphan fo
    isCurrent:()=>current,budgetMs:reason==='deadline'?35:1000});
   await until(()=>f.calls.some(c=>c.method==='book.detail'));
   const first=f.calls.find(c=>c.method==='book.detail');if(reason==='user')current=false;
-  await assert.rejects(admission,e=>e.code==='cancelled');
+  const rejected=assert.rejects(admission,e=>e.code==='cancelled');await clock.advance(reason==='deadline'?36:101);await rejected;
   assert.equal(first.options.shouldCancel(),true,'the actual Core request receives cancellation');
   await until(()=>f.runtime.scheduler.active===0&&f.runtime.jobs.size===0&&f.runtime.foregroundRequests===0);
   assert.equal(f.calls.some(c=>c.method==='book.toc'||c.method==='search-book.put'),false,'orphan cannot fetch TOC or publish source health');
@@ -201,6 +245,8 @@ for(const reason of ['user','deadline'])await check(`${reason} cancels orphan fo
   assert.equal(first.options.shouldCancel(),true,'later foreground work cannot revive the old Core operation');
  }finally{f.runtime.close()}
 });
+}
+if(id==='shared-consumer'){
 for(const otherPriority of ['foreground','background'])await check(`one cancelled caller preserves a live same-book ${otherPriority} consumer`,async()=>{
  const f=fixture({cooperativeCancellation:true});try{
   const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);let firstCurrent=true;
@@ -208,7 +254,7 @@ for(const otherPriority of ['foreground','background'])await check(`one cancelle
   await until(()=>f.calls.some(c=>c.method==='book.detail'));
   const second=f.runtime.acquireBook(seed(0),{isCurrent:()=>true},otherPriority);
   firstCurrent=false;
-  await assert.rejects(first,e=>e.code==='cancelled');
+  const rejected=assert.rejects(first,e=>e.code==='cancelled');await clock.advance(101);await rejected;
   const request=f.calls.find(c=>c.method==='book.detail');assert.equal(request.options.shouldCancel(),false);
   assert.equal(f.calls.filter(c=>c.method==='book.detail').length,1);
   gate.resolve();const session=await second;assert.equal(session.identity.bookId,'/b0');
@@ -216,6 +262,8 @@ for(const otherPriority of ['foreground','background'])await check(`one cancelle
   assert.equal(f.calls.some(c=>c.method==='search-book.put'),false,'a cancelled sibling cannot report source failure');
  }finally{f.runtime.close()}
 });
+}
+if(id==='same-book-reopen'){
 await check('same-book reopen waits for cancelled Core operation and starts a new acquisition',async()=>{
  const f=fixture({cooperativeCancellation:true});try{
   const gate=deferred();f.gates.set(`book.detail:${f.key('s1','/b0')}`,gate);let current=true;
@@ -223,17 +271,21 @@ await check('same-book reopen waits for cancelled Core operation and starts a ne
   await until(()=>f.calls.some(c=>c.method==='book.detail'));
   const request=f.calls.find(c=>c.method==='book.detail');current=false;assert.equal(request.options.shouldCancel(),true);
   f.gates.delete(`book.detail:${f.key('s1','/b0')}`);
-  const fresh=await f.runtime.acquireBook(seed(0));await oldRejected;
+  const next=f.runtime.acquireBook(seed(0));await clock.advance(101);const fresh=await next;await oldRejected;
   assert.equal(fresh.identity.bookId,'/b0');assert.equal(request.options.shouldCancel(),true);
   assert.equal(f.calls.filter(c=>c.method==='book.detail').length,2,'reopen never joins an operation already cancelled by Core');
   assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);
  }finally{f.runtime.close()}
 });
+}
+if(id==='unknown-author'){
 await check('same title with blank or conflicting author cannot authorize automatic source replacement',async()=>{
  for(const author of ['', '其他作者']){const f=fixture();try{const a=candidate(0),b=candidate(0,'s2');a.seed.author=author;f.modes.set(f.key('s1','/b0'),'empty');
  await assert.rejects(f.runtime.acquireCandidateGroup([a,b]));assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
  }finally{f.runtime.close()}}
 });
+}
+if(id==='author-labels'){
 await check('author label variants use one identity across search candidate and acquired detail without rewriting raw metadata',async()=>{
  for(const [primaryAuthor,candidateAuthor,detailAuthor] of [
   ['作者：关关公子','关关公子','作者:关关公子'],
@@ -253,7 +305,8 @@ await check('author label variants use one identity across search candidate and 
   }finally{f.runtime.close()}
  }
 });
-const authorProof=(raw,version='v1',field='search')=>({schemaVersion:1,sourceVersion:version,field,raw,label:raw.slice(1),rule:'author-nickname-at-v1'});
+}
+if(id==='author-proof'){
 await check('source-bound author decoration admits same-book detail and body while preserving raw rules context',async()=>{
  for(const [primaryAuthor,decoratedAuthor] of [['关关公子','@关关公子'],['@真实笔名','@@真实笔名']]){
   const f=fixture();try{
@@ -269,6 +322,8 @@ await check('source-bound author decoration admits same-book detail and body whi
   }finally{f.runtime.close()}
  }
 });
+}
+if(id==='invalid-proof'){
 await check('genuine at-author and stale decorated proof cannot authorize another author',async()=>{
  for(const proof of [undefined,authorProof('@关关公子','old'),{...authorProof('@关关公子'),label:'其他作者'}]){
   const f=fixture();try{const a=candidate(0),b=candidate(0,'s2');b.seed.author='@关关公子';b.seed.authorIdentity=proof;f.modes.set(f.key('s1','/b0'),'empty');
@@ -276,12 +331,16 @@ await check('genuine at-author and stale decorated proof cannot authorize anothe
   }finally{f.runtime.close()}
  }
 });
+}
+if(id==='empty-author'){
 await check('a recognized author template with an empty nickname remains unknown and cannot authorize fallback',async()=>{
  const f=fixture();try{const a=candidate(0),b=candidate(0,'s2');a.seed.author='@';a.seed.authorIdentity=authorProof('@');b.seed.author='@';
   f.detailAuthors.set(f.key('s1','/b0'),'@');f.detailProofs.set(f.key('s1','/b0'),authorProof('@','v1','detail'));f.modes.set(f.key('s1','/b0'),'empty');
   await assert.rejects(f.runtime.acquireCandidateGroup([a,b]));assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);
  }finally{f.runtime.close()}
 });
+}
+if(id==='detail-proof'){
 await check('acquired detail must revalidate decorated author against its own current proof',async()=>{
  for(const proof of [undefined,authorProof('@关关公子','old')]){
   const f=fixture();try{const a=candidate(0);f.detailAuthors.set(f.key('s1','/b0'),'@关关公子');f.detailProofs.set(f.key('s1','/b0'),proof);
@@ -289,6 +348,8 @@ await check('acquired detail must revalidate decorated author against its own cu
   }finally{f.runtime.close()}
  }
 });
+}
+if(id==='bounded-author'){
 await check('bounded author metadata policy cannot authorize a different or missing author',async()=>{
  for(const author of ['作者关关公子','关关公子（笔名）','浅草茉莉','作者：','关关公子 进入作者主页 →']){
   const f=fixture();try{
@@ -299,6 +360,8 @@ await check('bounded author metadata policy cannot authorize a different or miss
   }finally{f.runtime.close()}
  }
 });
+}
+if(id==='detail-author'){
 await check('a matching normalized search author still requires the acquired detail author to match',async()=>{
  const f=fixture();try{
   const a=candidate(0),b=candidate(0,'s2');a.seed.author='作者：关关公子';
@@ -308,6 +371,8 @@ await check('a matching normalized search author still requires the acquired det
   assert.equal(f.calls.some(c=>c.method==='chapter.content'&&c.params.sourceId==='s1'),false);
  }finally{f.runtime.close()}
 });
+}
+if(id==='hidden-wait'){
 await check('hidden source-wait pauses and resumes same visible group once without cancellation',async()=>{
  const f=fixture();try{const gate=deferred();f.gates.set('sources',gate);const groups=[[candidate(0)]];f.runtime.prepareGroups(groups);await pause();
  f.runtime.setPreparationVisible(false);gate.resolve();for(let i=0;i<6;i++)await pause();
@@ -317,6 +382,8 @@ await check('hidden source-wait pauses and resumes same visible group once witho
  f.runtime.prepareGroups(groups);await pause();assert.equal(f.calls.filter(c=>c.method==='book.detail').length,1);
  }finally{f.runtime.close()}
 });
+}
+if(id==='query-replacement'){
 await check('query replacement drops old waiting groups; old admitted work cannot enqueue old fallback',async()=>{
  const f=fixture();try{const gate=deferred();f.gates.set(`book.toc:${f.key('s1','/b0')}`,gate);f.modes.set(f.key('s1','/b0'),'empty');
  f.runtime.prepareGroups([[candidate(0),candidate(0,'s2')]]);await until(()=>f.calls.some(c=>c.method==='book.toc'));
@@ -324,6 +391,8 @@ await check('query replacement drops old waiting groups; old admitted work canno
  assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);assert.equal(f.calls.filter(c=>c.method==='book.toc'&&c.params.sourceId==='s3').length,1);
  }finally{f.runtime.close()}
 });
+}
+if(id==='stale-refresh'){
 await check('fresh prepared reused; stale catalog refresh failure handled and original promise rejects',async()=>{
  const f=fixture();const unhandled=[];const observe=e=>unhandled.push(e);process.on('unhandledRejection',observe);try{
  const first=await f.runtime.acquireBook(seed(0));const fresh=await f.runtime.acquireBookWithBackgroundRefresh(seed(0));assert.equal(fresh.session,first);assert.equal(fresh.backgroundRefresh,undefined);
@@ -332,29 +401,24 @@ await check('fresh prepared reused; stale catalog refresh failure handled and or
  const stale=await f.runtime.acquireBookWithBackgroundRefresh(seed(0));assert.ok(stale.backgroundRefresh);await assert.rejects(stale.backgroundRefresh);await pause();assert.equal(unhandled.length,0);
  }finally{process.removeListener('unhandledRejection',observe);f.runtime.close()}
 });
+}
+if(id==='change-notification'){
 await check('change notification batches actual identities and source mutation resets',async()=>{
  const f=fixture();try{const changes=[];f.runtime.subscribe(c=>changes.push(c));await f.runtime.request('book.search',{sourceId:'s1',keyword:'鸣龙'});
- await f.runtime.acquireBook(seed(0));await until(()=>changes.length>0);const ids=changes.flatMap(c=>c.identities).map(x=>f.key(x.sourceId,x.bookId));assert.ok(ids.includes(f.key('s1','/new')));assert.ok(ids.includes(f.key('s1','/b0')));
- await f.runtime.request('source.delete',{sourceId:'s1'});await until(()=>changes.some(c=>c.reset));
+ await f.runtime.acquireBook(seed(0));await clock.advance(25);await until(()=>changes.length>0);const ids=changes.flatMap(c=>c.identities).map(x=>f.key(x.sourceId,x.bookId));assert.ok(ids.includes(f.key('s1','/new')));assert.ok(ids.includes(f.key('s1','/b0')));
+ await f.runtime.request('source.delete',{sourceId:'s1'});await clock.advance(25);await until(()=>changes.some(c=>c.reset));
  }finally{f.runtime.close()}
 });
-// Extract the actual admission wrapper class as well as Index's ordinary methods.
-const indexSource=readFileSync(path('pages/Index.ets'),'utf8');
-function indexFixture(f){
- setRuntime(f.owner);
- const SearchVisibility=productionMotionMethods(path('features/search/SearchHost.ets'),['visibilityChanged']);
- const searchHost=Object.assign(new SearchVisibility(),{publication:{shelfAt:()=>[]},updateShelf(){}});
- const errors=[];const Index=productionMotionMethods(path('pages/Index.ets'),['refreshDetailAcquisitionProjection','installRemoteReadingSession','onSearchResultSelected','searchAcquisitionCandidate','remoteSeedForSearchBook','openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','probeRemoteContentVerdict','remoteContentVerdictLabel'],{ resolveBookshelfBook,BookAcquisitionProjectionGateway,
- sameRemoteSessionEvidence,preparedRemoteChapterMatches,preparedRemoteChapterPositionMatches,captureRemotePositionContext,withPreparedRemoteChapter,copyRemoteReadingSession,errorMessageOf,ReaderRuntimeOwner:{current:()=>f.owner},RemoteReadingFlowGateway,RemoteChapterCacheRefreshError,RemoteReadingGatewayError,remoteReadingFailureRecord,remoteReadingFailureKindOf,verdictForFailureKind,ReadingEntryHost:ProductionHost,searchCandidateRank,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},
- ReadingOfflineGateway:class{},ReaderCoreGateway:class{async loadShelfBook(){return undefined}},LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{warn(){},error(){},info(){}}});
- const page=Object.assign(new Index(),{mountedRuntimeOwner:f.owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),route:'search',searchPublication:{shelfAt:()=>[]},searchHost,searchPublicationRevision:0,shelfBooks:[],searchDetailCandidates:[],navigationGeneration:0,remoteSessionGeneration:0,remoteContentProbeGeneration:0,remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{removalKey:'',busy:false,batchRemovalBusy:false},showReadingFailure:(...a)=>errors.push(a),loadRemoteDirectoryProjection:async(_a,_b,s)=>s.entries});return{page,errors};
 }
+if(id==='index-empty'){
 await check('real selected search group primary empty TOC admits second and probes only selected body; no shelf write',async()=>{
  const f=fixture();try{f.modes.set(f.key('s1','/b0'),'empty');const {page,errors}=indexFixture(f);page.onSearchResultSelected(book(0),[book(0),book(0,'s2')]);
  await until(()=>page.remoteContentVerdict==='readable'||errors.length>0);assert.deepEqual(errors,[]);assert.equal(page.detailBook.sourceId,'s2');assert.equal(page.detailBook.sourceName,'s2名称');assert.equal(page.detailReturnRoute,'search');assert.equal(page.detailInBookshelf,false);
  assert.deepEqual(f.calls.filter(c=>c.method==='chapter.content').map(c=>c.params.sourceId),['s2']);assert.equal(f.calls.some(c=>/bookshelf.put|source.switch|progress.update/.test(c.method)),false);
  }finally{f.runtime.close()}
 });
+}
+if(id==='index-body-fallback'){
 await check('real search body failure tries second source and reuses admitted body exactly once',async()=>{
  const f=fixture();try{f.modes.set(`body:${f.key('s1','/b0')}`,new RemoteReadingGatewayError('invalidResponse','bad extraction','chapter.content'));
  const {page,errors}=indexFixture(f);page.onSearchResultSelected(book(0),[book(0),book(0,'s2')]);
@@ -364,6 +428,8 @@ await check('real search body failure tries second source and reuses admitted bo
  assert.equal(f.rows.get(f.key('s1','/b0')).acquisition.failureStage,undefined,'a chapter failure does not invalidate entire book');
  }finally{f.runtime.close()}
 });
+}
+if(id==='index-catalog-first'){
 await check('real search catalog is visible before delayed body completes',async()=>{
  const f=fixture();try{const gate=deferred();f.gates.set(`chapter.content:${f.key('s1','/b0')}`,gate);const {page,errors}=indexFixture(f);
  page.onSearchResultSelected(book(0),[book(0,'s2')]);await until(()=>f.calls.some(c=>c.method==='chapter.content'));
@@ -371,12 +437,16 @@ await check('real search catalog is visible before delayed body completes',async
  await until(()=>page.remoteContentVerdict==='readable'||errors.length>0);assert.deepEqual(errors,[]);
  }finally{f.runtime.close()}
 });
+}
+if(id==='index-storage'){
 await check('real body storage failure stops group and preserves visible admitted catalog',async()=>{
  const f=fixture();try{f.modes.set(`body:${f.key('s1','/b0')}`,new RemoteReadingGatewayError('storageFailure','storage unavailable','chapter.content'));
  const {page,errors}=indexFixture(f);page.onSearchResultSelected(book(0),[book(0,'s2')]);await until(()=>page.detailLoadingMessage?.length>0 && page.remoteContentVerdict!=='verifying');assert.deepEqual(errors,[]);
  assert.equal(page.detailBook.sourceId,'s1');assert.equal(page.detailToc.length,1);assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);await pause();const calls=f.calls.length;await page.refreshDetailAcquisitionProjection();assert.equal(f.calls.length,calls,'terminal failure does not trigger automatic notification retries');
  }finally{f.runtime.close()}
 });
+}
+if(id==='index-fixed-source'){
 for(const mode of ['shelf','explicit'])await check(`${mode} fixed source never auto-falls back`,async()=>{
  const f=fixture();try{f.modes.set(f.key('s1','/b0'),'empty');const {page,errors}=indexFixture(f);const primary=book(0),other=book(0,'s2');page.searchDetailCandidates=[primary,other];
  if(mode==='explicit')page.route='detail';const shelf=mode==='shelf'?primary:undefined;
@@ -384,10 +454,15 @@ for(const mode of ['shelf','explicit'])await check(`${mode} fixed source never a
  assert.equal(f.calls.some(c=>c.params.sourceId==='s2'),false);assert.equal(page.detailBook.sourceId,'s1');
  }finally{f.runtime.close()}
 });
+}
+if(id==='visible-range'){
 await check('visible range callback bounds group count, skips unchanged rows and clears stopped view',async()=>{
  const Page=productionMotionMethods(path('features/search/SearchPage.ets'),['publishVisibleGroups']);const calls=[];const page=Object.assign(new Page(),{presentation:{kind:'results'},visibleStart:0,visibleEnd:0,warmupGroups:[],visibleGroups:Array.from({length:2000},(_,i)=>({book:book(i),variants:[book(i)]})),onVisibleGroups:g=>calls.push(g)});
  page.publishVisibleGroups(10,25);assert.equal(calls[0].length,6);assert.equal(calls[0][0][0].bookId,'/b10');page.publishVisibleGroups(10,25);assert.equal(calls.length,1);
  page.presentation={kind:'results',stopped:true};page.publishVisibleGroups();assert.equal(calls.at(-1).length,0);
 });
-console.log(JSON.stringify({evidenceLayer:'SDK-extracted production methods and actual Coordinator/Gateway; synthetic RPC boundary, no device',outcomes},null,2));
-assert.equal(outcomes.filter(x=>x.status==='FAIL').length,0);
+}
+}finally{for(const page of ownedPages)page.readingEntryHost?.retire();setRuntime?.(undefined);if(clock){Date.now=savedNow;clock.restore();}}
+}
+const definitions={"catalog-contract": "catalog-contract actual scoped owner/gateway/storage path; controlled Core/OS ports", "volume-fallback": "volume-fallback actual scoped owner/gateway/storage path; controlled Core/OS ports", "superseded-catalog": "superseded-catalog actual scoped owner/gateway/storage path; controlled Core/OS ports", "visible-budget": "visible-budget actual scoped owner/gateway/storage path; controlled Core/OS ports", "visible-fallback": "visible-fallback actual scoped owner/gateway/storage path; controlled Core/OS ports", "preempt": "preempt actual scoped owner/gateway/storage path; controlled Core/OS ports", "same-book-join": "same-book-join actual scoped owner/gateway/storage path; controlled Core/OS ports", "candidate-budget": "candidate-budget actual scoped owner/gateway/storage path; controlled Core/OS ports", "fatal-fallback": "fatal-fallback actual scoped owner/gateway/storage path; controlled Core/OS ports", "capability-fallback": "capability-fallback actual scoped owner/gateway/storage path; controlled Core/OS ports", "environment": "environment actual scoped owner/gateway/storage path; controlled Core/OS ports", "deadline": "deadline actual scoped owner/gateway/storage path; controlled Core/OS ports", "cancel-wait": "cancel-wait actual scoped owner/gateway/storage path; controlled Core/OS ports", "orphan-cancel": "orphan-cancel actual scoped owner/gateway/storage path; controlled Core/OS ports", "shared-consumer": "shared-consumer actual scoped owner/gateway/storage path; controlled Core/OS ports", "same-book-reopen": "same-book-reopen actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-author": "unknown-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "author-labels": "author-labels actual scoped owner/gateway/storage path; controlled Core/OS ports", "author-proof": "author-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "invalid-proof": "invalid-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "empty-author": "empty-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "detail-proof": "detail-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "bounded-author": "bounded-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "detail-author": "detail-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "hidden-wait": "hidden-wait actual scoped owner/gateway/storage path; controlled Core/OS ports", "query-replacement": "query-replacement actual scoped owner/gateway/storage path; controlled Core/OS ports", "stale-refresh": "stale-refresh actual scoped owner/gateway/storage path; controlled Core/OS ports", "change-notification": "change-notification actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-empty": "index-empty actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-body-fallback": "index-body-fallback actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-catalog-first": "index-catalog-first actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-storage": "index-storage actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-fixed-source": "index-fixed-source actual scoped owner/gateway/storage path; controlled Core/OS ports", "visible-range": "visible-range actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

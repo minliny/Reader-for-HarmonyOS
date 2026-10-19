@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { resolveEtsLoaderRoot, resolveOpenHarmonySdkRoot, resolveArkFrontend, resolveArkUIRuntime,
   localFilePath, localFileUrl, virtualFilePath, requireToolPackage, coreCliPath } from './lib/tool-environment.mjs';
 
-const directory = mkdtempSync(join(tmpdir(), 'reader-tools-environment-'));
-try {
+async function resolver(){const directory=mkdtempSync(join(tmpdir(),'reader-tools-resolver-'));try{
   const sdk = join(directory, 'SDK with spaces 中文#', 'openharmony');
   const loader = join(sdk, 'ets/build-tools/ets-loader'); mkdirSync(loader, { recursive: true });
   const env = { READER_ETS_LOADER_ROOT: loader };
@@ -35,6 +35,8 @@ try {
   }
   assert.throws(() => resolveArkFrontend({ env, platform: 'unsupported' }), /does not support/);
   assert.throws(() => resolveArkUIRuntime({ env: { ...env, READER_ARKUI_PREVIEW_RUNTIME: join(directory, 'missing') } }), /unavailable/);
+}finally{rmSync(directory,{recursive:true,force:true});}}
+async function packageAnchor(){const directory=mkdtempSync(join(tmpdir(),'reader-tools-package-'));try{
   const dependencies = join(directory, 'dependency anchor', 'node_modules/reader-tool-fixture');
   mkdirSync(dependencies, { recursive: true });
   writeFileSync(join(dependencies, 'package.json'), JSON.stringify({ name: 'reader-tool-fixture', main: 'index.cjs' }));
@@ -42,16 +44,14 @@ try {
   assert.deepEqual(requireToolPackage('reader-tool-fixture', dependencies), { actual: true });
   assert.throws(() => requireToolPackage('reader-tool-fixture', join(directory, 'missing')), /does not exist/);
 
-  // Historical evidence/fixtures keep captured paths; executable maintenance
-  // code must use the discovery seam rather than an author's machine path.
-  const forbidden = new RegExp('/' + '(?:Users/|Applications/|private/tmp|opt/homebrew|Library/Developer)');
-  const visit = base => readdirSync(base, { withFileTypes: true }).flatMap(entry => {
-    const name = join(base, entry.name);
-    if (entry.isDirectory()) return ['evidence', 'fixtures'].includes(entry.name) ? [] : visit(name);
-    return /\.(?:mjs|cjs|js|py|sh)$/.test(name) ? [name] : [];
-  });
-  for (const file of visit(resolve(import.meta.dirname))) {
-    assert.equal(forbidden.test(readFileSync(file, 'utf8')), false, `host path must be discovered: ${file}`);
-  }
-  console.log('PASS SDK/tool environment: explicit overrides, macOS/Linux/Windows candidate selection, Unicode/spaces URL paths, package anchors, executable-path audit. Host simulations are not native Windows/Linux execution.');
-} finally { rmSync(directory, { recursive: true, force: true }); }
+}finally{rmSync(directory,{recursive:true,force:true});}}
+async function pathPolicy(file) {
+ const {readFileSync}=await import('node:fs');const {createRequire}=await import('node:module');
+ const ts=createRequire(import.meta.url)(resolveEtsLoaderRoot()+'/node_modules/typescript');
+ function violations(source,name) {const tree=ts.createSourceFile(name,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);assert.equal(tree.parseDiagnostics.length,0);const found=[];const walk=node=>{if((ts.isStringLiteral(node)||ts.isNoSubstitutionTemplateLiteral(node))&&/(?:\/Users\/|\/private\/tmp\/|\/opt\/homebrew\/|[A-Z]:\\Users\\)/i.test(node.text))found.push(node.text);ts.forEachChild(node,walk);};walk(tree);return found;}
+ assert.deepEqual(violations('// historical /Users/author/cache\nconst path=resolve(root,"sdk");','comment.mjs'),[],'comments are not executable path literals');
+ assert.equal(violations('const path="/Users/author/cache";','literal.mjs').length,1,'the policy rejects an executable author path');
+ const path=new URL(file,import.meta.url);assert.deepEqual(violations(readFileSync(path,'utf8'),path.pathname),[],file+' must use the discovery seam');
+}
+const cases={resolver,'package-anchor':packageAnchor,'path-resolver':()=>pathPolicy('./lib/tool-environment.mjs'),'path-compiler':()=>pathPolicy('./lib/ets-compiler-runtime.mjs'),'path-builder':()=>pathPolicy('./lib/reader-control-builder-probe.mjs')};
+for(const id of selectContractCases({resolver:'Portable tool candidates/overrides and Unicode URL paths','package-anchor':'Package dependency anchor admission','path-resolver':'Explicit maintenance resolver path policy','path-compiler':'Explicit ETS compiler helper path policy','path-builder':'Explicit SDK Builder helper path policy'})){await cases[id]();recordContractCasePass(id);}

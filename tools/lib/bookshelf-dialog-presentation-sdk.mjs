@@ -36,7 +36,7 @@ const Book=createReaderBuilderProbe(bookSource,boundedMembers(bookSource),{...sd
 const Group=createReaderBuilderProbe(selectorSource,boundedMembers(selectorSource),sdk.deps,sdk.hooks).Component;
 let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 const methods=['editingShelfGroupBook','editingShelfGroupBusy','editingShelfGroupPresentation','shelfBookKey','isCurrentRuntime','isCurrentBookshelfPresentation','isCurrentBookRemoval','openBookRemovalDialog','bookRemovalDialogContent','dismissBookRemovalDialog','confirmBookRemovalDialog',
- 'bindBookshelfManagement','bookshelfManagementIdentity','isCurrentBookshelfManagement','closeShelfGroup','shelfGroupRecovery','canContinueShelfGroup','shelfGroupRecoveryContent','openShelfGroup','shelfGroupContent','shelfGroupSurface','shelfGroupBody','isCurrentShelfGroup','assignShelfDefaultGroup'];
+ 'bindBookshelfManagement','bookshelfManagementIdentity','isCurrentBookshelfManagement','closeShelfGroup','shelfGroupRecovery','canContinueShelfGroup','shelfGroupRecoveryContent','openShelfGroup','shelfGroupContent','shelfGroupSurface','readerOwnsWindowEdges','messageSafeTop','shelfGroupBody','isCurrentShelfGroup','assignShelfDefaultGroup'];
 const defer=()=>{let resolve,reject;const promise=new Promise((r,j)=>{resolve=r;reject=j;});return{promise,resolve,reject};};
 function fixture(text=indexSource, runtime){
  const controllers=[];

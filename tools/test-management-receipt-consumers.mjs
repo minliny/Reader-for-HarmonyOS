@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes,createRequire} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
+import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const ordinary=s=>stripTypeScriptTypes(s.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
 const load=(p,n,deps={})=>new Function(...Object.keys(deps),ordinary(source(p))+`;return ${n};`)(...Object.values(deps));
@@ -69,11 +70,15 @@ async function fixture(kind){const isRules=kind==='rules',actual=isRules?await d
  Object.assign(index,{bookshelfManagementPresentationIdentity:identity});
  Object.assign(index,{getRulesManagementOrchestrator:()=>owner,bookshelfHost:host,openJsonImport(){},returnFromRulesManagement(){},returnToBookshelf(){}});
  function page(){Object.assign(index,{rulesManagementSnapshot:snapshot,bookshelfManagementSnapshot:snapshot});if(isRules)index[method](1,runtime,1,owner,identity);else index[method](1,runtime,1,host,identity);const child=[...index.children.values()][0];const pagePath=isRules?'features/settings/RulesManagementPage.ets':'features/bookshelf/BookshelfManagementPage.ets';
-  const page=createReaderBuilderProbe(source(pagePath),['recoveryAction',...(isRules?[]:['recoveryActor','recoveryIdentities']),'statusCard','recovery'],{ReaderRecoveryAction:Child,readerRecoveryView,EMPTY_RULES_MANAGEMENT_SNAPSHOT:Rules.EMPTY_RULES_MANAGEMENT_SNAPSHOT,EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT:Shelf.EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT}).owner;
+  const sdk=boundedSurfaceSdk(),page=sdk.consumer(source(pagePath),[...(isRules?['recoveryAction']:['pendingOverlay','pageContent','hasReadData','originalPending']),'statusCard','recovery'],{readerRecoveryView,EMPTY_RULES_MANAGEMENT_SNAPSHOT:Rules.EMPTY_RULES_MANAGEMENT_SNAPSHOT,EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT:Shelf.EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT});
   for(const name of ['bundleCard','replaceCard','txtTocCard','dictCard','subscriptionCard','statisticsCard','groupEditorCard','groupsCard','assignmentCard','recordsCard']) page[name]=()=>{};
   page.contentFrame=()=>({width:350,left:19,right:19});page.bottomContentInset=()=>12;
-  Object.assign(page,child.params,{appThemeScheme:'day'});page.statusCard();page.recoveryAction();const recovery=[...page.children.values()].find(c=>c.params.generation!==undefined);
-  return{page,recovery};
+  Object.assign(page,child.params,{appThemeScheme:'day'});
+  if(isRules){page.statusCard();page.recoveryAction();}
+  else{if(page.hasReadData())page.statusCard();else page.pageContent();page.pendingOverlay();}
+  const recovery=sdk.walk(page).find(c=>c instanceof sdk.deps.ReaderRecoveryAction);
+  const retry=recovery&&sdk.nodes(recovery).find(n=>n.onClick)?.onClick;
+  return{page,recovery,retry};
  }
  return{runtime,owner,page,open:()=>owner.open(identity),setVisible:v=>{visible=v;},snapshot:()=>snapshot,write:()=>{if(isRules)owner.saveReplaceRule({name:'x',pattern:'x',replacement:'y',isEnabled:true,isRegex:false,order:0},identity);else{owner.updateGroupName('new',identity);owner.updateGroupOrder('0',identity);owner.saveGroup(identity);}},settle:()=>owner.operationTail};}
 function runtimeAccepted(f,command){return f.runtime.count(command)>0;}
@@ -82,14 +87,14 @@ for(const kind of ['rules','shelf']){
  {
   const f=await fixture(kind);f.open();await f.settle();f.runtime.failRead=read;f.write();await f.settle();
   assert.equal(f.snapshot().receipt.receipt.fact,'confirmedRefreshFailed',JSON.stringify({kind,snapshot:f.snapshot()}));const p=f.page();assert.ok(p.recovery,'actual Index child props -> SDK page renders recovery');
-  assert.match(p.page.recovery().message,/已确认.*刷新失败/);p.recovery.params.onReconcile(p.recovery.params.generation);p.recovery.params.onReconcile(p.recovery.params.generation);await f.settle();
+  assert.match(p.page.recovery().message,/已确认.*刷新失败/);p.retry();p.retry();await f.settle();
   assert.equal(f.runtime.count(command),1);assert.equal(f.snapshot().receipt.receipt.fact,'confirmedCurrent');assert.equal(f.runtime.count(read),3,'double-click admits exactly one recovery read');
  }
  {
-  const f=await fixture(kind);f.open();await f.settle();f.runtime.failWrite=true;f.write();await f.settle();assert.equal(f.snapshot().receipt.receipt.confirmation,'unknown');const p=f.page();p.recovery.params.onReconcile(p.recovery.params.generation);await f.settle();assert.equal(f.snapshot().receipt.receipt.fact,'pendingReconciliation');assert.equal(f.runtime.count(command),1);
+  const f=await fixture(kind);f.open();await f.settle();f.runtime.failWrite=true;f.write();await f.settle();assert.equal(f.snapshot().receipt.receipt.confirmation,'unknown');const p=f.page();p.retry();await f.settle();assert.equal(f.snapshot().receipt.receipt.fact,'pendingReconciliation');assert.equal(f.runtime.count(command),1);
  }
  {
-  const f=await fixture(kind);f.runtime.failRead=read;f.open();await f.settle();const p=f.page();assert.ok(p.recovery);p.recovery.params.onReconcile(p.recovery.params.generation);await f.settle();assert.equal(f.snapshot().receipt,undefined,'read cannot fabricate write');
+  const f=await fixture(kind);f.runtime.failRead=read;f.open();await f.settle();const p=f.page();assert.ok(p.recovery);p.retry();await f.settle();assert.equal(f.snapshot().receipt,undefined,'read cannot fabricate write');
   f.runtime.invalidRead=true;f.open();await f.settle();assert.notEqual(f.snapshot().readFacts.fact,'current','malformed payload cannot publish current');
  }
  {
@@ -97,7 +102,7 @@ for(const kind of ['rules','shelf']){
   f.setVisible(true);f.open();await f.settle();
  }
  {
-  const f=await fixture(kind);f.open();await f.settle();f.runtime.failRead=read;f.write();await f.settle();const old=f.page().recovery.params;f.open();await f.settle();const n=f.runtime.calls.length;old.onReconcile(old.generation);await f.settle();assert.equal(f.runtime.calls.length,n,'re-entry invalidates captured recovery');currentOwner=rpc();f.write();await f.settle();assert.equal(f.runtime.calls.length,n,'retired owner dispatches no mutation');
+  const f=await fixture(kind);f.open();await f.settle();f.runtime.failRead=read;f.write();await f.settle();const old=f.page().retry;f.open();await f.settle();const n=f.runtime.calls.length;old();await f.settle();assert.equal(f.runtime.calls.length,n,'re-entry invalidates captured recovery');currentOwner=rpc();f.write();await f.settle();assert.equal(f.runtime.calls.length,n,'retired owner dispatches no mutation');
  }
 }
 

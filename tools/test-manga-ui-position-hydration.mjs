@@ -1,12 +1,29 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
-import {ProductionHost as ReadingEntryHost,setRuntime as setEntryRuntime} from './lib/reading-entry-owner-probe.mjs';
-import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "position-projection": {
+    "description": "Actual Index bounded queue, fake Gateway replies, global continue-card and stale owner fences; no Core IO",
+    "resources": []
+  },
+  "metadata-concurrency": {
+    "description": "Actual ReadingEntryHost cached metadata versus confirmed manga position and revocation; fake request boundary",
+    "resources": []
+  },
+  "retained-detail-directory-sdk": {
+    "description": "Actual Index→detail/catalog SDK retained payload and current reading facts; fake Gateway",
+    "resources": []
+  }
+};
+
+async function case_position_projection() {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const {ProductionHost : ReadingEntryHost,setRuntime : setEntryRuntime} = await import('./lib/reading-entry-owner-probe.mjs');
 // The actual Owner probe registers the ArkTS-relative resolver during module
 // evaluation. Link the production recovery graph only after that resolver is
 // active, retaining its real receipt/privacy projection and imported helpers.
@@ -183,6 +200,62 @@ async function drain(){
   const host=fixture(); host.sourceSwitchVisible=true; host.hydrateMangaPositions([books[0]]);
   assert.equal(pending.length,0,'source-switch presentation owns the window and does not start shelf manga hydration');
 }
+
+}
+
+async function case_metadata_concurrency() {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const {ProductionHost : ReadingEntryHost,setRuntime : setEntryRuntime} = await import('./lib/reading-entry-owner-probe.mjs');
+// The actual Owner probe registers the ArkTS-relative resolver during module
+// evaluation. Link the production recovery graph only after that resolver is
+// active, retaining its real receipt/privacy projection and imported helpers.
+const {EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
+const {readerRecoveryView}=await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
+const {bookshelfOperationClass}=await import('./lib/bookshelf-operation-owner-probe.mjs');
+const EMPTY_READABLE_ADMISSION=bookshelfOperationClass('features/bookshelf/BookshelfReadableAdmissionOwner.ts','EMPTY_READABLE_ADMISSION');
+const file=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
+let runtime={},pending=[],writes=[],nullEntryBooks=new Set();
+const runtimeAuthority={current:()=>runtime};
+class Gateway {
+  constructor(owner){this.owner=owner;}
+  entry(sourceId,bookId,_index,current){return new Promise(resolve=>pending.push({owner:this.owner,sourceId,bookId,current,resolve,kind:'entry',entryNull:nullEntryBooks.has(bookId)}));}
+  progress(sourceId,bookId,current){return new Promise(resolve=>pending.push({owner:this.owner,sourceId,bookId,current,resolve,kind:'progress'}));}
+}
+const Host=productionMotionMethods(file,['hydrateMangaPositions','mangaPositionProjectionCurrent','pumpMangaPositionProjections','projectMangaPosition',
+  'refreshDetailMangaPosition','refreshDetailAcquisitionProjection','returnToReadingOrigin','onReaderExited','currentReaderPresentationIdentity'],{
+  ReaderRuntimeOwner:runtimeAuthority,MangaSessionGateway:Gateway,MangaBookPresentation,
+  AppStorage:{setOrCreate:(_key,value)=>writes.push(value)},LOCAL_SOURCE_ID:'local',
+  ReadingEntryHost,EMPTY_READABLE_ADMISSION,hilog:{warn(){}},DOMAIN:0,
+  copyRemoteReadingSession:session=>({...session}) });
+const books=Array.from({length:180},(_,i)=>({sourceId:'source',bookId:`book-${i}`,contentKind:'manga',title:`Book ${i}`,author:'',addedAt:1}));
+const tick=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
+const fixture=()=>{
+  runtime={};pending=[];writes=[];nullEntryBooks=new Set();
+  return Object.assign(new Host(),{route:'bookshelf',readingSessionActive:false,sourceSwitchVisible:false,
+    mountedRuntimeOwner:runtime,shelfReceiptRetired:false,readingReadyGeneration:0,bindReadingEntryReader(){},
+    detailShelfAdmissionMount:1,readingEntryScopeId:-1,readableAdmissions:[],shelfOperation:{generation:0,busy:false,removalKey:''},
+    shelfBooks:books,navigationGeneration:1,bookshelfLoadGeneration:1,detailBook:undefined,
+    mangaProjectionSignature:'',mangaProjectionGeneration:0,mangaProjectionQueue:[],mangaProjectionWorkers:0,
+    readingOriginRoute:'detail',nextNavigationGeneration(){return ++this.navigationGeneration;},
+    refreshDetailAcquisitionProjection:async()=>{},refreshBookshelf(){this.shelfRefreshes=(this.shelfRefreshes??0)+1;}});
+};
+function entry(request,{revision=3,pageOrdinal=7,noProgress=false,epoch=1}={}) {
+  const chapterIdentity={sourceId:request.sourceId,bookId:request.bookId,chapterId:'chapter-4'};
+  const location=noProgress?null:{kind:'manga',chapter:chapterIdentity,manifestVersion:'m1',pageId:`page-${pageOrdinal}`,pageOrdinalFallback:pageOrdinal,x:0,y:0,progressRevision:revision};
+  return {chapter:{chapterIndex:4,chapterTitle:'来源原始卷名',totalPages:24,manifest:{chapter:chapterIdentity,manifestVersion:'m1',pages:[{pageId:`page-${pageOrdinal}`,ordinal:pageOrdinal}]}},
+    progress:{token:{epoch,revision},location},targetOrdinal:pageOrdinal};
+}
+async function drain(){
+  let safety=0;
+  while(pending.length&&safety++<300){const next=pending.shift();next.resolve(next.kind==='entry' ? (next.entryNull ? null : entry(next)) : entry(next).progress);await tick();}
+  assert.ok(safety<300,'bounded queue terminates');
+}
 {
   // Both requests belong to the same mounted detail. A late metadata result
   // must preserve the newer confirmed entry facts, including explicit clearing.
@@ -260,6 +333,63 @@ async function drain(){
     assert.equal(host.detailBook.mangaPosition,undefined,'novel metadata does not fabricate manga position');
   }
 }
+
+}
+
+async function case_retained_detail_directory_sdk() {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const {ProductionHost : ReadingEntryHost,setRuntime : setEntryRuntime} = await import('./lib/reading-entry-owner-probe.mjs');
+// The actual Owner probe registers the ArkTS-relative resolver during module
+// evaluation. Link the production recovery graph only after that resolver is
+// active, retaining its real receipt/privacy projection and imported helpers.
+const {EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
+const {readerRecoveryView}=await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
+const {bookshelfOperationClass}=await import('./lib/bookshelf-operation-owner-probe.mjs');
+const EMPTY_READABLE_ADMISSION=bookshelfOperationClass('features/bookshelf/BookshelfReadableAdmissionOwner.ts','EMPTY_READABLE_ADMISSION');
+const file=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
+let runtime={},pending=[],writes=[],nullEntryBooks=new Set();
+const runtimeAuthority={current:()=>runtime};
+class Gateway {
+  constructor(owner){this.owner=owner;}
+  entry(sourceId,bookId,_index,current){return new Promise(resolve=>pending.push({owner:this.owner,sourceId,bookId,current,resolve,kind:'entry',entryNull:nullEntryBooks.has(bookId)}));}
+  progress(sourceId,bookId,current){return new Promise(resolve=>pending.push({owner:this.owner,sourceId,bookId,current,resolve,kind:'progress'}));}
+}
+const Host=productionMotionMethods(file,['hydrateMangaPositions','mangaPositionProjectionCurrent','pumpMangaPositionProjections','projectMangaPosition',
+  'refreshDetailMangaPosition','refreshDetailAcquisitionProjection','returnToReadingOrigin','onReaderExited','currentReaderPresentationIdentity'],{
+  ReaderRuntimeOwner:runtimeAuthority,MangaSessionGateway:Gateway,MangaBookPresentation,
+  AppStorage:{setOrCreate:(_key,value)=>writes.push(value)},LOCAL_SOURCE_ID:'local',
+  ReadingEntryHost,EMPTY_READABLE_ADMISSION,hilog:{warn(){}},DOMAIN:0,
+  copyRemoteReadingSession:session=>({...session}) });
+const books=Array.from({length:180},(_,i)=>({sourceId:'source',bookId:`book-${i}`,contentKind:'manga',title:`Book ${i}`,author:'',addedAt:1}));
+const tick=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
+const fixture=()=>{
+  runtime={};pending=[];writes=[];nullEntryBooks=new Set();
+  return Object.assign(new Host(),{route:'bookshelf',readingSessionActive:false,sourceSwitchVisible:false,
+    mountedRuntimeOwner:runtime,shelfReceiptRetired:false,readingReadyGeneration:0,bindReadingEntryReader(){},
+    detailShelfAdmissionMount:1,readingEntryScopeId:-1,readableAdmissions:[],shelfOperation:{generation:0,busy:false,removalKey:''},
+    shelfBooks:books,navigationGeneration:1,bookshelfLoadGeneration:1,detailBook:undefined,
+    mangaProjectionSignature:'',mangaProjectionGeneration:0,mangaProjectionQueue:[],mangaProjectionWorkers:0,
+    readingOriginRoute:'detail',nextNavigationGeneration(){return ++this.navigationGeneration;},
+    refreshDetailAcquisitionProjection:async()=>{},refreshBookshelf(){this.shelfRefreshes=(this.shelfRefreshes??0)+1;}});
+};
+function entry(request,{revision=3,pageOrdinal=7,noProgress=false,epoch=1}={}) {
+  const chapterIdentity={sourceId:request.sourceId,bookId:request.bookId,chapterId:'chapter-4'};
+  const location=noProgress?null:{kind:'manga',chapter:chapterIdentity,manifestVersion:'m1',pageId:`page-${pageOrdinal}`,pageOrdinalFallback:pageOrdinal,x:0,y:0,progressRevision:revision};
+  return {chapter:{chapterIndex:4,chapterTitle:'来源原始卷名',totalPages:24,manifest:{chapter:chapterIdentity,manifestVersion:'m1',pages:[{pageId:`page-${pageOrdinal}`,ordinal:pageOrdinal}]}},
+    progress:{token:{epoch,revision},location},targetOrdinal:pageOrdinal};
+}
+async function drain(){
+  let safety=0;
+  while(pending.length&&safety++<300){const next=pending.shift();next.resolve(next.kind==='entry' ? (next.entryNull ? null : entry(next)) : entry(next).progress);await tick();}
+  assert.ok(safety<300,'bounded queue terminates');
+}
+const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
 {
   // Real installed SDK closures pass the replaced snapshot into the retained
   // detail and external catalog, then render the existing detail facts Builder.
@@ -345,4 +475,11 @@ async function drain(){
   assert.equal(mounted.isCurrentChapter({index:4}),false);assert.equal(mounted.isCurrentChapter({index:5}),true);
   pending.shift().resolve(updated);await tick();
 }
-console.log('PASS actual Index manga position projection: bounded queue, route/source/owner fencing, ordinary/Info return, unchanged revision detail refresh, clearing, concurrent metadata/hydration, filtered/paged global card retention; real SDK retained detail/catalog props and reading facts/highlight');
+
+}
+
+const implementations = {'position-projection':case_position_projection,'metadata-concurrency':case_metadata_concurrency,'retained-detail-directory-sdk':case_retained_detail_directory_sdk};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

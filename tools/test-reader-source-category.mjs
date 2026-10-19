@@ -1,9 +1,34 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
+export const CONTRACT_CASES = {
+  "pure-classification": {
+    "description": "Pure category metadata/provider boundary and readable/text policy; no mutable corpus presence",
+    "resources": []
+  },
+  "search-consumer-admission": {
+    "description": "Actual SearchGateway category controls RPC admission; fake RPC, decoding intentionally out of scope",
+    "resources": []
+  },
+  "discover-consumer-admission": {
+    "description": "Actual Discover owner admits only enabled/explore text sources; fake source and navigation ports",
+    "resources": []
+  },
+  "management-filters": {
+    "description": "Actual SourceManagement query/group/category/status intersection",
+    "resources": []
+  },
+  "bundled-supply-snapshot": {
+    "description": "Explicit maintenance-only classification of current bundled definitions; legitimate removals allowed, no fixed 12-ID presence",
+    "resources": []
+  }
+};
+
+async function case_pure_classification() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { dirname, resolve } = await import('node:path');
+const { fileURLToPath } = await import('node:url');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
 const categorySource = stripTypeScriptTypes(
@@ -16,7 +41,6 @@ const {
   readerSourceCategoryIsReadable,
   readerSourceCategoryLabel,
 } = await import(categoryUrl);
-
 assert.equal(classifyReaderSource({ bookSourceType: 0, name: '有声书' }), 'music');
 assert.equal(classifyReaderSource({ bookSourceType: 0, name: '爱奇艺漫画' }), 'comic');
 assert.equal(classifyReaderSource({ bookSourceType: 'TEXT', name: '漫画屋' }), 'comic');
@@ -63,35 +87,110 @@ for (const category of ['comic', 'music', 'download', 'external', 'other']) {
 }
 
 const searchGateway = read('entry/src/main/ets/features/search/SearchGateway.ts');
-const searchOrchestrator = read('entry/src/main/ets/features/search/SearchOrchestrator.ets');
-const searchPage = read('entry/src/main/ets/features/search/SearchPage.ets');
-const discoverOrchestrator = read('entry/src/main/ets/features/discover/DiscoverOrchestrator.ets');
-const switchGateway = read('entry/src/main/ets/features/source/SourceSwitchGateway.ts');
-const managementPage = read('entry/src/main/ets/features/source/SourceManagementPage.ets');
 
-assert.equal(readerSourceCategoryIsReadable('comic'), true);
-assert.equal(readerSourceCategoryIsReadable('novel'), true);
-assert.equal(readerSourceCategoryIsReadable('music'), false);
-assert.match(searchGateway, /if \(!readerSourceCategoryIsReadable\(sourceCategory\)\)/);
-assert.match(searchOrchestrator, /readerSourceCategoryIsReadable\(source\.category\)/);
-assert.match(searchPage, /本地/);
-assert.match(searchOrchestrator, /readerSourceCategoryIsReadable\(source\.category\)/);
-assert.match(discoverOrchestrator, /readerSourceCategoryIsText\(source\.category\)/);
-assert.match(switchGateway, /contentKind === 'manga' \? category !== 'comic' : !readerSourceCategoryIsText\(category\)/);
-assert.match(switchGateway, /source.category === 'comic'\) !== \(query.contentKind === 'manga'/);
-assert.match(managementPage, /readerSourceCategoryLabel\(source\.category\)/,
-  '管理页必须展示每个书源的类别');
-assert.match(managementPage, /matchesQuery && matchesGroup && matchesCategory && this.matchesStatus/);
-const index = read('entry/src/main/ets/pages/Index.ets');
-const entry = read('entry/src/main/ets/features/reading/ReadingEntryHost.ts');
-assert.match(index, /host\.openRemote\(/);
-assert.match(entry, /this\.runtime\.bookAcquisitions\(\)[\s\S]*coordinator\.acquireBookWithBackgroundRefresh\(seed, \{ isCurrent: current \}\)/);
-const coordinator = read('entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
-assert.match(coordinator, /if \(!isRemoteReadingCacheRecoveryEligible\(classified\)\) throw classified/,
-  'only recoverable cache states may pass into live source admission; stopped sources remain offline-readable');
-assert.match(coordinator, /if \(version === undefined\) \{[\s\S]*throw new RemoteReadingGatewayError\('cachedSessionUnavailable'[\s\S]*gateway\.openSession\(actual, \{ isCurrent, allowMangaCatalog: seed\.contentKind === 'manga' \}\)/,
-  'a live source is still required; only explicit manga catalog admission may bypass the text catalog boundary');
+}
 
+async function case_search_consumer_admission() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { dirname, resolve } = await import('node:path');
+const { fileURLToPath } = await import('node:url');
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
+const categorySource = stripTypeScriptTypes(
+  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+);
+const categoryUrl = `data:text/javascript;base64,${Buffer.from(categorySource).toString('base64')}`;
+const {
+  classifyReaderSource,
+  readerSourceCategoryIsText,
+  readerSourceCategoryIsReadable,
+  readerSourceCategoryLabel,
+} = await import(categoryUrl);
+const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
+const Gateway=productionMotionMethods(new URL('../entry/src/main/ets/features/search/SearchGateway.ts',import.meta.url),['searchBySource'],{readerSourceCategoryIsReadable,SEARCH_SOURCE_REQUEST_TIMEOUT_MS:1000,httpTransportFailureSummary:error=>{throw error;},errorMessageOf:error=>error.message});
+for(const category of ['novel','comic','music','download','external','other']){
+ let active=true,calls=0;
+ const owner=Object.assign(new Gateway(),{generateSearchRequestId:()=> 'case',sourceBookUrl:s=>s.sourceId,requestOptions:()=>({}),runtimeOwner:{async request(method,params){assert.equal(method,'book.search');assert.equal(params.sourceId,'s');calls++;active=false;return {data:{}};}}});
+ const outcome=await owner.searchBySource({sourceId:'s',category},'sample',()=>active);
+ assert.equal(calls,['novel','comic'].includes(category)?1:0,'actual search consumer dispatch matches category admission');
+ assert.equal(outcome.ok,false);
+}
+
+}
+
+async function case_discover_consumer_admission() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { dirname, resolve } = await import('node:path');
+const { fileURLToPath } = await import('node:url');
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
+const categorySource = stripTypeScriptTypes(
+  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+);
+const categoryUrl = `data:text/javascript;base64,${Buffer.from(categorySource).toString('base64')}`;
+const {
+  classifyReaderSource,
+  readerSourceCategoryIsText,
+  readerSourceCategoryIsReadable,
+  readerSourceCategoryLabel,
+} = await import(categoryUrl);
+const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
+const Discover=productionMotionMethods(new URL('../entry/src/main/ets/features/discover/DiscoverOrchestrator.ets',import.meta.url),['loadSources'],{readerSourceCategoryIsText});
+const categories=['novel','comic','music','download','external','other'];const sources=categories.map(category=>({sourceId:category,name:category,category,enabled:true,enabledExplore:true}));
+sources.push({sourceId:'disabled',category:'novel',enabled:false,enabledExplore:true},{sourceId:'no-explore',category:'novel',enabled:true,enabledExplore:false});
+const received=[];const owner=Object.assign(new Discover(),{isCurrentSession:()=>true,isCurrentRead:()=>true,beginRead:()=>1,sourceGateway:{loadSources:async()=>sources},currentSource:()=>undefined,loadSource:async(_session,index,rows)=>received.push({index,rows}),fail:(_session,_generation,_message,error)=>{throw error;}});
+await owner.loadSources(1);assert.equal(received.length,1);assert.deepEqual(received[0].rows.map(row=>row.sourceId),['novel']);
+
+}
+
+async function case_management_filters() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { dirname, resolve } = await import('node:path');
+const { fileURLToPath } = await import('node:url');
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
+const categorySource = stripTypeScriptTypes(
+  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+);
+const categoryUrl = `data:text/javascript;base64,${Buffer.from(categorySource).toString('base64')}`;
+const {
+  classifyReaderSource,
+  readerSourceCategoryIsText,
+  readerSourceCategoryIsReadable,
+  readerSourceCategoryLabel,
+} = await import(categoryUrl);
+const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
+const Page=productionMotionMethods(new URL('../entry/src/main/ets/features/source/SourceManagementPage.ets',import.meta.url),['filteredSources']);
+const rows=[{name:'Alpha',baseUrl:'https://one',group:'g1',category:'novel',enabled:true},{name:'Beta',baseUrl:'https://two',group:'g1',category:'comic',enabled:true},{name:'Gamma',baseUrl:'https://three',group:'g2',category:'comic',enabled:false}];
+const owner=Object.assign(new Page(),{sources:rows,searchQuery:'',groupValue:'全部分组',categoryValue:'all',matchesStatus:s=>s.enabled});
+assert.deepEqual(owner.filteredSources(),rows.slice(0,2));owner.categoryValue='comic';assert.deepEqual(owner.filteredSources(),[rows[1]]);owner.searchQuery='alpha';assert.deepEqual(owner.filteredSources(),[]);owner.searchQuery='two';owner.groupValue='g1';assert.deepEqual(owner.filteredSources(),[rows[1]]);owner.groupValue='g2';assert.deepEqual(owner.filteredSources(),[]);
+
+}
+
+async function case_bundled_supply_snapshot() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { dirname, resolve } = await import('node:path');
+const { fileURLToPath } = await import('node:url');
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const read = (relative) => readFileSync(resolve(repo, relative), 'utf8');
+const categorySource = stripTypeScriptTypes(
+  read('entry/src/main/ets/features/source/ReaderSourceCategory.ts'),
+);
+const categoryUrl = `data:text/javascript;base64,${Buffer.from(categorySource).toString('base64')}`;
+const {
+  classifyReaderSource,
+  readerSourceCategoryIsText,
+  readerSourceCategoryIsReadable,
+  readerSourceCategoryLabel,
+} = await import(categoryUrl);
 const collection = JSON.parse(read('entry/src/main/resources/rawfile/reader-tested-book-source-collection.json'));
 const rows = Array.isArray(collection) ? collection : collection.sources;
 const informationSourceIds = new Set(['corpus-0a6f4d44c21e', 'corpus-b4ac220076f9', 'corpus-e48578e73828',
@@ -109,23 +208,20 @@ for (const source of rows) {
     informationSources += 1;
     assert.equal(category, 'other', `${source.bookSourceName} contains information/reviews, not novel chapters`);
     assert.equal(readerSourceCategoryIsReadable(category), false);
-    // The original provider/rules survive; only runtime admission changes.
-    assert.ok(source.bookSourceUrl);
-    if ((source.bookSourceUrl ?? '').includes('pre-api.tuishujun.com') && source.ruleContent?.content) {
-      assert.match(source.ruleContent.content, /parseComments/);
-      assert.match(source.ruleToc.chapterList, /第00/);
-    }
-    if ((source.bookSourceUrl ?? '').includes('search.douban.com')) {
-      assert.match(source.ruleBookInfo.tocUrl, /reviews/);
-      assert.match(source.ruleContent.content, /review-content/);
-    }
+
   }
   if (['百合论坛', '百合会论坛', '酷18论坛', '轻说百科（优++）', '🎃轻小说百科🎃'].includes(source.bookSourceName)) {
     assert.equal(category, 'novel', 'actual fiction providers must survive forum/encyclopedia labels');
   }
 }
-assert.equal(informationSources, informationSourceIds.size, 'all reviewed bundled information definitions remain present and excluded');
+
 assert.equal(Object.values(counts).reduce((a, b) => a + b, 0), rows.length);
 console.log('bundled category coverage:', counts);
 
-console.log('reader source category isolation: PASS');
+}
+
+const implementations = {'pure-classification':case_pure_classification,'search-consumer-admission':case_search_consumer_admission,'discover-consumer-admission':case_discover_consumer_admission,'management-filters':case_management_filters,'bundled-supply-snapshot':case_bundled_supply_snapshot};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

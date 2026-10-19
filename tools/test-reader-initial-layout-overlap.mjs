@@ -1,11 +1,12 @@
-import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const selected=selectContractCases({overlap:{description:'Current body acquisition overlaps unresolved layout without early publication',resources:[]},barriers:{description:'Current stale selection, cache refresh and joined rejection barriers',resources:[]}});
+async function run(id){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { stripTypeScriptTypes }=await import('node:module');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 
-const baseline = process.argv.includes('--baseline');
-const source = new URL(baseline ? '../evidence/2026-09-14-physical-review/bookshelf-open-ph111/baseline/LocalReadingExperience.ets' :
-  '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const source=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
 const mapSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts', import.meta.url), 'utf8')
   .replace('constructor(private readonly content: string) {', 'constructor(content: string) { this.content = content;');
 const { ReadingSurfaceLayoutMap } = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
@@ -14,7 +15,8 @@ const Initial = productionMotionMethods(source, ['loadInitialChapter', 'openChap
   ReadingSurfaceLayoutMap, RemoteChapterCacheRefreshError, LOCAL_READING_SOURCE_ID: 'local',
 });
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
-const settle = async () => { for (let turn = 0; turn < 6; turn++) await new Promise(resolve => setImmediate(resolve)); };
+const settle=async()=>{await new Promise(resolve=>setImmediate(resolve));};
+const until=async predicate=>{for(let turn=0;turn<30&&!predicate();turn++)await settle();assert.ok(predicate(),'actual owner condition settles within bounded turns');};
 const sample = { chapterIndex: 0, content: '这是用于首屏并行验证的正文。', contentVersion: 'version-1', images: [] };
 function fixture(options = {}) {
   const calls = [], failures = [], layouts = [], publications = [];
@@ -38,18 +40,18 @@ function fixture(options = {}) {
   Object.defineProperty(owner, 'chapter', { get: () => publications.at(-1), set: value => publications.push(value) });
   return { owner, calls, failures, layouts, publications };
 }
-const report = { source: baseline ? 'pre-PH111 source' : 'current source', cases: [] };
-{
+const report={source:'current production source',cases:[]};
+if(id==='overlap'){
   const layout = deferred(), f = fixture();
   const pending = f.owner.loadInitialChapter(1, layout.promise);
-  await settle();
-  assert.equal(f.calls.length, baseline ? 0 : 1, 'body acquisition overlaps the unresolved layout gate');
+  await until(()=>f.calls.length===1);
+  assert.equal(f.calls.length, 1, 'body acquisition overlaps the unresolved layout gate');
   assert.equal(f.publications.length, 0); assert.equal(f.layouts.length, 0);
   report.cases.push({ case: 'layout blocked', chapterReadsBeforeLayout: f.calls.length, publishedBeforeLayout: 0, measuredBeforeLayout: 0 });
   layout.resolve([]); await pending;
   assert.equal(f.publications.length, 1); assert.equal(f.layouts.length, 1); assert.deepEqual(f.failures, []);
 }
-if (!baseline) {
+if(id==='barriers') {
   {
     const body = deferred(), layout = deferred(), f = fixture({ body });
     const pending = f.owner.loadInitialChapter(1, layout.promise); await settle();
@@ -59,7 +61,7 @@ if (!baseline) {
   }
   for (const invalidate of [f => { f.owner.mounted = false; }, f => { f.owner.chapterSelectionToken++; }]) {
     const layout = deferred(), f = fixture(); const pending = f.owner.loadInitialChapter(1, layout.promise);
-    await settle(); assert.equal(f.calls.length, 1); invalidate(f); layout.resolve([]); await pending;
+    await until(()=>f.calls.length===1); assert.equal(f.calls.length, 1); invalidate(f); layout.resolve([]); await pending;
     assert.equal(f.publications.length, 0); assert.equal(f.layouts.length, 0); assert.deepEqual(f.failures, []);
     report.cases.push({ case: 'unmount or newer selection during layout', stalePublications: 0 });
   }
@@ -69,10 +71,10 @@ if (!baseline) {
     const pending = f.owner.loadInitialChapter(1, layout.promise); await settle();
     await pending;
     assert.equal(f.calls.length, 1, 'cache recovery does not silently replace the body or hold acquisition');
-    f.owner.cacheRefreshAction(); await settle();
+    f.owner.cacheRefreshAction(); await until(()=>f.calls.length===2);
     assert.equal(f.calls.length, 2); assert.equal(f.calls[1][3], true);
     assert.equal(f.publications.length, 0); assert.equal(f.layouts.length, 0);
-    layout.resolve([]); await settle(); assert.equal(f.layouts.length, 1); assert.deepEqual(f.failures, ['refresh']);
+    layout.resolve([]); await until(()=>f.layouts.length===1); assert.equal(f.layouts.length, 1); assert.deepEqual(f.failures, ['refresh']);
     report.cases.push({ case: 'accepted cache refresh', refreshedBeforeLayout: true, publicationsBeforeLayout: 0, finalMeasurements: 1 });
   }
   const unhandled = [];
@@ -98,7 +100,6 @@ if (!baseline) {
     }
   } finally { process.removeListener('unhandledRejection', observe); }
 }
-const evidenceIndex = process.argv.indexOf('--evidence');
-if (evidenceIndex >= 0) writeFileSync(process.argv[evidenceIndex + 1], JSON.stringify(report, null, 2) + '\n');
-console.log(baseline ? 'BASELINE CONFIRMED: initial body waits until layout completes' :
-  'PASS actual initial chapter acquisition overlaps layout; publication/measurement, stale selection, refresh and rejection barriers remain intact');
+console.log(JSON.stringify(report));
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

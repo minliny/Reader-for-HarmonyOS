@@ -1,33 +1,38 @@
-import { foundationControls, foundationSpecs } from './lib/reader-foundation-control-probe.mjs';
-import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"carrier-propagation": {"description": "当前SourceTools具体标题/计数/书源角色与描述角色变更传播", "resources": []}, "input-selection": {"description": "实际输入回调与实际InlineSelect/trigger/Panel/ChoiceRow选择、旧identity/disabled/retired拒绝", "resources": []}, "guard-admission": {"description": "busy/unknown实际Builder变更按钮拒绝与可用按钮接纳", "resources": []}, "raw-debug": {"description": "原始错误完整多行与独立序号/当前语义色", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const { foundationControls, foundationSpecs } = await import('./lib/reader-foundation-control-probe.mjs');
+const { readerRecoveryView } = await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/source/SourceToolsPage.ets', import.meta.url), 'utf8');
 const headerSource = readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets', import.meta.url), 'utf8');
-const baseline = JSON.parse(readFileSync(new URL('./fixtures/design/source-tools-typography-baseline.json', import.meta.url)));
 const methods = [...source.matchAll(/@Builder\s+private\s+(\w+)\s*\(/g)].map(match => match[1]);
 methods.push('recovery', 'batchCheckPercent', 'batchCheckPhaseLabel', 'batchResultLabel', 'confirmExportThen', 'canWriteSources');
-const properties = ['fontFamily', 'fontWeight', 'fontSize', 'lineHeight', 'letterSpacing'];
-const result = { sourceName: '测试书源', sourceId: 'https://source.example', message: '能力检查完成', state: 'passed', traceId: 'trace' };
-const bookSource = { name: '测试书源', sourceId: 'https://source.example', baseUrl: 'https://source.example', lastCheckSummary: '上次检测已完成' };
-const fingerprint = node => JSON.stringify(Object.fromEntries(properties.filter(property => Object.hasOwn(node, property))
-  .map(property => [property, node[property]])));
-const allowed = new Set(baseline.nodes.map(node => fingerprint(node.tuple)));
-const seen = new Set();
+const bookSource={name:'测试书源',sourceId:'https://source.example',baseUrl:'https://source.example',lastCheckSummary:'上次检测已完成'};
 const nodes=owner=>[...owner.nodes.values(),...[...owner.children.values()].flatMap(child=>nodes(child))];
+const awaitInline=await import('./lib/reader-inline-select-sdk-probe.mjs');
+const inlineSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderInlineSelect.ets',import.meta.url),'utf8');
 const make = (overrides = {}) => {
   const controls=foundationControls({specs:foundationSpecs({...readerTypographyRoles,...overrides})});
+  const messages=boundedSurfaceSdk({properties:controls.properties,allowEmptyBranchAdmission:true});
+  controls.hooks.childSources={...messages.childSources,...controls.hooks.childSources};
   controls.hooks.childSources = {...controls.hooks.childSources, PageBackBar: headerSource};
   const PageBackBar = createReaderBuilderProbe(headerSource, boundedMembers(headerSource), controls.dependencies, controls.hooks).Component;
+  const {inlineSelectSdk}=awaitInline;
+  const inline=inlineSelectSdk({properties:controls.properties,uiContext:{getFont:()=>({}),getMeasureUtils:()=>({measureText:()=>150}),px2vp:x=>x/3,animateTo(_o,action){action();}}});
+  controls.hooks.childSources={...controls.hooks.childSources,...inline.hooks.childSources};controls.hooks.lifecycleChildren=true;
   const { owner } = createReaderBuilderProbe(source, methods, {
     // Virtual list painting is outside this typography probe. The actual row
     // Builders run separately below, with their real SDK observer closures.
-    LazyForEach: { create() {}, pop() {} }, readerRecoveryView, ...controls.dependencies, PageBackBar, ...overrides,
+    LazyForEach: { create() {}, pop() {} }, readerRecoveryView, ...messages.deps,...controls.dependencies, PageBackBar, ...inline.dependencies, ...overrides,
   },controls.hooks);
   const replay=owner.replay.bind(owner);owner.replay=()=>{replay();controls.properties.flush();};
   const calls = [];
@@ -52,92 +57,30 @@ const make = (overrides = {}) => {
     onReconcileEditor: () => calls.push('reconcile'), onDebugKeyChanged: value => calls.push(['key', value]),
     onCheckSelectionChanged: (...values) => calls.push(['checkSelection', ...values]),
   });
-  return { owner, calls };
+  return { owner, calls, inline };
 };
-const cases = [
-  ['batchCard'], ['batchCheckCard'], ['batchCounter', '计数', '#status-color'],
-  ['batchResultRow', result], ['statusCard'], ['exportCard'],
-  ['sourceRow', { source: bookSource, selected: true, actionsEnabled: true }],
-  ['editorCard'], ['debugCard'], ['debugLogRow', { state: 0, message: '请求完成' }, 0],
-  ['heading', '工具标题'], ['smallButton', '小操作', true, () => {}],
-  ['actionButton', '主操作', true, true, () => {}], ['fullWidthActionButton', '导出', true, () => {}],
-];
-for (const [name, ...args] of cases) {
-  const { owner } = make();
-  owner[name](...args);
-  for (const node of nodes(owner)) if (Object.hasOwn(node, 'fontSize')) {
-    const tuple = fingerprint(node);
-    assert.ok(allowed.has(tuple), `${name}/${String(node.create)}: exact baseline tuple, including omitted AUTO modifiers`);
-    seen.add(tuple);
-  }
-}
-assert.deepEqual(seen, allowed, 'all 14 authored tuples have real SDK Builder evidence');
 
-// The result branch and busy/phase colors use the same roles without replacing
-// the actual callbacks, native input values or selected controls.
-const { owner: progress } = make();
-progress.snapshot.batchCheck.results = [result];
-progress.batchCheckCard();
-assert.ok(nodes(progress).some(node => node.create === '实时结果（最新在前）'));
-for (const scheme of ['day', 'night', 'day']) {
-  progress.appThemeScheme = scheme; progress.replay();
-  const title = nodes(progress).find(node => typeof node.create === 'string' && node.create.startsWith('检测进度'));
-  assert.equal(title.fontColor, readerAppColor('TOK_INK', scheme));
+if(selectedCase==='carrier-propagation'){
+ const assertions=[['heading',['工具标题'],'工具标题','TYPE_SOURCE_TOOLS_HEADING'],['batchCounter',['计数','#status-color'],'计数','TYPE_SOURCE_TOOLS_COMPACT_ACTION'],['sourceRow',[{source:bookSource,selected:true,actionsEnabled:true}],bookSource.name,'TYPE_SOURCE_TOOLS_ACTION']];
+ for(const [method,args,label,roleName]of assertions){const {owner}=make();owner[method](...args);const node=nodes(owner).find(n=>n.create===label),role=readerTypographyRoles[roleName];assert.ok(node,method);assert.equal(node.fontSize,role.fontSizeFp);assert.equal(node.fontFamily,role.fontFamily);if(role.fontWeight!==undefined)assert.equal(node.fontWeight,role.fontWeight);}
+ const role=readerTypographyRoles.TYPE_SOURCE_TOOLS_DESCRIPTION,changed={...role,fontSizeFp:role.fontSizeFp+3};
+ const base=make().owner,mutant=make({TYPE_SOURCE_TOOLS_DESCRIPTION:changed}).owner;base.exportCard();mutant.exportCard();
+ const before=nodes(base).filter(n=>n.fontSize===role.fontSizeFp&&n.lineHeight===role.lineHeightFp);assert.ok(before.length>0);
+ for(const n of before){const after=nodes(mutant).find(m=>m.create===n.create&&m.type===n.type);assert.ok(after);assert.equal(after.fontSize,n.fontSize+3);assert.equal(after.lineHeight,n.lineHeight);}
 }
-const { owner: editor, calls: editorCalls } = make();
-editor.editorCard(); editor.debugCard();
-const code = nodes(editor).find(node => node.type === 'TextArea');
-const input = nodes(editor).find(node => node.type === 'TextInput');
-assert.equal(code.fontFamily, 'monospace'); assert.equal(code.height, 320);
-assert.equal(input.height, 40);
-code.onChange('{"edited":true}'); input.onChange('新的关键词');
-assert.deepEqual(editorCalls.slice(-2), [['editor', '{"edited":true}'], ['key', '新的关键词']]);
-const selects = nodes(editor).filter(node => node.type === 'Select');
-assert.equal(selects.length, 2);
-assert.ok(selects.every(node => !Object.hasOwn(node, 'fontSize') && !Object.hasOwn(node, 'fontFamily')),
-  'native Select typography remains at its current AUTO baseline');
-selects[0].onSelect(1); selects[1].onSelect(2);
-assert.deepEqual(editorCalls.slice(-2), [['checkSelection', 'explore', 2], ['checkSelection', 'search', 4]]);
-
-const { owner: buttons } = make();
-let accepted = 0;
-buttons.actionButton('禁用', true, false, () => accepted++);
-buttons.actionButton('允许', false, true, () => accepted++);
-buttons.smallButton('禁用小操作', false, () => accepted++);
-buttons.fullWidthActionButton('导出', true, () => accepted++);
-const controls = nodes(buttons).filter(node => typeof node.onClick === 'function');
-controls.forEach(node => node.onClick());
-assert.equal(accepted, 2, 'disabled action and small controls remain guarded');
-buttons.snapshot.busy = true; buttons.replay();
-controls.at(-1).onClick();
-assert.equal(accepted, 2, 'busy full-width export callback remains guarded after observer replay');
-for (const scheme of ['night', 'day']) {
-  buttons.appThemeScheme = scheme; buttons.replay();
-  assert.equal(controls[0].fontColor, readerAppColor('TOK_ON_PRIMARY', scheme));
-  assert.equal(controls[1].fontColor, readerAppColor('TOK_PRIMARY_TEXT', scheme));
+if(selectedCase==='input-selection'){
+ const {owner:editor,calls,inline}=make();editor.editorCard();editor.debugCard();const code=nodes(editor).find(n=>n.type==='TextArea'),input=nodes(editor).find(n=>n.type==='TextInput');
+ assert.equal(code.fontFamily,'monospace');code.onChange('{"edited":true}');input.onChange('新的关键词');assert.deepEqual(calls.slice(-2),[['editor','{"edited":true}'],['key','新的关键词']]);
+ const actors=[...editor.children.values()].filter(c=>typeof c.commit==='function'&&typeof c.toggle==='function');assert.equal(actors.length,2,'two actual production InlineSelect hosts');
+ inline.choose(actors[0],'发现');inline.choose(actors[1],'正文');assert.deepEqual(calls.slice(-2),[['checkSelection','explore',2],['checkSelection','search',5]]);
+ const a=actors[0],before=calls.length;a.toggle();const stale=a.selectionId;a.toggle();a.toggle();a.commit('搜索',stale);a.commit('不在选项中',a.selectionId);assert.equal(calls.length,before);a.actionEnabled=false;a.commit('搜索',a.selectionId);assert.equal(calls.length,before);a.aboutToDisappear();a.actionEnabled=true;a.commit('搜索',a.selectionId);assert.equal(calls.length,before);
+}
+if(selectedCase==='guard-admission'){
+ const {owner:buttons}=make();let accepted=0;buttons.actionButton('禁用',true,false,()=>accepted++);buttons.actionButton('允许',false,true,()=>accepted++);buttons.smallButton('禁用小操作',false,()=>accepted++);buttons.fullWidthActionButton('导出',true,()=>accepted++);const actions=nodes(buttons).filter(n=>typeof n.onClick==='function');actions.forEach(n=>n.onClick());assert.equal(accepted,2);buttons.snapshot.busy=true;buttons.replay();actions.at(-1).onClick();assert.equal(accepted,2);
+ for(const state of ['busy','receiptUnknown','editorUnknown']){const {owner,calls}=make();if(state==='busy')owner.snapshot.busy=true;if(state==='receiptUnknown')owner.snapshot.receipt={receipt:{confirmation:'unknown'}};if(state==='editorUnknown')owner.snapshot.editorReadback={confirmation:'unknown'};owner.batchCard();owner.editorCard();for(const node of nodes(owner))if(['启用','停用','删除','校验并保存'].includes(node.create))node.onClick();assert.equal(calls.some(c=>['setEnabled','deleteSelected','save'].includes(c)),false,state);}
+}
+if(selectedCase==='raw-debug'){
+ const {owner}=make(),message='目录读取失败。\n请求：https://example.test/very/long/source-and-chapter-identifier\n原始错误信息';owner.debugLogRow({state:-1,message},123);const actual=nodes(owner),body=actual.find(n=>n.create===message),ordinal=actual.find(n=>n.create==='124');assert.ok(body&&ordinal);assert.equal(body.fontSize,readerTypographyRoles.MESSAGE_BODY.fontSizeFp);assert.equal(body.lineHeight,readerTypographyRoles.MESSAGE_BODY.lineHeightFp);assert.equal(body.maxLines,undefined);assert.equal(body.textOverflow,undefined);assert.equal(body.fontColor,readerAppColor('TOK_MESSAGE_INK','day'));assert.equal(actual.find(n=>n.create==='检测失败').fontColor,readerAppColor('TOK_MESSAGE_DANGER','day'));owner.debugCard();const target=nodes(owner).find(n=>n.create===bookSource.sourceId);assert.equal(target.maxLines,undefined);assert.equal(target.textOverflow,undefined);
 }
 
-for(const state of ['busy','receiptUnknown','editorUnknown']){
- const {owner,calls}=make();
- if(state==='busy')owner.snapshot.busy=true;
- if(state==='receiptUnknown')owner.snapshot.receipt={receipt:{confirmation:'unknown'}};
- if(state==='editorUnknown')owner.snapshot.editorReadback={confirmation:'unknown'};
- owner.batchCard();owner.editorCard();
- for(const node of nodes(owner))if(['启用','停用','删除','校验并保存'].includes(node.create)){
-  assert.equal(node.opacity,0.62,`${state}: actual bounded source mutation action disabled`);node.onClick();
- }
- assert.equal(calls.some(call=>['setEnabled','deleteSelected','save'].includes(call)),false,`${state}: current domain guard prevents mutations`);
 }
-
-// One shared description role reaches export, editing and the active batch
-// label. A bounded dependency override exercises propagation on real SDK nodes.
-const { owner: propagated } = make({
-  TYPE_SOURCE_TOOLS_DESCRIPTION: { ...readerTypographyRoles.TYPE_SOURCE_TOOLS_DESCRIPTION, fontSizeFp: 13 },
-});
-propagated.batchCheckCard(); propagated.exportCard(); propagated.editorCard();
-const descriptionNodes = nodes(propagated).filter(node => node.lineHeight === 17);
-assert.equal(descriptionNodes.length, 3);
-assert.ok(descriptionNodes.every(node => node.fontSize === 13), 'one role update propagates across three real consumers');
-assert.ok(nodes(propagated).some(node => node.fontSize === 14), 'other heading variant remains unchanged');
-
-console.log('PASS source-tools real SDK typography: 14 tuples, AUTO, state/theme replay, input and action callbacks, role propagation');

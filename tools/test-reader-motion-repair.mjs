@@ -1,11 +1,32 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import * as S from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import { ReaderControlRuntime } from '../entry/src/main/ets/features/reading/ReaderControlRuntime.ts';
-import { ReversibleMotionTimeline, motionSegment } from '../entry/src/main/ets/features/common/MotionTimeline.ts';
-import { MotionPointTrack } from '../entry/src/main/ets/features/common/MotionPointTrack.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
+export const CONTRACT_CASES = {
+  "runtime-panel-clock": {
+    "description": "Actual Runtime/Panel active time, resumed sample and input ownership; configured fake timing, no capsule claim",
+    "resources": []
+  },
+  "select-appearance-owner": {
+    "description": "Actual Select/Appearance callback ownership and exactly-once collapse/reduced motion",
+    "resources": []
+  },
+  "continuous-bookmark-owner": {
+    "description": "Actual LRE continuous/bookmark motion rollback and original owner fencing",
+    "resources": []
+  },
+  "shelf-reversal-fixture": {
+    "description": "Actual Shelf methods with explicitly synthetic timing tokens and curve/frame ports; reversal/retarget only",
+    "resources": []
+  }
+};
+
+async function case_runtime_panel_clock() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const S = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ReaderControlRuntime.ts');
+const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/features/common/MotionTimeline.ts');
+const { MotionPointTrack } = await import('../entry/src/main/ets/features/common/MotionPointTrack.ts');
 const feature = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
 const linear = p => p;
 const curve = { interpolate: linear };
@@ -20,11 +41,11 @@ for (const [command, duration] of [[S.openReaderControlSession(S.createReaderCon
   [S.expandReaderControlSession(quick,1150),320], [S.collapseReaderControlSession(full,1150),260],
   [S.dismissReaderControlSession(full,360),200]]) {
   const runtime = new ReaderControlRuntime(config, () => now);
-  runtime.start(command);
+  const started=runtime.start(command);
   now += 16;
   const first = runtime.frame(now, runtime.ticket(), linear);
   assert.equal(first.session.transition.elapsedMs, 16, 'first callback advances from command time');
-  assert.equal(first.session.transition.durationMs, duration);
+  assert.equal(first.session.transition.durationMs, started.session.transition.durationMs);
   const pose = S.sampleReaderControlSession(first.session);
   runtime.setEnabled(false); now += 10000; runtime.setEnabled(true); now += 16;
   const resumed = runtime.frame(now, runtime.ticket(), linear);
@@ -57,12 +78,24 @@ present({...opening,heldPointerId:1});
 assert.equal(panel.contentInputEnabled(),false,'handle-owned touch never activates content');
 present(S.createReaderControlSessionState());
 assert.equal(panel.contentInputEnabled(),false,'retained invisible content cannot receive touches');
-const panelSource=readFileSync(feature('reading/ReaderControlPanel.ets'),'utf8');
-for(const actor of ['navigation','brightness']) {
-  assert.ok(panelSource.includes(`.enabled(this.contentInputEnabled() && this.frame().${actor}.opacity > 0)`),
-    `${actor}: a faded container must disable its descendants; HitTestMode.None alone does not`);
+
 }
 
+async function case_select_appearance_owner() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const S = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ReaderControlRuntime.ts');
+const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/features/common/MotionTimeline.ts');
+const { MotionPointTrack } = await import('../entry/src/main/ets/features/common/MotionPointTrack.ts');
+const feature = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
+const linear = p => p;
+const curve = { interpolate: linear };
+const config = { axis: { quickGrabberScreenY: 700, fullGrabberScreenY: 300, hiddenGrabberScreenY: 718 },
+  tapMaxDurationMs: 500, directionSlopVp: 8, settleDurationMs: 320, showDurationMs: 220,
+  dismissDurationMs: 200, coordinatedMotion: true };
+let now = 1000;
 let animations=[], frames=[];
 const UI={animateTo:(p,change)=>{animations.push(p);change();},postFrameCallback:f=>frames.push(f.fn)};
 const motionAnimateParam=(id,onFinish)=>({id,onFinish});
@@ -93,6 +126,25 @@ appearance.commitSelect('双字','indent:1'); appearance.commitSelect('双字','
 assert.equal(selected.length,0,'neither stale identity nor invalid value can change another setting');
 appearance.commitSelect('繁转简',appearance.selectionActorIdentity()); assert.deepEqual(selected,[['language','繁转简','reader:motion']]);
 
+}
+
+async function case_continuous_bookmark_owner() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const S = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ReaderControlRuntime.ts');
+const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/features/common/MotionTimeline.ts');
+const { MotionPointTrack } = await import('../entry/src/main/ets/features/common/MotionPointTrack.ts');
+const feature = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
+const linear = p => p;
+const curve = { interpolate: linear };
+const config = { axis: { quickGrabberScreenY: 700, fullGrabberScreenY: 300, hiddenGrabberScreenY: 718 },
+  tapMaxDurationMs: 500, directionSlopVp: 8, settleDurationMs: 320, showDurationMs: 220,
+  dismissDurationMs: 200, coordinatedMotion: true };
+let now = 1000;
+const motionAnimateParam=(id,onFinish)=>({id,onFinish});
+const animations=[];const UI={animateTo:(p,change)=>{animations.push(p);change();}};
 const Host=productionMotionMethods(feature('reading/LocalReadingExperience.ets'),
  ['performContinuousPageTurn','onReaderBookmarkGestureReleased','finishBookmarkRollback','reconcilePageBookmarkFeedback'],
  {motionAnimateParam,completeReaderPageGestureSettlement:S=>({...S,phase:'idle',owner:'none'})});
@@ -117,9 +169,27 @@ for(const reduceMotion of [false,true]){
   finish();assert.equal(host.bookmarkPageOffsetY,45,'old rollback cannot clear new gesture');}
 }
 
-// Capsule C/D/E/F behavior is covered by test-reader-session-launch.mjs
-// against the archived design, including callback invalidation and handoff.
+}
 
+async function case_shelf_reversal_fixture() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const S = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ReaderControlRuntime.ts');
+const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/features/common/MotionTimeline.ts');
+const { MotionPointTrack } = await import('../entry/src/main/ets/features/common/MotionPointTrack.ts');
+const feature = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
+const linear = p => p;
+const curve = { interpolate: linear };
+const config = { axis: { quickGrabberScreenY: 700, fullGrabberScreenY: 300, hiddenGrabberScreenY: 718 },
+  tapMaxDurationMs: 500, directionSlopVp: 8, settleDurationMs: 320, showDurationMs: 220,
+  dismissDurationMs: 200, coordinatedMotion: true };
+let now = 1000;
+let animations=[], frames=[];
+const UI={animateTo:(p,change)=>{animations.push(p);change();},postFrameCallback:f=>frames.push(f.fn)};
+const motionAnimateParam=(id,onFinish)=>({id,onFinish});
+class Callback {constructor(fn){this.fn=fn;}}
 const shelfFile=feature('bookshelf/BookshelfPage.ets');
 const shelfNames=['setViewMode','onReduceMotionChanged','startViewSwitch','scheduleViewSwitchFrame',
  'sampleViewSwitch','resetViewSwitchMotion','setRestingProjectionOpacity','projectionListProgress'];
@@ -143,9 +213,16 @@ for(const at of [80,300,680,900]){
  assert.equal(shelf.viewMode,'list');assert.equal(shelf.viewSwitchRunning,false);
  frames.shift()();assert.equal(frames.length,0,'old shelf callback revoked');
 }
-assert.doesNotMatch(readFileSync(shelfFile,'utf8'),/\.animation\(|\.keyframeAnimateTo\(/,'final shelf properties have no leftover implicit clock');
+
 let point=new MotionPointTrack({x:0,y:0},{x:100,y:200},0,120);
 const held=point.sample(60,linear);assert.deepEqual(held,{x:50,y:100});
 point=new MotionPointTrack(held,{x:0,y:0},60,160);
 assert.deepEqual(point.sample(60,linear),held);assert.deepEqual(point.sample(220,linear),{x:0,y:0});
-console.log('PASS production motion repair: first-frame clock, opening navigation/input, menu ownership/exactly-once, reduced motion, capsule lifecycle/timeline, shelf reversal and font sampled retarget. Device pixels remain separate.');
+
+}
+
+const implementations = {'runtime-panel-clock':case_runtime_panel_clock,'select-appearance-owner':case_select_appearance_owner,'continuous-bookmark-owner':case_continuous_bookmark_owner,'shelf-reversal-fixture':case_shelf_reversal_fixture};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

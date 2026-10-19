@@ -1,12 +1,17 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { searchListFixture, searchListRows, searchListSources, searchListTouches,
-  searchListSource, searchListDependencies, assertSearchListBuilderGeometry } from './lib/reader-content-search-list-probe.mjs';
-import * as list from '../entry/src/main/ets/features/reading/ReaderControlSearchListProjection.ts';
-import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
-import { readerContentSearchFieldProbe } from './lib/reader-content-search-field-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions=Object.fromEntries([['geometry-policy','Actual emitted List paint/extent invariants and targeted negative controls'],['scroll-receipts','Canonical anchor, requested/native receipt, regrab and lifecycle'],['data-source','Production DataSource append/replace and explicit SDK lazy indices'],['row-admission','Retained physical row current ordinal/book admission'],['input-variant','Current native shared input variant geometry']].map(([id,description])=>[id,{description,resources:[]}]));
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { searchListFixture, searchListRows, searchListSources, searchListTouches,
+  searchListSource, searchListDependencies, assertSearchListBuilderGeometry }=await import('./lib/reader-content-search-list-probe.mjs');
+const list=await import('../entry/src/main/ets/features/reading/ReaderControlSearchListProjection.ts');
+const scroll=await import('../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts');
+const { readerContentSearchFieldProbe }=await import('./lib/reader-content-search-field-probe.mjs');
 const near = (a, b, why) => assert.ok(Math.abs(a - b) < 1e-6, `${why}: ${a} != ${b}`);
 const { ReaderContentSearchDataSource } = searchListDependencies;
+if(selectedCase==='geometry-policy'){
 assertSearchListBuilderGeometry();
 for (const [from, to, expected] of [
   ['.position({ x: this.frame().results.x, y: this.frame().results.y }).clip(true)',
@@ -18,7 +23,9 @@ for (const [from, to, expected] of [
   assert.ok(searchListSource.includes(from));
   assert.throws(() => assertSearchListBuilderGeometry(searchListSource.replace(from, to)), expected);
 }
+}
 const reports = [];
+if(selectedCase==='scroll-receipts'){
 for (const count of [50, 2000, 10000]) {
   const f = searchListFixture({ count, p: 1 }); f.flush();
   const { owner, controller } = f;
@@ -104,6 +111,8 @@ for (const origin of [-38.45, -6, 0, 5]) {
   assert.equal(list.readerControlSearchListScrollDelta(0, -100, atEnd), 0);
   near(list.readerControlSearchListScrollDelta(atEnd, -72, atEnd), -72, 'tail can scroll back');
 }
+}
+if(selectedCase==='data-source'){
 const ds = new ReaderContentSearchDataSource(), events = [];
 const listener = { onDataReloaded: () => events.push('reload'), onDataChange: i => events.push(['change', i]),
   onDataAdd: i => events.push(['add', i]) };
@@ -123,6 +132,8 @@ for (const count of [50, 2000, 10000]) {
   assert.equal([...f.owner.nodes.values()].filter(n => n.type === 'ListItem').length, indices.length);
   f.owner.onResultScrollDisappear();
 }
+}
+if(selectedCase==='row-admission'){
 // A retained native row resolves its current ordinal and owner at callback
 // time. Reload/reordering cannot keep an old captured index or select a new book.
 {
@@ -141,6 +152,8 @@ for (const count of [50, 2000, 10000]) {
   oldClick(); assert.equal(selected.length, 1, 'late old-book row click cannot select replacement book');
   f.owner.onResultScrollDisappear();
 }
+}
+if(selectedCase==='input-variant'){
 const fontSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlSearchContent.ets', import.meta.url), 'utf8');
 const fieldProbe=readerContentSearchFieldProbe(fontSource),field=fieldProbe.owner;
 Object.assign(field,{query:'保留全文搜索',motionProgress:1,availableWidth:338,availableHeight:666});
@@ -155,5 +168,9 @@ assert.throws(()=>{
   Object.assign(wrong.owner,{query:'原全文搜索',motionProgress:1,availableWidth:338,availableHeight:666});wrong.owner.searchField();
   assert.equal(wrong.nodes(wrong.owner).find(node=>node.type==='TextInput').height,14);
 },/strictly equal/,'a wrong shared input variant cannot satisfy the original native geometry');
-console.log(JSON.stringify({ contract: 'PH90 native List', reports, sdkLazyProviderVerified: true,
+}
+console.log(JSON.stringify({ case: selectedCase, contract: 'PH90 native List', reports, sdkLazyProviderVerified: selectedCase==='data-source',
   boundary: 'SDK bindings, policy and paint equations passed; actual Ace range admission and pixel timing require VM validation' }));
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

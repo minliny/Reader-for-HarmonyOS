@@ -57,9 +57,9 @@ export function actualProjectionSdkFeedback(f) {
   sdk.childSources.MainTabShell=mainText;
   sdk.childSources.MainTabBar=read('features/shell/MainTabBar.ets');
   const frameDeps={...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics}};
-  // Recovery remains the actual Shell header slot, through its real main-tab
-  // and page hosts. The tab actor and top-bar content are unrelated UI seams;
-  // the Shell's branching, recovery identity and public header mask are real.
+  // Retained read failures now produce the real Shell Toast while its page
+  // remains mounted. The existing Index read delegate is tested separately
+  // from painted actions; an ordinary read failure must not create a Notice.
   const actualMain=createReaderBuilderProbe(mainText,boundedMembers(mainText),{
     ...sdk.deps,...frameDeps,MainTabBar:Child,
   },sdk.hooks);
@@ -79,12 +79,18 @@ export function actualProjectionSdkFeedback(f) {
     const wideDeclaration=shellText.match(/^export const BOOKSHELF_WIDE_BREAKPOINT\s*=\s*([\d.]+);/m);
     if(!wideDeclaration)throw Error('actual bookshelf width policy declaration required');
     const shell=sdk.consumer(shellText,['build','shellHeader','shellOverlay','content','recoveryNoticeContent',
-      'showBottomNav','numericAreaLength','headerHeight','viewportWidth','readerWindowMetricsRevision','onHeaderHeightChange'],
+      'showBottomNav','numericAreaLength','headerHeight','viewportWidth','readerWindowMetricsRevision','onHeaderHeightChange',
+      'mounted','onReadRecoveryChanged','onRecoveryChanged','lastReadFeedback','noticeHeight'],
       {BookshelfMoreMenu:Child,...frameDeps,BOOKSHELF_WIDE_BREAKPOINT:Number(wideDeclaration[1])});
-    Object.assign(shell,props,{content(){},topBar(){},moreMenuVisible:false});shell.initialRender();
+    const toasts=[];
+    Object.assign(shell,props,{mounted:true,content(){},topBar(){},moreMenuVisible:false,
+      getUIContext:()=>({getPromptAction:()=>({showToast:value=>toasts.push(value.message)})})});
+    shell.onReadRecoveryChanged();shell.onReadRecoveryChanged();shell.initialRender();
     const notice=sdk.walk(shell).find(owner=>owner instanceof sdk.deps.ReaderRecoveryNotice);
-    const action=sdk.nodes(shell).find(node=>node.height===36&&node.onClick);
-    return {props,shelf,notice,action,shell};
+    const action=sdk.walk(shell).find(owner=>owner instanceof sdk.deps.ReaderRecoveryAction);
+    const generation=props.readRecovery?.generation;
+    const retry=()=>props.onRetryRead(generation,props.navigationGeneration);
+    return {props,shelf,notice,action,shell,toasts,retry};
   };
   return {project,parent};
 }

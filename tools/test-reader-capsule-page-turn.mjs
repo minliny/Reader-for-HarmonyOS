@@ -1,29 +1,39 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import { installReaderMeasurementOwner } from './lib/reader-measurement-owner-fixture.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { execFileSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { deriveReaderSessionCapsule } from '../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts';
-import { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign, sampleReaderSessionLaunch } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts';
-import { ReaderSessionMorphSourceMeasurement } from '../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts';
-import * as pageGesture from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
-import { ReaderPageInputClock } from '../entry/src/main/ets/features/reading/ReaderPageInputClock.ts';
-import { completeReaderPageGestureSettlement } from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
+async function runCase(selectedCase) {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { installReaderMeasurementOwner } = await import('./lib/reader-measurement-owner-fixture.mjs');
+const { readFileSync, writeFileSync, mkdtempSync, rmSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { execFileSync } = await import('node:child_process');
+const { tmpdir } = await import('node:os');
+const { join } = await import('node:path');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts');
+const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign, sampleReaderSessionLaunch } = await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
+const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
+const pageGesture = await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
+const { ReaderPageInputClock } = await import('../entry/src/main/ets/features/reading/ReaderPageInputClock.ts');
+const { completeReaderPageGestureSettlement } = await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
+
+
+let historyRoot;
+try {
 const require = createRequire(import.meta.url);
 const sdk = (resolveEtsLoaderRoot());
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const baseline = process.env.READER_CAPSULE_BASELINE;
-const sourceOverride = process.env.READER_CAPSULE_SOURCE;
+const historical = selectedCase === 'historical-projection';
+const scope = historical ? 'visibility' : selectedCase;
+const baseline = historical ? process.env.READER_CAPSULE_BASELINE : undefined;
+const sourceOverride = historical ? process.env.READER_CAPSULE_SOURCE : undefined;
+if (historical) assert.ok(baseline || sourceOverride, 'historical case requires an explicit diagnostic ref or source; never a release input');
 let file = sourceOverride ?? new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 if (baseline && !sourceOverride) {
-  file = join(mkdtempSync(join(tmpdir(), 'reader-ph109-')), 'LocalReadingExperience.ets');
+  historyRoot = mkdtempSync(join(tmpdir(), 'reader-ph109-'));
+  file = join(historyRoot, 'LocalReadingExperience.ets');
   writeFileSync(file, execFileSync('git',
     ['show', `${baseline}:entry/src/main/ets/features/reading/LocalReadingExperience.ets`],
     { cwd: new URL('..', import.meta.url) }));
@@ -123,8 +133,9 @@ function nativeProjection(p) {
   return { owner, reads, decisions };
 }
 
+if (scope === 'visibility' || scope === 'freeze') {
 for (const [type, status] of [['tts', 'paused'], ['tts', 'interrupted'], ['autoPage', 'paused'], ['autoPage', 'running']]) {
-  for (const gesture of [false, true]) check(`${type}/${status}/${gesture ? 'gesture release' : 'tap or timer'}: retained page survives hidden measurement`, () => {
+  for (const gesture of [scope === 'freeze']) check(`${type}/${status}/${gesture ? 'gesture release' : 'tap or timer'}: retained page survives hidden measurement`, () => {
     const p = fixture(type, status), original = p.visiblePage;
     const ui = nativeProjection(p);
     if (gesture) {
@@ -146,6 +157,8 @@ for (const [type, status] of [['tts', 'paused'], ['tts', 'interrupted'], ['autoP
   });
 }
 
+}
+if (scope === 'freeze') {
 check('freeze release remains an observed dependency of the real capsule If', () => {
   const p = fixture('tts', 'paused');
   p.onReaderPageGestureStateChanged({ phase: 'tracking' });
@@ -158,27 +171,6 @@ check('freeze release remains an observed dependency of the real capsule If', ()
   p.onReaderPageGestureStateChanged({ phase: 'idle' });
   ui.owner.replay();
   assert.equal(ui.decisions.at(-1), 1, 'release admits the terminal business state');
-});
-check('chapter loading retains the capsule while the committed reading body remains visible', () => {
-  for (const type of ['tts', 'autoPage']) {
-    const p = fixture(type, 'paused'), ui = nativeProjection(p);
-    p.phase = 'loading'; ui.owner.replay();
-    assert.ok(ui.decisions.every(branch => branch === 0));
-    p.visibleFragments = []; ui.owner.replay();
-    assert.equal(ui.decisions.at(-1), 1, 'an empty retained page is insufficient');
-  }
-});
-
-check('first load, real failure, controls, obstruction and exit still hide the capsule', () => {
-  for (const [key, value] of [['mounted', false], ['exitRequested', true], ['controlObscured', true],
-    ['interactionBlocked', true], ['phase', 'failed'], ['controlVisible', () => true]]) {
-    const p = fixture('tts', 'paused'); p[key] = value;
-    assert.equal(p.shouldShowSessionCapsule(), false, key);
-  }
-  for (const phase of ['loading', 'measuring']) {
-    const p = fixture('tts', 'paused'); p.phase = phase; p.visiblePage = undefined; p.visibleFragments = [];
-    assert.equal(p.shouldShowSessionCapsule(), false, `${phase} without committed body`);
-  }
 });
 check('a no-animation gesture rollback releases its held capsule snapshot', () => {
   const p = fixture('tts', 'paused');
@@ -204,14 +196,37 @@ check('a direct gesture commit releases session state and countdown updates', ()
   }
 });
 
+}
+if (scope === 'visibility') {
+check('chapter loading retains the capsule while the committed reading body remains visible', () => {
+  for (const type of ['tts', 'autoPage']) {
+    const p = fixture(type, 'paused'), ui = nativeProjection(p);
+    p.phase = 'loading'; ui.owner.replay();
+    assert.ok(ui.decisions.every(branch => branch === 0));
+    p.visibleFragments = []; ui.owner.replay();
+    assert.equal(ui.decisions.at(-1), 1, 'an empty retained page is insufficient');
+  }
+});
+
+check('first load, real failure, controls, obstruction and exit still hide the capsule', () => {
+  for (const [key, value] of [['mounted', false], ['exitRequested', true], ['controlObscured', true],
+    ['interactionBlocked', true], ['phase', 'failed'], ['controlVisible', () => true]]) {
+    const p = fixture('tts', 'paused'); p[key] = value;
+    assert.equal(p.shouldShowSessionCapsule(), false, key);
+  }
+  for (const phase of ['loading', 'measuring']) {
+    const p = fixture('tts', 'paused'); p.phase = phase; p.visiblePage = undefined; p.visibleFragments = [];
+    assert.equal(p.shouldShowSessionCapsule(), false, `${phase} without committed body`);
+  }
+});
+}
+if (scope === 'pointer-routing') {
 // The actual parent __Common__ and raw Row are siblings in LRE. A zIndex on
 // the Stage inside Panel cannot repair a lower/equal parent. This controlled
 // pointer seam verifies emitted attributes/callback dispatch, not native hit
 // testing, compositor order, layout or device interaction acceptance.
 check('SDK capsule parent ownership, real Stage click and Host dispatch', () => {
-  const reading = name => readFileSync((name === 'ReaderSessionLaunchStage' ? process.env.READER_CAPSULE_STAGE_SOURCE :
-    name === 'ReaderSessionCapsule' ? process.env.READER_CAPSULE_STATIC_SOURCE : undefined) ??
-    new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url), 'utf8');
+  const reading = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url), 'utf8');
   const panelText = reading('ReaderControlPanel'), stageText = reading('ReaderSessionLaunchStage');
   const rawText = reading('ReaderPageInteractionLayer'), capsuleText = reading('ReaderSessionCapsule');
   let panelStatement, panelCall;
@@ -396,5 +411,15 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
   console.log(`PASS capsule SDK parent/Stage: ${combinations} TTS/auto quick/full dot/settled/finished combinations; controlled callback/phase gates only, native hit testing OPEN`);
 });
 
+}
 for (const result of checks) console.log(JSON.stringify(result));
 assert.equal(checks.filter(r => r.status === 'FAIL').length, 0, 'PH109 production regression');
+
+} finally { if (historyRoot) rmSync(historyRoot, { recursive: true, force: true }); }
+}
+for (const id of selectContractCases({
+  'visibility': { description: 'Actual capsule projection through hidden measurement/loading, guards and retained page', resources: [] },
+  'freeze': { description: 'Observed freeze release, direct/no-animation gesture commit and rollback', resources: [] },
+  'pointer-routing': { description: 'SDK parent/Stage actors and raw pointer/Host callback exclusivity', resources: [] },
+  'historical-projection': { description: 'Diagnostic-only explicit old ref/source projection; not release qualification', resources: [] },
+})) { await runCase(id); recordContractCasePass(id); }

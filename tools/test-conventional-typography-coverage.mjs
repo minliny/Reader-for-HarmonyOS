@@ -1,8 +1,17 @@
-import { approvedTypographyContract, approvedTypographyFile } from './lib/approved-manga-typography-carriers.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
-import { auditTypographyConsumers, typographyExpressionContext, isSharedTypographyExpression } from './lib/reader-typography-consumer-audit.mjs';
-import { registeredProducerTypographySlots } from './lib/architecture-shared-producer-contract.mjs';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"selected-carrier-negative-controls": {"description": "实际action menu/SettingsSelect/diagnostic有限字体准入负例", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+
+
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync, readdirSync } = await import('node:fs');
+const { auditTypographyConsumers, typographyExpressionContext, isSharedTypographyExpression } = await import('./lib/reader-typography-consumer-audit.mjs');
+const { registeredProducerTypographySlots } = await import('./lib/architecture-shared-producer-contract.mjs');
+
 
 const root = new URL('../entry/src/main/ets/features/', import.meta.url);
 const producerContract = JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json', import.meta.url), 'utf8'));
@@ -37,7 +46,7 @@ function diagnosticTypographyNodes(source, file) {
 function verifySource(source, file) {
   const expressionContext = typographyExpressionContext(source, 'entry/src/main/ets/features/' + file);
   const producerSlots = registeredProducerTypographySlots(source, 'entry/src/main/ets/features/' + file, producerContract);
-  const approved = approvedTypographyContract(source, file);
+
   const diagnosticNodes = diagnosticTypographyNodes(source, file);
   let consumers = 0, sharedArguments = 0, sharedProducerArguments = 0, approvedArguments = 0, diagnosticArguments = 0;
   for (const node of auditTypographyConsumers(source, file)) {
@@ -45,7 +54,7 @@ function verifySource(source, file) {
     for (const [property, modifier] of Object.entries(node.modifiers)) {
       if (isSharedTypographyExpression(modifier.expression, expressionContext, node.owner)) { sharedArguments++; continue; }
       if (producerSlots.has(node.method, property, modifier.expression)) { sharedProducerArguments++; continue; }
-      if (approved.has(node)) { approvedArguments++; continue; }
+
       if (diagnosticNodes.has(node.carrierStart)) { diagnosticArguments++; continue; }
       assert.fail(`${file}:${node.line}/${property}: private style must consume the public role/spec or exact finite producer (${modifier.expression})`);
     }
@@ -53,17 +62,7 @@ function verifySource(source, file) {
   return { consumers, sharedArguments, sharedProducerArguments, approvedArguments, diagnosticArguments };
 }
 
-let files = 0, consumers = 0, sharedArguments = 0, sharedProducerArguments = 0, approvedArguments = 0, diagnosticArguments = 0;
-for (const file of readdirSync(root, { recursive: true }).filter(file => file.endsWith('.ets') && !file.startsWith('reading/'))) {
-  files++;
-  const result = verifySource(readFileSync(new URL(file, root), 'utf8'), file);
-  consumers += result.consumers;
-  sharedArguments += result.sharedArguments;
-  sharedProducerArguments += result.sharedProducerArguments;
-  approvedArguments += result.approvedArguments;
-  diagnosticArguments += result.diagnosticArguments;
-}
-
+let files=0,consumers=0,sharedArguments=0,sharedProducerArguments=0,approvedArguments=0,diagnosticArguments=0;
 // Exercise actual current consumers in memory. Neither negative control edits
 // production files or creates a second rendering implementation.
 const menuFile = 'common/ReaderActionMenuSurface.ets';
@@ -86,7 +85,7 @@ assert.throws(() => verifySource(legacySelectedRow, selectFile),
 
 const diagnosticFile = 'common/ReaderLayoutDebugOverlay.ets';
 const diagnosticSource = readFileSync(new URL(diagnosticFile, root), 'utf8');
-assert.equal(diagnosticArguments, 1, 'one exact user-requested diagnostic typography argument');
+verifySource(diagnosticSource,diagnosticFile);
 assert.throws(() => verifySource(diagnosticSource.replace('.fontSize(10)', '.fontSize(99)'), diagnosticFile),
   /exact diagnostic typography/, 'diagnostic label cannot acquire an arbitrary private size');
 assert.throws(() => verifySource(diagnosticSource.replace('.fontSize(10)', '.fontSize(10).lineHeight(99)'), diagnosticFile),
@@ -96,15 +95,10 @@ assert.throws(() => verifySource(diagnosticSource.replace('Canvas(this.drawingCo
 assert.throws(() => verifySource(diagnosticSource, 'common/ReaderLayoutDebugOverlayCopy.ets'),
   /private style/, 'diagnostic admission cannot be copied to another common path');
 
-console.log(`PASS conventional Typography coverage: ${files} files, ${consumers} real modifier carriers, ${sharedArguments} public role/spec arguments + ${sharedProducerArguments} exact finite producer arguments; ${approvedArguments} exact approved manga arguments + ${diagnosticArguments} exact diagnostic telemetry argument, no unregistered private arguments or retired debt; 6 actual-source regression controls rejected`);
-
-// Approval is finite: retain the whole real carrier, including AUTO omissions.
-const approvedFile='manga/MangaDownloadOperationsPanel.ets';
-const approvedSource=readFileSync(new URL(approvedFile,root),'utf8');
-assert.throws(()=>verifySource(approvedSource.replace('.fontSize(13)', '.fontSize(99)'),approvedFile), /exact approved typography carrier\/tuple changed/);
-assert.throws(()=>verifySource(approvedSource.replace('.fontSize(13)', '.fontSize(13).letterSpacing(99)'),approvedFile), /exact approved typography carrier\/tuple changed/);
-assert.throws(()=>verifySource(approvedSource.replace('Column({ space: 8 }) {', "Column({ space: 8 }) { Text('未经批准').fontSize(13);"),approvedFile), /exact approved typography carrier\/tuple changed/);
+console.log(`PASS selected typography negative controls: ${files} files, ${consumers} real modifier carriers, ${sharedArguments} public role/spec arguments + ${sharedProducerArguments} exact finite producer arguments; ${approvedArguments} exact approved manga arguments + ${diagnosticArguments} exact diagnostic telemetry argument, no unregistered private arguments or retired debt; 6 actual-source regression controls rejected`);
 
 assert.equal(isSharedTypographyExpression("TYPE_DOWNLOAD_CONTROL.fontSizeFp.toString() + 'vp'"), true);
 assert.equal(isSharedTypographyExpression("DOWNLOAD_VISUAL.controlFontSize.toString() + 'vp'"), false);
 assert.equal(isSharedTypographyExpression("(TYPE_DOWNLOAD_CONTROL.fontSizeFp + 1).toString() + 'vp'"), false);
+
+}

@@ -25,7 +25,7 @@ const sourceId = 'source';
 const seed = bookId => ({ sourceId, bookId, detailUrl: bookId, title: '目录示例', author: '作者', sourceVersion: 'v1' });
 const book = (bookId, extra={}) => ({ ...seed(bookId), addedAt: 1, readProgress: 3210, ...extra });
 function fixture(books=[book('/one')]) {
-  const projectionAdmissions=[], calls=[], records=new Map(), catalogs=new Map(), modes=new Map(), prefetched=[], log=[];
+  const projectionAdmissions=[], calls=[], toasts=[], records=new Map(), catalogs=new Map(), modes=new Map(), prefetched=[], log=[];
   let remoteCount=1, cacheGate, tocGate, targetsGate, projectionGate, failProjection=false, installedOwner, active=0, peak=0, projections=0, fullScans=0, enabled=true, diagnosticThrows=false,failTargets=false;
   const runtime = new BookAcquisitionCoordinator(async (method, params, options) => {
     calls.push({method,params});
@@ -70,8 +70,9 @@ function fixture(books=[book('/one')]) {
   const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,rssInstanceIdentity:1,shelfReadingFilter:'all',shelfSourceFilter:'all',shelfContentFilter:'all',bookshelfHost:bookshelfCatalogHost(Flow,()=>installedOwner),shelfReceiptRetired:false,shelfProjectionRevision:'',navigationGeneration:1,bookshelfCatalogEpoch:0,bookshelfBackgroundEpoch:0,route:'bookshelf',shelfBooks:books,settingsSnapshot:{autoCheckUpdate:true},
     applicationSettingsSnapshot:{autoCheckUpdate:true},searchAppForeground:true,readingSessionActive:false,
     bookshelfUpdateRunning:false,bookshelfBackgroundRefreshRunning:false,bookshelfUpdateDone:0,bookshelfUpdateTotal:0,
+    getUIContext:()=>({getPromptAction:()=>({showToast:value=>toasts.push(value.message)})}),
     bookshelfLoadGeneration:0,prefetchReadingWindow:async session=>prefetched.push(session),invalidateBookshelfProjection(){this.bookshelfLoadGeneration++;},applyBookshelfState(){}});
-  return {runtime,owner,page,currentOwner:()=>installedOwner,calls,projectionAdmissions,records,catalogs,modes,prefetched,log,remoteCount:n=>{remoteCount=n;}, diagnosticThrows:v=>{diagnosticThrows=v;},
+  return {runtime,owner,page,toasts,currentOwner:()=>installedOwner,calls,projectionAdmissions,records,catalogs,modes,prefetched,log,remoteCount:n=>{remoteCount=n;}, diagnosticThrows:v=>{diagnosticThrows=v;},
     cacheGate:g=>{cacheGate=g;},tocGate:g=>{tocGate=g;},targetsGate:g=>{targetsGate=g;}, projectionGate:g=>{projectionGate=g;}, failProjection:v=>{failProjection=v;},failTargets:v=>{failTargets=v;}, setOwner:v=>{installedOwner=v;},peak:()=>peak,projections:()=>projections,fullScans:()=>fullScans};
 }
 const ets = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
@@ -84,11 +85,11 @@ function actualFeedbackShell(composition, shellSource, props) {
  Object.assign(composition.childSources,{MainTabShell:mainSource,MainTabBar:barSource,BookshelfMoreMenu:ets('features/bookshelf/BookshelfMoreMenu.ets')});
  const platform={...metricsApi,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics},MainTabBar:Child};
  const MainTabShell=createReaderBuilderProbe(mainSource,boundedMembers(mainSource),{...composition.deps,...platform},composition.hooks).Component;
- const shell=composition.consumer(shellSource,['build','shellHeader','shellOverlay','headerHeight','onHeaderHeightChange','showBottomNav','numericAreaLength','recovery','readRecovery','populated','reduceMotion','onReconcile','onRetryRead','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','onTemporaryBackBridge','temporaryBackGeneration','temporaryBackIdentity','mounted','moreMenuVisible','dismissMoreMenu','requestMainTab','content','recoveryNoticeContent'],
+ const shell=composition.consumer(shellSource,['onNoticeHeightChange','onReadRecoveryChanged','onRecoveryChanged','lastReadFeedback','noticeHeight','build','shellHeader','shellOverlay','headerHeight','onHeaderHeightChange','showBottomNav','numericAreaLength','recovery','readRecovery','populated','reduceMotion','onReconcile','onRetryRead','navigationGeneration','onNavigationGenerationChanged','registerTemporaryBackGeneration','onTemporaryBackBridge','temporaryBackGeneration','temporaryBackIdentity','mounted','moreMenuVisible','dismissMoreMenu','requestMainTab','content','recoveryNoticeContent'],
   {MainTabShell,BookshelfMoreMenu:Child,bookshelfTemporaryGeneration:0,BOOKSHELF_WIDE_BREAKPOINT:600,...platform},props);
  Object.assign(shell,{topBar(){},content(){},moreMenuVisible:false});shell.initialRender();
  assert.ok(composition.nodes(shell).some(node=>node.type==='Stack'&&node.backgroundColor),'the production Scaffold owns the page surface');
- assert.ok(composition.nodes(shell).some(node=>node.type==='Column'&&node.backgroundColor&&node.onAreaChange),'the recovery notice is protected by an actual opaque fixed header host');
+ assert.equal(composition.walk(shell).some(owner=>owner instanceof composition.deps.ReaderRecoveryNotice),false,'confirmed catalog work never paints a pending Notice');
  return shell;
 }
 function actualRecovery(f) {
@@ -108,9 +109,11 @@ function actualRecovery(f) {
  composition.childSources.BookshelfMoreMenu=ets('features/bookshelf/BookshelfMoreMenu.ets');
  const shell=actualFeedbackShell(composition,shellSource,props);
  const notice=composition.walk(shell).find(owner=>owner instanceof composition.deps.ReaderRecoveryNotice);
- assert.ok(notice,'real Shell -> shared RecoveryNotice consumes the catalog facts');
- const action=composition.nodes(shell).find(node=>node.height===36&&node.onClick);
- return {props,notice,action,nodes:composition.nodes(shell)};
+ assert.equal(notice,undefined,'ordinary catalog result uses short Toast, not pending Notice');
+ const action=composition.walk(shell).find(owner=>owner instanceof composition.deps.ReaderRecoveryAction);
+ assert.equal(action,undefined,'no obsolete inline action is rendered');
+ const facts=f.page.bookshelfCatalogFacts, retry=()=>props.onReconcile(facts.generation,props.navigationGeneration);
+ return {props,notice,action,retry,message:f.toasts.at(-1),canRetry:facts.canRetry,nodes:composition.nodes(shell)};
 }
 function reconstructCatalog(f,navigation=f.page.navigationGeneration) {
  const old=f.page;old.retireBookshelfCatalogPresentation();old.shelfReceiptRetired=true;
@@ -165,7 +168,7 @@ await check('per-book failure/empty results preserve old records, settle flags a
     assert.equal(f.prefetched.length,1);assert.equal(f.prefetched[0].identity.bookId,'/healthy');
     assert.equal(f.page.bookshelfUpdateDone,3);assert.equal(f.page.bookshelfUpdateTotal,3);assert.ok(f.peak()<=2);
     assert.equal(f.page.bookshelfCatalogFacts.fact,'partial');assert.equal(f.page.bookshelfCatalogFacts.value.succeeded,1);assert.equal(f.page.bookshelfCatalogFacts.value.failed,2);
-    assert.match(f.page.shelfRecovery().message,/成功 1\/3，失败 2/);assert.equal(f.page.shelfRecovery().canRetry,false);
+    assert.match(f.toasts.at(-1),/成功 1\/3，失败 2/);assert.equal(f.page.shelfRecovery().visible,false);assert.equal(f.page.bookshelfCatalogFacts.canRetry,false);
     assert.equal(f.calls.some(c=>/clear|delete|remove|progress.update/.test(c.method)),false);
   } finally {f.runtime.close();}
 });
@@ -292,8 +295,8 @@ for(const change of ['cancel','close','source-delete']) await check(`force waiti
 });
 await check('accepted catalog ACK + failed shelf read offers readonly retry, never another force write',async()=>{
  const f=fixture();try{f.failProjection(true);f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
-  assert.equal(f.page.bookshelfCatalogFacts.fact,'refreshFailed');assert.equal(f.page.bookshelfCatalogFacts.value.succeeded,1);assert.equal(f.page.shelfRecovery().canRetry,true);
-  const writes=f.calls.filter(c=>c.method==='book.toc').length;f.failProjection(false);const token=f.page.shelfRecovery().generation;
+  assert.equal(f.page.bookshelfCatalogFacts.fact,'refreshFailed');assert.equal(f.page.bookshelfCatalogFacts.value.succeeded,1);assert.equal(f.page.shelfRecovery().visible,false);assert.equal(f.page.bookshelfCatalogFacts.canRetry,true);assert.match(f.toasts.at(-1),/刷新/);
+  const writes=f.calls.filter(c=>c.method==='book.toc').length;f.failProjection(false);const token=f.page.bookshelfCatalogFacts.generation;
   await Promise.all([f.page.reconcileBookshelfCatalogProjection(token),f.page.reconcileBookshelfCatalogProjection(token)]);
   assert.equal(f.calls.filter(c=>c.method==='book.toc').length,writes);assert.equal(f.page.bookshelfCatalogFacts.fact,'current');assert.equal(f.projections(),2);
  }finally{f.runtime.close();}
@@ -317,23 +320,23 @@ await check('body preparation failure preserves catalog success as a separate fa
   assert.equal(f.page.bookshelfCatalogFacts.value.succeeded,1);assert.equal(f.page.bookshelfCatalogFacts.value.failed,0);assert.equal(f.page.bookshelfCatalogFacts.value.preparationFailed,1);assert.equal(f.page.bookshelfCatalogFacts.fact,'partial');
  }finally{f.runtime.close();}
 });
-await check('actual Host -> Index -> SDK Shell/Notice/physical retry separates partial and readback failure',async()=>{
+await check('actual Host -> Index -> SDK Shell Toast/existing read delegate separates partial and readback failure',async()=>{
  const f=fixture([book('/broken'),book('/good')]);try{
   f.modes.set('/broken','error');f.failProjection(true);f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
   const shown=actualRecovery(f);assert.equal(shown.props.updateProgressDone,2);assert.equal(shown.props.updateProgressTotal,2);
-  assert.match(shown.notice.view.message,/成功 1\/2，失败 1/);assert.ok(shown.action);assert.equal(shown.notice.view.canRetry,true);
+  assert.match(shown.message,/成功 1\/2，失败 1/);assert.equal(shown.action,undefined);assert.equal(shown.canRetry,true);
   const writes=f.calls.filter(call=>call.method==='book.toc').length;f.failProjection(false);
-  shown.action.onClick();shown.action.onClick();await until(()=>!f.page.bookshelfCatalogFacts.canRetry&&f.page.bookshelfCatalogFacts.fact==='partial');
+  shown.retry();shown.retry();await until(()=>!f.page.bookshelfCatalogFacts.canRetry&&f.page.bookshelfCatalogFacts.fact==='partial');
   assert.equal(f.calls.filter(call=>call.method==='book.toc').length,writes);assert.equal(f.projections(),2);
-  const partial=actualRecovery(f);assert.match(partial.notice.view.message,/成功 1\/2，失败 1/);assert.equal(partial.action,undefined);
-  // Real old native recovery callback cannot force a new catalog mutation.
-  f.page.navigationGeneration++;const before=f.projections();shown.action.onClick();await pause();assert.equal(f.projections(),before);
+  const partial=actualRecovery(f);assert.match(partial.message,/成功 1\/2，失败 1/);assert.equal(partial.action,undefined);
+  // The retained actual Index callback cannot force a new catalog mutation.
+  f.page.navigationGeneration++;const before=f.projections();shown.retry();await pause();assert.equal(f.projections(),before);
  }finally{f.runtime.close();}
 });
 await check('target-read rejection is the only phase allowed to say catalog checks never started',async()=>{
  const f=fixture();try{f.page.shelfProjectionRevision='r';f.failTargets(true);
  f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
- assert.equal(f.page.bookshelfCatalogFacts.fact,'failed');assert.match(actualRecovery(f).notice.view.message,/未启动检查/);
+ assert.equal(f.page.bookshelfCatalogFacts.fact,'failed');assert.match(actualRecovery(f).message,/未启动检查/);
  assert.equal(f.calls.filter(c=>c.method==='book.toc').length,0);assert.equal(f.projections(),0);
  }finally{f.runtime.close();}
 });
@@ -344,7 +347,7 @@ await check('progress publication throws do not erase real catalog ACKs or abort
  assert.equal(f.page.bookshelfCatalogHost.snapshot().facts.value.succeeded,2);assert.equal(f.page.bookshelfCatalogHost.snapshot().facts.value.failed,1);
  assert.equal(f.calls.filter(c=>c.method==='book.toc').length,3);assert.equal(f.projections(),1);
  Object.defineProperty(f.page,'bookshelfUpdateDone',{value:0,writable:true,configurable:true});f.page.rssInstanceIdentity++;f.page.getBookshelfCatalogOwner();
- assert.match(actualRecovery(f).notice.view.message,/成功 2\/3，失败 1/);assert.doesNotMatch(f.page.shelfRecovery().message,/未启动/);
+ assert.match(actualRecovery(f).message,/成功 2\/3，失败 1/);assert.doesNotMatch(f.page.shelfRecovery().message,/未启动/);
  assert.ok(f.projectionAdmissions.every(admit=>typeof admit==='function'&&!admit()),'old source presentation is retired after successful exact dispatch; restored current consumer cannot reuse its old IO predicate');
  }finally{f.runtime.close();}
 });
@@ -353,7 +356,7 @@ await check('executed work and readback diagnostic failures preserve progress an
  host.runBatch=async(...args)=>{await batch(...args);throw Error('final publication unavailable');};
  f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
  assert.equal(f.page.bookshelfCatalogFacts.fact,'partial');assert.equal(f.page.bookshelfCatalogFacts.value.succeeded,1);
- assert.match(actualRecovery(f).notice.view.message,/已确认成功 1/);assert.doesNotMatch(f.page.shelfRecovery().message,/未启动/);
+ assert.match(actualRecovery(f).message,/已确认成功 1/);assert.doesNotMatch(f.page.shelfRecovery().message,/未启动/);
  const writes=f.calls.filter(c=>c.method==='book.toc').length;f.failProjection(false);
  await f.page.reconcileBookshelfCatalogProjection(f.page.bookshelfCatalogFacts.generation);
  assert.equal(f.calls.filter(c=>c.method==='book.toc').length,writes);assert.equal(f.page.bookshelfCatalogFacts.fact,'current');
@@ -376,24 +379,23 @@ await check('warm readback failure retains original fact and readonly recovery a
   f.failProjection(true);f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
   const original=f.page.getBookshelfCatalogOwner(),facts=original.snapshot().facts,oldNotice=actualRecovery(f),page=reconstructCatalog(f);
   assert.equal(page.getBookshelfCatalogOwner(),original);assert.equal(page.bookshelfCatalogFacts,facts);assert.equal(facts.fact,'refreshFailed');f.failProjection(false);
-  const before=f.projections();oldNotice.action.onClick();await pause();assert.equal(f.projections(),before,'old physical notice cannot borrow successor Index');
-  const current=actualRecovery({...f,page});current.action.onClick();current.action.onClick();await until(()=>original.snapshot().facts.fact==='current');
-  assert.equal(f.projections(),before+1,'current physical retry is single pure read');assert.equal(f.calls.filter(call=>call.method==='book.toc').length,1);
+  const before=f.projections();oldNotice.retry();await pause();assert.equal(f.projections(),before,'old captured delegate cannot borrow successor Index');
+  const current=actualRecovery({...f,page});current.retry();current.retry();await until(()=>original.snapshot().facts.fact==='current');
+  assert.equal(f.projections(),before+1,'current captured delegate is a single pure read');assert.equal(f.calls.filter(call=>call.method==='book.toc').length,1);
  }finally{f.runtime.close();}
 });
-await check('actual SDK retained Shell nav update rotates only result Notice with immutable old callbacks',async()=>{
+await check('actual SDK retained Shell keeps catalog Toast outside pending Notice and fences read delegates across navigation',async()=>{
  const f=fixture();try{
   f.failProjection(true);f.page.startManualBookshelfUpdate();await until(()=>!f.page.bookshelfUpdateRunning);
   const old=actualRecovery(f),text=ets('features/bookshelf/BookshelfShell.ets'),sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
   sdk.childSources.BookshelfMoreMenu=ets('features/bookshelf/BookshelfMoreMenu.ets');
-  const shell=actualFeedbackShell(sdk,text,old.props);
-  const oldAction=sdk.nodes(shell).find(node=>node.height===36&&node.onClick),oldNotice=sdk.walk(shell).find(node=>node instanceof sdk.deps.ReaderRecoveryNotice);
-  const oldPhysical=oldAction.onClick,oldHandler=oldNotice.onReconcile,sequence=f.page.bookshelfCatalogFacts.generation;
+  const shell=actualFeedbackShell(sdk,text,old.props),sequence=f.page.bookshelfCatalogFacts.generation;
+  assert.equal(sdk.walk(shell).some(owner=>owner instanceof sdk.deps.ReaderRecoveryNotice),false);
+  const oldHandler=old.props.onReconcile;
   f.page.navigationGeneration++;f.page.getBookshelfCatalogOwner();const current=actualRecovery(f);shell.updateStateVars(current.props);sdk.properties.flush();
-  const freshNotice=sdk.walk(shell).find(node=>node instanceof sdk.deps.ReaderRecoveryNotice&&node!==oldNotice);assert.ok(freshNotice,'finite result Notice rotates by navigation');
-  const freshAction=[...freshNotice.children.values()].flatMap(node=>[...node.nodes.values()]).find(node=>node.height===36&&node.onClick);assert.ok(freshAction);
-  f.failProjection(false);const before=f.projections();oldPhysical();oldHandler(sequence);await pause();assert.equal(f.projections(),before,'old gesture/callback retain original nav');
-  freshAction.onClick();freshAction.onClick();await until(()=>f.page.bookshelfCatalogFacts.fact==='current');assert.equal(f.projections(),before+1);
+  assert.equal(sdk.walk(shell).some(owner=>owner instanceof sdk.deps.ReaderRecoveryNotice),false,'navigation does not manufacture a persistent catalog notice');
+  f.failProjection(false);const before=f.projections();old.retry();oldHandler(sequence);await pause();assert.equal(f.projections(),before,'old captured Index delegate cannot borrow fresh navigation');
+  current.retry();current.retry();await until(()=>f.page.bookshelfCatalogFacts.fact==='current');assert.equal(f.projections(),before+1);
   assert.equal(f.calls.filter(call=>call.method==='book.toc').length,1);
  }finally{f.runtime.close();}
 });

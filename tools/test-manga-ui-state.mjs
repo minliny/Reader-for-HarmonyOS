@@ -1,11 +1,26 @@
-import { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } from '../entry/src/main/ets/features/manga/MangaLayoutPolicy.ts';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { createDefaultReaderSettingsSnapshot, normalizeReaderSettingsSnapshot, copyReaderSettingsSnapshot } from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
+export const CONTRACT_CASES = {
+  "manga-preferences": {
+    "description": "Real SettingsGateway with cache/durable and unknown-flush queue ports; no SDK or device",
+    "resources": []
+  },
+  "chapter-action-admission": {
+    "description": "Actual Surface chapter and late seek admission with fake controller",
+    "resources": []
+  },
+  "layout-policy": {
+    "description": "Pure phone/tablet directory policy boundaries; no device geometry claim",
+    "resources": []
+  }
+};
+
+async function case_manga_preferences() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { createDefaultReaderSettingsSnapshot, normalizeReaderSettingsSnapshot, copyReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+const { runtimeOwnerIdentityProbe } = await import('./lib/reader-runtime-admission-probe.mjs');
 const initial = createDefaultReaderSettingsSnapshot();
 const normalized = normalizeReaderSettingsSnapshot({ ...initial, mangaBackground: 'ink', mangaPageNumbers: false });
 assert.equal(normalized.mangaBackground, 'ink');
@@ -82,8 +97,13 @@ assert.equal(gateway.current().mangaBackground, 'paper');
 assert.equal(gateway.current().mangaPageNumbers, false);
 assert.equal(gateway.current().screenTimeout, 'alwaysOn', 'manga writes preserve the novel setting owner');
 
+}
+
+async function case_chapter_action_admission() {
+const { default: assert } = await import('node:assert/strict');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const Surface = productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url),
-  ['adjacentChapter','pageOrdinal','openChapterEnd','seekPage']);
+  ['adjacentChapter','pageOrdinal','openChapterEnd','seekPage','nativeImageFailures','nativeFailureKey','wholeImageUnavailable','unavailableMarkerTile']);
 const chapter = { chapterIndex: 8, manifest: { chapter: { sourceId: 's', bookId: 'b', chapterId: '/8' } } };
 const owner = Object.assign(new Surface(), { sourceId: 's', bookId: 'b', mounted: true, opened: true,
   horizontal: false, displayedPage: 3, horizontalPageCount: 4,
@@ -123,6 +143,11 @@ await seeking;
 assert.equal(restores, 0, 'late page acquisition after disposal never moves a native viewport');
 console.log('PASS production manga preference migration, stale novel form preservation, accepted/saved unknown-ACK reconciliation and serialization, actual readable neighbors, confirmed chapter-end and disposed seek fencing');
 
+}
+
+async function case_layout_policy() {
+const { default: assert } = await import('node:assert/strict');
+const { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } = await import('../entry/src/main/ets/features/manga/MangaLayoutPolicy.ts');
 assert.equal(mangaUsesPersistentDirectory(393,852,false),false);
 assert.equal(mangaUsesPersistentDirectory(820,420,false),false,'phone landscape keeps a floating directory');
 assert.equal(mangaUsesPersistentDirectory(1180,820,true),true);
@@ -133,3 +158,11 @@ assert.equal(mangaDirectoryColumnWidth(701),258);
 assert.equal(mangaDirectoryColumnWidth(1180),258);
 assert.equal(mangaDirectoryColumnWidth(1600),258);
 console.log('PASS phone portrait/landscape versus tablet directory ownership and bounded persistent column');
+
+}
+
+const implementations = {'manga-preferences':case_manga_preferences,'chapter-action-admission':case_chapter_action_admission,'layout-policy':case_layout_policy};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

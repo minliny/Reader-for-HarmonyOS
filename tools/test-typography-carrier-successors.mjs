@@ -1,35 +1,49 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { sharedTypographyReplacement, typographyCarrierMethod } from './lib/reader-typography-shared-replacements.mjs';
-const read = p => readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const baseline = JSON.parse(read('tools/fixtures/design/conventional-typography-baseline.json'));
-const file = tail => baseline.files.find(file => file.path.endsWith(tail));
-const rss = file('/RssSubscriptionEditorPage.ets');
-const save = rss.nodes.find(node => node.method === 'build' && node.text === "'保存'");
-const page = read(rss.path);
-const saveCarrier=sharedTypographyReplacement(rss.path,save,page);
-assert.equal(saveCarrier.producerPath,'entry/src/main/ets/features/common/ReaderButton.ets');
-assert.throws(()=>sharedTypographyReplacement(rss.path,save,page.replace('this.saveAction();','// this.saveAction();')),/actual AST call/,'comment cannot stand in for a real Builder edge');
-assert.throws(()=>sharedTypographyReplacement(rss.path,save,page.replace("specId: 'form-busy-action'","specId: 'rules-action'")),/real finite binding/);
-const button=read('entry/src/main/ets/features/common/ReaderButton.ets');
-assert.throws(()=>sharedTypographyReplacement(rss.path,save,page,button.replace('instance.fontSize(text.fontSizeFp)','instance.fontSize(19)')),/exact immutable original native tuple/);
-assert.equal(typographyCarrierMethod(rss.path,rss.nodes[0],page),'pageContent','existing RSS status keeps its exact original tuple in the proved public content slot');
-assert.throws(()=>typographyCarrierMethod(rss.path,rss.nodes[0],page.replace('content: (): void => { this.pageContent(); }','content: (): void => {}')),/actual public slot calls/,'an unchanged status tuple cannot bypass its actual shared content slot');
-const settings=file('/SettingsPage.ets'),reset=settings.nodes.find(node=>node.method==='buildGeneral'&&node.text==='this.resetMessage'),settingsPage=read(settings.path);
-assert.equal(typographyCarrierMethod(settings.path,reset,settingsPage),'operationFeedback');
-assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replaceAll('this.operationFeedback();','// this.operationFeedback();')),/actual AST call/);
-assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replace('Text(this.feedbackMessage())','Text(this.resetMessage)')),/exact authored successor carrier/);
-assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replace('Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)','Text(this.feedbackMessage()).fontSize(19)')),/exact public successor tuple/);
-assert.throws(()=>typographyCarrierMethod(settings.path,reset,settingsPage.replace('Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)','Text(this.feedbackMessage()).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).letterSpacing(0)')),/AUTO omissions/);
-const target = read('entry/src/main/ets/features/common/ReaderRecoveryNotice.ets');
-for(const [tail,text] of [['/BookshelfPage.ets','this.viewModeError'],['/BookshelfSettingsPage.ets','this.error']]){
-  const pageFile=file(tail), expected=pageFile.nodes.find(node=>node.text===text),source=read(pageFile.path);
-  const actual=sharedTypographyReplacement(pageFile.path,expected,source);assert.equal(actual.text,'this.view.message');
-  assert.deepEqual(Object.keys(actual.modifiers),Object.keys(expected.original));
-  assert.throws(()=>sharedTypographyReplacement(pageFile.path,expected,source.replaceAll('ReaderRecoveryNotice({','ReaderOtherNotice({')),/actual page consumes/);
-  assert.throws(()=>sharedTypographyReplacement(pageFile.path,expected,source.replace("import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';",'')),/actual shared implementation import/);
-  assert.throws(()=>sharedTypographyReplacement(pageFile.path,expected,source,target.replace('TYPE_APP_INHERITED_BODY.fontSizeFp','13')),/exact original shared role/);
-  assert.throws(()=>sharedTypographyReplacement(pageFile.path,expected,source,target.replace('.fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)','.fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontWeight(400)')),/AUTO omission/);
-  assert.equal(sharedTypographyReplacement('entry/src/main/ets/features/other/OtherPage.ets',expected,source),undefined,'no free-form whitelisting of new pages');
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"settings-feedback": {"description": "实际Settings in-flight反馈/完成后无永久Text", "resources": []}, "shelf-notice": {"description": "实际Shelf两consumer→RecoveryNotice→action captured generation", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const {default: assert} = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {boundedSurfaceSdk} = await import('./lib/bounded-surface-sdk-probe.mjs');
+
+const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+if(selectedCase==='settings-feedback'){const settingsPage=read('entry/src/main/ets/features/settings/SettingsPage.ets');
+for(const busy of [true,false]){
+  const sdk=boundedSurfaceSdk(),o=sdk.consumer(settingsPage,['operationFeedback']);
+  Object.assign(o,{appThemeScheme:'day',resetInFlight:busy,cacheCleanupInFlight:false,resetMessage:'已恢复界面与阅读设置',
+    hasPendingSettings:()=>false,recovery:()=>({canRetry:false})});o.operationFeedback();
+  const texts=sdk.nodes(o).filter(n=>n.type==='Text');
+  assert.equal(texts.length,busy?1:0,'only the real in-flight task owns an inline message');
+  if(busy){assert.equal(texts[0].create,'正在恢复界面与阅读设置');
+    assert.ok(sdk.nodes(o).some(n=>n.type==='LoadingProgress'));}
 }
-console.log('PASS precise Typography successors: RSS actual saveAction edge + Settings current feedbackMessage edge + two actual shared recovery carriers; literal/default/import/comment bypasses rejected.');
+}
+if(selectedCase==='shelf-notice'){
+for(const [tail,text] of [['/BookshelfPage.ets','this.viewModeError'],['/BookshelfSettingsPage.ets','this.error']]){
+  const pageFile={path:'entry/src/main/ets/features/'+(tail==='/BookshelfPage.ets'?'bookshelf/BookshelfPage.ets':'bookshelf/BookshelfSettingsPage.ets')},source=read(pageFile.path),method=tail==='/BookshelfPage.ets'?'bookshelfTabContent':'pendingOverlay';
+  const mount=(input=source)=>{
+    assert.match(input,/import \{ ReaderRecoveryNotice \} from '\.\.\/common\/ReaderRecoveryNotice';/,
+      'actual shared implementation import remains required');
+    const sdk=boundedSurfaceSdk(),o=sdk.consumer(input,[method]);
+    const calls=[],view={visible:true,canRetry:true,message:'原显示方式保存待核对',generation:11};
+    Object.assign(o,{appThemeScheme:'day',viewModeSnapshot:{},modeReconcileBusy:false,viewModeReconcileBusy:false,
+      viewModePending:()=>true,modePending:()=>true,viewModeRecovery:()=>view,
+      isWideViewport:()=>false,tabletContent(){},phoneContent(){},settingsRecovery(){},
+      actionBook:undefined,bookActionSheetContent(){},bookActionSheetOptions:()=>({}),headerClearance:64,noticeTopInset:0,
+      retryViewMode:g=>calls.push(g),retryMode:g=>calls.push(g)});o[method]();
+    const children=sdk.walk(o).filter(c=>c instanceof sdk.deps.ReaderRecoveryNotice);
+    assert.equal(children.length,1,'the actual current owner mounts one finite shared notice');
+    assert.deepEqual(sdk.properties.sdk.ObservedObject.GetRawObject(children[0].view),view,
+      'the complete current recovery view reaches the mounted shared child through its genuine copied Prop');
+    assert.ok(sdk.nodes(children[0]).some(n=>n.type==='Span'&&n.create==='  '+view.message),
+      'the real shared native Span renders the current recovery message');
+    const action=sdk.walk(children[0]).find(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label==='核对显示方式');
+    assert.ok(action);[...action.nodes.values()].find(n=>n.onClick).onClick();assert.deepEqual(calls,[11]);
+  };
+  mount();
+  assert.throws(()=>mount(source.replaceAll('ReaderRecoveryNotice({','ReaderOtherNotice({')),/actual current owner mounts|not defined|UI component syntax|no diagnostics/);
+  assert.throws(()=>mount(source.replace("import { ReaderRecoveryNotice } from '../common/ReaderRecoveryNotice';",'')),/actual shared implementation import/);
+}
+}
+
+}

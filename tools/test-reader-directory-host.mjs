@@ -1,8 +1,17 @@
-import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
-registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if((s.startsWith('./')||s.startsWith('../'))&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReaderDirectoryHost}=await import(process.env.READER_READING_OWNER_SDK === '1' ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/ReaderDirectoryHost.ts');
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'node-protocol':{description:'Direct production Node owner with fake RPC/projection; no journal supplied',resources:[]},
+ 'sdk-protocol':{description:'Installed SDK-emitted production owner with same fake RPC; no journal or actual Core claim',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { registerHooks }=await import('node:module');
+const resolution=registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if((s.startsWith('./')||s.startsWith('../'))&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
+try {
+const {ReaderDirectoryHost}=await import(selectedCase==='sdk-protocol' ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/ReaderDirectoryHost.ts');
 const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
+const {readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
 const clone=structuredClone, tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:()=>resolve()};};
 const book={sourceId:'local',sourceName:'local',bookId:'book',title:'Book',author:'Author'};
@@ -22,7 +31,7 @@ function fixture(){let runtimeCurrent=true,routeCurrent=true;const delivered=[],
  return{rpc,host,binding,create,delivered,settled,entries:()=>entries,setEntries:v=>entries=v,retire:()=>routeCurrent=false,unset:()=>runtimeCurrent=false,restore:()=>{routeCurrent=runtimeCurrent=true;}};
 }
 {
- const f=fixture();f.rpc.failList=true;await f.create();assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedRefreshFailed');assert.equal(f.host.busy(),false);assert.deepEqual(f.entries()[0].bookmarks,[],'readback failure retains the last usable projection');assert.equal(f.entries()[0].level,2);assert.equal(f.entries()[0].downloadState,'completed');assert.deepEqual(f.settled,[true]);
+ const f=fixture();f.rpc.failList=true;await f.create();assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedRefreshFailed');assert.equal(readingDirectoryRecovery('dir',book,f.host.snapshot()).bookmarksKind,'readback');assert.equal(f.host.busy(),false);assert.deepEqual(f.entries()[0].bookmarks,[],'readback failure retains the last usable projection');assert.equal(f.entries()[0].level,2);assert.equal(f.entries()[0].downloadState,'completed');assert.deepEqual(f.settled,[true]);
  f.rpc.failList=false;await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedCurrent');assert.equal(f.entries()[0].bookmarks.length,1);assert.equal(f.rpc.calls.filter(c=>c.method==='bookmark.create').length,1);
 }
 {
@@ -39,7 +48,7 @@ for(const retire of ['retire','unset']){
  f.restore();f.rpc.pause=undefined;await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedCurrent');assert.equal(f.rpc.calls.filter(c=>c.method==='bookmark.create').length,1);
 }
 {
- const f=fixture();await f.create();await f.create();const times=f.entries()[0].bookmarks.map(b=>b.time),d=defer();f.rpc.pause=d;const task=f.host.deleteBookmarks(times,f.binding);await tick();f.retire();d.resolve();await task;assert.equal(f.host.snapshot().confirmedCount,1,'ACK counted before UI guard');assert.equal(f.rpc.calls.filter(c=>c.method==='bookmark.delete').length,1,'retirement stops subsequent dispatch only');assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.equal(f.host.snapshot().requestedCount,2);assert.equal(f.host.snapshot().completion,'partial');
+ const f=fixture();await f.create();await f.create();const times=f.entries()[0].bookmarks.map(b=>b.time),d=defer();f.rpc.pause=d;const task=f.host.deleteBookmarks(times,f.binding);await tick();f.retire();d.resolve();await task;assert.equal(f.host.snapshot().confirmedCount,1,'ACK counted before UI guard');assert.equal(f.rpc.calls.filter(c=>c.method==='bookmark.delete').length,1,'retirement stops subsequent dispatch only');assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.equal(f.host.snapshot().requestedCount,2);assert.equal(f.host.snapshot().completion,'partial');assert.equal(readingDirectoryRecovery('dir',book,f.host.snapshot()).bookmarksKind,'result');
 }
 {
  const f=fixture();f.binding.emitOperation=()=>{throw Error('presentation failed');};await f.create();assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedCurrent','presentation exception does not alter mutation receipt');
@@ -52,3 +61,8 @@ for(const retire of ['retire','unset']){
  assert.equal(ReaderDirectoryHost.forRuntime(successor.rpc,()=>true),successor.host);
 }
 console.log('PASS actual LocalReadingFlowGateway -> ReaderDirectoryHost: qualified ACK/unknown/partial/retirement/runtime-unset/read-only reconciliation/foreign keys/presentation isolation');
+
+}finally{resolution.deregister();}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

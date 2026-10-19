@@ -1,7 +1,11 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const selected=selectContractCases({lifecycle:{description:'Actual deferred fractional extent/data admission and two source-mutation negatives',resources:[]},'sdk-bindings':{description:'Actual SDK fixed/natural List extent, row height and content offsets',resources:[]}});
+async function run(id){
+const {default:assert}=await import('node:assert/strict');
+const {readFileSync}=await import('node:fs');
+const {stripTypeScriptTypes}=await import('node:module');
+const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');
+if(id==='lifecycle'){
 const source = readFileSync(new URL(
   '../entry/src/main/ets/features/reading/ReaderDirectoryList.ets', import.meta.url), 'utf8');
 const snapshotSource = readFileSync(new URL(
@@ -12,8 +16,13 @@ const { sameReaderDirectoryData, snapshotReaderDirectoryData } = await import(
 // Run the real lifecycle/watch methods with only the platform size container
 // mocked. This checks propagation, not native virtual List measurement/reflow.
 function loadList(text = source) {
-  assert.equal(text.split('\n  build() {').length, 2);
-  const methods = `${text.split('\n  build() {')[0]}\n}`
+  const {ts,options}=installedEtsCompiler();
+  const tree=ts.createSourceFile('ReaderDirectoryList.ets',text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+  assert.deepEqual(tree.parseDiagnostics,[]);
+  const list=tree.statements.find(n=>n.name?.text==='ReaderDirectoryList');
+  const data=tree.statements.find(n=>n.name?.text==='DirectoryListDataSource');
+  assert.ok(list&&data,'actual list and data source owners');
+  const methods = `${data.getText(tree)}\nclass ReaderDirectoryList {${list.members.filter(n=>n.name?.getText(tree)!=='build').map(n=>n.getText(tree)).join('\n')}}` 
     .replace(/^import[\s\S]*?;\s*/gm, '')
     .replace(/@(?:Component|Prop|State|BuilderParam|Builder)\b\s*/g, '')
     .replace(/@Watch\('[^']+'\)\s*/g, '')
@@ -53,36 +62,6 @@ function checkLifecycle(List) {
   }
 }
 
-function checkRenderWiring(text) {
-  assert.match(text, /@Prop @Watch\('onRowHeightChanged'\) rowHeight: number = 40;/,
-    'row-height changes must reach the production watcher');
-  assert.match(text, /@State private itemSizes: ChildrenMainSize = new ChildrenMainSize\(40\);/,
-    'the size container must be observable');
-  assert.match(text, /private rowHeightGeneration: number = 0;/,
-    'row-height updates must carry a mutation generation');
-  assert.match(text, /private rowHeightLifecycleGeneration: number = 0;/,
-    'row-height updates must carry a lifecycle generation');
-  assert.match(text, /private scheduleRowHeightFlush\(\): void \{[\s\S]*?setTimeout\(\(\): void => \{/,
-    'row-height extent writes must be deferred to the next turn');
-  assert.equal((text.match(/\.childrenMainSize\(this\.naturalRowHeight \? undefined : this\.itemSizes\)/g) ?? []).length, 1,
-    'the actual List receives exactly one shared extent container');
-  assert.equal((text.match(/\.height\(this\.naturalRowHeight \? undefined : this\.rowHeight\)/g) ?? []).length, 1,
-    'materialized ListItem height uses the same source as virtual extent');
-  assert.match(text, /LazyForEach\(this\.dataSource/,
-    'extent correction must preserve lazy rows and a notified data source');
-  // Manga natural rows keep the native List viewport intact: top/bottom
-  // clearance belongs to the List content offsets, while the text branch
-  // keeps its legacy fixed row padding and extent.
-  assert.match(text, /\.padding\(\{[\s\S]*?top: this\.naturalRowHeight \? 0 : this\.listPaddingTop/,
-    'manga natural rows must not shrink the native viewport with List padding');
-  assert.match(text, /\.contentStartOffset\(this\.naturalRowHeight \? \(this\.listPaddingTop >= 0 \? this\.listPaddingTop : this\.listPaddingY\) : this\.contentStartInset\)/,
-    'manga top clearance is a content offset rather than viewport padding');
-  assert.match(text, /\.contentEndOffset\(this\.naturalRowHeight \? \(this\.listPaddingBottom >= 0 \? this\.listPaddingBottom : this\.listPaddingY\) : this\.contentEndInset\)/,
-    'manga bottom clearance is a content offset rather than viewport padding');
-  assert.match(text, /top: this\.naturalRowHeight \? 0 : this\.listPaddingTop >= 0 \? this\.listPaddingTop : this\.listPaddingY,\n      bottom: this\.naturalRowHeight \? 0 : this\.listPaddingBottom >= 0 \? this\.listPaddingBottom : this\.listPaddingY/,
-    'text directory retains the existing explicit List padding branch');
-}
-
 checkLifecycle(loadList());
 {
   const list = new (loadList())();
@@ -110,7 +89,7 @@ checkLifecycle(loadList());
   list.onEntriesChanged();
   assert.equal(list.dataSource.totalCount(), 0, 'intentional empty filter is retained');
 }
-checkRenderWiring(source);
+
 assert.throws(() => checkLifecycle(loadList(source.replace(
   'if (nextSize !== undefined && this.itemSizes.childDefaultSize !== nextSize) {\n        this.itemSizes.childDefaultSize = nextSize;\n      }',
   'this.itemSizes.childDefaultSize = 40;'))),
@@ -118,7 +97,24 @@ assert.throws(() => checkLifecycle(loadList(source.replace(
 assert.throws(() => checkLifecycle(loadList(source.replace(
   'this.itemSizes.childDefaultSize = initialSize;', 'this.itemSizes.childDefaultSize = 40;'))),
   'missing initial Quick extent synchronization is detected');
-assert.throws(() => checkRenderWiring(source.replace('.childrenMainSize(this.naturalRowHeight ? undefined : this.itemSizes)', '')),
-  'disconnected native List extent is detected');
 
-console.log('reader directory extent: production lifecycle + wiring passed (not native virtualization/anchor acceptance)');
+
+}else{
+ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryList.ets',import.meta.url),'utf8');
+ for(const natural of [false,true])for(const rowHeight of [32,34.072,40]){
+  const entry={index:21,title:'章节'},lazy={create(_id,_owner,data,generate){assert.equal(data.totalCount(),1);generate(data.getData(0),0);},pop(){}};
+  const owner=createReaderBuilderProbe(source,['build','rowBuilder','emptyBuilder','emptyContent'],{LazyForEach:lazy,makeBuilderParameterProxy:(_name,values)=>Object.fromEntries(Object.entries(values).map(([key,get])=>[key,get()])),BarState:{Auto:'auto',Off:'off'}}).owner;
+  const itemSizes={childDefaultSize:rowHeight};const forwarded=[];
+  Object.assign(owner,{naturalRowHeight:natural,entries:[entry],dataSource:{totalCount:()=>1,getData:()=>entry},rowHeight,itemSizes,
+   listPaddingX:3,listPaddingRight:7,listPaddingTop:19,listPaddingBottom:23,listPaddingY:11,contentStartInset:5,contentEndInset:9,
+   rowBuilder:arg=>forwarded.push(arg),emptyBuilder(){},onUserScrollIntent(){},probeGeometry(){}});
+  owner.initialRender();const nodes=[...owner.nodes.values()],list=nodes.find(n=>n.type==='List'),items=nodes.filter(n=>n.type==='ListItem');
+  assert.ok(list&&items.length===1);assert.equal(list.childrenMainSize,natural?undefined:itemSizes);assert.equal(items[0].height,natural?undefined:rowHeight);
+  assert.deepEqual(list.padding,{left:3,right:7,top:natural?0:19,bottom:natural?0:23});
+  assert.equal(list.contentStartOffset,natural?19:5);assert.equal(list.contentEndOffset,natural?23:9);
+  assert.deepEqual(forwarded,[{item:entry,index:0}]);
+ }
+}
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

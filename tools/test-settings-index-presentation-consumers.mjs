@@ -35,9 +35,9 @@ function index(f,route='settings',text=indexSource){
   const params=props(),p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
   if(route==='bookshelfSettings'){
    const o=p.consumer(shelfSource,['operation','navigationGeneration','autoCheckUpdate','onAutoCheckUpdate','onBack','onRetryAccepted','onReconcile','mounted','presentationRevision',
-    'settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery'],{readerRecoveryView},params);
+    'settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery','settingsPending','retrySettingsAccepted','onOperationChanged','lastSettingsFeedback'],{readerRecoveryView},params);
    Object.assign(o,{mounted:true,presentationRevision:1});
-   const native=label=>{o.settingsRecovery();const actor=p.walk(o).find(c=>c instanceof p.deps.ReaderRecoveryAction&&c.label===label);assert.ok(actor,label);return p.nodes(actor).find(n=>n.onClick).onClick;};
+   const native=label=>{o.settingsRecovery();const actual=label==='刷新设置'&&o.settingsPending()?'核对设置':label;const actor=p.walk(o).find(c=>c instanceof p.deps.ReaderRecoveryAction&&c.label===actual);assert.ok(actor,label);return p.nodes(actor).find(n=>n.onClick).onClick;};
    return{o,p,params,toggle:()=>params.onAutoCheckUpdate(!params.autoCheckUpdate),native,refresh(){o.updateStateVars(props());p.properties.flush();}};
   }
   const ReaderPressFeedback=productionReaderPressFeedback();p.hooks.lifecycleChildren=true;
@@ -49,10 +49,12 @@ function index(f,route='settings',text=indexSource){
   const o=p.consumer(pageSource,[...properties,...callbacks,'appThemeScheme','mounted','themeOwner','temporaryBackIdentity','resetMessage',
    'autoCheckUpdateValue','tapBottomScrollTopValue','reduceMotionValue','crashLogValue','onSnapshotChanged','syncSnapshotValues','onCacheCleanupChanged','applyCacheCleanup',
    'switchRow','toggleSetting','settingValue','settingCanToggle','settingToggleBusy','operationFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind',
-   'recoveryActionGeneration','recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction'],{ReaderPressFeedback,ReaderRuntimeOwner:f.Runtime,readerRecoveryView},params);
+   'recoveryActionGeneration','recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction','onOperationChanged','operationFeedbackIdentity',
+   'lastOperationFeedback','lastOperationToast','lastCacheFeedback','cacheFeedbackIdentity','showFeedbackToast','hasPendingSettings','hasPendingCleanup','pendingFeedback',
+   'capturedPendingAction','recoveryIdentityFor'],{ReaderPressFeedback,ReaderRuntimeOwner:f.Runtime,readerRecoveryView},params);
   Object.assign(o,{mounted:true,themeOwner:f.runtime,temporaryBackIdentity:'actual-settings:'+sequence,resetMessage:''});o.syncSnapshotValues();
   const toggle=()=>{o.switchRow('减少动效',()=>({id:1}),'reduceMotion');const actor=p.walk(o).findLast(c=>c instanceof p.deps.ReaderToggle);assert.ok(actor,'actual shared toggle mounted');return p.nodes(actor).find(n=>n.onClick).onClick;};
-  const native=label=>{o.operationFeedback();const actor=p.walk(o).findLast(c=>c instanceof p.deps.ReaderRecoveryAction&&c.label===label);assert.ok(actor,label);return p.nodes(actor).find(n=>n.onClick).onClick;};
+  const native=label=>{o.operationFeedback();o.pendingFeedback();const actual=label==='重试保存当前设置'?'继续保存':label==='刷新设置'&&o.hasPendingSettings()?'核对':label;const actor=p.walk(o).findLast(c=>c instanceof p.deps.ReaderRecoveryAction&&c.label===actual);assert.ok(actor,label);return p.nodes(actor).find(n=>n.onClick).onClick;};
   return{o,p,params,toggle,native,refresh(){o.updateStateVars(props());p.properties.flush();}};
  };
  return{i,routes,props,page,open:async()=>{i.settingsHost.open(i.settingsPresentationIdentity);await settle();}};

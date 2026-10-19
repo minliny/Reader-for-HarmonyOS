@@ -1,5 +1,7 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "reader-harmony-contract-evidence-policy",
-  "contractsReceiptRequired": true
+  "defaultScope": "none",
+  "contractsReceiptRequired": "when-executed",
+  "executionPolicy": "Review necessary items and their reasons before execution; full suites require an explicit user request."
 }

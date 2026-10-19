@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync as writeNativeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -7,10 +7,23 @@ import { contractSelection, contractTests, runContractsBounded } from './run-con
 import { localContractPlan } from '../scripts/check-local.mjs';
 import { buildContractScope, remainingContractBudget } from '../scripts/hap-pipeline.mjs';
 
+// Every owned synthetic child below is plain Node. Give these fixture roots
+// an explicit resource declaration; production missing metadata still fails.
+function writeFileSync(path, bytes, ...options) {
+ writeNativeFileSync(path,bytes,...options);
+ if (String(path).endsWith('/tools/contract-test-tiers.json')) {
+  let inventory;try{inventory=JSON.parse(String(bytes));}catch{return;}
+  const names=[...(inventory.source??[]),...(inventory.integration??[])];
+  writeNativeFileSync(String(path).replace('contract-test-tiers.json','contract-case-manifest.json'),JSON.stringify({schemaVersion:1,files:{},legacy:Object.fromEntries(names.map(name=>[name,{resources:[],basis:'Owned plain Node fixture, no native build'}]))}));
+ }
+}
+
+
 // Only tiny owned Node fixtures execute here. "full" below is the two-child
 // fixture inventory, never the production classified inventory.
 const root = mkdtempSync(join(tmpdir(), 'reader-development-scope-'));
 const logs = [];
+const rationale = 'The explicitly selected tiny fixture checks scope dispatch, failure settlement and omission receipts.';
 try {
   mkdirSync(join(root, 'tools'));
   const marker = join(root, 'must-not-run');
@@ -26,16 +39,19 @@ try {
     input: `import { contractTests } from ${JSON.stringify(new URL('./run-contract-tests.mjs', import.meta.url).href)}; console.log(typeof contractTests);`, timeout: 2_000 });
   assert.equal(stdinImport.status, 0, stdinImport.stderr); assert.equal(stdinImport.stdout.trim(), 'function',
     'read-only stdin imports do not enter the real CLI or resolve a nonexistent dash path');
-  assert.equal(buildContractScope(new Map([['--contracts-scope', 'search-return-runtime']]), root), 'search-return-runtime');
-  assert.throws(() => buildContractScope(new Map([['--class', 'acceptance'], ['--contracts-scope', 'search-return-runtime']]), root), /only supported for iteration/);
+  assert.equal(buildContractScope(new Map(), root), 'none');
+  assert.equal(buildContractScope(new Map([['--contracts-scope', 'search-return-runtime'], ['--rationale', rationale]]), root), 'search-return-runtime');
+  assert.equal(buildContractScope(new Map([['--class', 'acceptance'], ['--contracts-scope', 'search-return-runtime'], ['--rationale', rationale]]), root), 'search-return-runtime');
   for (const scope of ['', 'unknown', 'search-message-ui']) {
     assert.throws(() => contractTests(root, 'full', scope), /unknown contract scope/);
-    assert.throws(() => localContractPlan(['--contracts-scope', scope], root), /Usage|unknown contract scope/);
+    assert.throws(() => localContractPlan(['--contracts-scope', scope, '--rationale', rationale], root), /Usage|unknown contract scope/);
   }
   assert.throws(() => localContractPlan(['--contracts-scope'], root), /Usage/);
-  assert.deepEqual(localContractPlan([], root).args, ['tools/run-contract-tests.mjs', '--full']);
-  assert.deepEqual(localContractPlan(['--contracts-scope', 'search-return-runtime'], root).args,
-    ['tools/run-contract-tests.mjs', '--scope', 'search-return-runtime']);
+  assert.deepEqual(localContractPlan([], root), { list: true }, 'no selected checks means no test execution');
+  assert.deepEqual(localContractPlan(['--full', '--rationale', rationale], root).args,
+    ['tools/run-contract-tests.mjs', '--full', '--rationale', rationale]);
+  assert.deepEqual(localContractPlan(['--contracts-scope', 'search-return-runtime', '--rationale', rationale], root).args,
+    ['tools/run-contract-tests.mjs', '--scope', 'search-return-runtime', '--rationale', rationale]);
   assert.equal(contractTests(root, 'full', 'search-return-runtime').scopePolicy.timeoutMs, 120_000);
   assert.ok(remainingContractBudget(performance.now() - 90_000, 1_000, 120_000) > 28_000,
     'the retained runtime scope uses its own finite total budget');
@@ -137,9 +153,9 @@ try {
       {id:'direct',tests:['test-z-direct.mjs'],proves:'Runs the direct fixture first.',doesNotProve:'No native ICU or wall-time proof.'},
       {id:'owner',tests:['test-a-later.mjs'],proves:'Runs the remaining owner fixture.',doesNotProve:'No device or full-suite acceptance.'}]}}};
   writeFileSync(join(returnRoot,'tools/contract-test-tiers.json'),JSON.stringify(returnManifest));
-  assert.equal(buildContractScope(new Map([['--contracts-scope','search-return-runtime']]),returnRoot),'search-return-runtime');
-  assert.throws(()=>buildContractScope(new Map([['--class','acceptance'],['--contracts-scope','search-return-runtime']]),returnRoot),/only supported for iteration/);
-  assert.deepEqual(localContractPlan(['--contracts-scope','search-return-runtime'],returnRoot).args,['tools/run-contract-tests.mjs','--scope','search-return-runtime']);
+  assert.equal(buildContractScope(new Map([['--contracts-scope','search-return-runtime'],['--rationale',rationale]]),returnRoot),'search-return-runtime');
+  assert.equal(buildContractScope(new Map([['--class','acceptance'],['--contracts-scope','search-return-runtime'],['--rationale',rationale]]),returnRoot),'search-return-runtime');
+  assert.deepEqual(localContractPlan(['--contracts-scope','search-return-runtime','--rationale',rationale],returnRoot).args,['tools/run-contract-tests.mjs','--scope','search-return-runtime','--rationale',rationale]);
   assert.throws(()=>contractTests(returnRoot,'full','search-return-runtime-unknown'),/unknown contract scope/);
   assert.throws(()=>contractTests(returnRoot,'source','search-return-runtime'),/scope cannot replace the source tier/);
   const returnSelection=contractTests(returnRoot,'full','search-return-runtime');

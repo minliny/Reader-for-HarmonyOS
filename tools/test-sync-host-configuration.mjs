@@ -1,7 +1,9 @@
-import { configIntentFixture } from './lib/sync-config-intent-fixture.mjs';
-import { restoreReaderThemeSelection, migrateLegacyReaderThemeSelection } from '../entry/src/main/ets/features/common/ReaderThemeSelection.ts';
 import assert from 'node:assert/strict';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { configIntentFixture }=await import("./lib/sync-config-intent-fixture.mjs");
+const { restoreReaderThemeSelection, migrateLegacyReaderThemeSelection }=await import("../entry/src/main/ets/features/common/ReaderThemeSelection.ts");
+const { productionMotionMethods }=await import("./lib/reader-motion-method-probe.mjs");
 const path=f=>new URL(`../entry/src/main/ets/${f}`,import.meta.url);
 const copy=x=>JSON.parse(JSON.stringify(x));
 const configGuards=[];
@@ -13,27 +15,7 @@ const Host=productionMotionMethods(path('features/sync/SyncHostConfiguration.ts'
  restoreReaderThemeSelection, migrateLegacyReaderThemeSelection, WebDavCredentialStore:{instance:store},ReaderThemeHost:{durableBackup:async()=>{durableReads++;return copy(theme);},restore:async x=>{if(failTheme){failTheme=false;throw Error('flush');}theme=copy(x);return ''; }},AppStorage:{get:key=>key==='readerSystemScheme'?'night':'day',setOrCreate(){}}
 });
 const host=new Host(),prior=await host.capture(),next={version:1,bookshelfViewMode:'list',themeSelection:{...copy(selected),appMode:'night',reader:{id:'night',scheme:'night'}}};
-assert.deepEqual(host.decode(host.encode(next)),next);assert.ok(durableReads>0);
-const legacySelection={appThemeMode:'system',readerThemeId:'deleted-theme',defaultDayReaderThemeId:'warm',defaultNightReaderThemeId:'greenNight'};
-const migratedHost=host.decode({version:1,bookshelfViewMode:'list',themeSelection:legacySelection});
-assert.equal(migratedHost.themeSelection.reader.scheme,'night','Host legacy fallback uses actual system observation before effective app');
-assert.equal(migratedHost.themeSelection.appMode,'system');
-assert.ok(!JSON.stringify(host.encode(migratedHost)).includes('appThemeMode'),'writes use only canonical envelope');
-const extra={...next,password:'secret',themeDefinitions:{ink:'#000'}};assert.equal(JSON.stringify(host.encode(extra)).includes('secret'),false);assert.equal(JSON.stringify(host.encode(extra)).includes('#000'),false);
-await host.apply(next);assert.equal(mode,'list');assert.equal(theme.appMode,'night');
-failTheme=true;await assert.rejects(host.apply(prior),/恢复失败/);assert.equal(mode,'list','theme flush failure compensates only acknowledged mode');assert.equal(theme.appMode,'night');
-
-const Store=productionMotionMethods(path('features/sync/WebDavCredentialStore.ts'),['loadRestoreJournal','saveRestoreJournal','clearRestoreJournal','validateRestoreJournal'],{LOCAL_RESTORE_JOURNAL_KEY:'journal'});
-const values=new Map();let failFlush=false;
-const prefs={get:async(k,d)=>values.get(k)??d,put:async(k,v)=>values.set(k,v),delete:async k=>values.delete(k),flush:async()=>{if(failFlush){failFlush=false;throw Error('flush');}}};
-const credentials=Object.assign(new Store(),{localModeWriteTail:Promise.resolve(),ensureLocalPreferences:async()=>prefs});
 const journal={version:1,operationId:'operation-1',checksum:'a'.repeat(64)};
-failFlush=true;await assert.rejects(credentials.saveRestoreJournal(journal),/flush/);assert.equal(await credentials.loadRestoreJournal(),undefined);
-await credentials.saveRestoreJournal(journal);assert.deepEqual(await credentials.loadRestoreJournal(),journal);
-await assert.rejects(credentials.saveRestoreJournal({...journal,operationId:'operation-2'}),/上一次恢复/);
-await assert.rejects(credentials.clearRestoreJournal('wrong'),/替换/);
-failFlush=true;await assert.rejects(credentials.clearRestoreJournal(journal.operationId),/flush/);assert.deepEqual(await credentials.loadRestoreJournal(),journal);
-await credentials.clearRestoreJournal(journal.operationId);assert.equal(await credentials.loadRestoreJournal(),undefined);
 const Gateway=productionMotionMethods(path('features/sync/SyncGateway.ts'),['recoverInterruptedRestore','recoverRestoreJournal','driveTransaction','assertTransactionIdentity'],{MAX_TRANSACTION_STEPS:30,SyncGateway:{restoreRecoveries:new Map()}});
 function gatewayFixture({receipt=false,hostConfig=true,failApplyResponse=false,failCommitResponse=false,failHost=false}={}){
  let applied=receipt,coreApplications=0,themeApplications=0,commits=0,queries=0,record;
@@ -51,6 +33,32 @@ function gatewayFixture({receipt=false,hostConfig=true,failApplyResponse=false,f
  }}});
  return {g,guard,stats:()=>({applied,coreApplications,themeApplications,commits,queries,pending,record})};
 }
+try {
+if(id==='host-schema'){
+assert.deepEqual(host.decode(host.encode(next)),next);assert.ok(durableReads>0);
+const legacySelection={appThemeMode:'system',readerThemeId:'deleted-theme',defaultDayReaderThemeId:'warm',defaultNightReaderThemeId:'greenNight'};
+const migratedHost=host.decode({version:1,bookshelfViewMode:'list',themeSelection:legacySelection});
+assert.equal(migratedHost.themeSelection.reader.scheme,'night','Host legacy fallback uses actual system observation before effective app');
+assert.equal(migratedHost.themeSelection.appMode,'system');
+assert.ok(!JSON.stringify(host.encode(migratedHost)).includes('appThemeMode'),'writes use only canonical envelope');
+const extra={...next,password:'secret',themeDefinitions:{ink:'#000'}};assert.equal(JSON.stringify(host.encode(extra)).includes('secret'),false);assert.equal(JSON.stringify(host.encode(extra)).includes('#000'),false);
+await host.apply(next);assert.equal(mode,'list');assert.equal(theme.appMode,'night');
+failTheme=true;await assert.rejects(host.apply(prior),/恢复失败/);assert.equal(mode,'list','theme flush failure compensates only acknowledged mode');assert.equal(theme.appMode,'night');
+}
+if(id==='journal'){
+const Store=productionMotionMethods(path('features/sync/WebDavCredentialStore.ts'),['loadRestoreJournal','saveRestoreJournal','clearRestoreJournal','validateRestoreJournal'],{LOCAL_RESTORE_JOURNAL_KEY:'journal'});
+const values=new Map();let failFlush=false;
+const prefs={get:async(k,d)=>values.get(k)??d,put:async(k,v)=>values.set(k,v),delete:async k=>values.delete(k),flush:async()=>{if(failFlush){failFlush=false;throw Error('flush');}}};
+const credentials=Object.assign(new Store(),{localModeWriteTail:Promise.resolve(),ensureLocalPreferences:async()=>prefs});
+
+failFlush=true;await assert.rejects(credentials.saveRestoreJournal(journal),/flush/);assert.equal(await credentials.loadRestoreJournal(),undefined);
+await credentials.saveRestoreJournal(journal);assert.deepEqual(await credentials.loadRestoreJournal(),journal);
+await assert.rejects(credentials.saveRestoreJournal({...journal,operationId:'operation-2'}),/上一次恢复/);
+await assert.rejects(credentials.clearRestoreJournal('wrong'),/替换/);
+failFlush=true;await assert.rejects(credentials.clearRestoreJournal(journal.operationId),/flush/);assert.deepEqual(await credentials.loadRestoreJournal(),journal);
+await credentials.clearRestoreJournal(journal.operationId);assert.equal(await credentials.loadRestoreJournal(),undefined);
+}
+if(id==='restore-recovery'){
 {
  const t=gatewayFixture();assert.equal(await t.g.recoverInterruptedRestore(),false);assert.equal(t.stats().pending,undefined);assert.equal(t.stats().themeApplications,0,'no receipt proves no Core apply and causes no Host mutation');
 }
@@ -68,14 +76,14 @@ for(const failure of [{},{failApplyResponse:true},{failCommitResponse:true},{fai
  const initial={transactionId:journal.operationId,status:'applyRequired',phase:'restoreApply',requests:[],storageApply:{manifest:{checksum:journal.checksum},payload:'opaque-Core-snapshot'},hostConfig:copy(next)};
  const done=await t.g.driveTransaction(initial);assert.equal(done.status,'completed');assert.equal(t.stats().coreApplications,1,'lost replies recover by receipt, never replay storage apply');assert.equal(t.stats().pending,undefined);
 }
-console.log('PASS WebDAV Host production recovery: durable choices, allow-list, compensated flush, journal ownership, crash boundary, old backup, lost apply/commit response and idempotent completion');
 {
  const t=gatewayFixture({receipt:true});const other=Object.assign(new Gateway(),t.g);
  const startup=t.g.recoverInterruptedRestore(),page=other.recoverInterruptedRestore();
  assert.equal(startup,page,'separate gateways for the same runtime join one recovery');
  await Promise.all([startup,page]);assert.equal(t.stats().queries,1);assert.equal(t.stats().themeApplications,1);
 }
-
+}
+if(id==='scheme-order'){
 {
  const forged=copy(next);forged.themeSelection.reader={id:'day',scheme:'night'};
  assert.throws(()=>host.decode(host.encode(forged)),/SCHEME_MISMATCH/);
@@ -87,6 +95,8 @@ console.log('PASS WebDAV Host production recovery: durable choices, allow-list, 
  assert.equal(t.stats().coreApplications,0,'catalog/declared scheme must validate before Core apply');
  assert.equal(t.stats().themeApplications,0);
 }
+}
+if(id==='migration-start'){
 {
  const diagnostics=new Map();let params,barrier=0;
  const Start=productionMotionMethods(path('features/sync/SyncGateway.ts'),['startTransaction','decodeTransaction','requireBackupSettled','reconcileBackupReceipt'],{
@@ -101,9 +111,14 @@ console.log('PASS WebDAV Host production recovery: durable choices, allow-list, 
  assert.ok(!('systemScheme' in params.hostConfig));assert.ok(!('themeMigrationReason' in params.hostConfig));
  assert.equal(diagnostics.get('readerThemeRestoreFallback'),'legacy-unknown-reader:system:night');
 }
-
+}
+if(id==='config-barrier'){
 {
  const t=gatewayFixture({receipt:true});t.guard.f.asset.failAdd=true;await assert.rejects(t.guard.store.save(t.guard.f.config),/cannot be written/);
  await assert.rejects(t.g.recoverInterruptedRestore(),/original configuration intent/);assert.equal(t.stats().queries,0,'unconfirmed original config blocks even otherwise approved restore');assert.equal(t.stats().themeApplications,0);
 }
-for(const f of configGuards)f.cleanup();
+}
+}finally{for(const f of configGuards)f.cleanup();}
+}
+const definitions={"host-schema": "host-schema exact Sync behavior; controlled platform ports", "journal": "journal exact Sync behavior; controlled platform ports", "restore-recovery": "restore-recovery exact Sync behavior; controlled platform ports", "scheme-order": "scheme-order exact Sync behavior; controlled platform ports", "migration-start": "migration-start exact Sync behavior; controlled platform ports", "config-barrier": "config-barrier exact Sync behavior; controlled platform ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

@@ -1,17 +1,39 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, mkdtempSync, mkdirSync, openSync, closeSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve, dirname, basename } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync, spawn } from 'node:child_process';
 import { performance } from 'node:perf_hooks';
-import { randomUUID } from 'node:crypto';
-import { acquireBuildLease } from '../../Reader-Core/scripts/lib/build-resource-lock.mjs';
+import { randomUUID, createHash } from 'node:crypto';
 
 export const MAX_CONTRACT_TIMEOUT_MS = 110_000;
 export const MAX_CONTRACT_KILL_GRACE_MS = 1_000;
 export const MAX_CONTRACT_SCOPE_TIMEOUT_MS = 600_000;
 const ORDERED_DEVELOPMENT_SCOPES = ['search-return-runtime'];
+
+/** A retired name stays unavailable even if an old checkout restores its file. */
+export function retiredContractTests() {
+  const registry = JSON.parse(readFileSync(new URL('./retired-contract-tests.json', import.meta.url), 'utf8'));
+  assert.equal(registry.schemaVersion, 1, 'unsupported retired contract registry');
+  assert.ok(Array.isArray(registry.entries), 'retired contract entries are required');
+  for (const entry of registry.entries) {
+    assert.ok(typeof entry.id === 'string' && entry.id.length > 0, 'retired contract identity is required');
+    assert.match(entry.file, /^test-[^/\\]+\.mjs$/, 'invalid retired contract filename');
+  }
+  assert.equal(new Set(registry.entries.map(entry => entry.id)).size, registry.entries.length, 'duplicate retired contract identity');
+  assert.equal(new Set(registry.entries.map(entry => entry.file)).size, registry.entries.length, 'duplicate retired contract filename');
+  return registry.entries;
+}
+
+function activeContractInventory(manifest, discovered) {
+  const retired = new Set(retiredContractTests().map(entry => entry.file));
+  const registrations = [...manifest.source, ...manifest.integration,
+    ...Object.values(manifest.scopes ?? {}).flat(),
+    ...Object.values(manifest.scopePolicies ?? {}).flatMap(policy => policy.layers?.flatMap(layer => layer.tests) ?? [])];
+  assert.ok(registrations.every(name => !retired.has(name)), 'retired contract cannot be registered in a tier, scope or evidence layer');
+  return discovered.filter(name => !retired.has(name));
+}
 
 export function contractScopePolicy(manifest, scope) {
   if (scope === undefined) return null;
@@ -49,7 +71,7 @@ function announceOwnedGroup(action, pid) {
 // announce their real groups through Node's private parent/child IPC channel,
 // so cancellation does not lose those groups when a controller exits first.
 // Uncooperative code that starts other sessions is outside this boundary.
-function runOwnedContract(root, name, fd, env, timeoutMs, killGraceMs, active, blockDispatch) {
+function runOwnedContract(root, name, fd, env, timeoutMs, killGraceMs, active, blockDispatch, caseIds = []) {
   return new Promise(resolveResult => {
     const processGroups = process.platform !== 'win32';
     const ownerToken = randomUUID(), ownedGroups = new Set(), allOwnedGroups = new Set();
@@ -122,7 +144,7 @@ function runOwnedContract(root, name, fd, env, timeoutMs, killGraceMs, active, b
       observeTermination();
     };
     try {
-      child = spawn(process.execPath, [resolve(root, 'tools', name)],
+      child = spawn(process.execPath, [resolve(root, 'tools', name), ...(caseIds.length ? ['--case', caseIds.join(',')] : [])],
         { cwd: root, stdio: processGroups ? ['ignore', fd, fd, 'ipc'] : ['ignore', fd, fd],
           env: { ...env, READER_CONTRACT_GROUP_OWNER: ownerToken }, detached: processGroups });
     } catch (failure) { error = failure.code ?? failure.message; finish(true); return; }
@@ -164,6 +186,7 @@ function runOwnedContract(root, name, fd, env, timeoutMs, killGraceMs, active, b
 export function contractSelection(manifest, discovered, tier, scope) {
   assert.ok(['source', 'full'].includes(tier));
   assert.equal(manifest.schemaVersion, 1);
+  discovered = activeContractInventory(manifest, discovered);
   const declared = [...manifest.source, ...manifest.integration];
   assert.equal(new Set(declared).size, declared.length, 'duplicate test classification');
   assert.deepEqual([...declared].sort(), discovered, 'every discovered test must be classified');
@@ -190,15 +213,112 @@ export function contractSelection(manifest, discovered, tier, scope) {
     integrationCount: manifest.integration.length, scopePolicy };
 }
 
-export function contractTests(root, tier, scope) {
+export function contractInventory(root) {
   const manifest = JSON.parse(readFileSync(resolve(root, 'tools/contract-test-tiers.json'), 'utf8'));
   const discovered = readdirSync(resolve(root, 'tools')).filter(name =>
     /^test-.*\.mjs$/.test(name) && !/-server\.mjs$/.test(name)).sort();
+  return { manifest, discovered: activeContractInventory(manifest, discovered) };
+}
+
+export function contractTests(root, tier, scope) {
+  const { manifest, discovered } = contractInventory(root);
   return contractSelection(manifest, discovered, tier, scope);
+}
+
+/** Explicit individual checks never expand to an implicit full/source suite. */
+export function explicitContractTests(root, names) {
+  const retired = new Set(retiredContractTests().map(entry => entry.file));
+  assert.ok(Array.isArray(names) && names.every(name => !retired.has(name)), 'retired contract cannot be selected explicitly');
+  const { manifest, discovered: inventory } = contractInventory(root);
+  const declared = [...manifest.source, ...manifest.integration];
+  assert.ok(Array.isArray(names) && names.length > 0 && names.every(name =>
+    typeof name === 'string' && /^test-[^/\\]+\.mjs$/.test(name) && inventory.includes(name) && declared.includes(name)), 'unknown or empty explicit test selection');
+  assert.equal(new Set(names).size, names.length, 'duplicate explicit test');
+  return { selected: [...names], omitted: inventory.filter(name => !names.includes(name)), inventory,
+    integrationCount: manifest.integration.length, nestedTestImports: reviewedTestImports(root, names), scopePolicy: null };
+}
+
+/** Metadata only; never import a test to discover its cases or resource needs. */
+export function contractCaseSelection(root, names, requested = {}) {
+  assert.ok(requested && typeof requested === 'object' && !Array.isArray(requested), 'case selection must be a file-to-IDs object');
+  assert.ok(Object.keys(requested).every(name => names.includes(name)), 'cases must belong to an explicitly selected file');
+  let metadata;
+  try { metadata = JSON.parse(readFileSync(resolve(root, 'tools/contract-case-manifest.json'), 'utf8')); }
+  catch { metadata = { schemaVersion: 1, files: {}, legacy: {} }; }
+  assert.equal(metadata.schemaVersion, 1, 'unsupported contract case manifest');
+  const selections = {}, resources = new Set();
+  for (const name of names) {
+    const source = readFileSync(resolve(root, 'tools', name), 'utf8');
+    const focused = /from\s+['"]\.\/lib\/contract-case-selection\.mjs['"]/.test(source);
+    const ids = requested[name] ?? [];
+    assert.ok(Array.isArray(ids) && new Set(ids).size === ids.length, 'select unique case IDs');
+    if (focused) assert.ok(ids.length > 0, `${name}: focused case selection required; a list is NOT_RUN, never PASS`);
+    const declarations = metadata.files?.[name]?.cases;
+    if (ids.length) {
+      assert.ok(focused && declarations && ids.every(id => typeof id === 'string' && Object.hasOwn(declarations, id)), `${name}: unknown or unpublished case; no whole-file fallback`);
+      assert.ok(ids.every(id=>declarations[id].qualification === 'QUALIFIED'), `${name}: selected case is not qualified for dispatch; no broader fallback`);
+      const expected = metadata.files[name].sourceSha256;
+      assert.ok(/^[a-f0-9]{64}$/.test(expected ?? '') && createHash('sha256').update(source).digest('hex') === expected, `${name}: reviewed case/resource definition changed; review this file before dispatch`);
+      selections[name] = [...ids];
+    }
+    const needs = ids.length ? ids.flatMap(id => declarations[id].resources ?? ['UNREVIEWED']) : metadata.legacy?.[name]?.resources;
+    assert.ok(Array.isArray(needs) && needs.every(value => ['native-build', 'shared-build', 'network-fixture'].includes(value)), `${name}: resource declaration must be reviewed before dispatch`);
+    needs.forEach(value => resources.add(value));
+  }
+  return { selections, resources: [...resources] };
+}
+
+function caseReceipts(log, expected) {
+  if (!expected.length) return [];
+  const receipts = [];
+  for (const line of readFileSync(log, 'utf8').split(/\r?\n/)) {
+    let row; try { row = JSON.parse(line); } catch { continue; }
+    if (row?.kind === 'reader-contract-case-result') receipts.push(row);
+  }
+  assert.deepEqual(receipts.map(row => row.case).sort(), [...expected].sort(), 'case receipts must exactly match selection; missing, duplicate or extra case is not PASS');
+  assert.ok(receipts.every(row => row.status === 'PASS'), 'every selected case must pass');
+  return receipts;
+}
+
+function reviewedTestImports(root, names) {
+  // Side-effect test imports execute assertions too. Require those modules in
+  // the reviewed list instead of silently widening an individual selection.
+  const toolsRoot = resolve(root, 'tools'), visited = new Set(), nested = [];
+  const retired = new Set(retiredContractTests().map(entry => entry.file));
+  function visit(path, owner) {
+    if (visited.has(path)) return;
+    visited.add(path);
+    const source = readFileSync(path, 'utf8');
+    const imports = [
+      ...source.matchAll(/(?:^|\n)\s*import\s+(?:[^'";]*?\bfrom\s*)?['"]([^'"]+)['"]/g),
+      ...source.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]/g),
+      ...source.matchAll(/(?:^|\n)\s*export\s+[^'";]*?\bfrom\s*['"]([^'"]+)['"]/g),
+    ];
+    for (const match of imports) {
+      const specifier = match[1];
+      if (!specifier.startsWith('.') && !specifier.startsWith('/') && !specifier.startsWith('file:')) continue;
+      const dependency = fileURLToPath(new URL(specifier, pathToFileURL(path)));
+      if (!dependency.endsWith('.mjs')) continue;
+      // Node ignores query/fragment when reading file modules. Neither those
+      // suffixes nor an absolute file URL may revive a retired assertion.
+      assert.ok(!retired.has(basename(dependency)), `retired contract ${basename(dependency)} cannot be imported (from ${owner})`);
+      if (!dependency.startsWith(toolsRoot + '/') && !dependency.startsWith(toolsRoot + '\\')) continue;
+      const name = dependency.slice(toolsRoot.length + 1);
+      if (/^test-[^/\\]+\.mjs$/.test(name)) {
+        nested.push({ from: owner, test: name });
+        assert.ok(names.includes(name), `explicit selection also requires imported test ${name} (from ${owner}); review and name every nested check`);
+      }
+      visit(dependency, owner);
+    }
+  }
+  for (const name of names) visit(resolve(toolsRoot, name), name);
+  return nested;
 }
 
 export function runContracts(root, tier) {
   const { selected, integrationCount } = contractTests(root, tier);
+  reviewedTestImports(root, selected);
+  contractCaseSelection(root, selected); // Focused files cannot silently list and turn green.
   for (const name of selected) {
     const result = spawnSync(process.execPath, [resolve(root, 'tools', name)], {
       cwd: root, stdio: 'inherit', timeout: MAX_CONTRACT_TIMEOUT_MS, killSignal: 'SIGKILL',
@@ -220,9 +340,14 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
   assert.ok(Number.isInteger(workers) && workers >= 1 && workers <= 4, 'workers must be an integer in 1..4');
   const timeoutMs = testOptions.timeoutMs ?? MAX_CONTRACT_TIMEOUT_MS;
   const killGraceMs = testOptions.killGraceMs ?? MAX_CONTRACT_KILL_GRACE_MS;
-  const { selected, omitted, inventory, integrationCount, scopePolicy } = contractTests(root, tier, testOptions.scope);
+  const explicit = testOptions.tests !== undefined;
+  const { selected, omitted, inventory, integrationCount, scopePolicy, nestedTestImports } = explicit ?
+    explicitContractTests(root, testOptions.tests) : contractTests(root, tier, testOptions.scope);
+  const reviewedImports = nestedTestImports ?? reviewedTestImports(root, selected);
+  const caseSelection = contractCaseSelection(root, selected, testOptions.cases);
+  if (explicit) assert.equal(workers, 1, 'explicit checks run sequentially in the reviewed order');
   const scopeTimeoutMs = scopePolicy === null ? null : testOptions.scopeTimeoutMs ?? scopePolicy.timeoutMs;
-  const failFast = scopePolicy?.failFast ?? false;
+  const failFast = explicit || (scopePolicy?.failFast ?? false);
   assert.ok(Number.isInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= MAX_CONTRACT_TIMEOUT_MS, 'invalid test deadline');
   assert.ok(Number.isInteger(killGraceMs) && killGraceMs > 0 && killGraceMs <= MAX_CONTRACT_KILL_GRACE_MS, 'invalid termination grace');
   assert.ok(scopeTimeoutMs === null || Number.isInteger(scopeTimeoutMs) && scopeTimeoutMs > 0 && scopeTimeoutMs <= scopePolicy.timeoutMs,
@@ -260,8 +385,14 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
       // inherit the canonical parent's remaining scope budget as a new run.
       delete childEnvironment.READER_CONTRACT_RESULTS_FILE;
       delete childEnvironment.READER_CONTRACT_SCOPE_TIMEOUT_MS;
-      const result = await runOwnedContract(root, name, fd, childEnvironment, timeoutMs, killGraceMs, active, blockDispatch);
+      const caseIds = caseSelection.selections[name] ?? [];
+      const result = await runOwnedContract(root, name, fd, childEnvironment, timeoutMs, killGraceMs, active, blockDispatch, caseIds);
       closeSync(fd);
+      let receipts = [];
+      if (!result.error && !result.timedOut && result.status === 0) {
+        try { receipts = caseReceipts(log, caseIds); }
+        catch (failure) { result.error = failure.message; }
+      }
       // Only an actually successful, closed child releases its own temporary
       // storage. Failed/expired children retain fixtures alongside their logs.
       // This never scans or removes the shared OS temp root or user data.
@@ -270,7 +401,7 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
         try { rmSync(temporaryDirectory, { recursive: true }); temporaryStorageRemoved = true; }
         catch (failure) { result.error = `temporary cleanup: ${failure.code ?? failure.message}`; }
       }
-      const row = { name, ...result, milliseconds: Math.round(performance.now() - started),
+      const row = { name, ...result, cases: caseIds, caseReceipts: receipts, milliseconds: Math.round(performance.now() - started),
         wallMilliseconds: Date.now() - wallStarted, log, temporaryDirectory, temporaryStorageRemoved };
       results.push(row);
       if (failFast && (row.error || row.timedOut || row.status !== 0 || row.treeSettled === false)) failureStopped = true;
@@ -290,16 +421,19 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
   }
   const millisecondsTotal = Math.ceil(performance.now() - runStarted);
   if (scopeTimeoutMs !== null && millisecondsTotal > scopeTimeoutMs) scopeExpired = true;
-  results.sort(ORDERED_DEVELOPMENT_SCOPES.includes(testOptions.scope) ?
+  results.sort(explicit || ORDERED_DEVELOPMENT_SCOPES.includes(testOptions.scope) ?
     (a, b) => selected.indexOf(a.name) - selected.indexOf(b.name) : (a, b) => a.name.localeCompare(b.name));
   const unrun = selected.filter(name => !results.some(row => row.name === name));
   const selectedPassed = !workerFailure && !scopeExpired && !treeRecoveryBlocked && !cancelled && unrun.length === 0 &&
     results.every(row => !row.error && !row.timedOut && row.status === 0 && row.treeSettled !== false);
-  const completeSuite = testOptions.scope === undefined && tier === 'full';
+  const completeSuite = !explicit && testOptions.scope === undefined && tier === 'full';
   assert.equal(active.size, 0, 'every started child must report its process-tree result');
   if (!scopeExpired && !treeRecoveryBlocked && !cancelled && !failureStopped) assert.equal(results.length, selected.length, 'every selected test must settle');
   const report = { schemaVersion: 1, name: 'reader-harmony-contract-results', tier,
-    scope: testOptions.scope ?? tier, selected, omitted, inventory, workers, timeoutMs, killGraceMs,
+    ...(testOptions.rationale ? { rationale: testOptions.rationale } : {}),
+    scope: explicit ? 'custom' : testOptions.scope ?? tier, selected, omitted, inventory, workers, timeoutMs, killGraceMs,
+    nestedTestImports: reviewedImports, caseSelection: caseSelection.selections, resources: caseSelection.resources,
+    ...(explicit ? { executionOrder: 'explicit-selection-order' } : {}),
     scopeTimeoutMs, scopeExpired, millisecondsTotal, unrun, failFast, failureStopped, treeRecoveryBlocked, cancelled, treeCapability,
     selectedStatus: selectedPassed ? 'PASS' : 'FAIL',
     harmonyContracts: !selectedPassed ? 'FAIL' : completeSuite ? 'PASS' : 'PARTIAL',
@@ -320,28 +454,49 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
   if (failed.length) throw failure(failed.map(row => `${row.name} failed (${row.timedOut
     ? `timeout ${timeoutMs}ms; exit ${row.status ?? row.signal}; termination ${row.termination.map(entry => entry.signal).join(',')}`
     : row.error ?? row.status ?? row.signal}); ${row.log}`).join('\n'));
-  console.log(`Host ${testOptions.scope ? `scope ${testOptions.scope} (full suite NOT_RUN)` : tier === 'source' ? 'source (full suite NOT_RUN)' : tier} contract tests passed: ${selected.length}; integration tests classified: ${integrationCount}; logs: ${logRoot}`);
+  console.log(`Host ${explicit ? 'explicit checks (full suite NOT_RUN)' : testOptions.scope ? `scope ${testOptions.scope} (full suite NOT_RUN)` : tier === 'source' ? 'source (full suite NOT_RUN)' : tier} contract tests passed: ${selected.length}; integration tests classified: ${integrationCount}; logs: ${logRoot}`);
   return { ...report, logRoot };
 }
 
 if (process.argv[1] && process.argv[1] !== '-' && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const mode = process.argv[2], options = new Map();
-  assert.ok(['--source', '--full', '--scope'].includes(mode),
-    'Usage: node tools/run-contract-tests.mjs --source|--full|--scope <name> [--results-file <file>] [--test-timeout-ms <1..110000>]');
-  let cursor = 3, scope;
+  const repository = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  if (mode === undefined || mode === '--list') {
+    assert.ok(process.argv.length <= 3, 'list mode does not accept execution arguments');
+    const { manifest, discovered } = contractInventory(repository);
+    console.log(JSON.stringify({ status: 'NOT_RUN', harmonyContracts: 'NOT_RUN', fullSuite: 'NOT_RUN', acceptanceEligible: false,
+      availableTests: discovered, availableScopes: Object.keys(manifest.scopes ?? {}),
+      selection: 'Explicit --tests, --scope, --source or --full only after item-specific necessity review.' }));
+  } else {
+  assert.ok(['--source', '--full', '--scope', '--tests'].includes(mode),
+    'Usage: node tools/run-contract-tests.mjs [--list|--source|--full|--scope <name>|--tests <comma-separated names>] --rationale <item-specific reason> [--cases file.mjs#case-id,...] [--results-file <file>] [--test-timeout-ms <1..110000>]');
+  let cursor = 3, scope, tests;
   if (mode === '--scope') { scope = process.argv[cursor++]; assert.ok(scope && !scope.startsWith('--'), 'missing contract scope'); }
+  if (mode === '--tests') { const value = process.argv[cursor++]; assert.ok(value && !value.startsWith('--'), 'missing explicit test selection'); tests = value.split(','); }
   for (; cursor < process.argv.length; cursor += 2) {
     const key = process.argv[cursor], value = process.argv[cursor + 1];
-    assert.ok(['--results-file', '--test-timeout-ms'].includes(key) && !options.has(key) && value && !value.startsWith('--'), 'invalid contract runner argument');
+    assert.ok(['--results-file', '--test-timeout-ms', '--rationale', '--cases'].includes(key) && !options.has(key) && value && !value.startsWith('--'), 'invalid contract runner argument');
     options.set(key, value);
   }
-  const repository = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  assert.ok(options.get('--rationale')?.trim(), 'an item-specific necessity rationale is required before running checks');
   const tier = mode === '--source' ? 'source' : 'full';
-  contractTests(repository, tier, scope); // Reject unknown scopes before acquiring the shared toolchain.
+  if (tests) explicitContractTests(repository, tests);
+  else reviewedTestImports(repository, contractTests(repository, tier, scope).selected); // Reject unknown or unreviewed nested checks before acquiring the shared toolchain.
+  const cases = {};
+  if (options.has('--cases')) {
+    assert.ok(tests, '--cases requires exact --tests files');
+    for (const value of options.get('--cases').split(',')) {
+      const parts = value.split('#');
+      assert.ok(parts.length === 2 && parts.every(Boolean), 'use --cases file.mjs#case-id');
+      (cases[parts[0]] ??= []).push(parts[1]);
+    }
+  }
+  const caseSelection = contractCaseSelection(repository, tests ?? contractTests(repository, tier, scope).selected, cases);
   // The standalone dispatcher consumes the same toolchain as HAP/Native. A
   // diagnostic run must not bypass their shared owner, including when each
   // test gets a different OS temporary directory.
-  const lease = acquireBuildLease();
+  const needsBuildLease=caseSelection.resources.some(value=>['native-build','shared-build'].includes(value));
+  const lease = needsBuildLease ? (await import('../../Reader-Core/scripts/lib/build-resource-lock.mjs')).acquireBuildLease() : { env: { ...process.env }, release() {} };
   let treeSettled = true;
   const cancellation = new AbortController();
   const cancel = () => cancellation.abort();
@@ -349,14 +504,16 @@ if (process.argv[1] && process.argv[1] !== '-' && realpathSync(process.argv[1]) 
   try {
     Object.assign(process.env, lease.env);
     await runContractsBounded(repository, tier,
-      Number(process.env.READER_CONTRACT_TEST_WORKERS ?? 1), { scope,
+      tests ? 1 : Number(process.env.READER_CONTRACT_TEST_WORKERS ?? 1), { scope, tests, cases,
         timeoutMs: Number(options.get('--test-timeout-ms') ?? process.env.READER_CONTRACT_TEST_TIMEOUT_MS ?? MAX_CONTRACT_TIMEOUT_MS),
         scopeTimeoutMs: scope === undefined || process.env.READER_CONTRACT_SCOPE_TIMEOUT_MS === undefined ? undefined : Number(process.env.READER_CONTRACT_SCOPE_TIMEOUT_MS),
         resultsFile: options.get('--results-file') ?? process.env.READER_CONTRACT_RESULTS_FILE,
+        rationale: options.get('--rationale'),
         signal: cancellation.signal });
   } catch (error) { treeSettled = error.treeSettled !== false; throw error; }
   finally {
     process.removeListener('SIGTERM', cancel); process.removeListener('SIGINT', cancel);
     if (treeSettled) lease.release();
+  }
   }
 }

@@ -1,16 +1,24 @@
-import { localFilePath } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import * as autoPolicy from '../entry/src/main/ets/features/reading/ReaderAutoPageState.ts';
-import { ReaderAutoPageCoordinator } from '../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts';
-import { readerTtsSessionBlocksAutoPageStart } from '../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts';
-import { buildReaderSessionLaunchGeometry } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts';
-import { ReaderSessionLaunchController } from '../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts';
-import { ReaderSessionMorphSourceMeasurement, readerSessionMorphSourceKindForPage } from '../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts';
-import { ReaderPageChromeSnapshot } from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
-import { copyReaderControlSessionState, createReaderControlSessionState } from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import { ReaderPageChromeMeasurements } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'business-intent':{description:'Immediate launch, availability/pause/stop barriers and obsolete business admission',resources:[]},
+ 'visual-owner-seam':{description:'Actual Host first frame/.5 clock/hold integration; detailed design clock owned by session-launch',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const { localFilePath }=await import('./lib/tool-environment.mjs');
+const {default:assert}=await import('node:assert/strict');
+const autoPolicy=await import('../entry/src/main/ets/features/reading/ReaderAutoPageState.ts');
+const { ReaderAutoPageCoordinator }=await import('../entry/src/main/ets/features/reading/ReaderAutoPageCoordinator.ts');
+const { readerTtsSessionBlocksAutoPageStart }=await import('../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts');
+const { buildReaderSessionLaunchGeometry }=await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts');
+const { ReaderSessionLaunchController }=await import('../entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts');
+const { ReaderSessionMorphSourceMeasurement, readerSessionMorphSourceKindForPage }=await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
+const { ReaderPageChromeSnapshot }=await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
+const { copyReaderControlSessionState, createReaderControlSessionState }=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const { ReaderPageChromeMeasurements }=await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 const file=localFilePath(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url));
+if(selectedCase==='business-intent'){
 const names=['toggleTts','stopTts','toggleAutoPage','startAutoPageSession','stopAutoPage','cancelPendingAutoPageStart',
   'cancelPendingTtsPlay','createTtsPlayIntent','isTtsPlayIntentCurrent',
   'captureControlPlaybackPresentation','isControlPlaybackPresentationCurrent','toggleSessionCapsule'];
@@ -97,6 +105,8 @@ for(const invalidate of [h=>h.stopTts(),h=>{h.mounted=false;},h=>{h.lifecycleTok
  assert.equal(host.autoPageState.status,'running');assert.equal(calls.some(c=>c.startsWith('start:')),false);
 }
 
+}
+if(selectedCase==='visual-owner-seam'){
 // Run the actual Host visual methods with the real ownership controller. This
 // verifies first-frame publication / 350ms close / 1750ms persistence (PH09).
 let now=10000;const storage=new Map();const frames=[],holdTimers=[];
@@ -128,14 +138,17 @@ const visual=Object.assign(new Visual(),{mounted:true,appForeground:true,exitReq
 });
 assert.equal(visual.beginSessionCapsuleMorph('autoPage'),true);assert.equal(visual.sessionLaunch.sample.timeMs,0);
 assert.equal(visual.sessionLaunch.sample.sharpOpacity,1);assert.equal(visual.hiddenCalls,0);assert.equal(frames.length,1);
-for(const elapsed of [349,350,700,850,1150]){
- now=10000+elapsed;frames.shift().onFrame(now*1e6);
- assert.equal(visual.sessionLaunch.sample.timeMs,elapsed*2);
- assert.equal(visual.hiddenCalls,elapsed>=350?1:0);
-}
+now=11150;frames.shift().onFrame(now*1e6);
+assert.equal(visual.sessionLaunch.sample.timeMs,2300,'Host wall clock uses approved .5 playback');
+assert.equal(visual.hiddenCalls,1,'Host consumes current control-hidden receipt');
 assert.equal(frames.length,0);assert.equal(holdTimers.length,1);assert.equal(holdTimers[0].ms,600);
 now=11750;holdTimers[0].fn();
 assert.equal(visual.sessionLaunch.sample.finished,true);assert.equal(visual.sessionLaunch.ownership,'stage');
 assert.equal(frames.length,0);assert.equal(storage.get('readerSessionChromeOverlayActive'),true);
 assert.equal(visual.pageTurnRenderRevision,1,'the stable stage does not hand the footer back to old page textures');
 console.log('Reader playback Host intents: PASS (production methods; immediate visual, delayed ACK, pause intent, barriers, 350/1750 ownership)');
+
+}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

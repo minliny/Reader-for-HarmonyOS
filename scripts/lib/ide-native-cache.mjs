@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
 import { constants, copyFileSync, lstatSync, mkdirSync, mkdtempSync, readFileSync,
-  readdirSync, unlinkSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+  unlinkSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve, isAbsolute } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
 const libraries = new Set(['libc++_shared.so', 'libreader_bookturn_napi.so', 'libreader_core_napi.so']);
 const stages = ['cmake/default/obj', 'libs/default', 'stripped_native_libs/default'];
@@ -10,8 +12,10 @@ const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 // These are generated Hvigor directories, never entry/libs or an input SDK.
 // Run before task execution/input snapshots, while holding the build lease.
 // A numbered copy is recoverable only when the canonical sibling is identical.
-export function reconcileIdeNativeCache(repoRoot) {
+export function reconcileIdeNativeCache(repoRoot, { paths = [], repair = false } = {}) {
   const root = resolve(repoRoot);
+  if (!Array.isArray(paths) || new Set(paths).size !== paths.length) throw new Error('Select unique generated Native file paths');
+  if (!paths.length) return { status: 'NOT_RUN', removed: [], recoveryDirectory: null };
   function realDirectory(path) {
     const parent = dirname(path);
     if (path !== root && !realDirectory(parent)) return false;
@@ -21,14 +25,10 @@ export function reconcileIdeNativeCache(repoRoot) {
     return true;
   }
   const candidates = [];
-  function visit(directory) {
-    for (const name of readdirSync(directory).sort()) {
-      const path = join(directory, name), stat = lstatSync(path);
-      const nativeName = /\.so(?:\.\d+)*$/.test(name);
-      if (stat.isDirectory() && !nativeName) { visit(path); continue; }
+  function inspect(path) {
+      const directory = dirname(path), name = path.slice(directory.length + 1), stat = lstatSync(path);
       if (!stat.isFile()) throw new Error(`Native cache entry must be a regular file or real directory: ${path}`);
-      if (!nativeName) continue;
-      if (libraries.has(name)) continue;
+      if (libraries.has(name)) return;
       const match = /^(.*) [1-9]\d*\.so$/.exec(name);
       const canonicalName = match ? `${match[1]}.so` : undefined;
       if (!libraries.has(canonicalName)) throw new Error(`Unexpected generated Native library; refusing automatic recovery: ${path}`);
@@ -38,13 +38,15 @@ export function reconcileIdeNativeCache(repoRoot) {
       if (!bytes.equals(expected)) throw new Error(`Numbered Native copy differs from its canonical sibling; refusing automatic recovery: ${path}`);
       candidates.push({ path: relative(root, path), canonical: relative(root, canonical),
         bytes: bytes.length, sha256: digest(bytes), recoveryPath: relative(root, path), stat });
-    }
   }
-  for (const stage of stages) {
-    const directory = join(root, 'entry/build/default/intermediates', stage);
-    if (realDirectory(directory)) visit(directory);
+  for (const selected of paths) {
+    if (typeof selected !== 'string' || isAbsolute(selected) || selected.split(/[\\/]/).some(part => ['', '.', '..'].includes(part))) throw new Error('Select an exact repository-relative generated Native file');
+    if (!stages.some(stage => selected.startsWith(`entry/build/default/intermediates/${stage}/`))) throw new Error('Native diagnosis is limited to the three generated stages');
+    const path = resolve(root, selected);
+    if (!realDirectory(dirname(path))) throw new Error('Selected Native cache parent is missing');
+    inspect(path);
   }
-  if (!candidates.length) return { removed: [], recoveryDirectory: null };
+  if (!repair || !candidates.length) return { status: 'DIAGNOSED', candidates: candidates.map(({ stat, ...record }) => record), removed: [], recoveryDirectory: null };
 
   // Validate the whole inventory before touching any generated file. Preserve
   // bytes in independent files, since ProcessLibs can hard-link its inputs.
@@ -90,5 +92,17 @@ export function reconcileIdeNativeCache(repoRoot) {
   }
   receipt.status = 'RECOVERED';
   saveReceipt();
-  return { removed: files, recoveryDirectory };
+  return { status: 'RECOVERED', removed: files, recoveryDirectory };
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const { values } = parseArgs({ options: { path: { type: 'string', multiple: true }, repair: { type: 'boolean' }, list: { type: 'boolean' } }, allowPositionals: false });
+  if(values.list && (values.path?.length || values.repair)) throw new Error('--list cannot perform diagnosis or repair');
+  if(!values.path?.length && !values.repair) console.log(JSON.stringify({status:'NOT_RUN',defaultExecution:'OFF',usage:'--path <exact generated SO> [--repair]; ordinary builds never scan the cache'}));
+  else {
+  if (!values.path?.length) throw new Error('Use --path <exact generated SO> [--repair]; ordinary builds never scan the cache');
+  const lease = values.repair ? (await import('../../../Reader-Core/scripts/lib/build-resource-lock.mjs')).acquireBuildLease() : { release() {} };
+  try { console.log(JSON.stringify(reconcileIdeNativeCache(resolve(dirname(fileURLToPath(import.meta.url)), '../..'), { paths: values.path, repair: values.repair === true }))); }
+  finally { lease.release(); }
+  }
 }

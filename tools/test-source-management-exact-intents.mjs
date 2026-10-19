@@ -1,9 +1,16 @@
-import {writeFileSync} from 'node:fs';
-import {resolve} from 'node:path';
 import assert from 'node:assert/strict';
-import {fixture} from './lib/source-management-durable-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const {writeFileSync}=await import("node:fs");
+const {resolve}=await import("node:path");
+const {fixture}=await import("./lib/source-management-durable-probe.mjs");
 const source=i=>({bookSourceUrl:`https://source-${i}.test`,bookSourceName:`Source ${i}`,bookSourceType:0,enabled:true});
-let cases=0;
+
+const {cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');
+console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...durableFixtureToolEvidence()}));
+let passed=false;try{
+const key=id;
+if(key==='setter'){
 for(const failure of ['beforeMethod','afterMethod']) {
  const f=await fixture();await f.source.importBookSourceDocument(JSON.stringify(source(1)));
  f.options[failure]='rules.mutation.apply';await assert.rejects(f.source.updateSource('https://source-1.test',{enabled:false},f.current));
@@ -14,8 +21,10 @@ for(const failure of ['beforeMethod','afterMethod']) {
   assert.deepEqual(cold.writes()[0].params,{operationId:original.operationId,sequence:original.sequence,mutation:original.mutation});
  } else {assert.equal(pure.confirmation,'confirmed');assert.equal(pure.blocked,true);assert.equal(pure.writeStage,'cleanup');assert.equal(cold.cleanupCalls.length,0,'pure query does not retry login cleanup');await cold.recoverSource(true);assert.equal(cold.writes().length,0);}
  const row=await cold.source.loadSources('https://source-1.test');assert.equal(row[0].enabled,false);assert.equal(cold.disk(),'');
- assert.ok(writes>0);cases++;
+ assert.ok(writes>0);
 }
+}
+if(key==='document'){
 for(const failure of ['beforeMethod','afterMethod']) {
  const f=await fixture(),document=[source(10),source(11),source(12)];f.options[failure]='rules.mutation.apply';
  await assert.rejects(f.source.importBookSourceDocument(JSON.stringify(document),f.current));
@@ -24,20 +33,26 @@ for(const failure of ['beforeMethod','afterMethod']) {
  f.retire();const cold=await fixture(f);const query=await cold.recoverSource(false);assert.equal(cold.writes().length,0);
  assert.equal(query.canRetryOriginal,true);await cold.recoverSource(true);
  const list=await cold.source.loadSources();assert.equal(list.length,3);assert.equal(cold.disk(),'');
- assert.equal(cold.writes().length,failure==='beforeMethod'?3:2,'qualified row is not blindly replayed');cases++;
+ assert.equal(cold.writes().length,failure==='beforeMethod'?3:2,'qualified row is not blindly replayed');
 }
+}
+if(key==='partial-document'){
 {
  const f=await fixture();const summary=await f.source.importBookSourceDocument(JSON.stringify([source(20),{bad:true},source(21)]),f.current);
  assert.equal(summary.importedCount,2);assert.equal(summary.failedCount,1);assert.deepEqual(summary.sourceIds,['https://source-20.test','https://source-21.test']);
- assert.equal(f.writes().length,2);assert.equal(f.disk(),'');cases++;
+ assert.equal(f.writes().length,2);assert.equal(f.disk(),'');
 }
+}
+if(key==='higher-head'){
 {
  const f=await fixture();await f.source.importBookSourceDocument(JSON.stringify(source(30)),f.current);
  f.options.beforeMethod='rules.mutation.apply';await assert.rejects(f.source.deleteSources(['https://source-30.test']));
  const original=JSON.parse(f.disk());await f.command('rules.mutation.apply',{operationId:'12345678-1234-4234-8123-000000000099/2',sequence:2,mutation:{method:'dict-rule.put',params:{name:'x',urlRule:'x',showRule:'x',enabled:true,sortNumber:0}}});
  const before=f.writes().length;await assert.rejects(f.recoverSource(true));assert.equal(f.writes().length,before,'higher head never admits a new identity or old deletion');
- assert.equal(JSON.parse(f.disk()).operationId,original.operationId);cases++;
+ assert.equal(JSON.parse(f.disk()).operationId,original.operationId);
 }
+}
+if(key==='cleanup'){
 {
  const f=await fixture();await f.source.importBookSourceDocument(JSON.stringify(source(40)),f.current);
  f.options.cookieFailure=true;const result=await f.source.deleteSources(['https://source-40.test']);
@@ -47,8 +62,10 @@ for(const failure of ['beforeMethod','afterMethod']) {
  f.retire();const cold=await fixture(f);const pure=await cold.recoverSource(false);
  assert.equal(pure.confirmation,'confirmed');assert.equal(pure.writeStage,'cleanup');assert.equal(cold.cleanupCalls.length,0);
  await cold.recoverSource(true);assert.equal(cold.writes().length,0,'Host cleanup never replays a committed Core delete');
- assert.deepEqual(cold.cleanupCalls,['https://source-40.test']);assert.equal(cold.disk(),'');cases++;
+ assert.deepEqual(cold.cleanupCalls,['https://source-40.test']);assert.equal(cold.disk(),'');
 }
+}
+if(key==='terminal-corruption'){
 for (const corruption of ['fixedDTO','terminalHash','legacyTerminal']) {
  const f=await fixture();await f.source.importBookSourceDocument(JSON.stringify(source(50)),f.current);
  f.options.cookieFailure=true;await f.source.deleteSources(['https://source-50.test']);
@@ -64,6 +81,10 @@ for (const corruption of ['fixedDTO','terminalHash','legacyTerminal']) {
   const result=await cold.recoverSource(false);assert.equal(result.confirmation,'confirmed');
   assert.equal(cold.calls.some(c=>c.method==='rules.mutation.query'),true,'legacy unchecked terminal must obtain real Core ACK');
  } else await assert.rejects(cold.recoverSource(true),/校验|终态/);
- assert.equal(cold.writes().length,0,'corrupt or unchecked original never authorizes another mutation');cases++;
+ assert.equal(cold.writes().length,0,'corrupt or unchecked original never authorizes another mutation');
 }
-console.log(`Source original management/document actual SDK + Atomic + per-RPC cold SQLite: PASS (${cases} groups).`);
+}
+passed=true;}finally{const cleanup=await cleanupDurableFixtures({retain:!passed});if(!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));}
+}
+const definitions={"setter": {"description": "setter actual production SDK/Core scope", "resources": []}, "document": {"description": "document actual production SDK/Core scope", "resources": []}, "partial-document": {"description": "partial-document actual production SDK/Core scope", "resources": []}, "higher-head": {"description": "higher-head actual production SDK/Core scope", "resources": []}, "cleanup": {"description": "cleanup actual production SDK/Core scope", "resources": []}, "terminal-corruption": {"description": "terminal-corruption actual production SDK/Core scope", "resources": []}};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

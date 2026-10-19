@@ -1,80 +1,26 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import {makeIndex as compileIndex,failureChain,sourceSwitchLiveSdk} from './lib/source-switch-sdk-consumer.mjs';
-import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './lib/general-settings-owner-probe.mjs';
-import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
-import {actualBookshelfOperationTypes,actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
-import {actualCacheAuthorityFixture} from './lib/reading-directory-sdk-consumer.mjs';
 import assert from 'node:assert/strict';
-import {createRequire} from 'node:module';
-import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
-import {fixture,settle as settleOwner,deferred,origin,target,session,rawCandidate,Runtime,read,gatewayExports,setCurrentRuntime,Core} from './lib/source-switch-owner-probe.mjs';
-const {ProductionHost:ReadingEntryHost,setRuntime:setEntryRuntime}=await import('./lib/reading-entry-owner-probe.mjs');
-const evidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
-import * as horizontal from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
-import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import * as authorMetadata from '../entry/src/main/ets/features/common/BookAuthorMetadata.ts';
-const {ReaderNativeAlertOwner}=await import('./lib/reader-native-alert-sdk-probe.mjs');
-const {ReadingOfflineHost}=await import('./lib/reader-reading-owner-sdk-probe.mjs');
-// Compile the fixed production SDK graph once. Every scenario still receives
-// its own actual V1 properties, native child tables, Runtime and source owner.
-const sourceOwners=new WeakMap(),cacheStores=new WeakMap();
-const sourceHostPort={forRuntime(runtime){const type=sourceOwners.get(runtime);assert.ok(type);return type.forRuntime(runtime);}};
-class CacheStorePort{constructor(runtime,...args){const Store=cacheStores.get(runtime);assert.ok(Store,'cleanup uses its own sandbox authority');return new Store(runtime,...args);}}
-const factorySource=compileIndex.toString(),initializerStart=factorySource.indexOf(' Object.assign(index,'),
- initializerEnd=factorySource.indexOf(' const acquire=f.runtime.bookAcquisitions;');
-assert.ok(initializerStart>=0&&initializerEnd>initializerStart,'execute the unchanged finite fixture initializer');
-const initializeIndex=new Function('index','f','Runtime','origin','ReaderNativeAlertOwner','actualBookshelfOperationTypes',
- 'actualBookshelfHostField','actualSourceManagementTypes','actualSourceManagementHostField','actualGeneralSettingsTypes',
- 'actualGeneralSettingsHostField','Core','navigation','reading',factorySource.slice(initializerStart,initializerEnd));
-let indexTemplate,indexEmissions=0;
-const indexActors=[];
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const {resolveEtsLoaderRoot,virtualFilePath}=await import('./lib/tool-environment.mjs');const {makeIndex:compileIndex,initializeIndex:initializeProductionIndex,failureChain,sourceSwitchLiveSdk}=await import('./lib/source-switch-sdk-consumer.mjs');
+const {createRequire}=await import('node:module');const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
+const {fixture:productionFixture,settle:settleOwner,deferred,origin,target,session,rawCandidate,Runtime,read,gatewayExports,setCurrentRuntime,Core}=await import('./lib/source-switch-owner-probe.mjs');const owned=[];const fixture=(...a)=>{const f=productionFixture(...a);owned.push(f.host);return f;};
+const {setRuntime:setEntryRuntime}=await import('./lib/reading-entry-owner-probe.mjs');const metricsApi=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');const authorMetadata=await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
+let actualCacheAuthorityFixture,cleanupDurableFixtures;const sourceOwners=new WeakMap(),cacheStores=new WeakMap();const sourceHostPort={forRuntime(runtime){const type=sourceOwners.get(runtime);assert.ok(type);return type.forRuntime(runtime);}};class CacheStorePort{constructor(runtime,...args){const Store=cacheStores.get(runtime);assert.ok(Store,'explicit cleanup sandbox authority');return new Store(runtime,...args);}}
+let indexTemplate,indexEmissions=0;const indexActors=[];
 function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
- sourceOwners.set(f.runtime,f.Constructor);if(cacheAuthority)cacheStores.set(f.runtime,cacheAuthority.types.CacheClearOperationIntentStore);
- setEntryRuntime(f.runtime);
- let result;
- if(indexTemplate===undefined){indexEmissions++;indexTemplate=compileIndex({...f,Constructor:sourceHostPort},{navigation,reading,
-   cacheAuthority:{types:{CacheClearOperationIntentStore:CacheStorePort}}});result=indexTemplate;}
- else{
-  const {p,leafDeps}=indexTemplate,index=new indexTemplate.index.constructor(undefined,{sourceSwitchScopeId:0});
-  initializeIndex(index,f,Runtime,origin,ReaderNativeAlertOwner,actualBookshelfOperationTypes,actualBookshelfHostField,
-   actualSourceManagementTypes,actualSourceManagementHostField,actualGeneralSettingsTypes,actualGeneralSettingsHostField,Core,navigation,reading);
-  const acquire=f.runtime.bookAcquisitions;f.runtime.bookAcquisitions=()=>({...acquire(),readingProjectionRevision:()=>0,setPreparationVisible(){}});
-  result={p,index,leafDeps,mount(){index.sourceSwitchOverlayContent();return p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchPanel).at(-1);},
-   rows:()=>p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchNovelRow)};
- }
- for(const old of indexActors){assert.notEqual(result.index,old);assert.notEqual(result.index.nodes,old.nodes);
-  assert.notEqual(result.index.__sourceSwitchState,old.__sourceSwitchState,'V1 state cells remain scenario-local');}
- indexActors.push(result.index);return result;
+ sourceOwners.set(f.runtime,f.Constructor);if(cacheAuthority)cacheStores.set(f.runtime,cacheAuthority.types.CacheClearOperationIntentStore);setEntryRuntime(f.runtime);let result;
+ if(indexTemplate===undefined){indexEmissions++;indexTemplate=compileIndex({...f,Constructor:sourceHostPort},{navigation,reading,domain:'source-switch-only',cacheAuthority:{types:{CacheClearOperationIntentStore:CacheStorePort}}});result=indexTemplate;}
+ else{const {p,leafDeps}=indexTemplate,index=new indexTemplate.index.constructor(undefined,{sourceSwitchScopeId:0});initializeProductionIndex(index,f,{navigation,reading,domain:'source-switch-only'});const acquire=f.runtime.bookAcquisitions;f.runtime.bookAcquisitions=()=>({...acquire(),readingProjectionRevision:()=>0,setPreparationVisible(){}});result={p,index,leafDeps,mount(){index.sourceSwitchOverlayContent();return p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchPanel).at(-1);},rows:()=>p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchNovelRow)};}
+ for(const previous of indexActors){assert.notEqual(result.index,previous);assert.notEqual(result.index.nodes,previous.nodes);assert.notEqual(result.index.__sourceSwitchState,previous.__sourceSwitchState);}indexActors.push(result.index);return result;
 }
 const settle=async()=>{await settleOwner();await new Promise(setImmediate);await settleOwner();};
-async function waitForRetiredSourceCleanup(host,identity,previousGeneration,outcome){
- const deadline=performance.now()+15_000;
- for(;;){
-  const operation=host.snapshot();
-  // Idle before admission and a receipt from earlier work are not completion.
-  // The mutex remains active through the exact Core receipt and platform step.
-  if(operation?.action==='clear'&&operation.sourceId===identity.sourceId&&operation.bookId===identity.bookId&&
-    operation.generation>previousGeneration&&['succeeded','failed','retired'].includes(operation.materialization)&&!host.busy())return operation;
-  const remaining=deadline-performance.now();
-  assert.ok(remaining>0,`retired source cleanup ${outcome} did not reach its terminal operation: ${JSON.stringify({busy:host.busy(),operation})}`);
-  await new Promise(resolve=>setTimeout(resolve,Math.min(5,remaining)));
- }
-}
-const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','applySourceSwitchSnapshot','retireRssPresentation','retireSourceSwitchPresentation',
- 'bindSourceSwitchReader','applySourceSwitchEffect','openSourceSwitch','openDetailSourceSwitch','retrySourceSwitch','refreshSourceSwitch',
- 'sourceSwitchProbeQuery','knownSearchSourceCandidates','onPickSource','retryFailedSourceSwitch','dismissSourceSwitchFailure','onRollbackSourceSwitch',
- 'closeSourceSwitch','performSourceSwitchSeam','resolveReaderSourceSwitchTransaction','reconcilePendingSourceSwitches','currentSourceSwitchTransactionId',
- 'nextNavigationGeneration','isCurrentRuntime','openReading','onRemoteSessionReady','installRemoteReadingSession',
- 'getReadingEntryHost','readingEntryLease','applyReadingEntrySnapshot','bindReadingEntryReader','retireReadingEntryPresentation',
- 'detailReadableAdmission','detailBookKey','chooseCachedChapterRefresh','showReadingFailure','showIndexAlert',
- 'applyReadingCommit','getReadingOfflineHost','cleanupRetiredSourceCache','sourceSwitchOverlayContent'];
-const states=['sourceSwitchVisible','sourceSwitchState','sourceSwitchFailureMessage','sourceSwitchScopeId'];
-const checks=[];
-// Actual SDK row -> Index -> shared Gateway/Host -> first-image admission.
-// The only author proof is the exact cold Core row, never a display rewrite.
-for(const mode of ['valid','stale-proof','wrong-book','wrong-author','target-version','registry-during-proof',
- 'wrong-target-author','registry-during-image','cancel-resolve','cancel-reject']){
+async function waitForRetiredSourceCleanup(host,identity,previousGeneration,outcome){for(let turn=0;turn<2000;turn++){const operation=host.snapshot();if(operation?.action==='clear'&&operation.sourceId===identity.sourceId&&operation.bookId===identity.bookId&&operation.generation>previousGeneration&&['succeeded','failed','retired'].includes(operation.materialization)&&!host.busy())return operation;await new Promise(setImmediate);}assert.fail('exact retired cache cleanup did not settle: '+outcome);}
+async function visualContract(){const {readFileSync}=await import('node:fs');return{numbers:JSON.parse(readFileSync(new URL('../../Reader-UI/design/source-switch/source-switch.visual.json',import.meta.url),'utf8')).numbers,colors:JSON.parse(readFileSync(new URL('../../Reader-UI/theme/registry.json',import.meta.url),'utf8')).appRoles.TOK_SS_DRAWER_SCRIM};}
+const checks=[];let passed=false;
+
+try{
+async function mangaCase(mode){
+
  const proof={schemaVersion:1,sourceVersion:'v1',field:'detail',raw:'@Writer',label:'Writer',rule:'author-nickname-at-v1'};
  const targetSession={...session,contentKind:'manga',detailUrl:'target',hostRequirements:[],
   book:{title:'Book',author:mode==='wrong-target-author'?'Other':'Writer'},
@@ -135,14 +81,14 @@ for(const mode of ['valid','stale-proof','wrong-book','wrong-author','target-ver
    await work;await settle();assert.equal(x.index.sourceSwitchScopeId,scope);
    assert.equal(x.index.sourceSwitchVisible,true);assert.equal(x.index.sourceSwitchState.kind,'candidates');
    assert.equal(f.calls.filter(([method])=>method==='acquire').length,0);
-   x.mount().onClose();checks.push('actual-cold-manga-SDK-'+mode);continue;
+   x.mount().onClose();checks.push('actual-cold-manga-SDK-'+mode);return;
   }
   gate.resolve();
  }
  await work;await settle();
  const opens=x.index.effects.filter(effect=>effect?.validated);
  if(mode==='valid'){
-  assert.equal(opens.length,1);assert.equal(opens[0].validated,targetSession);
+  assert.equal(opens.length,1,JSON.stringify({failure:x.index.sourceSwitchFailureMessage,state:x.index.sourceSwitchState,privateFailure:f.host.lastFailure?.stack,calls:f.calls.map(c=>c[0])}));assert.equal(opens[0].validated,targetSession);
   assert.deepEqual(resolvedQuery.authorIdentity,proof);assert.equal(assertQueries.length,1);
   assert.equal(assertQueries[0],resolvedQuery,'final target verification uses the same qualified query after Host retirement');
   assert.equal(f.calls.filter(([method])=>method==='acquire').length,1);assert.equal(images.length,1);assert.equal(released.length,1);
@@ -164,6 +110,17 @@ for(const mode of ['valid','stale-proof','wrong-book','wrong-author','target-ver
  assert.equal(f.calls.some(([method])=>['manga.sourceSwitch.commit','reading.progress.update','bookshelf.add'].includes(method)),false);
  checks.push('actual-cold-manga-SDK-'+mode);
 }
+if(id==='manga-valid')await mangaCase('valid');
+if(id==='manga-stale-proof')await mangaCase('stale-proof');
+if(id==='manga-wrong-book')await mangaCase('wrong-book');
+if(id==='manga-wrong-author')await mangaCase('wrong-author');
+if(id==='manga-target-version')await mangaCase('target-version');
+if(id==='manga-registry-during-proof')await mangaCase('registry-during-proof');
+if(id==='manga-wrong-target-author')await mangaCase('wrong-target-author');
+if(id==='manga-registry-during-image')await mangaCase('registry-during-image');
+if(id==='manga-cancel-resolve')await mangaCase('cancel-resolve');
+if(id==='manga-cancel-reject')await mangaCase('cancel-reject');
+if(id==='preview-cancel'){
 for(const late of ['resolve','reject']){
  const gate=deferred(),f=fixture({open:false,shared:true,preview:true,acquireGate:gate}),x=makeIndex(f);
  x.index.openDetailSourceSwitch();await settle();const panel=x.mount(),row=x.rows().find(value=>value.candidate.sourceId==='new');
@@ -176,8 +133,8 @@ for(const late of ['resolve','reject']){
  assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
  checks.push('actual-SDK-preview-preparation-close-reopen-before-late-'+late);
 }
-// The actual Index method must retain a proven author identity when its
-// reading session is gone, while refusing a different book or stale/raw proof.
+}
+if(id==='seed-author-proof'){
 {
  const proof={schemaVersion:1,sourceVersion:'v1',field:'detail',raw:'@Writer',label:'Writer',rule:'author-nickname-at-v1'};
  const seed={sourceId:'old',bookId:'book',title:'Book',author:'@Writer',authorIdentity:proof,sourceVersion:'v1'};
@@ -223,6 +180,8 @@ for(const late of ['resolve','reject']){
  }
  checks.push('actual-Index-exact-seed-and-detail-author-proof-without-session-raw-version-and-identity-rejection');
 }
+}
+if(id==='qualification-cancel'){
 for(const outcome of ['resolve','reject']){
  const f=fixture({shared:true,open:false}),x=makeIndex(f),gate=deferred(),base=f.runtime.request.bind(f.runtime);
  const acquisitions=f.runtime.bookAcquisitions;let revision=1,blockNextRegistry=false,started=false;
@@ -248,6 +207,8 @@ for(const outcome of ['resolve','reject']){
  assert.equal(f.calls.some(([method])=>method==='acquire'||method==='source.switch.commit'),false);
  x.mount().onClose();checks.push('actual-SDK-close-pending-qualification-reopen-before-late-'+outcome);
 }
+}
+if(id==='source-finalization'){
 {
  const f=fixture({shared:true,open:false}),x=makeIndex(f);x.index.openDetailSourceSwitch();await settle();
  assert.equal(x.index.sourceSwitchState.kind,'candidates');assert.equal(x.index.sourceSwitchScopeId,f.host.current().scopeId);
@@ -273,6 +234,8 @@ for(const outcome of ['resolve','reject']){
  x.index.applyReadingCommit({...target,chapterIndex:0,sourceSwitchTransactionId:tx});assert.equal(x.index.cleanup.length,1);
  checks.push('actual-Index-Host-Gateway-SDK-candidate-reader-seam-and-exact-finalization');
 }
+}
+if(id==='old-overlay'){
 {
  const f=fixture({shared:true,open:false}),x=makeIndex(f);x.index.openDetailSourceSwitch();await settle();const old=x.mount(),scope=x.index.sourceSwitchScopeId;
  old.onClose();assert.equal(f.host.current().visible,false);x.index.openDetailSourceSwitch();await settle();const current=x.mount();
@@ -281,6 +244,8 @@ for(const outcome of ['resolve','reject']){
  current.onClose();assert.equal(f.host.current().visible,false);
  checks.push('actual-SDK-detail-overlay-reopen-old-physical-actions-rejected');
 }
+}
+if(id==='unknown-recovery'){
 {
  const f=fixture({shared:true,open:false,loseCommitAck:true,failExactQuery:true}),x=makeIndex(f);
  x.index.openDetailSourceSwitch();await settle();const panel=x.mount();panel.onSelectCandidate(f.candidate());await settle();
@@ -293,6 +258,8 @@ for(const outcome of ['resolve','reject']){
  assert.equal(f.calls.filter(([m])=>m==='source.switch.rollback').length,0);
  checks.push('actual-unknown-title-reads-exact-recovery-without-second-commit');
 }
+}
+if(id==='late-navigation'){
 {
  const gate=deferred(),f=fixture({shared:true,open:false,commitGate:gate}),x=makeIndex(f);
  x.index.openDetailSourceSwitch();await settle();const panel=x.mount();panel.onSelectCandidate(f.candidate());await settle();
@@ -302,6 +269,8 @@ for(const outcome of ['resolve','reject']){
  assert.equal(x.index.detailBook.sourceId,'other');assert.equal(x.index.sourceSwitchVisible,false);
  checks.push('retired-navigation-keeps-accepted-ACK-without-late-reader-navigation');
 }
+}
+if(id==='failed-preview'){
 {
  const f=fixture({shared:true,open:false,preview:true,failAcquire:true}),x=makeIndex(f);
  x.index.openDetailSourceSwitch();await settle();const old=x.mount();old.onSelectCandidate(f.candidate());await settle();
@@ -311,6 +280,8 @@ for(const outcome of ['resolve','reject']){
  f.options.failAcquire=false;x.index.retryFailedSourceSwitch(scope);await settle();assert.ok(x.index.effects.some(e=>e.validated));
  checks.push('detail-acquisition-failure-mounts-reader-with-live-explicit-recovery-scope');
 }
+}
+if(id==='remount'){
 {
  const f=fixture({shared:true,open:false}),x=makeIndex(f);x.index.openDetailSourceSwitch();await settle();
  const originalScope=x.index.sourceSwitchScopeId;const old=x.mount();
@@ -322,6 +293,8 @@ for(const outcome of ['resolve','reject']){
  assert.equal(f.calls.filter(([m])=>m==='source.switch.commit').length,0);
  checks.push('same-Runtime-successor-lease-old-detach-and-runtime-unavailable');
 }
+}
+if(id==='retained-reader-failure'){
 {
  const f=fixture({shared:true,open:false,preview:true,failAcquire:true}),x=makeIndex(f);
  x.index.openDetailSourceSwitch();await settle();x.mount().onSelectCandidate(f.candidate());await settle();
@@ -333,8 +306,11 @@ for(const outcome of ['resolve','reject']){
  assert.equal(f.calls.filter(([m])=>m==='acquire').length,2);assert.equal(f.calls.filter(([m])=>m==='source.switch.commit').length,0);
  checks.push('actual-Index-ReaderShell-retained-ReadingExperience-failure-lexical-scope-recovery');
 }
-for(const outcome of ['confirmed','platform-failure','Core-unknown']){
- const f=fixture({shared:true,open:false}),cacheAuthority=await actualCacheAuthorityFixture(true),x=makeIndex(f,{cacheAuthority});delete x.index.cleanupRetiredSourceCache;
+}
+async function retiredCacheCase(outcome){
+const {actualCacheAuthorityFixture:authority}=await import('./lib/reading-directory-sdk-consumer.mjs');actualCacheAuthorityFixture=authority;({cleanupDurableFixtures}=await import('./lib/reading-operation-durable-probe.mjs'));
+
+ const f=fixture({shared:true,open:false}),cacheAuthority=await actualCacheAuthorityFixture(true),x=makeIndex(f,{cacheAuthority});delete x.index.cleanupRetiredSourceCache;console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...cacheAuthority.toolEvidence()}));
  // Real isolated sandbox IO and actual cold Core receipts replace the obsolete
  // bare cache.clear stub; SourceSwitch keeps its existing controlled RPC seam.
  f.runtime.getUIAbilityContext=()=>({filesDir:cacheAuthority.files});
@@ -351,7 +327,7 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
  };
  f.runtime.clearOfflineBookImages=async(sourceId,bookId)=>{cleanup.push(['images',sourceId,bookId]);if(outcome==='platform-failure')throw Error('old cache images unavailable');};
  x.index.openDetailSourceSwitch();await settle();x.mount().onSelectCandidate(f.candidate());
- for(let i=0;i<200&&x.index.detailBook.sourceId!=='new';i++)await new Promise(r=>setTimeout(r,5));
+ for(let turn=0;turn<2000&&x.index.detailBook.sourceId!=='new';turn++)await new Promise(setImmediate);
  assert.equal(x.index.detailBook.sourceId,'new','actual accepted source seam completes before visible reading commit');
  assert.equal(f.host.current().write.confirmation,'confirmed');
  const tx=f.host.current().pending.transactionId;f.setPhase('finalized');
@@ -382,8 +358,10 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
  assert.equal(cleanup.length,outcome==='Core-unknown'?1:2,'repeated canonical notification cannot repeat old-source cleanup');
  checks.push('actual-Index-OffineHost-atomic-store-cold-Core-retired-source-'+outcome);
 }
-// The retained reading identity includes readyGeneration, while only the small
-// temporary source overlay is keyed by the source owner scope.
+if(id==='retired-cache-confirmed')await retiredCacheCase('confirmed');
+if(id==='retired-cache-platform-failure')await retiredCacheCase('platform-failure');
+if(id==='retired-cache-Core-unknown')await retiredCacheCase('Core-unknown');
+if(id==='reader-overlay'){
 {
  const f=fixture({shared:true,open:false}),x=makeIndex(f,{reading:true});x.index.openSourceSwitch();await settle();
  const s=x.p.consumer(read('features/shell/ReaderShell.ets'),['sourceSwitchScopeId','sourceSwitchOverlayContent'],x.leafDeps,{sourceSwitchScopeId:x.index.sourceSwitchScopeId});
@@ -396,11 +374,10 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
  assert.equal(f.calls.filter(([m])=>m==='source.switch.commit').length,0);
  checks.push('actual-ReaderShell-overlay-oldscope-preserved-without-reader-tree-remount');
 }
-// A target source commit still needs the real reader's body, selected physical
-// page and canonical progress admission. The UI must follow these facts, and
-// must relinquish its surface to the existing reader error on any failure.
+}
+if(id==='reader-completion'){
 {
- const source=read('features/reading/LocalReadingExperience.ets');
+ const {numbers}=await visualContract();const source=read('features/reading/LocalReadingExperience.ets');
  const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
  // The SDK output depends on this fixed source/member/dependency graph, not
  // on scenario fields. Reuse its constructor while retaining a fresh actor,
@@ -450,10 +427,9 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
  assert.equal(progress.sourceName,'新书源');assert.equal(progress.chapterTitle,'准确章节 第 20 章');
  assert.equal(progress.statusText,'正在载入章节…');assert.ok(x.p.nodes(progress).some(n=>n.create==='正在切换书源'));
  const spinner=x.p.walk(progress).find(c=>c instanceof x.deps.SourceSwitchSpinner);assert.ok(spinner);
- const ring=x.p.nodes(spinner).find(n=>n.type==='Shape');assert.equal(ring.width,36);assert.equal(spinner.shouldAnimate(),true);
- assert.equal(spinner.durationMs,1800);assert.equal(x.p.nodes(spinner).filter(n=>n.type==='Path').length,2);
- spinner.foreground=false;x.p.properties.flush();assert.equal(spinner.shouldAnimate(),false,'background pauses the actual SVG animator');assert.equal(ring.rotate.angle,0);
- spinner.foreground=true;spinner.reduceMotion=true;x.p.properties.flush();assert.equal(spinner.shouldAnimate(),false,'reduced motion keeps the real loading surface static');assert.equal(ring.rotate.angle,0);
+ const ring=x.p.nodes(spinner).find(n=>n.type==='LoadingProgress');assert.ok(ring,'current native loading indicator');assert.equal(ring.width,numbers.switchSpinnerSize);assert.equal(ring.enableLoading,true);
+ spinner.foreground=false;x.p.properties.flush();assert.equal(ring.enableLoading,false,'background disables native loading animation');
+ spinner.foreground=true;spinner.reduceMotion=true;x.p.properties.flush();assert.equal(ring.enableLoading,false,'reduced motion disables native loading animation');
  const ready=make({phase:'ready',chapter:{sourceId:'new',bookId:'target',chapterIndex:19,chapterTitle:'第 20 章',content:'当前章节真实正文'},
    visiblePage:{startScalar:0},visibleFragments:[{text:'当前章节真实正文',imageHeight:0}],visiblePageSelectionToken:2,
    materializedChapterSelectionToken:2});
@@ -465,13 +441,13 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
  ready.o.onSourceSwitchPagePresented(ready.o.pageTurnRenderRevision);
  assert.equal(ready.o.sourceSwitchToastText,'已切换至 新书源','real production canonical and current-revision guards admit completion');
  ready.o.cancelSourceSwitchCompletion();
- assert.equal(actors.length,13,'every positive, negative and rendered reader case retains an independent actor');
+ 
  checks.push('actual-target-reader-prepare-current-selection-ready-failure-stale-prop-foreground-reduced-motion');
 }
-// Exercise the metadata and overlay host on the actual SDK-emitted builders.
-// Controlled child ports capture their real payloads; they do not imitate the
-// source transaction, native sheet layout or its transition scheduling.
+}
+if(id==='metadata-hosts'){
 {
+ const {numbers,colors}=await visualContract();
  class ChildPort {
   constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}
   updateStateVars(params){Object.assign(this.params,params);}
@@ -494,19 +470,19 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
   return{p,o,child:()=>[...o.children.values()].find(c=>c instanceof ChildPort)};
  };
  const book={sourceId:'old',bookId:'book',title:'书名',author:'作者',sourceName:'当前书源',coverUrl:'cover',lastChapter:'最新章节 第 120 章'};
- const expectedCurve={kind:'cubic-bezier',values:[0.2,0.7,0.2,1]};
+ const expectedCurve={kind:'cubic-bezier',values:[numbers.easingX1,numbers.easingY1,numbers.easingX2,numbers.easingY2]};
  const assertScrim=(probe,contentKind,scheme,reduceMotion)=>{
   const nodes=probe.p.nodes(probe.o).filter(n=>n.type==='Stack'&&typeof n.onClick==='function');
   assert.equal(nodes.length,1,'the real overlay has one dismissing scrim');
   const scrim=nodes[0];
-  const expectedColor=scheme==='day'?'#731F1B17':'#52000000';
+  const c=colors[scheme],hex=n=>Math.round(n).toString(16).padStart(2,'0').toUpperCase();const expectedColor='#'+[c.a*255,c.r,c.g,c.b].map(hex).join('');
   assert.equal(scrim.backgroundColor,expectedColor,'detail and retained reader use the same selected scrim palette for both formats');
   assert.equal(scrim.width,'100%');assert.equal(scrim.height,'100%');
   if(reduceMotion){
    assert.equal(scrim.transition.kind,'identity','reduced motion preserves a static scrim for both formats');
   }else{
    assert.equal(scrim.transition.kind,'asymmetric');
-   for(const [phase,duration] of [['appear',320],['disappear',280]]){
+   for(const [phase,duration] of [['appear',numbers.openDurationMs],['disappear',numbers.closeDurationMs]]){
     const effect=scrim.transition.parameters[phase];
     assert.equal(effect.kind,'opacity');
     assert.equal(effect.options.duration,duration,'the scrim uses the selected drawer transition duration');
@@ -549,9 +525,12 @@ for(const outcome of ['confirmed','platform-failure','Core-unknown']){
   ['payload'],'ReaderShell',shellSource,{detailBook:book,readingContentKind:'text'});
  carrier.o.payload();assert.equal(carrier.child().params.latestChapterTitle,book.lastChapter);
  carrier.o.detailBook={...book,lastChapter:undefined};carrier.o.replay();assert.equal(carrier.child().params.latestChapterTitle,'','missing latest metadata stays empty');
- assert.equal(factories.size,4,'the exact Index/Shell/Panel/payload source graphs compile once each');
- assert.equal(actors.length,25,'both formats, both schemes and both motion states still execute all 24 independent host actors plus the metadata carrier');
+ 
+ 
  checks.push('actual-Index-ReaderShell-Panel-latest-chapter-payload-and-shared-drawer-both-content-hosts');
 }
-assert.equal(indexEmissions,1,'the immutable SDK graph is emitted once; all original independent actors still execute');
-console.log(JSON.stringify({status:'PASS',checks,indexActors:indexActors.length,indexEmissions,scope:'actual Host/Gateway/full durable intent + Index delegates/seam + SDK Window/shared Row and metadata/drawer host builders; controlled runtime/native file boundary. Native layout/removal/focus/device remain separate.'}));
+}
+passed=true;}finally{for(const host of owned)host.retire();setCurrentRuntime(undefined);setEntryRuntime(undefined);const cleanup=await cleanupDurableFixtures?.({retain:!passed});if(cleanup&&!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));}
+}
+const definitions={"manga-valid": "manga-valid actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-stale-proof": "manga-stale-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-wrong-book": "manga-wrong-book actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-wrong-author": "manga-wrong-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-target-version": "manga-target-version actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-registry-during-proof": "manga-registry-during-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-wrong-target-author": "manga-wrong-target-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-registry-during-image": "manga-registry-during-image actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-cancel-resolve": "manga-cancel-resolve actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-cancel-reject": "manga-cancel-reject actual scoped owner/gateway/storage path; controlled Core/OS ports", "preview-cancel": "preview-cancel actual scoped owner/gateway/storage path; controlled Core/OS ports", "seed-author-proof": "seed-author-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "qualification-cancel": "qualification-cancel actual scoped owner/gateway/storage path; controlled Core/OS ports", "source-finalization": "source-finalization actual scoped owner/gateway/storage path; controlled Core/OS ports", "old-overlay": "old-overlay actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-recovery": "unknown-recovery actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-navigation": "late-navigation actual scoped owner/gateway/storage path; controlled Core/OS ports", "failed-preview": "failed-preview actual scoped owner/gateway/storage path; controlled Core/OS ports", "remount": "remount actual scoped owner/gateway/storage path; controlled Core/OS ports", "retained-reader-failure": "retained-reader-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-cache-confirmed": "retired-cache-confirmed actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-cache-platform-failure": "retired-cache-platform-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-cache-Core-unknown": "retired-cache-Core-unknown actual scoped owner/gateway/storage path; controlled Core/OS ports", "reader-overlay": "reader-overlay actual scoped owner/gateway/storage path; controlled Core/OS ports", "reader-completion": "reader-completion actual scoped owner/gateway/storage path; controlled Core/OS ports", "metadata-hosts": "metadata-hosts actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

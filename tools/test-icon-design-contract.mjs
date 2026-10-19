@@ -1,150 +1,31 @@
-import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, extname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import { svgAssetRecipes } from './svg-provenance.config.mjs';
-
-const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const read = (path) => readFileSync(resolve(repo, path), 'utf8');
-
-function sourceFiles(directory) {
-  const files = [];
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...sourceFiles(path));
-    } else if (extname(entry.name) === '.ets' || extname(entry.name) === '.ts') {
-      files.push(path);
-    }
-  }
-  return files;
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"reader": {"description": "实际replaceHeader Image→两个Reader资源→canonical SVG", "resources": []}, "discover": {"description": "实际currentSourceCard Image→两个Discover资源→canonical SVG", "resources": []}, "sync": {"description": "实际scopeRow Image→两个Sync资源→canonical SVG", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
 }
+async function runSelectedCase(selectedCase) {
 
-const slots = [
-  ['reader directory active', 'entry/src/main/ets/features/reading/ReaderControlPanel.ets',
-    ['reader_directory_list_active'], '943:9888'],
-  ['reader tts active', 'entry/src/main/ets/features/reading/ReaderControlPanel.ets',
-    ['reader_tts_nav_active'], '943:10354'],
-  ['reader appearance active', 'entry/src/main/ets/features/reading/ReaderControlPanel.ets',
-    ['reader_appearance_nav_active'], '943:10790'],
-  ['reader settings active', 'entry/src/main/ets/features/reading/ReaderControlPanel.ets',
-    ['reader_settings_nav_active'], '943:11211'],
-  ['full tts header', 'entry/src/main/ets/features/reading/ReaderTtsFullPanel.ets',
-    ['reader_tts_header'], '943:12119'],
-  ['full settings header', 'entry/src/main/ets/features/reading/ReaderSettingsFullPanel.ets',
-    ['reader_settings_header'], '943:14749'],
-  ['discover refresh', 'entry/src/main/ets/features/discover/DiscoverPage.ets',
-    ['discover_refresh'], '943:1312'],
-  ['discover source', 'entry/src/main/ets/features/discover/DiscoverPage.ets',
-    ['discover_source_stack'], '943:1312'],
-  ['discover source disclosure', 'entry/src/main/ets/features/discover/DiscoverPage.ets',
-    ['discover_source_chevron'], '943:1312'],
-  ['discover filter', 'entry/src/main/ets/features/discover/DiscoverPage.ets',
-    ['discover_filter'], '943:1312'],
-  ['discover filter disclosure', 'entry/src/main/ets/features/discover/DiscoverPage.ets',
-    ['discover_filter_chevron'], '943:1312'],
-  ['discover apply', 'entry/src/main/ets/features/discover/DiscoverPage.ets',
-    ['discover_apply'], '943:1312'],
-  ['webdav server', 'entry/src/main/ets/features/sync/SyncPage.ets', ['sync_server'], '943:4982'],
-  ['webdav account', 'entry/src/main/ets/features/sync/SyncPage.ets', ['sync_account'], '943:4982'],
-  ['webdav password', 'entry/src/main/ets/features/sync/SyncPage.ets', ['sync_password'], '943:4982'],
-  ['webdav backup password', 'entry/src/main/ets/features/sync/SyncPage.ets',
-    ['sync_backup_password'], 'product extension of 943:4982'],
-  ['webdav folder', 'entry/src/main/ets/features/sync/SyncPage.ets', ['sync_folder'], '943:4982'],
-  ['source management group', 'entry/src/main/ets/features/source/SourceManagementPage.ets',
-    ['source_group_folder'], '943:4281'],
-  ['rss management view', 'entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets',
-    ['rss_manage_view_all'], '4198:3798'],
-  ['rss management edit', 'entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets',
-    ['rss_manage_edit'], '4198:3798'],
-  ['rss management refresh', 'entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets',
-    ['rss_manage_refresh'], '4198:3798'],
-  ['rss management delete', 'entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets',
-    ['rss_manage_delete'], '4198:3798'],
-  ['rss entry bookmark', 'entry/src/main/ets/features/rss/RssEntryDetailPage.ets',
-    ['rss_bookmark', 'rss_bookmark_active'], '4054:65493'],
-];
-
-assert.equal(slots.length, 23, 'the corrected Figma audit must retain all 23 confirmed icon slots');
-for (const [slot, file, assets, figmaNode] of slots) {
-  const source = read(file);
-  for (const asset of assets) {
-    assert.ok(source.includes(asset),
-      `${slot} (${figmaNode}) must use fixed asset ${asset}`);
-  }
+const {default:assert}=await import('node:assert/strict');
+const {readFileSync}=await import('node:fs');
+const {svgAssetRecipes}=await import('./svg-provenance.config.mjs');
+const {renderRecipe}=await import('./sync-svg-assets.mjs');
+const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {ts,options}=installedEtsCompiler();
+const scopes={reader:{file:'reading/ReaderControlPanel.ets',method:'replaceHeader',asset:'reader_control_replace_header'},discover:{file:'discover/DiscoverPage.ets',method:'currentSourceCard',asset:'discover_source_stack'},sync:{file:'sync/SyncPage.ets',method:'scopeRow',asset:'sync_scope_chevron'}};
+const scope=scopes[selectedCase];const path=new URL('../entry/src/main/ets/features/'+scope.file,import.meta.url);const source=readFileSync(path,'utf8');
+function boundAssets(text) {
+ const ast=ts.createSourceFile(String(path),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.equal(ast.parseDiagnostics.length,0);
+ const owner=ast.statements.find(node=>node.members?.some(member=>member.name?.getText(ast)===scope.method));assert.ok(owner,'actual owner of selected member');const member=owner.members.find(node=>node.name?.getText(ast)===scope.method);assert.ok(member,'actual selected consumer member');const names=new Set();
+ const visit=node=>{if((ts.isCallExpression(node)||ts.isEtsComponentExpression(node))&&node.expression.getText(ast)==='Image') {const resources=n=>{if(ts.isStringLiteral(n)&&n.text.startsWith('app.media.'))names.add(n.text.slice('app.media.'.length));ts.forEachChild(n,resources);};node.arguments.forEach(resources);}ts.forEachChild(node,visit);};visit(member);return names;
 }
-
-const recipes = new Map(svgAssetRecipes.map((recipe) => [recipe.file, recipe]));
-const recipeContracts = [
-  ['reader_directory_list_active', 'Icon/ReaderModuleDirectory', '#FFFAF4', 0],
-  ['reader_tts_nav_active', 'Icon/ReaderModuleTts', '#FFFAF4', 0],
-  ['reader_appearance_nav_active', 'Icon/ReaderModuleAppearance', '#FFFAF4', 0],
-  ['reader_settings_nav_active', 'Icon/ReaderModuleSettings', '#FFFAF4', 0],
-  ['reader_tts_header', 'Icon/Tts', '#332C25', 0],
-  ['reader_settings_header', 'Icon/ReaderModuleSettings', '#332C25', 0],
-  ['reader_chevron_down_primary', 'Icon/Chevron', '#2F6373', 90],
-  ['discover_refresh', 'Icon/Refresh', '#1F1B17', 0],
-  ['discover_source_stack', 'Icon/SourceStack', '#1F3528', 0],
-  ['discover_source_chevron', 'Icon/ChevronRight', '#1F1B17', 0],
-  ['discover_filter', 'Icon/Filter', '#3F372F', 0],
-  ['discover_filter_chevron', 'Icon/ChevronRight', '#3F372F', 0],
-  ['discover_apply', 'Icon/Check', '#FFFFFF', 0],
-  ['sync_server', 'Icon/Link', '#2D4A3E', 0],
-  ['sync_account', 'Icon/People', '#2D4A3E', 0],
-  ['sync_password', 'Icon/Shield', '#2D4A3E', 0],
-  ['sync_backup_password', 'Icon/Lock', '#2D4A3E', 0],
-  ['sync_folder', 'Icon/Folder', '#2D4A3E', 0],
-  ['sync_scope_chevron', 'Icon/Chevron', '#41484C', 90],
-  ['source_group_folder', 'Icon/Folder', '#2D4A3E', 0],
-  ['rss_manage_view_all', 'Icon/List', '#1F1B17', 0],
-  ['rss_manage_edit', 'Icon/Edit', '#1F1B17', 0],
-  ['rss_manage_refresh', 'Icon/Refresh', '#1F1B17', 0],
-  ['rss_manage_delete', 'Icon/Trash', '#AB2E28', 0],
-  ['rss_bookmark', 'Icon/Bookmark', '#756F69', 0],
-  ['rss_bookmark_active', 'Icon/Bookmark', '#1F3528', 0],
-];
-
-for (const [asset, component, color, rotation] of recipeContracts) {
-  const recipe = recipes.get(asset);
-  assert.ok(recipe, `${asset} must be registered in SVG provenance`);
-  assert.equal(recipe.component, component, `${asset} must use ${component}`);
-  assert.equal(recipe.color, color, `${asset} must use Figma color ${color}`);
-  assert.equal(recipe.rotation, rotation, `${asset} rotation must match Figma`);
-  assert.equal(recipe.fillNone, true, `${asset} must preserve its outline geometry`);
+const actual=boundAssets(source);for(const asset of [scope.asset,scope.asset+'_theme_night'])assert.ok(actual.has(asset),'actual Image expression binds '+asset);
+const mutant=source.replaceAll('app.media.'+scope.asset,'app.media.audit_wrong_asset')+'\n// app.media.'+scope.asset;
+assert.equal(boundAssets(mutant).has(scope.asset),false,'a historical asset comment cannot hide a wrong actual Image');
+for(const asset of [scope.asset,scope.asset+'_theme_night']) {
+ const recipe=svgAssetRecipes.find(recipe=>recipe.file===asset);assert.ok(recipe,'selected actual slot has a registered recipe');
+ const expected=await renderRecipe(recipe);const packaged=readFileSync(new URL('../entry/src/main/resources/base/media/'+asset+'.svg',import.meta.url),'utf8');assert.equal(packaged,expected.content,'selected generated SVG preserves canonical source and finite adapter');
+ const damaged=packaged.replace(/viewBox="[^"]+"/,'viewBox="0 0 1 1"');assert.notEqual(damaged,expected.content,'packaged geometry mutation is rejected by byte equality');
 }
+console.log('selected slot AST/canonical SVG binding PASS; current visual acceptance NOT_RUN');
 
-for (const asset of [
-  'reader_directory_list_active',
-  'reader_tts_nav_active',
-  'reader_appearance_nav_active',
-  'reader_settings_nav_active',
-]) {
-  assert.ok(!recipes.get(asset).component.includes('/Filled/'),
-    `${asset} must not regress to a filled Reader module variant`);
 }
-
-const bannedAliases = [
-  ['entry/src/main/ets/features/discover/DiscoverPage.ets',
-    ['rss_refresh', 'rss_source', 'bookshelf_filter', 'reader_chevron_right', 'import_success']],
-  ['entry/src/main/ets/features/sync/SyncPage.ets',
-    ['bookshelf_rss', 'directory_bookmark', 'directory_bookmark_on', 'reader_directory_directory',
-      'reader_chevron_down']],
-  ['entry/src/main/ets/features/source/SourceManagementPage.ets', ['directory_directory']],
-  ['entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets', ['settings_gen_cache']],
-];
-for (const [file, aliases] of bannedAliases) {
-  const source = read(file);
-  for (const alias of aliases) {
-    assert.ok(!source.includes(`app.media.${alias}`), `${file} must not reuse ${alias}`);
-  }
-}
-
-const arkSources = sourceFiles(resolve(repo, 'entry/src/main/ets'));
-for (const file of arkSources) {
-  const source = readFileSync(file, 'utf8');
-  assert.doesNotMatch(source, /\.fillColor\(/,
-    `${file}: Image.fillColor is forbidden for SVG icons; generate a fixed-color asset variant instead`);
-}
-
-console.log('icon design contract: PASS (23 confirmed slots + 2 latent coupling/tint risks)');

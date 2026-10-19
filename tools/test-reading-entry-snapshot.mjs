@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
-import { readFileSync } from 'node:fs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { registerHooks, stripTypeScriptTypes }=await import('node:module');
+const { readFileSync }=await import('node:fs');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
 const {readReadingEntrySnapshot,readPreparedReadingEntrySnapshot}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
@@ -19,6 +22,9 @@ function fixture(){
   resolveSourceSwitchTransactionId:async()=>undefined,onRemoteSessionReady:()=>{throw Error('must not fabricate a full session');}};
  return {calls,body,runtime,intent,set:value=>{answer=value;},invalidate:()=>{contentCurrent=false;},stop:()=>{current=false;}};
 }
+
+try{
+if(id==='atomic-body'){
 {
  const f=fixture();const gateway=await ReadingSessionFlowGateway.open(f.intent,f.runtime);
  assert.equal(f.calls.length,0);assert.equal(gateway.remoteSession(),undefined);
@@ -28,6 +34,8 @@ function fixture(){
  assert.equal(chapter,snapshot.chapter);assert.equal(f.calls.length,1,'entry progress/body processing has one Core request');
  f.invalidate();assert.equal(snapshot.isCurrent(),false);
 }
+}
+if(id==='schema'){
 {
  const f=fixture();f.set({...f.body,bookId:'other'});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/identity/);
  f.set({...f.body,progress:{...f.body.progress,bodyVersion:'stale'}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/scope/);
@@ -40,6 +48,8 @@ function fixture(){
  }
  f.set({...f.body,navigation:{...f.body.navigation,current:{...f.body.navigation.current,level:0}}});await assert.rejects(readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),/level/);
 }
+}
+if(id==='resume-chapter'){
 {
  const f=fixture();
  const mismatch={...f.body,chapterIndex:3,progressRevision:'durable-325',
@@ -77,17 +87,22 @@ function fixture(){
  }finally{hook.deregister();}
  console.log('PASS defensive implicit resume chapter/progress guard: async and prepared reject 3/325; explicit chapter 3 remains legal; guard-removal counterexample accepts the same DTO');
 }
+}
+if(id==='offline-body'){
 {
  const f=fixture();f.set({kind:'missing',sourceId:'s',bookId:'b',reason:'contentMissing'});
  assert.equal(await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),undefined);
  f.set({...f.body,contentRefreshRequired:true});const snapshot=await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);
  assert.equal(snapshot.chapter.cacheRefreshRequired,true,'valid old offline bytes remain readable without forced network');
 }
+}
+if(id==='cancellation'){
 {
  const f=fixture();let release;f.runtime.request=async()=>{await new Promise(r=>release=r);return{data:f.body};};
  const read=readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);f.invalidate();release();await assert.rejects(read,/cancelled/);
 }
-console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisite, one request + retained body, strict identity/scope/navigation, old offline body and cancellation PASS');
+}
+if(id==='historical-resume'){
 {
  const f=fixture();
  const resumed={...f.body,resumeOnly:true,navigation:{...f.body.navigation,
@@ -105,6 +120,8 @@ console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisi
  assert.equal(await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true),undefined);
  console.log('PASS explicit historical-only entry proof, durable matching progress, group isolation and non-readable miss');
 }
+}
+if(id==='image-identity'){
 {
  const f=fixture();
  const old=await readReadingEntrySnapshot(f.runtime,'s','b',undefined,()=>true);
@@ -126,6 +143,8 @@ console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisi
  }
  console.log('PASS separate chapter image layout identity: stable across windows, unchanged position scope, malformed metadata rejected');
 }
+}
+if(id==='catalog-paging'){
 {
  const {readReadingCatalog}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
  const calls=[];let changed=false,cancel=false;
@@ -142,6 +161,8 @@ console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisi
  cancel=true;await assert.rejects(readReadingCatalog(runtime,'s','b',()=>!cancel),/cancelled/);
  console.log('bounded catalog: 256-row pages, pinned revision, reject changed and cancelled projections PASS');
 }
+}
+if(id==='lazy-observer'){
 {
  const f=fixture(), admissions=[];
  f.runtime.bookAcquisitions=()=>({acquireBookWithBackgroundRefresh:(_seed,options,priority)=>new Promise(resolve=>admissions.push({resolve,options,priority}))});
@@ -161,3 +182,8 @@ console.log('reading entry snapshot: no acquisition/full TOC/progress prerequisi
  assert.equal(old,0);assert.equal(current,1,'old mount disposer cannot remove the replacement observer');
  console.log('lazy session: independent foreground/background consumers, priority and rebound observer ownership PASS');
 }
+}
+}finally{}
+}
+const definitions={"atomic-body": "atomic-body actual production scoped behavior, controlled IO; no native device claim", "schema": "schema actual production scoped behavior, controlled IO; no native device claim", "resume-chapter": "resume-chapter actual production scoped behavior, controlled IO; no native device claim", "offline-body": "offline-body actual production scoped behavior, controlled IO; no native device claim", "cancellation": "cancellation actual production scoped behavior, controlled IO; no native device claim", "historical-resume": "historical-resume actual production scoped behavior, controlled IO; no native device claim", "image-identity": "image-identity actual production scoped behavior, controlled IO; no native device claim", "catalog-paging": "catalog-paging actual production scoped behavior, controlled IO; no native device claim", "lazy-observer": "lazy-observer actual production scoped behavior, controlled IO; no native device claim"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

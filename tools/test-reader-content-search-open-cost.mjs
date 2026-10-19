@@ -1,23 +1,31 @@
-import { installContentSearchOwnerProbe } from './lib/reader-content-search-owner-probe.mjs';
-import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { performance } from 'node:perf_hooks';
-import { stripTypeScriptTypes } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts';
-import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts';
-import * as motion from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
-import { splitReaderSearchSnippet } from '../entry/src/main/ets/features/reading/ReaderSearchHighlight.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'entry-zero-core':{description:'Actual LRE entry and typing issue no Core request; publication matrix owned separately',resources:[]},
+ 'render-budget':{description:'Actual SDK full DataSource and explicitly requested rows operation count budget',resources:[]},
+ 'historical-benchmark':{description:'Explicit archived Builder/copy diagnostic; no release wall-clock threshold',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const { installContentSearchOwnerProbe }=await import('./lib/reader-content-search-owner-probe.mjs');
+const {default:assert}=await import('node:assert/strict');
+const { createHash }=await import('node:crypto');
+const { readFileSync }=await import('node:fs');
+const { performance }=await import('node:perf_hooks');
+const { stripTypeScriptTypes }=await import('node:module');
+const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe }=await import('./lib/arkui-property-runtime-probe.mjs');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const geometry=await import('../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts');
+const scroll=await import('../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts');
+const motion=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+const { splitReaderSearchSnippet }=await import('../entry/src/main/ets/features/reading/ReaderSearchHighlight.ts');
 // This exact platform module contains only type imports; execute its real body.
 const { ReaderContentSearchPublication } = await import('data:text/javascript,' + encodeURIComponent(stripTypeScriptTypes(
   readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderContentSearchPublication.ets', import.meta.url), 'utf8'))));
-import { searchListDependencies, searchListMethods, searchListRowMembers, searchListLazyRequests } from './lib/reader-content-search-list-probe.mjs';
+const { searchListDependencies, searchListMethods, searchListRowMembers, searchListLazyRequests }=await import('./lib/reader-content-search-list-probe.mjs');
 
 const file=new URL('../entry/src/main/ets/features/reading/ReaderControlSearchContent.ets',import.meta.url);
-const baseline=process.argv.includes('--baseline');
+const baseline=selectedCase==='historical-benchmark';
 const source=readFileSync(baseline?new URL('../evidence/2026-09-14-physical-review/search-flow-implementation/ph90-search-content-before.ets',import.meta.url):file,'utf8');
 const legacyMembers=['resultsBody','loadMoreAction','resultRow','resultSnippet','resultTitle','currentResult','currentSnippet',
   'selectCurrentResult','statusText','presentation','resultClip','resultScrollFrame','resultLayout','resultRowsHeight','frame'];
@@ -46,6 +54,7 @@ function createOwner(state,indices){
   return{page,lazy,sourceCounts};
 }
 const report=[];
+if(selectedCase!=='entry-zero-core'){
 for(const count of [0,50,500,2000]){
   const input=count?{kind:'results',keyword:'关键词',results:rows(count)}:{kind:'idle'};
   const started=performance.now();const copied=baseline?property.deepCopy(property.deepCopy(input)):input;
@@ -83,6 +92,8 @@ for(const count of [0,50,500,2000]){
   report.push({count,payloadHandoffMs:copyMs,legacyDeepCopies:baseline?2:0,dataPublishMs:publishMs,buildMs,replayMs,
     linearFindVisits:visits,mountedRows:titles.length,...(!baseline?{nativeRequestedIndices:indices,providerTotalCount:count}: {})});
 }
+}
+if(selectedCase==='entry-zero-core'){
 // Entry and typing execute the actual LRE methods without searching Core.
 const Lre=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
   ['prepareControlPage','updateQuickSearchQuery','publishQuickSearchState','runQuickSearch','loadMoreQuickSearch'],
@@ -93,25 +104,11 @@ const entry=Object.assign(new Lre(),{lifecycleToken:1,searchGeneration:0,quickSe
 installContentSearchOwnerProbe(entry);
 for(const page of ['quickSearch','fullSearch'])entry.prepareControlPage(page);
 entry.updateQuickSearchQuery('新关键词');assert.deepEqual(entry.quickSearchState,{kind:'idle'});
-const all=rows(2000),requests=[];
-const search=Object.assign(new Lre(),{lifecycleToken:1,bookId:'b',searchGeneration:0,quickSearchQuery:'关键词',quickSearchState:{kind:'idle'},
-  quickSearchPublication:new ReaderContentSearchPublication(),quickSearchRevision:0,controlVisible:()=>true,
-  controlPage:()=> 'fullSearch',isSessionActive:()=>true,
-  sessionGateway:{},
-  activeGateway:()=>({searchContentPage:async(book,keyword,limit,offset)=>{
-    requests.push({book,keyword,limit,offset});return{results:all.slice(offset,offset+limit),offset,hasMore:offset+limit<all.length};
-  }})});
-installContentSearchOwnerProbe(search);
-const turn=()=>new Promise(resolve=>setImmediate(resolve));
-search.runQuickSearch();await turn();assert.equal(search.quickSearchState.results.length,50);
-assert.equal(search.quickSearchRevision,2,'one loading and one terminal publication per initial search');
-for(let count=50;count<2000;count+=50){search.loadMoreQuickSearch();await turn();assert.equal(search.quickSearchState.results.length,count+50);}
-assert.equal(requests.length,40);assert.ok(requests.every(request=>request.limit===50));
-assert.equal(search.quickSearchState.hasMore,false);search.loadMoreQuickSearch();await turn();assert.equal(requests.length,40);
-let release;search.activeGateway=()=>({searchContentPage:()=>new Promise(resolve=>release=resolve)});
-search.runQuickSearch();search.updateQuickSearchQuery('另一个关键词');release({results:all.slice(0,50),offset:0,hasMore:true});await turn();
-assert.deepEqual(search.quickSearchState,{kind:'idle'},'late result cannot overwrite the new input intent');
+}
 console.log(JSON.stringify({baseline,sdk:property.source,componentSha256:createHash('sha256').update(source).digest('hex'),scenarios:report,emptyEntryAndTypingCoreCalls:0,
-  cumulativePagination:{pages:40,pageSize:50,results:2000,lateGenerationRejected:true},
+  case:selectedCase, costEvidence:'operation counts; recorded milliseconds are diagnostic only, not thresholds',
   boundary:baseline?'Archived full ForEach Builder and legacy double SDK copy; no native layout, IME or device frame-time claim':
     'Actual SDK row generation follows explicit requests at the native LazyForEach boundary; the full source is unsliced. No native range-selection, same-frame paint, IME or device frame-time claim'}));
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

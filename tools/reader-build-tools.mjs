@@ -5,24 +5,30 @@ import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { parseArgs } from 'node:util';
 
-// Keep Hvigor's supported major; never let its cold-cache fallback install 10.27.0.
+// Reproducible release-profile pin, not an upstream compatibility range.
 export const REQUIRED_PNPM = '10.34.5';
 export function sharedTools(env = process.env) {
   return resolve(env.HVIGOR_SHARED_TOOLS || resolve(env.HVIGOR_USER_HOME || resolve(homedir(), '.hvigor'), 'wrapper/tools'));
 }
-export function assertBuildTools(directory = sharedTools()) {
+export function assertBuildTools(directory = sharedTools(), { profile = 'development' } = {}) {
+  if (!['development', 'release'].includes(profile)) throw new Error('Unknown build-tool profile');
   const manifest = resolve(directory, 'node_modules/pnpm/package.json');
-  if (!existsSync(manifest) || JSON.parse(readFileSync(manifest, 'utf8')).version !== REQUIRED_PNPM) {
-    throw new Error(`Prepare Hvigor tools with: node tools/reader-build-tools.mjs --install (pnpm ${REQUIRED_PNPM} required)`);
+  if (!existsSync(manifest)) throw new Error('Prepared pnpm is missing; install it explicitly, never during a build');
+  const { name, version } = JSON.parse(readFileSync(manifest, 'utf8'));
+  if (name !== 'pnpm' || !/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(version)) throw new Error('Invalid prepared pnpm identity');
+  if (profile === 'release' && version !== REQUIRED_PNPM) {
+    throw new Error(`Release profile is pinned to pnpm ${REQUIRED_PNPM}; this is not a development compatibility verdict`);
   }
   const cli = resolve(directory, 'node_modules/pnpm/bin/pnpm.cjs');
-  const result = spawnSync(process.execPath, [cli, '--version'], { encoding: 'utf8' });
-  if (result.status !== 0 || result.stdout.trim() !== REQUIRED_PNPM) throw new Error('Hvigor pnpm executable/version mismatch');
-  return { pnpm: REQUIRED_PNPM };
+  const result = spawnSync(process.execPath, [cli, '--version'], { encoding: 'utf8', timeout: 10_000 });
+  if (result.error || result.status !== 0 || result.stdout.trim() !== version) throw new Error('Hvigor pnpm executable/version mismatch');
+  return { pnpm: version, profile, toolIdentity: 'VERIFIED', compatibility: 'Actual Hvigor execution determines compatibility; no unverified version range is asserted.' };
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  if (process.argv.includes('--install')) {
+  const { values } = parseArgs({ options: { install: { type: 'boolean' }, profile: { type: 'string', default: 'development' } }, allowPositionals: false });
+  if (values.install) {
     const configuredCli = process.env.READER_NPM_CLI || process.env.NPM_CLI_JS;
     const candidates = [configuredCli,
       resolve(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js'),
@@ -36,5 +42,5 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       { stdio: 'inherit', shell: false });
     if (result.status !== 0) process.exit(result.status || 1);
   }
-  console.log(JSON.stringify({ status: 'PASS', ...assertBuildTools() }));
+  console.log(JSON.stringify({ status: 'AVAILABLE', ...assertBuildTools(sharedTools(), { profile: values.profile }) }));
 }

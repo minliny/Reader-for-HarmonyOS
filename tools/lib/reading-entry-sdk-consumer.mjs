@@ -26,13 +26,14 @@ const methods=['getReadingEntryHost','readingEntryLease','applyReadingEntrySnaps
  'openLocalBookDetail','openRemoteBookDetail','onRemoteSessionReady','installRemoteReadingSession','probeRemoteContentVerdict','refreshCachedChapterFromPrompt','chooseCachedChapterRefresh',
  'refreshDetailAcquisitionProjection','openReading','isKnownDetailChapter','presentPreparedReading','returnToReadingOrigin','applyReaderDirectoryProjection',
  'retireSettingsPresentation','retireSourceManagementPresentation','nextNavigationGeneration','retireSourceSwitchPresentation','retireRssPresentation','retireRssEditorPresentation','isCurrentRuntime','showIndexAlert','showReadingFailure','runIndexRecoveryAction',
- 'externalDirectory','detailContent','detailSurface','isCurrentDetailPresentation','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','detailReadableAdmission','detailShelfMessage','detailBookKey','remoteContentVerdictLabel',
+ 'detailOperationNoticeContent','externalDirectory','detailContent','detailSurface','isCurrentDetailPresentation','detailShelfAdmissionIdentity','isCurrentDetailShelfAdmission','detailReadableAdmission','detailShelfMessage','detailBookKey','remoteContentVerdictLabel',
  'requestDetailShelfMutation','addDetailBook','cancelDetailBookAddition','readableAdmissionCurrent','publishReadableAdmission',
  'isSameDetailBook','canRemoveDetailBook','removeDetailBook','applyDetailBookRemoval','shelfFilter','shelfRecovery','emptyShelfRecovery',
  'requestRemoveDetailBook','openBookRemovalDialog','dismissBookRemovalDialog','confirmBookRemovalDialog','isCurrentBookRemoval'];
 const Runtime={current:()=>{throw Error('consumer must use captured mounted Runtime');},isCurrent:owner=>ProductionHost.forRuntime(owner).owns(owner)};
 const emptyAdmission={key:'',generation:0,adding:false,cancelling:false,message:'',confirmation:'none'};
-export function makeIndex(f,{route='search',mount=1,indexSource=read('pages/Index.ets')}={}){
+export function makeIndex(f,{route='search',mount=1,indexSource=read('pages/Index.ets'),domain='all'}={}){
+ assert.ok(['all','entry'].includes(domain),'known Index fixture domain');
  const EntryHost=f.host.constructor;
  const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
  const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
@@ -45,7 +46,7 @@ export function makeIndex(f,{route='search',mount=1,indexSource=read('pages/Inde
  const shelfRuntime={current:()=>f.runtime,isCurrent:owner=>owner===f.runtime&&!f.runtime.closed};
  const shelfTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:shelfRuntime,ReaderCoreRequestError});
  const idx=p.consumer(indexSource,[...properties(indexSource).filter(n=>[
-  'detailBook','detailToc','detailInBookshelf','detailLoadingMessage','remoteReadingSession','remoteReadingSeed','remoteContentVerdict',
+  'detailBook','detailToc','detailInBookshelf','detailLoadingMessage','detailCatalogBusy','remoteReadingSession','remoteReadingSeed','remoteContentVerdict',
   'readableAdmissions','shelfOperation'].includes(n)),...methods,
   ...(indexSource.includes('private retireBookshelfCatalogPresentation(') ? ['retireBookshelfCatalogPresentation'] : [])],
   {...leafDeps,LocalBookDetail:leaf,ReadingEntryHost:EntryHost,ReaderRuntimeOwner:{current:()=>{if(f.runtime.closed)throw Error('Runtime unavailable');return f.runtime;},isCurrent:owner=>owner===f.runtime&&!owner.closed},
@@ -67,12 +68,18 @@ export function makeIndex(f,{route='search',mount=1,indexSource=read('pages/Inde
    getUIContext:()=>({showAlertDialog(options){f.notices.push(options);f.nativeAlert=options;}}),
    searchAcquisitionCandidate:row=>({seed:row,catalogReady:false,failed:false})});
  idx.bookshelfHost=actualBookshelfHostField(idx,shelfTypes.Host,{setOrCreate(){}});
- const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:shelfRuntime});
- idx.sourcePresentationIdentity='';
- idx.sourceHost=actualSourceManagementHostField(idx,sourceTypes.SourceHost);
- const settingsTypes=actualGeneralSettingsTypes({ReaderRuntimeOwner:shelfRuntime});
- idx.settingsPresentationIdentity='';
- idx.settingsHost=actualGeneralSettingsHostField(idx,settingsTypes.SettingsHost);
+ idx.sourcePresentationIdentity='';idx.settingsPresentationIdentity='';
+ if(domain==='entry'){
+  // Entry tests never mount either management presentation. Keep the actual
+  // Index retirement methods, and fail if a case tries to retire a live one.
+  const absentPresentation={detachPresentation(identity){assert.equal(identity,'','entry domain cannot exercise management ownership');}};
+  idx.sourceHost=absentPresentation;idx.settingsHost=absentPresentation;
+ }else{
+  const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:shelfRuntime});
+  idx.sourceHost=actualSourceManagementHostField(idx,sourceTypes.SourceHost);
+  const settingsTypes=actualGeneralSettingsTypes({ReaderRuntimeOwner:shelfRuntime});
+  idx.settingsHost=actualGeneralSettingsHostField(idx,settingsTypes.SettingsHost);
+ }
  const owner=()=>EntryHost.forRuntime(f.runtime);
  const render=()=>{idx.detailContent();return p.walk(idx).filter(c=>c instanceof leaf).at(-1);};
  return{p,idx,owner,render,leaf};

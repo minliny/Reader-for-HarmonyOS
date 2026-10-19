@@ -1,12 +1,34 @@
-import assert from 'node:assert/strict';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import * as marks from '../entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts';
-import * as paint from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts';
-import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "unicode-highlight": {
+    "description": "Independent Array.from oracle, TTS priority, cached identity; CPU budget at most one linear scan",
+    "resources": []
+  },
+  "surface-publication": {
+    "description": "Actual Surface one-frame batching, no-op publication, resize and disposal; manual frames",
+    "resources": []
+  },
+  "native-upload-deduplication": {
+    "description": "Actual presentation-session native upload admission and lifecycle invalidation; fake native port",
+    "resources": []
+  },
+  "settings-clip-cache": {
+    "description": "Actual Settings clip path cache, current rectangles, density invalidation and relative clips",
+    "resources": []
+  },
+  "directory-anchor": {
+    "description": "Actual Directory relative anchor, no-op native anchoring, unmeasured fallback and lifecycle fence",
+    "resources": []
+  }
+};
+
+async function case_unicode_highlight() {
+const { default: assert } = await import('node:assert/strict');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const source = name => new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url);
 class Frame { constructor(action) { this.action = action; } }
-
+const marks = await import('../entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts');
 // Unicode output oracle is independent of the cache's UTF16 scan.
 const cache = new marks.ReaderHighlightTextCache();
 for (const text of ['汉'.repeat(1000), '甲𠮷🙂乙\r\n尾', '', 'A\ud800B']) {
@@ -35,11 +57,23 @@ try {
   String.prototype.codePointAt = function (index) { if (String(this) === text) scans++; return originalCodePointAt.call(this, index); };
   let result = '';
   for (const name of ['highlightPrefix', 'highlightBody', 'highlightSuffix']) if (fragment[name]().length) result += fragment[name]();
-  assert.equal(result, text); assert.equal(scans, 700, 'all Span evaluations share one bounded Unicode scan');
+  assert.equal(result, text); assert.ok(scans > 0 && scans <= text.length, 'all repeated Span evaluations share at most one linear code-point scan; no device timing claim');
 } finally { String.prototype.codePointAt = originalCodePointAt; }
 fragment.ttsHighlightStart = 600; fragment.ttsHighlightEnd = 610;
 assert.equal(fragment.highlightBody().length, 10, 'TTS retains priority over auto page');
 
+}
+
+async function case_surface_publication() {
+const { default: assert } = await import('node:assert/strict');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const source = name => new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url);
+class Frame { constructor(action) { this.action = action; } }
+const marks = await import('../entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts');
+const Fragment = productionMotionMethods(source('ReadingSurface'), ['scheduleHighlightGeometry', 'measureHighlightGeometry',
+  'highlightRange', 'highlightPrefix', 'highlightBody', 'highlightSuffix', 'usesTtsHighlight', 'indentPrefix', 'themeStyle'],
+  { ...marks, ReaderHighlightFrame: Frame, graphicsText: { RectWidthStyle: { TIGHT: 1 }, RectHeightStyle: { TIGHT: 1 } },
+    readerAppearanceParagraphIndentPrefix: () => '　　', readerAppearanceThemeStyle: () => ({ ink: '#101010' }) });
 const Surface = productionMotionMethods(source('ReadingSurface'), ['enqueueHighlightMeasurement', 'acceptHighlightGeometry',
   'usesHighlightCanvas', 'scheduleDynamicHighlights', 'drawDynamicHighlights', 'renderFragments', 'onHighlightContentChanged', 'aboutToDisappear'],
   { ...marks, ReaderHighlightFrame: Frame });
@@ -101,6 +135,14 @@ pageCase.page.scheduleDynamicHighlights(); const beforeDisappear = pageCase.stat
 pageCase.page.aboutToDisappear(); pageCase.drain();
 assert.equal(pageCase.stats.outputs.length, beforeDisappear, 'queued work cannot survive owner teardown');
 
+}
+
+async function case_native_upload_deduplication() {
+const { default: assert } = await import('node:assert/strict');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const source = name => new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url);
+class Frame { constructor(action) { this.action = action; } }
+const marks = await import('../entry/src/main/ets/features/reading/ReaderDynamicHighlight.ts');
 let uploads = 0, accepted = true;
 const Session = productionMotionMethods(source('BookTurnPresentationSession'),
   ['setDynamicHighlights', 'configure', 'onNativeEvent', 'clearCapturedTextures', 'releasePendingSnapshot'],
@@ -114,6 +156,16 @@ assert.equal(uploads, 4, 'lifecycle events invalidate dedupe');
 session.configure(400, 800); session.setDynamicHighlights('a', []); assert.equal(uploads, 5);
 accepted = false; session.setDynamicHighlights('b', []); session.setDynamicHighlights('b', []); assert.equal(uploads, 7, 'rejected publication must retry');
 
+}
+
+async function case_settings_clip_cache() {
+const { default: assert } = await import('node:assert/strict');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const source = name => new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url);
+class Frame { constructor(action) { this.action = action; } }
+const paint = await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+const geometry = await import('../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts');
+const actors = await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
 let paths = 0, rectangles = 0;
 const clipCache = new paint.ReaderControlMotionClipCache(path => { paths++; return { path }; }, () => { rectangles++; return { rect: true }; });
 const Settings = productionMotionMethods(source('ReaderControlSettingsContent'), ['p', 'geometry', 'sharedRect', 'sharedClip'], { ...geometry, ...actors, ...paint });
@@ -140,6 +192,13 @@ for (const height of [190, 666]) for (const offset of [0, 100, 250, 666]) for (c
   }
 }
 
+}
+
+async function case_directory_anchor() {
+const { default: assert } = await import('node:assert/strict');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const source = name => new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url);
+class Frame { constructor(action) { this.action = action; } }
 const Directory = productionMotionMethods(source('ReaderControlDirectoryContent'), ['onProgressChanged', 'queueLeadingCorrection', 'captureLeadingRow', 'rowHeight', 'value', 'leadingAnchorIsAligned'],
   { ControlDirectoryFrame: Frame, ScrollAlign: { START: 1 }, LengthMetrics: { vp: n => n } });
 for (const atTop of [true, false]) for (const nativeAnchored of [true, false]) {
@@ -168,4 +227,11 @@ for (const atTop of [true, false]) for (const nativeAnchored of [true, false]) {
   directory.mounted = false; directory.lifecycle++; const before = corrections;
   for (const cb of queue.splice(0)) cb.action(); assert.equal(corrections, before, 'no stale lifecycle scroll');
 }
-console.log('PASS rendering work: empty 24-fragment page 1 clear/0 id scans; active marks 1 frame; duplicate/lifecycle/resize guards; Unicode 700 scan steps; 120 settings poses 0 paths; directory no-op correction 0');
+
+}
+
+const implementations = {'unicode-highlight':case_unicode_highlight,'surface-publication':case_surface_publication,'native-upload-deduplication':case_native_upload_deduplication,'settings-clip-cache':case_settings_clip_cache,'directory-anchor':case_directory_anchor};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

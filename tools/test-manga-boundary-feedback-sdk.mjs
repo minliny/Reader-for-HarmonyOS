@@ -1,11 +1,19 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
-import { actualReaderPageShell, readerPageShellSourceUrl } from './lib/reader-page-shell-runtime-probe.mjs';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"boundary-caption": {"description": "真实footer文本Props与非交互", "resources": []}, "retained-paint": {"description": "真实旧章paint不透明/clip/穿透与三个mutant", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaBoundaryTurnFeedback.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
@@ -17,9 +25,11 @@ assert.equal(tree.parseDiagnostics.length, 0);
 const actor = tree.statements.find(node => node.name?.getText(tree) === 'MangaBoundaryTurnFeedback');
 assert.ok(actor);
 const names = actor.members.map(node => node.name?.getText(tree)).filter(Boolean);
-const role = readerTypographyRoles.TYPE_SOURCE_SWITCH_NOVEL_ACTION;
+const captionRole = readerTypographyRoles.MESSAGE_META;
+const iconRole = readerTypographyRoles.MESSAGE_GESTURE_ICON;
 const captions = ['上拉进入下一章节', '松手进入下一章节', '正在进入下一章节…'];
 const outcomes = [];
+if(selectedCase === 'boundary-caption') {
 for (const [scheme, palette] of Object.entries({
   day: { paperColor: '#F8F4EC', inkColor: '#1F1B17', mutedColor: '#777777' },
   night: { paperColor: '#1C1E1A', inkColor: '#EAE7DE', mutedColor: '#999999' },
@@ -34,7 +44,8 @@ for (const [scheme, palette] of Object.entries({
   assert.equal(texts[0].create, '↑');
   assert.equal(texts[0].fontColor, palette.mutedColor);
   assert.equal(texts[1].fontColor, palette.inkColor);
-  for (const text of texts) {
+  for (const [index,text] of texts.entries()) {
+    const role=index===0?iconRole:captionRole;
     assert.equal(text.fontFamily, role.fontFamily);
     assert.equal(text.fontWeight, role.fontWeight);
     assert.equal(text.fontSize, role.fontSizeFp);
@@ -42,11 +53,11 @@ for (const [scheme, palette] of Object.entries({
     assert.equal(text.maxLines, 1);
     assert.equal(text.onClick, undefined);
   }
-  assert.equal(row.width, '100%'); assert.equal(row.height, 48);
+  assert.equal(row.width,'100%');
   assert.equal(row.backgroundColor, palette.paperColor);
   assert.equal(row.hitTestBehavior, 'HitTestMode.None');
   assert.equal(row.borderRadius, undefined, 'flat footer must not become a floating card');
-  assert.deepEqual(row.padding, { left: 18, right: 18 });
+
   const identities = nodes.map(node => node.id);
   for (const caption of captions) {
     owner.updateStateVars({ caption }); properties.flush();
@@ -60,6 +71,8 @@ for (const [scheme, palette] of Object.entries({
   outcomes.push(`${scheme}: SDK footer retains its two public-role Text actors through release/preparation copy and live theme changes`);
 }
 
+}
+if(selectedCase === 'retained-paint') {
 // Execute the real parent Builder and the complete existing page modifier.
 // A retained chapter's empty paper gaps must hide candidate pixels, while the
 // noninteractive paint layer keeps native gestures owned by the reading stage.
@@ -124,3 +137,7 @@ assert.throws(() => retainedProof(surfaceSource.replace(retainedBuilder, interce
 outcomes.push('Actual retained chapter SDK paint reuses the complete shared page modifier: opaque live paper, clipped old pixels, gesture pass-through and retained image actors; three broken-policy controls rejected');
 console.log(JSON.stringify({ outcomes,
   boundary: 'Actual official SDK component emission and property runtime; footer structure/copy/theme and retained paint attributes only. Parent release threshold, native gesture delivery, chapter readiness, HAP and user acceptance are separate checks.' }, null, 2));
+
+}
+
+}

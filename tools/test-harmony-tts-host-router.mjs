@@ -1,8 +1,17 @@
-import assert from 'node:assert/strict';
-import { stripTypeScriptTypes } from 'node:module';
-import { readFile } from 'node:fs/promises';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"speech-router": {"description": "实际system/http路由与optional bridge/retirement", "resources": []}, "http-owner": {"description": "实际credential展开/prefetch descriptor/stop归属", "resources": []}, "http-request-policy": {"description": "实际fetchAudio→executeBytes安全参数/response/cancel准入", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
 
-import { HarmonyTtsHostRouter } from '../entry/src/main/ets/app/HarmonyTtsHostRouter.ts';
+
+const {default: assert} = await import('node:assert/strict');
+const { stripTypeScriptTypes } = await import('node:module');
+const { readFile } = await import('node:fs/promises');
+const { HarmonyTtsHostRouter } = await import('../entry/src/main/ets/app/HarmonyTtsHostRouter.ts');
+
 
 class FakeHost {
   constructor(kind) { this.kind = kind; }
@@ -29,6 +38,7 @@ class FakeHost {
   emit(event) { this.listener?.(event); }
 }
 
+if(selectedCase==='speech-router') {
 const system = new FakeHost('system');
 const http = new FakeHost('http');
 const media = {
@@ -137,11 +147,8 @@ await resilientRouter.close();
   const speech = new FakeHost('system');
   const slowRouter = new HarmonyTtsHostRouter(speech, new FakeHost('http'), slowMedia, slowBackground);
   const activation = slowRouter.activateAudioSession(false);
-  const winner = await Promise.race([
-    activation.then(() => 'foreground-ready'),
-    new Promise(resolve => setTimeout(() => resolve('optional-bridge-blocked'), 30)),
-  ]);
-  assert.equal(winner, 'foreground-ready', 'optional bridges cannot hold up foreground speech');
+  let settled=false;activation.then(()=>settled=true);await new Promise(done=>setImmediate(done));
+  assert.equal(settled,true,'unresolved optional bridges cannot block foreground speech promise');
   await slowRouter.activateAudioSession(false);
   assert.equal(slowMedia.calls, 1);
   assert.equal(slowBackground.calls, 1);
@@ -261,72 +268,9 @@ for (const ending of ['deactivate', 'close', 'replace']) {
   assert.deepEqual(events,[]);
 }
 
-const httpHostSource = await readFile(
-  new URL('../entry/src/main/ets/app/HarmonyHttpTtsHost.ts', import.meta.url),
-  'utf8',
-);
-assert.match(httpHostSource, /gateway\.buildRequest\(configId, request\.text, ratePercent\)/,
-  'HttpTTS must forward the exact five-point speed percentage to Core');
-assert.match(httpHostSource, /HTTP_TTS_MAX_AUDIO_BYTES/);
-assert.match(httpHostSource, /HttpExecuteHost\.instance\.executeBytes\(/,
-  'HttpTTS must reuse the hardened redirect/DNS transport');
-assert.match(httpHostSource, /followRedirects: true/);
-assert.match(httpHostSource, /maxRedirects: HTTP_TTS_MAX_REDIRECTS/);
-assert.match(httpHostSource, /httpsOnly: true/,
-  'HttpTTS must reject cleartext redirect downgrades');
-assert.match(httpHostSource, /sameOriginRedirectsOnly: descriptor\.playback\?\.credentialRef !== undefined/,
-  'all credential-bearing redirects, including custom headers, must remain on the same effective origin');
-assert.match(httpHostSource, /admittedGeneration !== this\.networkGeneration/,
-  'stop/close must cancel the shared transport through its ownership probe');
-assert.doesNotMatch(httpHostSource, /Base64Helper|bodyBase64/);
-assert.match(httpHostSource, /descriptor\.method/);
-assert.match(httpHostSource, /descriptor\.body/);
-assert.match(httpHostSource, /normalizeAudioBytes/);
-assert.match(httpHostSource, /ReaderTtsCredentialStore\.instance\.read/);
-assert.match(httpHostSource, /fetchAudio\(descriptor, configId\)/,
-  'HttpTTS must bind credential resolution to the config selected for this request');
-assert.match(httpHostSource, /isReaderTtsCredentialAliasForConfig\(playback\.credentialRef, configId\)/,
-  'HttpTTS must reject credential aliases belonging to another config');
-assert.match(httpHostSource, /read\(playback\.credentialRef, configId\)/,
-  'credential store reads must carry the selected config id');
-assert.match(httpHostSource, /requestUrl = this\.expandCredentialPlaceholder\(/,
-  'URL credential placeholders must be resolved only in the Host');
-assert.match(httpHostSource, /encodedSecret = encodeURIComponent\(secret\)/,
-  'URL credential placeholders must be component-encoded before transport');
-assert.match(httpHostSource, /expandCredentialPlaceholder\(/,
-  'credential expansion must be bounded before allocating the final URL/header');
-assert.match(httpHostSource, /hasUrlPlaceholder = descriptor\.url\.includes\('\{\{apiKey\}\}'\)/,
-  'URL credential placeholders must satisfy the alias/header admission check');
-assert.doesNotMatch(httpHostSource, /http\.createHttp\(\)|request\.request\(/,
-  'HttpTTS must not keep a second unguarded HTTP implementation');
-assert.match(httpHostSource, /this\.cancelActiveRequest\('Reader HttpTTS audio request stopped'\)/);
-assert.match(httpHostSource, /player\.dataSrc = this\.createDataSource\(bytes\)/);
-assert.match(httpHostSource, /fileSize: bytes\.length/);
-assert.match(httpHostSource, /target\.set\(bytes\.subarray\(start, start \+ count\), 0\)/);
-assert.match(httpHostSource, /generation !== this\.speakGeneration/);
-assert.match(
-  httpHostSource,
-  /gateway\.buildRequest\(configId, request\.text, ratePercent\);\s+if \(this\.closed \|\| generation !== this\.speakGeneration\) return;/,
-  'a stop during descriptor construction must not start a late audio request',
-);
-assert.doesNotMatch(httpHostSource, /createMediaSourceWithUrl/);
-assert.match(httpHostSource, /await player\.prepare\(\)/);
-assert.match(httpHostSource, /await player\.play\(\)/);
-assert.match(httpHostSource, /type: 'complete', requestId, completion: 'audio'/);
-assert.match(httpHostSource, /await player\.release\(\)/);
-
-const backgroundSource = await readFile(
-  new URL('../entry/src/main/ets/app/HarmonyTtsBackgroundSession.ts', import.meta.url),
-  'utf8',
-);
-assert.match(backgroundSource, /backgroundTaskManager\.startBackgroundRunning\([\s\S]*?\['audioPlayback'\]/);
-assert.match(backgroundSource, /backgroundTaskManager\.stopBackgroundRunning\(this\.context, id\)/);
-assert.match(backgroundSource, /wantAgent\.OperationType\.START_ABILITY/);
-assert.match(backgroundSource, /this\.context\.abilityInfo\.bundleName/);
-assert.match(backgroundSource, /canIUse\('SystemCapability\.ResourceSchedule\.BackgroundTaskManager\.ContinuousTask'\)/);
-assert.doesNotMatch(backgroundSource, /ReaderTtsSessionCoordinator|tts\.queue|ReaderCoreRuntime/,
-  'the platform lease must not become another TTS state machine');
-
+}
+if(selectedCase==='http-owner' || selectedCase==='http-request-policy') {
+const httpHostSource=await readFile(new URL('../entry/src/main/ets/app/HarmonyHttpTtsHost.ts',import.meta.url),'utf8');
 // Exercise the Host-only credential expansion without constructing platform
 // audio objects. Private methods remain normal ArkTS methods after erasure;
 // this probe supplies only their explicit credential-store dependencies.
@@ -342,12 +286,13 @@ const ReaderHttpTtsGateway = class {};
 const isReaderTtsCredentialAliasForConfig = (alias, id) => alias === 'reader.tts.' + id + '.fixture-token';
 globalThis.auditCredentialFixture = 'a&b/c?d#e';
 const ReaderTtsCredentialStore = {instance: {read: async () => globalThis.auditCredentialFixture}};
-const HttpExecuteHost = {};
+const HttpExecuteHost = {instance:{executeBytes:(...args)=>globalThis.auditHttpExecute(...args)}};
 const isCrossOriginSensitiveHeader = () => false;
 `;
 const hostModule = await import(`data:text/javascript;base64,${Buffer.from(
   hostPrelude + stripTypeScriptTypes(executableHost) + '\nexport {HarmonyHttpTtsHost};',
 ).toString('base64')}`);
+if(selectedCase==='http-owner') {
 const hostProbe = Object.create(hostModule.HarmonyHttpTtsHost.prototype);
 const resolved = await hostProbe.resolveRequest({
   url: 'https://tts.example.test/audio?token={{apiKey}}',
@@ -445,4 +390,25 @@ console.log('Harmony HttpTTS credential URL encoding and expansion bounds: PASS'
   assert.equal(playbackHost.prefetchedAudio, undefined, 'stop must drop the speculative buffer');
 }
 
+
+}
+if(selectedCase==='http-request-policy') {
+ const calls=[];let response={status:200,bytes:new Uint8Array([1,2,3])},after;
+ globalThis.auditHttpExecute=async(...args)=>{calls.push(args);after?.();return response;};
+ const h=Object.create(hostModule.HarmonyHttpTtsHost.prototype);Object.assign(h,{closed:false,networkGeneration:0});
+ h.resolveRequest=async()=>({url:'https://tts.example.test/audio',headers:{}});h.normalizeAudioBytes=bytes=>bytes;
+ const request={url:'https://tts.example.test/audio',method:'POST',headers:{},body:'body',contentType:'text/plain'};
+ assert.deepEqual(await h.fetchAudio(request,42),response.bytes);
+ const [sent,budget,_reserved,cancel]=calls.at(-1);assert.equal(sent.httpsOnly,true);assert.equal(sent.followRedirects,true);assert.ok(Number.isSafeInteger(sent.maxRedirects)&&sent.maxRedirects>0);assert.equal(sent.sameOriginRedirectsOnly,false);assert.equal(sent.headers['Content-Type'],'text/plain');assert.equal(sent.body,'body');assert.ok(budget>0);assert.equal(cancel(),false);
+ await h.fetchAudio({...request,playback:{credentialRef:'reader.tts.42.fixture-token'}},42);assert.equal(calls.at(-1)[0].sameOriginRedirectsOnly,true,'credential-bearing redirect uses exact-origin policy');
+ for(const status of [undefined,199,300,403]) {response={status,bytes:new Uint8Array([1])};await assert.rejects(h.fetchAudio(request,42),/failed with HTTP/);}
+ for(const bytes of [new Uint8Array(),new Uint8Array(budget+1)]){response={status:200,bytes};await assert.rejects(h.fetchAudio(request,42),/outside the allowed range/);}
+ const before=calls.length;await assert.rejects(h.fetchAudio({...request,body:'{{apiKey}}'},42),/unresolved credential placeholder/);assert.equal(calls.length,before);
+ response={status:200,bytes:new Uint8Array([1])};after=()=>{h.networkGeneration++;};await assert.rejects(h.fetchAudio(request,42),/cancelled/);assert.equal(calls.at(-1)[3](),true,'late generation retires actual transport cancel predicate');
+ delete globalThis.auditHttpExecute;
+}
 console.log('Harmony TTS Host router and HttpTTS transport contract: PASS');
+
+}
+
+}

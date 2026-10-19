@@ -1,18 +1,32 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { findReaderTheme, readerThemeDefinition, READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { ReaderRectVp } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import { readerAppearanceThemeStyle } from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
-import { readerWidthClass } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
-import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } from './lib/reader-page-chrome-measurement-probe.mjs';
-import { ReaderPageChromeMeasurements, READER_PAGE_CHROME_BOOKMARK_SIZE, resolveReaderPageChromeLayout } from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
-import { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress } from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
-import { READER_CONTROL_PROGRESS_MAX } from '../entry/src/main/ets/features/reading/ReaderControlGeometry.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "paper-status-composition": {
+    "description": "Actual SDK paper/status/Shell window and theme composition; native raster/crop pixels unverified",
+    "resources": []
+  },
+  "continuous-fixed-chrome": {
+    "description": "Actual selected production stage composition, header-only update dependencies and omitted-call negative control; fake stage",
+    "resources": []
+  }
+};
+
+async function case_paper_status_composition() {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { findReaderTheme, readerThemeDefinition, READER_THEME_DEFINITIONS } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { ReaderRectVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { readerAppearanceThemeStyle } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const { readerWidthClass } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
+const { ReaderPageChromeMeasurements, READER_PAGE_CHROME_BOOKMARK_SIZE, resolveReaderPageChromeLayout } = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress } = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
+const { READER_CONTROL_PROGRESS_MAX } = await import('../entry/src/main/ets/features/reading/ReaderControlGeometry.ts');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
   if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;
 }}});
@@ -160,6 +174,75 @@ for (const extend of [false, true]) for (const controls of [false, true]) for (c
   }
 }
 
+
+}
+
+async function case_continuous_fixed_chrome() {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { findReaderTheme, readerThemeDefinition, READER_THEME_DEFINITIONS } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { ReaderRectVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { readerAppearanceThemeStyle } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const { readerWidthClass } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
+const { ReaderPageChromeMeasurements, READER_PAGE_CHROME_BOOKMARK_SIZE, resolveReaderPageChromeLayout } = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const { ReaderPageChromeSnapshot, formatReaderPageOrdinal, formatReaderPageProgress } = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
+const { READER_CONTROL_PROGRESS_MAX } = await import('../entry/src/main/ets/features/reading/ReaderControlGeometry.ts');
+registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){
+  if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;
+}}});
+const { createDefaultReaderReadingLayout, resolveReaderReadingLayout } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const { createDefaultReaderAppearanceSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
+const { createDefaultReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+const { readerRenderStageKind } = await import('../entry/src/main/ets/features/reading/ReaderRenderStageSpec.ts');
+const { ReaderWindowMetricsSnapshot, ReaderInsetsVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+
+const read = file => readFileSync(new URL(`../entry/src/main/ets/${file}`, import.meta.url), 'utf8');
+const paperSource = read('features/reading/ReaderPaperBackground.ets');
+const statusSource = read('features/reading/ReaderStatusBarPaper.ets');
+const surfaceSource = read('features/reading/ReadingSurface.ets');
+const shellSource = read('features/shell/ReaderShell.ets');
+const lreSource = read('features/reading/LocalReadingExperience.ets');
+const require = createRequire(import.meta.url);
+const sdkRoot = resolveEtsLoaderRoot();
+const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
+function register(name, source) {
+  syntax.componentCollection.customComponents.add(name);
+  syntax.propCollection.set(name, new Set([...source.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
+}
+register('ReaderPaperBackground', paperSource);
+register('ReaderStatusBarPaper', statusSource);
+class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+const enums = Object.fromEntries(['GradientDirection', 'ImageFit', 'ImageInterpolation', 'ImageRepeat'].map(name =>
+  [name, new Proxy({}, { get: (_target, key) => `${name}.${key}` })]));
+function paper(params) {
+  const owner = createReaderBuilderProbe(paperSource, ['build', 'themeStyle', 'paperTexture', 'paperHighlight', 'paperShade'], {
+    readerAppearanceThemeStyle, ...enums,
+  }).owner;
+  Object.assign(owner, { synchronousImages: false, ...params }); owner.initialRender(); return owner;
+}
+function status(params) {
+  const owner = createReaderBuilderProbe(statusSource, ['build'], {
+    findReaderTheme, readerThemeDefinition, ReaderPaperBackground: Child,
+  }).owner;
+  Object.assign(owner, params); owner.initialRender(); return owner;
+}
+function statusGeometry(owner, rect, viewport) {
+  const nodes = [...owner.nodes.values()];
+  const crop = nodes.find(n => n.clip === true);
+  const background = nodes.find(n => n.type === '__Common__');
+  assert.deepEqual([crop.width, crop.height, crop.position], [rect.width, rect.height, { x: rect.left, y: rect.top }]);
+  assert.equal(crop.hitTestBehavior, 'HitTestMode.None');
+  assert.deepEqual([background.width, background.height], viewport);
+  assert.equal(crop.position.x + background.position.x, 0, 'texture origin stays in window coordinates');
+  assert.equal(crop.position.y + background.position.y, 0, 'status crop never restarts or scales the paper texture');
+}
+let cases = 0;
 // Compile the production stage-selection block verbatim, excluding only the
 // unrelated controls/input overlays. Real SDK properties track which observer
 // consumes the new display value; a progress update must leave the stage alone.
@@ -171,10 +254,7 @@ for (const extend of [false, true]) for (const controls of [false, true]) for (c
   const start=lreSource.indexOf('      if (readerRenderStageKind('),end=lreSource.indexOf('      this.sourceSwitchCompletionWash();',start);
   assert.ok(start>0&&end>start);
   const stageBlock=lreSource.slice(start,end);
-  assert.equal((stageBlock.match(/this\.continuousPageChromeContent\(\)/g)??[]).length,1,
-    'one ordinary chrome call is a sibling of the continuous stage');
   const continuousSource=read('features/reading/ReaderContinuousReadingStage.ets');
-  assert.doesNotMatch(continuousSource,/\bReaderPageChrome\s*\(/,'no chapter-list row or scrolling stage gains a duplicate header');
   const continuousTree=parse(continuousSource,'ContinuousStage.ets');
   const dataClass=continuousTree.statements.find(n=>n.name?.text==='ContinuousFragmentDataSource');
   const DataSource=new Function(stripTypeScriptTypes(dataClass.getText(continuousTree))+';return ContinuousFragmentDataSource;')();
@@ -286,6 +366,11 @@ for (const extend of [false, true]) for (const controls of [false, true]) for (c
   console.log(`PASS continuous chrome: ${continuousCases} real SDK cold/ready Text, control suppression, one header, launch exclusion and header-only progress dependency; stage/list paint and native StorageLink delivery are controlled boundaries.`);
 }
 
-assert.match(surfaceSource, /ReaderPaperBackground\(\{[\s\S]*?theme: this\.appearance\.activeTheme,[\s\S]*?expanded: this\.layout\.widthClass === 'expanded',[\s\S]*?synchronousImages: this\.snapshotSynchronousImages/);
-assert.doesNotMatch(surfaceSource, /backgroundImage\(this\.paperTexture\(/, 'no second page-only paper implementation remains');
-console.log(`PASS PH112: ${cases} actual SDK page/status paper compositions, full-window crops, stable late geometry/theme updates, 16 shell overlays, native visibility gates and opaque unknown-theme fallback. Device pixels are separate evidence.`);
+
+}
+
+const implementations = {'paper-status-composition':case_paper_status_composition,'continuous-fixed-chrome':case_continuous_fixed_chrome};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

@@ -120,9 +120,10 @@ for(const failure of ['reader_configuration_reset_v1','reader_settings_v1','read
  unsubscribe();await other.load();assert.equal(events.length,2,'unmounted consumers release their subscription');
 }
 // Real page confirmation and callback semantics; the native modal/pixels are not simulated.
-const Page=productionMotionMethods(new URL('features/settings/SettingsPage.ets',base),['requestRestoreDefaults','performRestoreDefaults']);
-let dialog,calls=0;const page=Object.assign(new Page(),{mounted:true,resetRevision:0,resetInFlight:false,appThemeScheme:'day',getUIContext:()=>({showAlertDialog:d=>dialog=d}),onRestoreDefaults:async()=>{calls++;return true;}});
+const Page=productionMotionMethods(new URL('features/settings/SettingsPage.ets',base),['requestRestoreDefaults','performRestoreDefaults','hasPendingSettings','showFeedbackToast']);
+let dialog,calls=0;const feedback=[];const page=Object.assign(new Page(),{mounted:true,operation:{},resetRevision:0,resetInFlight:false,appThemeScheme:'day',getUIContext:()=>({showAlertDialog:d=>dialog=d,getPromptAction:()=>({showToast:v=>feedback.push(v)})}),onRestoreDefaults:async()=>{calls++;return true;}});
 page.requestRestoreDefaults();dialog.primaryButton.action();assert.equal(calls,0);assert.match(dialog.message,/保留书籍、书源、进度、书签/);
 page.requestRestoreDefaults();dialog.secondaryButton.action();await new Promise(r=>setImmediate(r));assert.equal(calls,1);assert.equal(page.resetMessage,'已恢复界面与阅读设置');
+assert.equal(feedback.length,1);assert.equal(feedback[0].message,'已恢复界面与阅读设置');
 page.requestRestoreDefaults();page.mounted=false;dialog.secondaryButton.action();await new Promise(r=>setImmediate(r));assert.equal(calls,1,'dismissed page cannot start reset from stale dialog');
 console.log('PASS production configuration reset: confirmed scope, durable intent, six failure points, restart continuation, newer user intent ordering, owner replacement, shared queues, accepted-vs-confirmed cache and stale-dialog guard. No Core data/credential mutation.');

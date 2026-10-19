@@ -1,8 +1,30 @@
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {readableAdmissionFixture,readableDeferred as deferred,readableTick as tick,readableSource as source,ReaderCoreRequestError} from './lib/bookshelf-readable-admission-probe.mjs';
-import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
-import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "owner-interleavings": {
+    "description": "Actual readable Owner/Index add/cancel/readback order, exact Runtime and reconstructed owner; fake Core ports",
+    "resources": []
+  },
+  "detail-sdk-identity": {
+    "description": "Actual Index→detail SDK immutable callbacks, metadata-first and operation barriers; no fixed geometry",
+    "resources": []
+  },
+  "cold-manga-first-image": {
+    "description": "Actual typed DTO/Coordinator/MangaAdmission→SDK first image admission with fake Core and image ports",
+    "resources": []
+  },
+  "cold-novel-preparation": {
+    "description": "Actual Coordinator/typed Gateway→SDK body preparation and cancellation, shared pure Core fixture",
+    "resources": []
+  }
+};
+
+async function case_owner_interleavings() {
+const { default: assert } = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {readableAdmissionFixture,readableDeferred : deferred,readableTick : tick,readableSource : source,ReaderCoreRequestError} = await import('./lib/bookshelf-readable-admission-probe.mjs');
+const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
 const {BookRequestScheduler}=await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
 const until=async test=>{for(let i=0;i<200;i++){if(test())return;await tick();}assert.fail('readable admission did not settle');};
@@ -19,6 +41,66 @@ for(const outcome of ['ack','generic-failure','duplicate','malformed']){
  if(outcome==='ack'){assert.equal(state.confirmation,'confirmed');assert.equal(f.page.detailInBookshelf,true);assert.equal(f.page.refreshes,1);assert.equal(state.adding,false);}
  else if(outcome==='duplicate'){assert.equal(state.confirmation,'rejected');assert.equal(f.page.detailInBookshelf,false);assert.equal(f.page.memberships,1);assert.match(state.message,/已加入书架/);}
  else{assert.equal(state.confirmation,'unknown');assert.equal(state.receipt,undefined);assert.equal(f.page.detailInBookshelf,false);f.page.addDetailBook();assert.equal(f.calls.filter(c=>c[0]==='add').length,1,'unknown cannot replay preparation');}
+}
+// Cancel acknowledgement and shelf observation settle independently of the
+// original add's response. Neither ordering may manufacture an add receipt or
+// turn the already-confirmed cancellation back into a pending add result.
+for(const order of ['cancel-first','add-error-first'])for(const membership of [false,true]){
+ const add=deferred(),cancel=deferred(),lookup=deferred();
+ const f=readableAdmissionFixture({add:()=>add.promise,cancel:()=>cancel.promise,lookup:()=>lookup.promise});
+ f.page.addDetailBook();
+ if(order==='add-error-first'){
+  add.reject(Error('lost add response'));await tick();assert.equal(f.snapshot().confirmation,'unknown');
+ }
+ f.page.cancelDetailBookAddition();cancel.resolve();await until(()=>f.calls.some(c=>c[0]==='bookshelf.get'));
+ lookup.resolve(membership?saved():null);await until(()=>!f.snapshot().cancelling);
+ assert.equal(f.snapshot().confirmation,'none',`${order}: confirmed cancellation has no add acknowledgement`);
+ assert.equal(f.snapshot().receipt,undefined,'a matching saved row is membership, never this add acknowledgement');
+ assert.equal(f.snapshot().membership,membership);assert.equal(f.page.detailInBookshelf,membership);
+ if(!membership)assert.equal(f.page.detailShelfMessage(f.page.detailBook),'已取消加入书架');
+ if(order==='cancel-first'){add.reject(Error('late cancelled add response'));await tick();}
+ assert.equal(f.snapshot().confirmation,'none',`${order}: late add failure cannot downgrade cancellation`);
+ assert.equal(f.snapshot().adding,false);assert.equal(f.snapshot().receipt,undefined);
+ assert.equal(f.snapshot().membership,membership);
+ assert.equal(f.calls.filter(c=>c[0]==='add').length,1);assert.equal(f.calls.filter(c=>c[0]==='cancel').length,1);
+}
+for(const failure of ['cancel','readback']){
+ const add=deferred();let cancelAttempts=0,readAttempts=0;
+ const f=readableAdmissionFixture({add:()=>add.promise,cancel:async()=>{if(++cancelAttempts===1&&failure==='cancel')throw Error('cancel response lost');},
+  lookup:async()=>{if(++readAttempts===1&&failure==='readback')throw Error('shelf read failed');return null;}});
+ f.page.addDetailBook();add.reject(Error('add response lost'));await tick();
+ f.page.cancelDetailBookAddition();await until(()=>!f.snapshot().cancelling);
+ assert.equal(f.snapshot().confirmation,'unknown');assert.equal(f.snapshot().adding,true);
+ assert.equal(f.snapshot().membership,undefined);assert.equal(f.snapshot().receipt,undefined);
+ assert.match(f.snapshot().message,/取消状态未确认，请重试/);
+ f.page.cancelDetailBookAddition();await until(()=>!f.snapshot().cancelling);
+ assert.equal(f.snapshot().confirmation,'none');assert.equal(f.snapshot().adding,false);
+ assert.equal(f.snapshot().membership,false);assert.equal(f.snapshot().receipt,undefined);
+ assert.equal(f.page.detailShelfMessage(f.page.detailBook),'已取消加入书架');
+ assert.equal(cancelAttempts,2);assert.equal(readAttempts,failure==='cancel'?1:2);
+ assert.equal(f.calls.filter(c=>c[0]==='add').length,1,'cancel retry never replays add');
+}
+for(const ackOrder of ['before-cancel-read','after-cancel-read']){
+ const add=deferred(),cancel=deferred();const f=readableAdmissionFixture({add:()=>add.promise,cancel:()=>cancel.promise});
+ f.page.addDetailBook();f.page.cancelDetailBookAddition();
+ if(ackOrder==='before-cancel-read'){add.resolve(ack());await tick();assert.equal(f.snapshot().confirmation,'confirmed');}
+ cancel.resolve();await until(()=>!f.snapshot().cancelling);
+ if(ackOrder==='after-cancel-read'){
+  assert.equal(f.snapshot().confirmation,'none');assert.equal(f.snapshot().receipt,undefined);
+  add.resolve(ack());await tick();
+ }
+ assert.equal(f.snapshot().confirmation,'confirmed','a real add ACK remains authoritative');
+ assert.equal(f.snapshot().receipt.bookId,'b');
+ assert.equal(f.snapshot().membership,ackOrder==='after-cancel-read','shelf observation remains distinct from the real add ACK');
+ assert.equal(f.calls.filter(c=>c[0]==='add').length,1);
+}
+{
+ const add=deferred(),cancel=deferred();const f=readableAdmissionFixture({add:()=>add.promise,cancel:()=>cancel.promise});
+ f.page.addDetailBook();f.page.cancelDetailBookAddition();const owner=f.page.bookshelfHost.readable(f.runtime);
+ f.setRuntime({});cancel.resolve();add.reject(Error('retired add response'));await tick();
+ assert.equal(owner.find('s','b').confirmation,'unknown','retired cancellation cannot claim confirmation without its current read');
+ assert.equal(owner.find('s','b').membership,undefined);assert.equal(f.calls.filter(c=>c[0]==='bookshelf.get').length,0);
+ assert.equal(f.page.detailInBookshelf,false);assert.equal(f.page.refreshes,0);assert.equal(f.notices.length,0);
 }
 for(const stale of ['nav','book','mutated-book','route','unmount','unset','replacement']) for(const rejected of [false,true]){
  const gate=deferred();const f=readableAdmissionFixture({add:()=>gate.promise});f.page.addDetailBook();
@@ -47,6 +129,10 @@ for(const read of ['missing','saved','failed','stale']){
  if(read==='failed'){assert.equal(beforeAck.adding,true);assert.match(beforeAck.message,/取消状态未确认/);}
  if(read==='stale')assert.equal(f.page.detailInBookshelf,false);
  add.reject(Error('cancelled body'));await tick();
+ if(read==='missing'||read==='saved'){
+  assert.equal(f.snapshot().confirmation,'none','late body failure preserves confirmed cancellation');assert.equal(f.snapshot().receipt,undefined);
+  if(read==='missing')assert.equal(f.page.detailShelfMessage(f.page.detailBook),'已取消加入书架');
+ }
  assert.equal(f.calls.filter(c=>c[0]==='add').length,1);assert.equal(f.calls.filter(c=>c[0]==='cancel').length,1);
 }
 {
@@ -74,11 +160,34 @@ for(const read of ['missing','saved','failed','stale']){
  gateA.resolve(ack());await tick();assert.equal(f.page.detailInBookshelf,false);assert.equal(f.page.detailReadableAdmission(book).adding,true);
  gateB.resolve(ack('other'));await tick();assert.equal(f.page.detailInBookshelf,true);assert.equal(f.page.readableAdmissions.length,2);
 }
-// Reuse the existing Core request fixture, then execute the actual Coordinator,
-// actual typed Gateway, Host field, Index intent and SDK physical button.
-const preparation=readFileSync(new URL('./test-added-book-preparation.mjs',import.meta.url),'utf8');
-const prefix=preparation.slice(preparation.indexOf('const book ='),preparation.indexOf('// The confirmed receipt'));
-const fixture=new Function('assert','BookAcquisitionCoordinator','BookRequestScheduler','deferred','tick',prefix+'return fixture;')(assert,BookAcquisitionCoordinator,BookRequestScheduler,deferred,tick);
+{
+ const gates=[];const f=readableAdmissionFixture({add:()=>{const g=deferred();gates.push(g);return g.promise;}});
+ const owner=f.page.bookshelfHost.readable(f.runtime);const tasks=[];
+ for(let index=0;index<17;index++)tasks.push(owner.add({sourceId:'s',bookId:'b'+index,title:'书',author:'作者'},()=>true,()=>{}));
+ assert.equal(gates.length,16,'finite accepted-task capacity cannot grow without bound');assert.match(owner.find('s','b16').message,/稍后重试/);
+ gates.forEach((g,index)=>g.resolve(ack('b'+index)));await Promise.all(tasks);
+}
+{
+ const f=readableAdmissionFixture();let admitted=true;const owner=f.page.bookshelfHost.readable(f.runtime);
+ owner.subscribe(()=>{admitted=false;throw Error('retired during publication');});await owner.add(saved(),()=>admitted,()=>assert.fail('retired publication'));
+ assert.equal(f.calls.length,0,'withdrawn intent cannot dispatch after a synchronous publication');assert.equal(owner.find('s','b').adding,false);
+}
+
+}
+
+async function case_detail_sdk_identity() {
+const { default: assert } = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {readableAdmissionFixture,readableDeferred : deferred,readableTick : tick,readableSource : source,ReaderCoreRequestError} = await import('./lib/bookshelf-readable-admission-probe.mjs');
+const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const {BookRequestScheduler}=await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
+const until=async test=>{for(let i=0;i<200;i++){if(test())return;await tick();}assert.fail('readable admission did not settle');};
+const ack=(id='b')=>({data:{sourceId:'s',bookId:id,created:true,addedAt:1}});
+const saved=(id='b')=>({sourceId:'s',bookId:id,title:'书',author:'作者',addedAt:1,sortIndex:0});
+const {addedBookPreparationCoreFixture}=await import('./lib/added-book-preparation-core-fixture.mjs');
+const {fixture}=addedBookPreparationCoreFixture({assert,BookAcquisitionCoordinator,BookRequestScheduler,deferred,tick});
 function detailSdk(f){
  const detailSource=source('features/bookshelf/LocalBookDetail.ets');
  class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){for(const [key,value]of Object.entries(params))if(key!=='onRemove'&&key!=='onCancelAdd')this.params[key]=value;}}
@@ -90,12 +199,6 @@ function detailSdk(f){
  Object.assign(probe.owner,{appThemeScheme:'day',viewportWidth:390});probe.owner.actionArea();
  const actions=[...probe.owner.nodes.values()].filter(n=>n.type==='Text'&&typeof n.onClick==='function');
  assert.equal(actions.length,2);
- if(f.page.detailBook.contentKind!=='manga'){
-  assert.ok(actions.every(n=>n.height===48&&n.borderRadius===16));
-  assert.equal(actions[1].width,94);assert.deepEqual(actions.map(n=>n.fontSize),[14,12]);
-  const dock=[...probe.owner.nodes.values()].find(n=>n.type==='Stack');
-  assert.equal(dock.height,68);assert.equal(dock.borderRadius,24);
- }
  return {parent,child,actor:probe.owner,button:actions[1],hit:actions[1].onClick};
 }
 // The real detail first frame can publish metadata before a catalog/session.
@@ -139,6 +242,50 @@ for(const barrier of ['busy','unknown','reader','source-switch','offline']) {
  const sdk=detailSdk(f);assert.equal(f.page.canRemoveDetailBook(f.page.detailBook),false,barrier);
  assert.equal(sdk.button.enabled,false,`${barrier}: presentation and actual operation gate agree`);
  sdk.hit();await tick();assert.equal(f.calls.filter(c=>c[0]==='add').length,0);
+}
+{
+ const gate=deferred();const f=readableAdmissionFixture({add:()=>gate.promise});const sdk=detailSdk(f);const old=sdk.hit;
+ f.page.detailBook=saved('next');f.page.navigationGeneration++;old();assert.equal(f.calls.length,0,'old physical actor cannot add the next book');
+ const originalCount=sdk.actor.observers.length;sdk.actor.updateStateVars({...sdk.child.params,admissionIdentity:f.page.detailShelfAdmissionIdentity(),book:f.page.detailBook});sdk.actor.replay();
+ assert.equal(sdk.actor.observers.length,originalCount+3,'only the keyed secondary action and its native busy wrapper are created');
+ assert.deepEqual([...sdk.actor.nodes.values()].filter(node=>node.id>=originalCount).map(node=>node.type),['Stack','Text','If']);
+ old();assert.equal(f.calls.length,0,'V1 Prop update cannot promote immutable old button identity');
+ f.page.remoteReadingSession={identity:f.page.detailBook,book:f.page.detailBook};
+ const current=[...sdk.actor.nodes.values()].filter(n=>n.type==='Text'&&typeof n.onClick==='function').at(-1);current.onClick();assert.equal(f.calls.filter(c=>c[0]==='add').length,1);
+ gate.resolve(ack('next'));await tick();
+}
+{
+ const f=readableAdmissionFixture();const sdk=detailSdk(f);f.page.detailBook=saved('next');f.page.remoteReadingSession={identity:f.page.detailBook,book:f.page.detailBook};f.page.navigationGeneration++;
+ f.page.isCurrentDetailShelfAdmission=()=>true;sdk.hit();await tick();assert.equal(f.calls.filter(c=>c[0]==='add').length,1,'negative control: removing captured identity guard mutates successor');
+}
+
+}
+
+async function case_cold_manga_first_image() {
+const { default: assert } = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {readableAdmissionFixture,readableDeferred : deferred,readableTick : tick,readableSource : source,ReaderCoreRequestError} = await import('./lib/bookshelf-readable-admission-probe.mjs');
+const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const {BookRequestScheduler}=await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
+const until=async test=>{for(let i=0;i<200;i++){if(test())return;await tick();}assert.fail('readable admission did not settle');};
+const ack=(id='b')=>({data:{sourceId:'s',bookId:id,created:true,addedAt:1}});
+const saved=(id='b')=>({sourceId:'s',bookId:id,title:'书',author:'作者',addedAt:1,sortIndex:0});
+const {addedBookPreparationCoreFixture}=await import('./lib/added-book-preparation-core-fixture.mjs');
+const {fixture}=addedBookPreparationCoreFixture({assert,BookAcquisitionCoordinator,BookRequestScheduler,deferred,tick});
+function detailSdk(f){
+ const detailSource=source('features/bookshelf/LocalBookDetail.ets');
+ class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){for(const [key,value]of Object.entries(params))if(key!=='onRemove'&&key!=='onCancelAdd')this.params[key]=value;}}
+ const parent=createReaderBuilderProbe(source('pages/Index.ets'),['detailContent','detailSurface','externalDirectory','isCurrentDetailPresentation'],{LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local'},{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:source('features/bookshelf/BookDirectoryPage.ets')}}).owner;
+ Object.assign(parent,f.page,{detailToc:[],remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',offlineMutationActiveKey:'',directoryReturnTarget:'detail',hasUnknownShelfWrite:()=>f.page.hasUnknownShelfWrite(),
+  detailReadableAdmission:book=>f.page.detailReadableAdmission(book),detailShelfMessage:book=>f.page.detailShelfMessage(book),detailShelfAdmissionIdentity:()=>f.page.detailShelfAdmissionIdentity(),isCurrentDetailShelfAdmission:id=>f.page.isCurrentDetailShelfAdmission(id),requestDetailShelfMutation:()=>f.page.requestDetailShelfMutation(),cancelDetailBookAddition:()=>f.page.cancelDetailBookAddition(),detailBookKey:book=>f.page.detailBookKey(book)});
+ parent.detailContent();const child=[...parent.children.values()][0];
+ const probe=localBookDetailSdk({}, {allowEmptyBranchAdmission:true,initialParams:child.params});
+ Object.assign(probe.owner,{appThemeScheme:'day',viewportWidth:390});probe.owner.actionArea();
+ const actions=[...probe.owner.nodes.values()].filter(n=>n.type==='Text'&&typeof n.onClick==='function');
+ assert.equal(actions.length,2);
+ return {parent,child,actor:probe.owner,button:actions[1],hit:actions[1].onClick};
 }
 // No warm catalog exists for this comic. Run the real Core DTO decoder,
 // Coordinator and MangaAdmissionGateway first-image path all the way to the
@@ -191,6 +338,35 @@ for(const imageResult of ['ready','failed']){
   await until(()=>f.snapshot().membership===false&&!f.snapshot().cancelling);assert.equal(f.snapshot().adding,false);}
  coordinator.close();
 }
+
+}
+
+async function case_cold_novel_preparation() {
+const { default: assert } = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {readableAdmissionFixture,readableDeferred : deferred,readableTick : tick,readableSource : source,ReaderCoreRequestError} = await import('./lib/bookshelf-readable-admission-probe.mjs');
+const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const {BookAcquisitionCoordinator}=await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
+const {BookRequestScheduler}=await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
+const until=async test=>{for(let i=0;i<200;i++){if(test())return;await tick();}assert.fail('readable admission did not settle');};
+const ack=(id='b')=>({data:{sourceId:'s',bookId:id,created:true,addedAt:1}});
+const saved=(id='b')=>({sourceId:'s',bookId:id,title:'书',author:'作者',addedAt:1,sortIndex:0});
+const {addedBookPreparationCoreFixture}=await import('./lib/added-book-preparation-core-fixture.mjs');
+const {fixture}=addedBookPreparationCoreFixture({assert,BookAcquisitionCoordinator,BookRequestScheduler,deferred,tick});
+function detailSdk(f){
+ const detailSource=source('features/bookshelf/LocalBookDetail.ets');
+ class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){for(const [key,value]of Object.entries(params))if(key!=='onRemove'&&key!=='onCancelAdd')this.params[key]=value;}}
+ const parent=createReaderBuilderProbe(source('pages/Index.ets'),['detailContent','detailSurface','externalDirectory','isCurrentDetailPresentation'],{LocalBookDetail:Child,BookDirectoryPage:Child,LOCAL_SOURCE_ID:'local'},{childSources:{LocalBookDetail:detailSource,BookDirectoryPage:source('features/bookshelf/BookDirectoryPage.ets')}}).owner;
+ Object.assign(parent,f.page,{detailToc:[],remoteContentVerdict:'readable',remoteContentVerdictLabel:()=>'',offlineMutationActiveKey:'',directoryReturnTarget:'detail',hasUnknownShelfWrite:()=>f.page.hasUnknownShelfWrite(),
+  detailReadableAdmission:book=>f.page.detailReadableAdmission(book),detailShelfMessage:book=>f.page.detailShelfMessage(book),detailShelfAdmissionIdentity:()=>f.page.detailShelfAdmissionIdentity(),isCurrentDetailShelfAdmission:id=>f.page.isCurrentDetailShelfAdmission(id),requestDetailShelfMutation:()=>f.page.requestDetailShelfMutation(),cancelDetailBookAddition:()=>f.page.cancelDetailBookAddition(),detailBookKey:book=>f.page.detailBookKey(book)});
+ parent.detailContent();const child=[...parent.children.values()][0];
+ const probe=localBookDetailSdk({}, {allowEmptyBranchAdmission:true,initialParams:child.params});
+ Object.assign(probe.owner,{appThemeScheme:'day',viewportWidth:390});probe.owner.actionArea();
+ const actions=[...probe.owner.nodes.values()].filter(n=>n.type==='Text'&&typeof n.onClick==='function');
+ assert.equal(actions.length,2);
+ return {parent,child,actor:probe.owner,button:actions[1],hit:actions[1].onClick};
+}
 for(const chapterResult of ['ready','cancelled','failed']){
  const core=fixture(),body=deferred();core.gates.set('chapter.content:b',body);
  if(chapterResult==='failed')core.failBodies.add('b');
@@ -214,6 +390,8 @@ for(const chapterResult of ['ready','cancelled','failed']){
    assert.match(f.snapshot().message,/403/);sdk.actor.updateStateVars({...sdk.child.params,adding:true});sdk.actor.replay();sdk.hit();
    await until(()=>f.snapshot().membership===false&&!f.snapshot().cancelling);
    assert.equal(f.snapshot().adding,false,'failed preparation remains cancellable through the same physical actor');
+   assert.equal(f.snapshot().confirmation,'none','actual Core add-failure then strict cancellation clears only the unresolved add presentation');
+   assert.equal(f.snapshot().receipt,undefined);assert.equal(f.page.detailShelfMessage(f.page.detailBook),'已取消加入书架');
   }
  }
  assert.ok(!core.calls.some(c=>c.method.startsWith('reading.progress')),'explicit admission preserves reading progress');core.runtime.close();
@@ -237,30 +415,15 @@ for(const chapterResult of ['ready','cancelled','failed']){
  assert.equal(f.snapshot().membership,false);assert.equal(f.snapshot().receipt,undefined);assert.equal(f.snapshot().confirmation,'none');
  assert.equal(core.store.intents.get('b').state,'cancelled');assert.ok(core.calls.some(c=>c.method==='bookshelf.get'));
  body.resolve();await until(()=>!f.snapshot().adding);
+ assert.equal(f.snapshot().confirmation,'none','actual Core cancellation then late body rejection remains settled');
+ assert.equal(f.snapshot().receipt,undefined);assert.equal(f.page.detailShelfMessage(f.page.detailBook),'已取消加入书架');
  assert.equal(core.calls.filter(c=>c.method==='bookshelf.add').length,0);core.runtime.close();
 }
-{
- const gates=[];const f=readableAdmissionFixture({add:()=>{const g=deferred();gates.push(g);return g.promise;}});
- const owner=f.page.bookshelfHost.readable(f.runtime);const tasks=[];
- for(let index=0;index<17;index++)tasks.push(owner.add({sourceId:'s',bookId:'b'+index,title:'书',author:'作者'},()=>true,()=>{}));
- assert.equal(gates.length,16,'finite accepted-task capacity cannot grow without bound');assert.match(owner.find('s','b16').message,/稍后重试/);
- gates.forEach((g,index)=>g.resolve(ack('b'+index)));await Promise.all(tasks);
+
 }
-{
- const f=readableAdmissionFixture();let admitted=true;const owner=f.page.bookshelfHost.readable(f.runtime);
- owner.subscribe(()=>{admitted=false;throw Error('retired during publication');});await owner.add(saved(),()=>admitted,()=>assert.fail('retired publication'));
- assert.equal(f.calls.length,0,'withdrawn intent cannot dispatch after a synchronous publication');assert.equal(owner.find('s','b').adding,false);
+
+const implementations = {'owner-interleavings':case_owner_interleavings,'detail-sdk-identity':case_detail_sdk_identity,'cold-manga-first-image':case_cold_manga_first_image,'cold-novel-preparation':case_cold_novel_preparation};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
 }
-{
- const gate=deferred();const f=readableAdmissionFixture({add:()=>gate.promise});const sdk=detailSdk(f);const old=sdk.hit;
- f.page.detailBook=saved('next');f.page.navigationGeneration++;old();assert.equal(f.calls.length,0,'old physical actor cannot add the next book');
- const originalCount=sdk.actor.observers.length;sdk.actor.updateStateVars({...sdk.child.params,admissionIdentity:f.page.detailShelfAdmissionIdentity(),book:f.page.detailBook});sdk.actor.replay();assert.equal(sdk.actor.observers.length,originalCount+1,'only the keyed secondary Text actor is created');old();assert.equal(f.calls.length,0,'V1 Prop update cannot promote immutable old button identity');
- f.page.remoteReadingSession={identity:f.page.detailBook,book:f.page.detailBook};
- const current=[...sdk.actor.nodes.values()].filter(n=>n.type==='Text'&&typeof n.onClick==='function').at(-1);current.onClick();assert.equal(f.calls.filter(c=>c[0]==='add').length,1);
- gate.resolve(ack('next'));await tick();
-}
-{
- const f=readableAdmissionFixture();const sdk=detailSdk(f);f.page.detailBook=saved('next');f.page.remoteReadingSession={identity:f.page.detailBook,book:f.page.detailBook};f.page.navigationGeneration++;
- f.page.isCurrentDetailShelfAdmission=()=>true;sdk.hit();await tick();assert.equal(f.calls.filter(c=>c[0]==='add').length,1,'negative control: removing captured identity guard mutates successor');
-}
-console.log('PASS: readable add/cancel actual Coordinator→typed Gateway→Host→Index→SDK, metadata-first admission, actual busy/unknown/reader/switch/offline gates, cold manga first-image admission, receipt/member distinction, exact Runtime/navigation, same-runtime reconstruction, unknown barrier and retained physical actor');

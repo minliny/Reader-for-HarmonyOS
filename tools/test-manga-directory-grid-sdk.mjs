@@ -1,12 +1,20 @@
-import { mangaGridProbeDependencies, mangaGridBuilderMembers } from './lib/manga-directory-grid-probe.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import * as layout from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
-import { readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"paged-data": {"description": "真实paged数据/lazy百万行/12页缓存/255边界", "resources": []}, "retained-paint": {"description": "实际same-key DTO/depth/download revision/withdrawn actor", "resources": []}, "current-grid-geometry": {"description": "当前漫画spec Grid spans/offset/explicit parent false", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { mangaGridProbeDependencies, mangaGridBuilderMembers } = await import('./lib/manga-directory-grid-probe.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const fonts = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+const layout = await import('../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts');
+const { readerDirectoryScopeKey } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts');
+
 
 const path = new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url);
 const source = readFileSync(path, 'utf8');
@@ -33,44 +41,6 @@ data.registerDataChangeListener({ onDataReloaded: () => changes.push('reload'), 
 const view = { status: 'ready', identity: { sourceId: 'manga', bookId: 'book' }, viewId: 'v1', navigationRevision: 'r1',
   visibleTotal: nodes.length, currentVisibleIndex: 252, nodes: nodes.slice(0, 256) };
 data.replace(view);
-assert.deepEqual(requests, [], 'Quick publishes the full count without fetching far pages');
-assert.equal(data.totalCount(), 600, 'compact Quick exposes the same Core visible total as Full');
-for (const index of [0, 250, 251, 252]) {
-  const item = data.getData(index);
-  assert.equal(item.index, index);
-  assert.equal(item.node.chapterIndex, 5000 + index, 'canonical chapter identity never becomes a Grid ordinal');
-  assert.equal(data.displayIndex(index), index);
-}
-assert.equal(data.getData(249).node.kind, 'group', 'Core group retains its authoritative visible slot');
-assert.equal(data.getData(256).node, undefined); assert.equal(data.getData(599).node, undefined);
-assert.deepEqual(requests, [256, 512], 'only explicitly requested visible slots load their bounded pages');
-data.admit(256, { viewId: 'v1', visibleTotal: 600, nodes: nodes.slice(256, 512) });
-data.admit(512, { viewId: 'v1', visibleTotal: 600, nodes: nodes.slice(512) });
-assert.equal(data.totalCount(), 600); assert.equal(data.getData(599).node.chapterIndex, 5599);
-assert.equal(data.displayIndex(20), 20, 'far browsing remains available inside Quick');
-assert.equal(data.displayIndex(-1), undefined); assert.equal(data.displayIndex(600), undefined);
-data.replace({ ...view, viewId: 'search', visibleTotal: 2, currentVisibleIndex: 1,
-  nodes: [node(253, '22上'), node(254, '22下')] });
-assert.equal(data.totalCount(), 2, 'search uses the complete Core search projection');
-assert.equal(data.getData(1).node.chapterIndex, 5254);
-data.admit(0, { viewId: 'v1', visibleTotal: 600, nodes: [node(0, 'stale')] });
-assert.equal(data.getData(0).node.title, '22上', 'late pages cannot replace a different immutable view');
-{
-  const nested = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('loaded hierarchy cannot fetch ancestors'));
-  const catalog = [node(0, '第一卷', { kind: 'group', depth: 1, parentId: undefined, chapterIndex: undefined }),
-    node(1, '同名子组', { kind: 'group', depth: 2, parentId: 'n0', chapterIndex: undefined }),
-    node(2, '01', { depth: 3, parentId: 'n1', parentTitle: '同名子组' }),
-    node(3, '第二卷', { kind: 'group', depth: 1, parentId: undefined, chapterIndex: undefined }),
-    node(4, '同名子组', { kind: 'group', depth: 2, parentId: 'n3', chapterIndex: undefined }),
-    node(5, '01', { depth: 3, parentId: 'n4', parentTitle: '同名子组' }),
-    node(6, '02', { depth: 3, parentId: 'uncaptured', parentTitle: '未捕获父组' })];
-  nested.replace({ ...view, viewId: 'nested', visibleTotal: catalog.length, currentVisibleIndex: 2, nodes: catalog });
-  assert.equal(nested.totalCount(), catalog.length);
-  assert.equal(nested.getData(2).node.parentId, 'n1'); assert.equal(nested.getData(5).node.parentId, 'n4');
-  assert.ok(Array.from({ length: nested.totalCount() }, (_, index) => nested.getData(index)).every(item =>
-    item.index === nested.displayIndex(item.index) && item.node !== undefined), 'all nested slots remain actual Core nodes, never synthetic contexts');
-}
-
 const compact = [node(0, '01'), node(1, '02'), node(2, '3上'), node(3, '3下'),
   node(4, '可读整卷', { hasChildren: true }), node(5, '不可读', { kind: 'disabled', chapterIndex: undefined }),
   node(6, '命名章节'), node(7, '下一分组', { kind: 'group', chapterIndex: undefined, hasChildren: true })];
@@ -110,6 +80,242 @@ function probe(scheme = 'day', quick = false, width = 390, fontScale = 1, candid
     scroller: { scrollToIndex: (...args) => scrolls.push(args), getItemRect: () => ({ y: -22, height: 44 }) } });
   return { ...result, actions, scrolls, anchors };
 }
+if(selectedCase==='paged-data') {
+assert.deepEqual(requests, [], 'Quick publishes the full count without fetching far pages');
+assert.equal(data.totalCount(), 600, 'compact Quick exposes the same Core visible total as Full');
+for (const index of [0, 250, 251, 252]) {
+  const item = data.getData(index);
+  assert.equal(item.index, index);
+  assert.equal(item.node.chapterIndex, 5000 + index, 'canonical chapter identity never becomes a Grid ordinal');
+  assert.equal(data.displayIndex(index), index);
+}
+assert.equal(data.getData(249).node.kind, 'group', 'Core group retains its authoritative visible slot');
+assert.equal(data.getData(256).node, undefined); assert.equal(data.getData(599).node, undefined);
+assert.deepEqual(requests, [256, 512], 'only explicitly requested visible slots load their bounded pages');
+data.admit(256, { viewId: 'v1', visibleTotal: 600, nodes: nodes.slice(256, 512) });
+data.admit(512, { viewId: 'v1', visibleTotal: 600, nodes: nodes.slice(512) });
+assert.equal(data.totalCount(), 600); assert.equal(data.getData(599).node.chapterIndex, 5599);
+assert.equal(data.displayIndex(20), 20, 'far browsing remains available inside Quick');
+assert.equal(data.displayIndex(-1), undefined); assert.equal(data.displayIndex(600), undefined);
+data.replace({ ...view, viewId: 'search', visibleTotal: 2, currentVisibleIndex: 1,
+  nodes: [node(253, '22上'), node(254, '22下')] });
+assert.equal(data.totalCount(), 2, 'search uses the complete Core search projection');
+assert.equal(data.getData(1).node.chapterIndex, 5254);
+data.admit(0, { viewId: 'v1', visibleTotal: 600, nodes: [node(0, 'stale')] });
+assert.equal(data.getData(0).node.title, '22上', 'late pages cannot replace a different immutable view');
+{
+  const nested = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('loaded hierarchy cannot fetch ancestors'));
+  const catalog = [node(0, '第一卷', { kind: 'group', depth: 1, parentId: undefined, chapterIndex: undefined }),
+    node(1, '同名子组', { kind: 'group', depth: 2, parentId: 'n0', chapterIndex: undefined }),
+    node(2, '01', { depth: 3, parentId: 'n1', parentTitle: '同名子组' }),
+    node(3, '第二卷', { kind: 'group', depth: 1, parentId: undefined, chapterIndex: undefined }),
+    node(4, '同名子组', { kind: 'group', depth: 2, parentId: 'n3', chapterIndex: undefined }),
+    node(5, '01', { depth: 3, parentId: 'n4', parentTitle: '同名子组' }),
+    node(6, '02', { depth: 3, parentId: 'uncaptured', parentTitle: '未捕获父组' })];
+  nested.replace({ ...view, viewId: 'nested', visibleTotal: catalog.length, currentVisibleIndex: 2, nodes: catalog });
+  assert.equal(nested.totalCount(), catalog.length);
+  assert.equal(nested.getData(2).node.parentId, 'n1'); assert.equal(nested.getData(5).node.parentId, 'n4');
+  assert.ok(Array.from({ length: nested.totalCount() }, (_, index) => nested.getData(index)).every(item =>
+    item.index === nested.displayIndex(item.index) && item.node !== undefined), 'all nested slots remain actual Core nodes, never synthetic contexts');
+}
+
+{
+  const timers = [], requests = [], notifications = [], scrolls = [], saved = [];
+  let owner;
+  const far = new production.ReaderDirectoryNavigationDataSource(offset => owner.loadPage(offset));
+  const farView = { ...view, viewId: 'far', visibleTotal: 1000000, currentVisibleIndex: 6000,
+    nodes: [], preparedPages: [{ offset: 5888, page: { viewId: 'far', visibleTotal: 1000000,
+      nodes: Array.from({ length: 256 }, (_, at) => node(5888 + at)) } }] };
+  far.replace(farView);
+  far.registerDataChangeListener({ onDataReloaded() {}, onDataChanged: index => notifications.push(index) });
+  owner = createReaderBuilderProbe(source, ['loadPage', 'admitMangaPages', 'settleMangaScroll', 'captureViewportAnchor',
+    'schedulePosition', 'positionInitialCurrent', 'positionRowHeight', 'planPosition', 'mangaContentStartOffset'], {
+      ...layout, setTimeout: action => timers.push(action), readerDirectoryScopeKey,
+      cacheReaderDirectoryNavigationPage: production.cacheReaderDirectoryNavigationPage,
+      readerDirectoryViewportAnchor: () => saved.at(-1), readerDirectorySaveViewportAnchor: anchor => saved.push(anchor),
+      ScrollAlign: { START: 'start', CENTER: 'center' }, LengthMetrics: { vp: value => ({ value }) },
+    }).owner;
+  Object.assign(owner, { dataSource: far, view: farView, sourceId: 'manga', bookId: 'book',
+    mounted: true, generation: 11, interactionEnabled: true, mangaDisplay: true, mangaQuickDisplay: false,
+    mangaSearchActive: false, mangaDragging: false, initialPositionPending: true, mangaPresentationRevision: 0, pendingPages: [],
+    firstVisibleIndex: 6000, mangaRowMinHeight: 58, rowHeight: 40,
+    mangaVisibleTopInset: 0, contentStartInset: 0, listPaddingTop: 0, listPaddingY: 0,
+    scroller: { getItemRect(index) { return { y: -11, height: far.loadedNode(index) === undefined ? 58 : 44 }; },
+      scrollToIndex: (...args) => scrolls.push(args) }, onScrollSettled() {},
+    gateway: { async page(book, id, offset, guard) { requests.push([book, id, offset, guard()]);
+      return { viewId: 'far', visibleTotal: 1000000, nodes: Array.from({ length: 256 }, (_, at) => node(offset + at)) }; } },
+    onInvalidated: () => assert.fail('finite current page must not invalidate the view') });
+  owner.positionInitialCurrent();
+  assert.equal(scrolls[0][0], 6000, 'a far current target enters by Core rank using only its prepared page');
+  owner.firstVisibleIndex = 7000; owner.mangaDragging = true; owner.initialPositionPending = false;
+  assert.equal(far.getData(7000).node, undefined);
+  timers.shift()(); await Promise.resolve(); await Promise.resolve();
+  assert.deepEqual(requests, [['book', 'far', 6912, true]]);
+  assert.equal(owner.pendingPages[0].page.nodes.length, 0, 'motion pending data owns only a header; nodes remain in the process LRU');
+  assert.equal(far.loadedNode(7000), undefined, 'pre-cached nodes are not announced as materialized targets before admission');
+  assert.deepEqual(notifications, [], 'dragging never republishes placeholder geometry');
+  owner.settleMangaScroll();
+  assert.equal(far.loadedNode(7000).chapterIndex, 12000);
+  assert.ok(notifications.includes(7000), 'deferred cached page must notify the placeholder-to-target change');
+  assert.equal(owner.positionPlan.rowFraction, 0, 'the old placeholder58/12-lane geometry contributes no pixel fraction');
+  assert.deepEqual(saved, [], 'stop cannot snapshot a just-replaced native placeholder before the scheduled restore');
+  while (timers.length > 0) timers.shift()();
+  assert.equal(scrolls.at(-1)[0], 7000);
+  assert.equal(scrolls.at(-1)[3].extraOffset.value, 0);
+  // An already announced target rect remains a legitimate fractional anchor.
+  owner.firstVisibleIndex = 7000; owner.initialPositionPending = false;
+  owner.admitMangaPages([{ offset: 7168, page: { viewId: 'far', visibleTotal: 1000000,
+    nodes: Array.from({ length: 256 }, (_, at) => node(7168 + at)) } }]);
+  assert.equal(owner.positionPlan.rowFraction, 0.25);
+  while (timers.length > 0) timers.shift()();
+  assert.equal(scrolls.at(-1)[0], 7000); assert.equal(scrolls.at(-1)[3].extraOffset.value, 11);
+  for (let index = 0; index < 13; index += 1) production.directoryPages.put(`other-view:${index}`, [node(index)]);
+  owner.initialPositionPending = false; owner.firstVisibleIndex = 7000; owner.mangaDragging = true;
+  const changedBeforeEviction = notifications.length;
+  assert.equal(far.getData(7000).node, undefined, 'another directory may evict an announced page from the shared LRU');
+  timers.shift()(); await Promise.resolve(); await Promise.resolve();
+  assert.equal(far.loadedNode(7000), undefined, 'an evicted offset cannot keep a stale announced-page flag after a deferred refill');
+  owner.settleMangaScroll();
+  assert.ok(notifications.slice(changedBeforeEviction).includes(7000), 'an evicted placeholder also receives its target publication notification');
+  assert.equal(owner.positionPlan.rowFraction, 0, 'refilled placeholders cannot reuse a stale fractional rect');
+  while (timers.length > 0) timers.shift()();
+  assert.ok(requests.length === 2 && production.directoryPages.keys().length <= 12, 'far/drag navigation never enumerates the million-node view');
+}
+console.log('PASS actual manga Core-paged Grid SDK spans, 44vp cells/day/night/current marker/download proof, parent target/fold separation, narrow columns, complete bounded Core-paged Quick/real hierarchy/mapping/parts/search/full and canonical viewport anchors; native pixels and motion remain unverified');
+
+
+}
+if(selectedCase==='retained-paint') {
+// Equal LazyForEach keys retain the first itemGenerator argument. Exercise the
+// actual SDK observers and V1 property dependency delivery instead of invoking
+// a fresh row Builder after each publication. Native layout remains separate.
+function retainedMangaPaint(candidate = source, numeric = false) {
+  const initialNode = node(17, numeric ? '02' : '旧章节', { parentTitle: '旧卷', depth: 1 });
+  const initialView = { ...view, viewId: `retained-${numeric}-initial`, visibleTotal: 1,
+    currentVisibleIndex: 0, nodes: [initialNode] };
+  const retainedData = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('retained paint fixture is completely resident'));
+  retainedData.replace(initialView);
+  const captured = retainedData.getData(0);
+  const properties = createArkUIPropertyRuntimeProbe();
+  const extra = ['view', 'onViewChanged', 'chapterEntries', 'onChapterEntriesChanged', 'chapterByIndex',
+    'chapterSource', 'chapterSignatures', 'mangaPresentationRevision', 'currentChapterIndex', 'mangaGridSpans'];
+  const result = createReaderBuilderProbe(candidate, [...new Set([...names, ...extra])],
+    { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk }, properties.hooks);
+  const owner = result.owner, reads = [], downloads = [];
+  Object.assign(owner, { mounted: false, dataSource: retainedData, view: initialView, mangaDisplay: true,
+    mangaQuickDisplay: false, mangaSearchActive: true, mangaCatalogDisplay: false, mangaCatalogNarrow: undefined,
+    mangaPresentationRevision: 0, windowMetricsRevision: 0, mangaViewportWidth: 390,
+    mangaInitialViewportWidth: 0, mangaScheme: 'day', appThemeScheme: 'day', currentChapterIndex: 5017,
+    interactionEnabled: true, chapterDownloadEnabled: true, chapterDownloadActionsEnabled: false,
+    listPaddingX: 0, listPaddingRight: 0, rowHeight: 44, mangaRowMinHeight: 58,
+    bookId: 'book', sourceId: 'manga', generation: 1, selectionGeneration: 0,
+    captureViewportAnchor() {}, planPosition: () => undefined, schedulePosition() {},
+    selectTarget: native => reads.push(native), downloadTarget: native => downloads.push(native) });
+  owner.chapterEntries = [{ index: 5017, title: initialNode.title, navigable: true, downloadState: 'missing' }];
+  if (numeric) owner.mangaNumberCell(captured); else owner.mangaRow(captured);
+  owner.mounted = true;
+  const oldKey = owner.rowKey(captured), observerCount = owner.observers.length;
+  const painted = [...owner.nodes.values()].find(native => native.visibility === 'Visibility.Visible');
+  const title = [...owner.nodes.values()].find(native => native.type === 'Text' && native.create === initialNode.title);
+  const marker = [...owner.nodes.values()].find(native => native.type === 'Image' && native.create === 'app.media.reader_directory_marker_download');
+  const download = [...owner.nodes.values()].find(native => native.type === 'Stack' && native.accessibilityText?.includes('下载') && native.onClick);
+  const read = [...owner.nodes.values()].find(native => native.onClick && native.accessibilityText?.includes(initialNode.title) && !native.accessibilityText?.includes('下载'));
+  assert.ok(title && marker && download && read, 'the initial retained actors are the actual SDK-generated title/download/chapter');
+  const nextNode = { ...initialNode, title: numeric ? '03' : '新章节', parentTitle: '新卷', depth: 3 };
+  owner.view = { ...view, viewId: `retained-${numeric}-next`, visibleTotal: 1, currentVisibleIndex: 0, nodes: [nextNode] };
+  properties.flush();
+  assert.equal(owner.rowKey(retainedData.getData(0)), oldKey, 'title and parent metadata do not remount the LazyForEach row');
+  assert.equal(owner.observers.length, observerCount, 'the same retained native actors receive current facts');
+  assert.equal(title.create, nextNode.title, 'retained title reads the current canonical node');
+  if (!numeric) assert.ok([...owner.nodes.values()].some(native => native.type === 'Text' && native.create === '新卷'),
+    'retained search context reads the current parent title');
+  owner.mangaSearchActive = false; owner.mangaPresentationRevision += 1; properties.flush();
+  assert.equal(owner.mangaRowPaddingLeft(captured), 26, 'same-kind depth changes use the current node facts');
+  if (!numeric) assert.equal(read.padding.left, 26, 'the retained named actor receives the current depth geometry');
+  assert.ok(read.accessibilityText.includes(nextNode.title), 'retained accessibility reads current title');
+  read.onClick(); download.onClick();
+  assert.equal(reads.at(-1).title, nextNode.title, 'the retained chapter actor passes the current canonical node');
+  assert.equal(downloads.at(-1).title, nextNode.title, 'the retained download actor passes the current canonical node');
+  owner.chapterEntries = [{ index: 5017, title: nextNode.title, navigable: true, downloadState: 'completed' }];
+  properties.flush();
+  assert.equal(marker.create, 'app.media.reader_directory_marker_check', 'the chapter Watch publishes a real retained download repaint');
+  assert.equal(download.enabled, false, 'completed download authority is withdrawn from the existing actor');
+  owner.currentChapterIndex = -1; properties.flush();
+  assert.equal(title.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_REGULAR, 'current styling remains reactive on the retained title');
+  assert.ok(!read.accessibilityText.includes('正在读'), 'retained accessibility follows the latest current chapter');
+  owner.chapterEntries = [{ index: 5017, title: nextNode.title, navigable: false, downloadState: 'completed' }];
+  properties.flush();
+  assert.equal(owner.canDownloadTarget(nextNode), false, 'a non-navigable current chapter cannot retain download authority');
+  const count = reads.length;
+  owner.downloadTarget = Object.getPrototypeOf(owner).downloadTarget.bind(owner);
+  owner.gateway = { resolveTarget() { assert.fail('a withdrawn node cannot request download proof'); } };
+  owner.view = { ...view, viewId: `retained-${numeric}-removed`, visibleTotal: 0, nodes: [] };
+  properties.flush();
+  assert.equal(painted.visibility, 'Visibility.Hidden', 'withdrawn cached actors cannot paint old admitted facts');
+  read.onClick(); download.onClick();
+  assert.equal(reads.length, count, 'a retained removed actor cannot select its old target');
+  assert.equal(owner.canDownloadTarget(nextNode), false, 'a removed node cannot retain download authority');
+}
+retainedMangaPaint(source); retainedMangaPaint(source, true);
+const capturedTitle = source.replace('return mangaDirectoryDisplay(this.mangaDisplayNode(node)).title;', 'return node.title;');
+assert.notEqual(capturedTitle, source);
+assert.throws(() => retainedMangaPaint(capturedTitle), /retained title reads the current canonical node/,
+  'the original item.node.title capture is rejected by actual retained SDK observers');
+const quietDownload = source.replace('if (this.mangaDisplay && changed.size > 0) this.mangaPresentationRevision += 1;',
+  'if (this.mangaDisplay && changed.size > 0) {}');
+assert.notEqual(quietDownload, source);
+assert.throws(() => retainedMangaPaint(quietDownload), /retained download repaint/,
+  'data notifications with equal keys cannot replace an observable download publication');
+console.log('PASS retained equal-key SDK observers: named/numeric title, parent, current, accessibility, canonical clicks and download authority; captured-title/unpublished-download negative controls');
+const capturedDepth = source.replace('this.displayLevel(this.mangaPaintNode(item.node))', 'this.displayLevel(item.node)');
+assert.notEqual(capturedDepth, source);
+assert.throws(() => retainedMangaPaint(capturedDepth), /same-kind depth changes/,
+  'a current title cannot hide retained stale geometry');
+const ghostPaint = source.replaceAll('this.mangaRowAdmitted(item) ? Visibility.Visible : Visibility.Hidden', 'Visibility.Visible');
+assert.notEqual(ghostPaint, source);
+assert.throws(() => retainedMangaPaint(ghostPaint), /withdrawn cached actors cannot paint/,
+  'keeping a removed same-key actor visible is rejected without inventing a new Core target');
+{
+  const oldGroup = node(61, '旧卷组', { kind: 'group', depth: 1, chapterIndex: undefined,
+    hasChildren: true, expanded: true, readableDescendantCount: 2 });
+  const first = { ...view, viewId: 'retained-group-old', visibleTotal: 1, nodes: [oldGroup] };
+  const groupData = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('group is resident'));
+  groupData.replace(first); const captured = groupData.getData(0), properties = createArkUIPropertyRuntimeProbe();
+  const result = createReaderBuilderProbe(source, [...new Set([...names, 'view', 'onViewChanged', 'mangaPresentationRevision'])],
+    { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk }, properties.hooks);
+  const owner = result.owner, toggles = [];
+  Object.assign(owner, { mounted: false, dataSource: groupData, view: first, mangaDisplay: true,
+    mangaQuickDisplay: false, mangaSearchActive: false, mangaPresentationRevision: 0,
+    mangaCatalogDisplay: false, mangaCatalogNarrow: undefined, mangaScheme: 'day', appThemeScheme: 'day',
+    mangaViewportWidth: 390, mangaInitialViewportWidth: 0, windowMetricsRevision: 0,
+    interactionEnabled: true, currentChapterIndex: -1, chapterDownloadEnabled: false,
+    listPaddingX: 0, listPaddingRight: 0, rowHeight: 44, mangaRowMinHeight: 58,
+    generation: 1, selectionGeneration: 0, captureViewportAnchor() {}, planPosition: () => undefined,
+    schedulePosition() {}, toggleNode: native => toggles.push(native) });
+  owner.mangaRow(captured); owner.mounted = true;
+  const key = owner.rowKey(captured), count = owner.observers.length;
+  const fold = [...owner.nodes.values()].find(native => native.type === 'Image' && native.onClick);
+  const title = [...owner.nodes.values()].find(native => native.type === 'Text' && native.create === '旧卷组');
+  const metadata = [...owner.nodes.values()].find(native => native.type === 'Text' && native.create === '2 个可读条目');
+  const next = { ...oldGroup, title: '新卷组', depth: 3, expanded: false, readableDescendantCount: 9 };
+  owner.view = { ...view, viewId: 'retained-group-new', visibleTotal: 1, nodes: [next] }; properties.flush();
+  assert.equal(owner.rowKey(groupData.getData(0)), key, 'group folding retains its actual rotating Image actor');
+  assert.equal(owner.observers.length, count, 'group metadata refresh does not remount native actors');
+  assert.equal(title.create, '新卷组'); assert.equal(metadata.create, '9 个可读条目');
+  assert.equal(fold.rotate.angle, -90); assert.ok(fold.accessibilityText.includes('新卷组'));
+  fold.onClick(); assert.equal(toggles.at(-1).title, '新卷组', 'retained fold resolves the current canonical group');
+  owner.view = { ...view, viewId: 'retained-group-removed', visibleTotal: 0, nodes: [] }; properties.flush();
+  const before = toggles.length; fold.onClick();
+  assert.equal(toggles.length, before, 'withdrawn group cannot fold an old captured node');
+  assert.equal([...owner.nodes.values()].find(native => native.type === 'Row' && native.onClick).visibility,
+    'Visibility.Hidden', 'withdrawn group paint is not presented as current facts');
+}
+console.log('PASS same-kind depth and removed-node paint negative controls; retained group title/count/fold actor and absent-group action fence');
+
+
+
+}
+if(selectedCase==='current-grid-geometry') {
 {
   const enlarged = [node(0, '123456'), node(1, '123457'), node(2, '123458')];
   const localView = { ...gridView, viewId: 'enlarged', visibleTotal: enlarged.length, nodes: enlarged };
@@ -388,197 +594,6 @@ for (const scheme of ['day', 'night']) {
   assert.equal(gridData.displayIndex(scrolls.at(-1).visibleIndex), 1, 'the same anchor restores in the full directory');
 }
 assert.ok(production.directoryPages.keys().length <= 12, 'the production process cache remains bounded');
-{
-  const timers = [], requests = [], notifications = [], scrolls = [], saved = [];
-  let owner;
-  const far = new production.ReaderDirectoryNavigationDataSource(offset => owner.loadPage(offset));
-  const farView = { ...view, viewId: 'far', visibleTotal: 1000000, currentVisibleIndex: 6000,
-    nodes: [], preparedPages: [{ offset: 5888, page: { viewId: 'far', visibleTotal: 1000000,
-      nodes: Array.from({ length: 256 }, (_, at) => node(5888 + at)) } }] };
-  far.replace(farView);
-  far.registerDataChangeListener({ onDataReloaded() {}, onDataChanged: index => notifications.push(index) });
-  owner = createReaderBuilderProbe(source, ['loadPage', 'admitMangaPages', 'settleMangaScroll', 'captureViewportAnchor',
-    'schedulePosition', 'positionInitialCurrent', 'positionRowHeight', 'planPosition', 'mangaContentStartOffset'], {
-      ...layout, setTimeout: action => timers.push(action), readerDirectoryScopeKey,
-      cacheReaderDirectoryNavigationPage: production.cacheReaderDirectoryNavigationPage,
-      readerDirectoryViewportAnchor: () => saved.at(-1), readerDirectorySaveViewportAnchor: anchor => saved.push(anchor),
-      ScrollAlign: { START: 'start', CENTER: 'center' }, LengthMetrics: { vp: value => ({ value }) },
-    }).owner;
-  Object.assign(owner, { dataSource: far, view: farView, sourceId: 'manga', bookId: 'book',
-    mounted: true, generation: 11, interactionEnabled: true, mangaDisplay: true, mangaQuickDisplay: false,
-    mangaSearchActive: false, mangaDragging: false, initialPositionPending: true, mangaPresentationRevision: 0, pendingPages: [],
-    firstVisibleIndex: 6000, mangaRowMinHeight: 58, rowHeight: 40,
-    mangaVisibleTopInset: 0, contentStartInset: 0, listPaddingTop: 0, listPaddingY: 0,
-    scroller: { getItemRect(index) { return { y: -11, height: far.loadedNode(index) === undefined ? 58 : 44 }; },
-      scrollToIndex: (...args) => scrolls.push(args) }, onScrollSettled() {},
-    gateway: { async page(book, id, offset, guard) { requests.push([book, id, offset, guard()]);
-      return { viewId: 'far', visibleTotal: 1000000, nodes: Array.from({ length: 256 }, (_, at) => node(offset + at)) }; } },
-    onInvalidated: () => assert.fail('finite current page must not invalidate the view') });
-  owner.positionInitialCurrent();
-  assert.equal(scrolls[0][0], 6000, 'a far current target enters by Core rank using only its prepared page');
-  owner.firstVisibleIndex = 7000; owner.mangaDragging = true; owner.initialPositionPending = false;
-  assert.equal(far.getData(7000).node, undefined);
-  timers.shift()(); await Promise.resolve(); await Promise.resolve();
-  assert.deepEqual(requests, [['book', 'far', 6912, true]]);
-  assert.equal(owner.pendingPages[0].page.nodes.length, 0, 'motion pending data owns only a header; nodes remain in the process LRU');
-  assert.equal(far.loadedNode(7000), undefined, 'pre-cached nodes are not announced as materialized targets before admission');
-  assert.deepEqual(notifications, [], 'dragging never republishes placeholder geometry');
-  owner.settleMangaScroll();
-  assert.equal(far.loadedNode(7000).chapterIndex, 12000);
-  assert.ok(notifications.includes(7000), 'deferred cached page must notify the placeholder-to-target change');
-  assert.equal(owner.positionPlan.rowFraction, 0, 'the old placeholder58/12-lane geometry contributes no pixel fraction');
-  assert.deepEqual(saved, [], 'stop cannot snapshot a just-replaced native placeholder before the scheduled restore');
-  while (timers.length > 0) timers.shift()();
-  assert.equal(scrolls.at(-1)[0], 7000);
-  assert.equal(scrolls.at(-1)[3].extraOffset.value, 0);
-  // An already announced target rect remains a legitimate fractional anchor.
-  owner.firstVisibleIndex = 7000; owner.initialPositionPending = false;
-  owner.admitMangaPages([{ offset: 7168, page: { viewId: 'far', visibleTotal: 1000000,
-    nodes: Array.from({ length: 256 }, (_, at) => node(7168 + at)) } }]);
-  assert.equal(owner.positionPlan.rowFraction, 0.25);
-  while (timers.length > 0) timers.shift()();
-  assert.equal(scrolls.at(-1)[0], 7000); assert.equal(scrolls.at(-1)[3].extraOffset.value, 11);
-  for (let index = 0; index < 13; index += 1) production.directoryPages.put(`other-view:${index}`, [node(index)]);
-  owner.initialPositionPending = false; owner.firstVisibleIndex = 7000; owner.mangaDragging = true;
-  const changedBeforeEviction = notifications.length;
-  assert.equal(far.getData(7000).node, undefined, 'another directory may evict an announced page from the shared LRU');
-  timers.shift()(); await Promise.resolve(); await Promise.resolve();
-  assert.equal(far.loadedNode(7000), undefined, 'an evicted offset cannot keep a stale announced-page flag after a deferred refill');
-  owner.settleMangaScroll();
-  assert.ok(notifications.slice(changedBeforeEviction).includes(7000), 'an evicted placeholder also receives its target publication notification');
-  assert.equal(owner.positionPlan.rowFraction, 0, 'refilled placeholders cannot reuse a stale fractional rect');
-  while (timers.length > 0) timers.shift()();
-  assert.ok(requests.length === 2 && production.directoryPages.keys().length <= 12, 'far/drag navigation never enumerates the million-node view');
-}
-console.log('PASS actual manga Core-paged Grid SDK spans, 44vp cells/day/night/current marker/download proof, parent target/fold separation, narrow columns, complete bounded Core-paged Quick/real hierarchy/mapping/parts/search/full and canonical viewport anchors; native pixels and motion remain unverified');
-
-// Equal LazyForEach keys retain the first itemGenerator argument. Exercise the
-// actual SDK observers and V1 property dependency delivery instead of invoking
-// a fresh row Builder after each publication. Native layout remains separate.
-function retainedMangaPaint(candidate = source, numeric = false) {
-  const initialNode = node(17, numeric ? '02' : '旧章节', { parentTitle: '旧卷', depth: 1 });
-  const initialView = { ...view, viewId: `retained-${numeric}-initial`, visibleTotal: 1,
-    currentVisibleIndex: 0, nodes: [initialNode] };
-  const retainedData = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('retained paint fixture is completely resident'));
-  retainedData.replace(initialView);
-  const captured = retainedData.getData(0);
-  const properties = createArkUIPropertyRuntimeProbe();
-  const extra = ['view', 'onViewChanged', 'chapterEntries', 'onChapterEntriesChanged', 'chapterByIndex',
-    'chapterSource', 'chapterSignatures', 'mangaPresentationRevision', 'currentChapterIndex', 'mangaGridSpans'];
-  const result = createReaderBuilderProbe(candidate, [...new Set([...names, ...extra])],
-    { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk }, properties.hooks);
-  const owner = result.owner, reads = [], downloads = [];
-  Object.assign(owner, { mounted: false, dataSource: retainedData, view: initialView, mangaDisplay: true,
-    mangaQuickDisplay: false, mangaSearchActive: true, mangaCatalogDisplay: false, mangaCatalogNarrow: undefined,
-    mangaPresentationRevision: 0, windowMetricsRevision: 0, mangaViewportWidth: 390,
-    mangaInitialViewportWidth: 0, mangaScheme: 'day', appThemeScheme: 'day', currentChapterIndex: 5017,
-    interactionEnabled: true, chapterDownloadEnabled: true, chapterDownloadActionsEnabled: false,
-    listPaddingX: 0, listPaddingRight: 0, rowHeight: 44, mangaRowMinHeight: 58,
-    bookId: 'book', sourceId: 'manga', generation: 1, selectionGeneration: 0,
-    captureViewportAnchor() {}, planPosition: () => undefined, schedulePosition() {},
-    selectTarget: native => reads.push(native), downloadTarget: native => downloads.push(native) });
-  owner.chapterEntries = [{ index: 5017, title: initialNode.title, navigable: true, downloadState: 'missing' }];
-  if (numeric) owner.mangaNumberCell(captured); else owner.mangaRow(captured);
-  owner.mounted = true;
-  const oldKey = owner.rowKey(captured), observerCount = owner.observers.length;
-  const painted = [...owner.nodes.values()].find(native => native.visibility === 'Visibility.Visible');
-  const title = [...owner.nodes.values()].find(native => native.type === 'Text' && native.create === initialNode.title);
-  const marker = [...owner.nodes.values()].find(native => native.type === 'Image' && native.create === 'app.media.reader_directory_marker_download');
-  const download = [...owner.nodes.values()].find(native => native.type === 'Stack' && native.accessibilityText?.includes('下载') && native.onClick);
-  const read = [...owner.nodes.values()].find(native => native.onClick && native.accessibilityText?.includes(initialNode.title) && !native.accessibilityText?.includes('下载'));
-  assert.ok(title && marker && download && read, 'the initial retained actors are the actual SDK-generated title/download/chapter');
-  const nextNode = { ...initialNode, title: numeric ? '03' : '新章节', parentTitle: '新卷', depth: 3 };
-  owner.view = { ...view, viewId: `retained-${numeric}-next`, visibleTotal: 1, currentVisibleIndex: 0, nodes: [nextNode] };
-  properties.flush();
-  assert.equal(owner.rowKey(retainedData.getData(0)), oldKey, 'title and parent metadata do not remount the LazyForEach row');
-  assert.equal(owner.observers.length, observerCount, 'the same retained native actors receive current facts');
-  assert.equal(title.create, nextNode.title, 'retained title reads the current canonical node');
-  if (!numeric) assert.ok([...owner.nodes.values()].some(native => native.type === 'Text' && native.create === '新卷'),
-    'retained search context reads the current parent title');
-  owner.mangaSearchActive = false; owner.mangaPresentationRevision += 1; properties.flush();
-  assert.equal(owner.mangaRowPaddingLeft(captured), 26, 'same-kind depth changes use the current node facts');
-  if (!numeric) assert.equal(read.padding.left, 26, 'the retained named actor receives the current depth geometry');
-  assert.ok(read.accessibilityText.includes(nextNode.title), 'retained accessibility reads current title');
-  read.onClick(); download.onClick();
-  assert.equal(reads.at(-1).title, nextNode.title, 'the retained chapter actor passes the current canonical node');
-  assert.equal(downloads.at(-1).title, nextNode.title, 'the retained download actor passes the current canonical node');
-  owner.chapterEntries = [{ index: 5017, title: nextNode.title, navigable: true, downloadState: 'completed' }];
-  properties.flush();
-  assert.equal(marker.create, 'app.media.reader_directory_marker_check', 'the chapter Watch publishes a real retained download repaint');
-  assert.equal(download.enabled, false, 'completed download authority is withdrawn from the existing actor');
-  owner.currentChapterIndex = -1; properties.flush();
-  assert.equal(title.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_REGULAR, 'current styling remains reactive on the retained title');
-  assert.ok(!read.accessibilityText.includes('正在读'), 'retained accessibility follows the latest current chapter');
-  owner.chapterEntries = [{ index: 5017, title: nextNode.title, navigable: false, downloadState: 'completed' }];
-  properties.flush();
-  assert.equal(owner.canDownloadTarget(nextNode), false, 'a non-navigable current chapter cannot retain download authority');
-  const count = reads.length;
-  owner.downloadTarget = Object.getPrototypeOf(owner).downloadTarget.bind(owner);
-  owner.gateway = { resolveTarget() { assert.fail('a withdrawn node cannot request download proof'); } };
-  owner.view = { ...view, viewId: `retained-${numeric}-removed`, visibleTotal: 0, nodes: [] };
-  properties.flush();
-  assert.equal(painted.visibility, 'Visibility.Hidden', 'withdrawn cached actors cannot paint old admitted facts');
-  read.onClick(); download.onClick();
-  assert.equal(reads.length, count, 'a retained removed actor cannot select its old target');
-  assert.equal(owner.canDownloadTarget(nextNode), false, 'a removed node cannot retain download authority');
-}
-retainedMangaPaint(source); retainedMangaPaint(source, true);
-const capturedTitle = source.replace('return mangaDirectoryDisplay(this.mangaDisplayNode(node)).title;', 'return node.title;');
-assert.notEqual(capturedTitle, source);
-assert.throws(() => retainedMangaPaint(capturedTitle), /retained title reads the current canonical node/,
-  'the original item.node.title capture is rejected by actual retained SDK observers');
-const quietDownload = source.replace('if (this.mangaDisplay && changed.size > 0) this.mangaPresentationRevision += 1;',
-  'if (this.mangaDisplay && changed.size > 0) {}');
-assert.notEqual(quietDownload, source);
-assert.throws(() => retainedMangaPaint(quietDownload), /retained download repaint/,
-  'data notifications with equal keys cannot replace an observable download publication');
-console.log('PASS retained equal-key SDK observers: named/numeric title, parent, current, accessibility, canonical clicks and download authority; captured-title/unpublished-download negative controls');
-const capturedDepth = source.replace('this.displayLevel(this.mangaPaintNode(item.node))', 'this.displayLevel(item.node)');
-assert.notEqual(capturedDepth, source);
-assert.throws(() => retainedMangaPaint(capturedDepth), /same-kind depth changes/,
-  'a current title cannot hide retained stale geometry');
-const ghostPaint = source.replaceAll('this.mangaRowAdmitted(item) ? Visibility.Visible : Visibility.Hidden', 'Visibility.Visible');
-assert.notEqual(ghostPaint, source);
-assert.throws(() => retainedMangaPaint(ghostPaint), /withdrawn cached actors cannot paint/,
-  'keeping a removed same-key actor visible is rejected without inventing a new Core target');
-{
-  const oldGroup = node(61, '旧卷组', { kind: 'group', depth: 1, chapterIndex: undefined,
-    hasChildren: true, expanded: true, readableDescendantCount: 2 });
-  const first = { ...view, viewId: 'retained-group-old', visibleTotal: 1, nodes: [oldGroup] };
-  const groupData = new production.ReaderDirectoryNavigationDataSource(() => assert.fail('group is resident'));
-  groupData.replace(first); const captured = groupData.getData(0), properties = createArkUIPropertyRuntimeProbe();
-  const result = createReaderBuilderProbe(source, [...new Set([...names, 'view', 'onViewChanged', 'mangaPresentationRevision'])],
-    { ...mangaGridProbeDependencies, ...fonts, ...properties.sdk }, properties.hooks);
-  const owner = result.owner, toggles = [];
-  Object.assign(owner, { mounted: false, dataSource: groupData, view: first, mangaDisplay: true,
-    mangaQuickDisplay: false, mangaSearchActive: false, mangaPresentationRevision: 0,
-    mangaCatalogDisplay: false, mangaCatalogNarrow: undefined, mangaScheme: 'day', appThemeScheme: 'day',
-    mangaViewportWidth: 390, mangaInitialViewportWidth: 0, windowMetricsRevision: 0,
-    interactionEnabled: true, currentChapterIndex: -1, chapterDownloadEnabled: false,
-    listPaddingX: 0, listPaddingRight: 0, rowHeight: 44, mangaRowMinHeight: 58,
-    generation: 1, selectionGeneration: 0, captureViewportAnchor() {}, planPosition: () => undefined,
-    schedulePosition() {}, toggleNode: native => toggles.push(native) });
-  owner.mangaRow(captured); owner.mounted = true;
-  const key = owner.rowKey(captured), count = owner.observers.length;
-  const fold = [...owner.nodes.values()].find(native => native.type === 'Image' && native.onClick);
-  const title = [...owner.nodes.values()].find(native => native.type === 'Text' && native.create === '旧卷组');
-  const metadata = [...owner.nodes.values()].find(native => native.type === 'Text' && native.create === '2 个可读条目');
-  const next = { ...oldGroup, title: '新卷组', depth: 3, expanded: false, readableDescendantCount: 9 };
-  owner.view = { ...view, viewId: 'retained-group-new', visibleTotal: 1, nodes: [next] }; properties.flush();
-  assert.equal(owner.rowKey(groupData.getData(0)), key, 'group folding retains its actual rotating Image actor');
-  assert.equal(owner.observers.length, count, 'group metadata refresh does not remount native actors');
-  assert.equal(title.create, '新卷组'); assert.equal(metadata.create, '9 个可读条目');
-  assert.equal(fold.rotate.angle, -90); assert.ok(fold.accessibilityText.includes('新卷组'));
-  fold.onClick(); assert.equal(toggles.at(-1).title, '新卷组', 'retained fold resolves the current canonical group');
-  owner.view = { ...view, viewId: 'retained-group-removed', visibleTotal: 0, nodes: [] }; properties.flush();
-  const before = toggles.length; fold.onClick();
-  assert.equal(toggles.length, before, 'withdrawn group cannot fold an old captured node');
-  assert.equal([...owner.nodes.values()].find(native => native.type === 'Row' && native.onClick).visibility,
-    'Visibility.Hidden', 'withdrawn group paint is not presented as current facts');
-}
-console.log('PASS same-kind depth and removed-node paint negative controls; retained group title/count/fold actor and absent-group action fence');
-
-
 function checkScrollGeometry(candidate = source) {
   const { owner, scrolls } = probe('night', false, 320, 3.2, candidate, true), published = [];
   Object.assign(owner, { listPaddingTop: 612.6, listPaddingBottom: 58, mangaVisibleTopInset: 159.6,
@@ -647,3 +662,7 @@ const lostExplicitFalse = source.replace('this.mangaCatalogNarrow !== undefined 
 assert.notEqual(lostExplicitFalse, source);
 assert.throws(() => checkParentWidthClass(lostExplicitFalse), assert.AssertionError, 'reject the original false-overridden-by-body class bug');
 console.log('PASS actual SDK optional parent width class false/true/undefined and real-content column budget; original OR negative rejected');
+
+}
+
+}

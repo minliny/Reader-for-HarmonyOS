@@ -1,17 +1,22 @@
-import assert from 'node:assert/strict';
-import {readFileSync, rmSync} from 'node:fs';
-import {createHash} from 'node:crypto';
-import {fixture,seedEntry,settle} from './lib/rss-management-durable-probe.mjs';
-import {deferred,until} from './lib/rules-mutation-durable-probe.mjs';
-import {rssRecoverySurfaceSdk} from './lib/rss-recovery-surface-sdk-probe.mjs';
-import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {actualBookshelfOperationTypes,actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
-import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
-import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './lib/general-settings-owner-probe.mjs';
-import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
-import {projectOperationFacts} from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
-import {RssPresentationProjection} from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
-import {isReaderProductSurfaceEnabled} from '../entry/src/main/ets/app/ReaderProductScope.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"inflight-feed": {"description": "实际inflight Feed退役→返回新presentation与旧native拒绝", "resources": []}, "management": {"description": "实际management返回保原unknown/cleanup intent", "resources": []}, "entry": {"description": "实际entry返回保原unknown/cleanup intent", "resources": []}, "sourceFeed": {"description": "实际sourceFeed返回保原unknown/cleanup intent", "resources": []}, "shipping-scope": {"description": "实际L0关闭路由无新增Core work", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const {default: assert} = await import('node:assert/strict');
+const {readFileSync, rmSync} = await import('node:fs');
+const {createHash} = await import('node:crypto');
+const {fixture,seedEntry,settle} = await import('./lib/rss-management-durable-probe.mjs');
+const {deferred,until} = await import('./lib/rules-mutation-durable-probe.mjs');
+const {rssRecoverySurfaceSdk} = await import('./lib/rss-recovery-surface-sdk-probe.mjs');
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const {actualBookshelfOperationTypes,actualBookshelfHostField} = await import('./lib/bookshelf-operation-owner-probe.mjs');
+const {actualSourceManagementTypes,actualSourceManagementHostField} = await import('./lib/source-management-owner-probe.mjs');
+const {actualGeneralSettingsTypes,actualGeneralSettingsHostField} = await import('./lib/general-settings-owner-probe.mjs');
+const {ReaderNativeAlertOwner} = await import('./lib/reader-native-alert-sdk-probe.mjs');
+const {projectOperationFacts} = await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
+const {RssPresentationProjection} = await import('../entry/src/main/ets/features/rss/RssPresentationProjection.ts');
+const {isReaderProductSurfaceEnabled} = await import('../entry/src/main/ets/app/ReaderProductScope.ts');
+
 
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const indexSource=read('pages/Index.ets');
@@ -54,7 +59,7 @@ function composition(f,enabled=true){
  }
  return{p,sdk,paint,settled:()=>settle(f.Orchestrator.forRuntime(f.runtime))};
 }
-async function actualFixture(){const f=await fixture();roots.add(f.root);await seedEntry(f);return f;}
+async function actualFixture(){const f=await fixture();roots.add(f.root);console.log(JSON.stringify({kind:'reader-test-tool-evidence',tool:f.toolEvidence(),coreInfo:await f.readCoreIdentity()}));await seedEntry(f);return f;}
 function assertNoDurableReplay(f,beforeDisk,beforeWrites,beforeIo){
  assert.equal(f.writes().length,beforeWrites,'return/query never replays original apply');
  assert.equal(f.disk(),beforeDisk,'return/query never clears or replaces accepted original intent');
@@ -64,7 +69,7 @@ function assertNoDurableReplay(f,beforeDisk,beforeWrites,beforeIo){
 try{
  // The delayed operation is the real RSS Gateway list request; its original
  // binding is retired by the real Index navigation path, not by a fake flag.
- {
+ if(selectedCase==='inflight-feed') {
   const f=await actualFixture(),x=composition(f),gate=deferred();
   f.options.pauseMethod='rss-source.list';f.options.gate=gate;x.p.openRss();
   await until(()=>f.calls.some(c=>c.method==='rss-source.list'));
@@ -88,7 +93,7 @@ try{
  }
  // All three actual return paths preserve an accepted unknown write and the
  // current data projection. Fresh read/recovery may query its exact receipt.
- for(const failure of ['beforeMethod','afterMethod'])for(const origin of ['management','entry','sourceFeed']){
+ for(const failure of ['beforeMethod','afterMethod'])for(const origin of ['management','entry','sourceFeed'].filter(origin=>origin===selectedCase)){
   const f=await actualFixture();f.options[failure]='rules.mutation.apply';
   await assert.rejects(f.rss.persistFavorite('s','g',10));
   const x=composition(f);x.p.openRss();await x.settled();const old=x.paint();
@@ -114,7 +119,7 @@ try{
   assertNoDurableReplay(f,beforeDisk,beforeWrites,beforeIo);
   checks.push('actual-'+origin+'-return-'+failure+'-original-preserved-native-current-old-mount-runtime-rejected');
  }
- {
+ if(selectedCase==='shipping-scope'){
   const f=await actualFixture(),x=composition(f,false),route=x.p.route,nav=x.p.navigationGeneration;
   assert.equal(isReaderProductSurfaceEnabled('rss'),false,'shipping L0 remains closed');
   x.p.openRss();x.p.returnToRss();x.p.returnFromRssEntryDetail();x.p.returnFromRssSourceFeed();
@@ -125,4 +130,6 @@ try{
  console.log(JSON.stringify({status:'PASS',sourceHash,checks,scope:'actual Index retirement/return + real RSS Gateway/Orchestrator/Atomic/Core + SDK emitted RSS native action; native scheduling/device separate'}));
 }catch(error){
  console.error(JSON.stringify({status:'FAIL',sourceHash,checks,retainedFixtures:[...roots],error:error.message}));throw error;
+}
+
 }

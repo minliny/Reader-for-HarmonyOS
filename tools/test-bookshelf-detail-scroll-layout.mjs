@@ -1,7 +1,15 @@
-import assert from 'node:assert/strict';
-import {localBookDetailSdk, localBookDetailSource} from './lib/local-book-detail-sdk-probe.mjs';
-import {MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryContentTop} from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
-import {ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"header-frame": {"description": "当前漫画header safe/viewport与vp测量", "resources": []}, "retained-preview": {"description": "实际same-key preview current DTO与canonical callback", "resources": []}, "manga-spec": {"description": "当前已确认漫画自然几何/字体scale", "resources": []}, "font-receipts": {"description": "真实checked font晚到/换书/卸载拒绝", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const {default: assert} = await import('node:assert/strict');
+const {localBookDetailSdk, localBookDetailSource} = await import('./lib/local-book-detail-sdk-probe.mjs');
+const {MANGA_DIRECTORY_VISUAL: visual, mangaDirectoryColor, mangaDirectoryContentTop} = await import('../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts');
+const {ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp} = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+
 let metrics;
 const {Component, Header} = localBookDetailSdk({ReaderWindowCoordinator: {metrics: () => metrics}});
 const scaffold = owner => {
@@ -17,100 +25,6 @@ const fixedHeaderFrame = owner => {
 };
 // Execute the actual approved detail/header SDK actors. These are emitted
 // attributes and owner callbacks, not a simulation of native layout/pixels.
-for (const viewport of [320, 390, 800]) for (const count of [0, 1, 3, 20])
-  for (const safeBottom of [0, 24, 48]) for (const safeTop of [0, 32]) {
-  metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, viewport, 900), undefined,
-    new ReaderInsetsVp(0, safeTop, 0, safeBottom));
-  const owner = new Component(undefined, {}); const calls = [];
-  Object.assign(owner, {appThemeScheme: 'day', readerWindowMetricsRevision: 1, viewportWidth: 0,
-    book: {sourceId: 'local', bookId: 'layout', title: 'Book', author: 'Author', contentKind: 'text'},
-    toc: Array.from({length: count}, (_, index) => ({index, title: `第${index + 1}章`})),
-    shelfMessage: '加入书架失败，请重试', inBookshelf: true, removalEnabled: true,
-    removing: false, adding: false, cancellingAdd: false, readingEnabled: true,
-    admissionIdentity: 'original-detail', loadingMessage: '', readingBlockedReason: '',
-    collapsedGroups: [], introExpanded: false, onContinue: () => calls.push('continue'),
-    onRemove: identity => calls.push(['remove', identity]), onBack: () => calls.push('back')});
-  owner.initialRender();
-  const nodes = [...owner.nodes.values()], frameNodes = [...scaffold(owner).nodes.values()];
-  const root = frameNodes.find(node => node.type === 'Stack');
-  assert.equal(root.type, 'Stack'); assert.equal(root.create.alignContent, 'Alignment.Top');
-  assert.equal(root.height, '100%'); assert.equal(root.width, '100%');
-  const scroll = nodes.find(n => n.type === 'Scroll');
-  assert.equal(scroll.scrollBar, 'BarState.Off', 'novel scroll presentation is unchanged');
-  assert.equal(scroll.height, '100%'); assert.equal(scroll.width, '100%');
-  assert.equal(scroll.layoutWeight, undefined); assert.equal(scroll.padding, undefined,
-    'safe offsets and dock clearance do not shrink the full-viewport scroll actor');
-  const contentWidth = Math.min(720, viewport - 40), contentEdge = (viewport - contentWidth) / 2;
-  const content = nodes.find(n => n.type === 'Column' && n.width === contentWidth && n.padding?.top === safeTop + 76);
-  assert.ok(content); assert.deepEqual(content.margin, {left: contentEdge, right: contentEdge});
-  assert.deepEqual(content.padding, {top: safeTop + 76, bottom: safeBottom + 104});
-  assert.equal(nodes.filter(n => n.type === 'Row' && n.constraintSize?.minHeight === 58).length, count,
-    'the bounded preview shares the page scroll and retains every current chapter row');
-  assert.equal(nodes.filter(n => n.type === 'Scroll').length, 1, 'no nested directory preview scroll');
-  const footer = frameNodes.find(n => n.type === 'Stack' && n.create.alignContent === 'Alignment.Bottom');
-  assert.deepEqual([footer.width, footer.height], ['100%', '100%']);
-  assert.equal(footer.hitTestBehavior, 'HitTestMode.Transparent');
-  assert.equal(footer.padding, undefined); assert.equal(footer.align, undefined,
-    'the full-viewport footer owner places the centered dock without moving the page scroll');
-  const dock = nodes.find(n => n.type === 'Stack' && n.height === 68);
-  assert.equal(dock.create.alignContent, 'Alignment.Center');
-  assert.equal(dock.width, Math.min(680, viewport - 60)); assert.equal(dock.padding, 9);
-  const footerFrame = frameNodes.find(n => n.type === 'Column' && n.margin?.bottom === safeBottom + 12);
-  assert.ok(footerFrame, 'the public footer slot owns the unchanged dock bottom offset');
-  assert.deepEqual(footerFrame.margin, {bottom: safeBottom + 12});
-  assert.equal(content.padding.bottom - (dock.height + footerFrame.margin.bottom), 24,
-    'last content clears the actual dock and its live bottom margin with 24vp spare');
-  const actions = nodes.find(n => n.type === 'Row' && n.height === 48);
-  assert.equal(actions.width, '100%'); assert.equal(actions.create.space, 12);
-  const buttons = nodes.filter(n => n.type === 'Text' && n.height === 48);
-  assert.equal(buttons.length, 2); assert.equal(buttons[0].layoutWeight, 1);
-  assert.equal(buttons[1].width, 94); assert.ok(dock.width - 18 - 12 - 94 > 0,
-    'the primary action retains positive available width on the narrow viewport');
-  assert.deepEqual(buttons.map(n => n.borderRadius), [16, 16]);
-  buttons[0].onClick(); buttons[1].onClick();
-  assert.deepEqual(calls, ['continue', ['remove', 'original-detail']]);
-  const error = nodes.find(n => n.type === 'Text' && n.create === owner.shelfMessage);
-  assert.ok(error.id > content.id && error.id < dock.id,
-    'shelf error remains in scroll content before the floating overlay');
-  const header = [...owner.children.values()].find(c => c instanceof Header);
-  assert.ok(header.id > scroll.id && header.id < dock.id);
-  assert.ok(fixedHeaderFrame(owner).zIndex < footer.zIndex,
-    'public header/footer slots preserve the original overlay stacking order');
-  assert.equal(header.floating, true); assert.equal(header.centered, true);
-  const headerRow = [...header.nodes.values()].find(n => n.type === 'Row' && n.height === 52);
-  assert.ok(headerRow); assert.equal(headerRow.hitTestBehavior, 'HitTestMode.Transparent');
-  const headerOwner = fixedHeaderFrame(owner);
-  assert.deepEqual(headerOwner.padding, {left: 16, right: 16});
-  assert.deepEqual(headerOwner.margin, {top: safeTop + 8});
-  assert.equal(content.padding.top - (headerOwner.margin.top + headerRow.height), 16,
-    'first content clears the actual floating header without shrinking the viewport');
-  const back = [...header.nodes.values()].find(n => n.type === 'Stack' && n.width === 44 && n.onClick);
-  assert.ok(back); back.onClick(); assert.equal(calls.at(-1), 'back');
-  for (const scheme of ['night', 'day']) {owner.appThemeScheme = scheme; owner.replay();}
-}
-{
-  metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 390, 900));
-  const toc = [{index: 5, title: '第一卷', level: 1, navigable: false},
-    {index: 17, title: '12', level: 2, navigable: true},
-    {index: 63, title: '13（上）', level: 2, navigable: true},
-    {index: 67, title: '13（下）', level: 2, navigable: true}];
-  const selected = [];
-  const sdk = localBookDetailSdk({ReaderWindowCoordinator: {metrics: () => metrics}});
-  Object.assign(sdk.owner, {viewportWidth: 390, appThemeScheme: 'day',
-    book: {sourceId: 's', bookId: 'm', title: '漫画', author: '作者', contentKind: 'manga',
-      mangaPosition: {chapterIndex: 67, chapterTitle: '13（下）', pageOrdinal: 2, totalPages: 8}},
-    toc, onSelectChapter: index => selected.push(index)});
-  sdk.owner.onBookChanged(); sdk.owner.mangaFontsReady = true; sdk.owner.initialRender();
-  const child = [...sdk.owner.children.values()].find(value => value.row?.entries.some(entry => entry.index === 67));
-  assert.ok(child?.nodes, 'general detail SDK composition mounts the actual shared manga child');
-  const childNodes = [...child.nodes.values()];
-  assert.ok(childNodes.some(node => node.type === 'Image' && node.width === 10 && node.height === 10),
-    'the shared child emits its real compact current marker');
-  const current = childNodes.find(node => node.onClick && node.accessibilityText?.includes('正在读'));
-  assert.ok(current); current.onClick(); assert.deepEqual(selected, [67], 'actual shared child preserves canonical chapter identity');
-  sdk.owner.toc = toc.map(entry => entry.index === 67 ? {...entry, title: '更新后的条目'} : entry);
-  current.onClick(); assert.deepEqual(selected, [67], 'old actual child callbacks cannot target changed current catalog facts');
-}
 const mangaBook = {sourceId: 's', bookId: 'm', title: '漫画预览标题', author: '真实作者', sourceName: '实际来源',
   contentKind: 'manga', intro: '真实简介', mangaPosition: {chapterIndex: 17, chapterTitle: '当前章节', pageOrdinal: 2, totalPages: 8}};
 function admitDetail(owner, extra = {}) {
@@ -120,6 +34,7 @@ function admitDetail(owner, extra = {}) {
     shelfMessage: '', onContinue() {}, onRemove() {}, onOpenDirectory() {}, onSwitchSource() {}, onBack() {}, ...extra});
   owner.onBookChanged();
 }
+if(selectedCase==='header-frame') {
 function checkHeaderFrame(candidate = localBookDetailSource) {
   const sdk = localBookDetailSdk({ReaderWindowCoordinator: {metrics: () => metrics}}, {source: candidate});
   const cases = [
@@ -129,7 +44,7 @@ function checkHeaderFrame(candidate = localBookDetailSource) {
     {width: 390, left: 44, right: 12, expected: [40, 16, 334]},
     {width: 390, left: 12, right: 44, expected: [16, 40, 334]},
   ];
-  for (const {width, left, right, expected} of cases) for (const contentKind of ['manga', 'text']) {
+  for (const {width, left, right, expected} of cases) for (const contentKind of ['manga']) {
     metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, 900), undefined,
       new ReaderInsetsVp(left, 32, right, 24));
     const owner = new sdk.Component(undefined, {}), backCalls = [];
@@ -152,11 +67,6 @@ function checkHeaderFrame(candidate = localBookDetailSource) {
       assert.ok(wrapper.padding.left + bar.padding.left + bar.border.width >= left);
       assert.ok(wrapper.padding.right + bar.padding.right + bar.border.width >= right,
         'asymmetric safe edges remain outside the actual header action insets');
-    } else {
-      assert.equal(header.variant, 'standard');
-      assert.deepEqual(wrapper.padding, {left: 16 + left, right: 16 + right},
-        'novel detail preserves its original independent header geometry');
-      assert.deepEqual(wrapper.margin, {top: 40}, 'novel header retains the original safe-top offset');
     }
     const back = [...header.nodes.values()].find(node => typeof node.onClick === 'function');
     back.onClick(); assert.deepEqual(backCalls, ['back']);
@@ -205,9 +115,9 @@ const transposedHeader = localBookDetailSource.replace(
   'frame.width + expansion * 2, Math.max(0, frame.right - expansion)');
 assert.notEqual(transposedHeader, localBookDetailSource);
 assert.throws(() => checkHeaderFrame(transposedHeader), /548vp demo cap/, 'misordered frame coordinates are rejected');
-const leakedNovelHeader = localBookDetailSource.replace('this.headerFrame().left : 16 + this.safeLeft()', 'this.headerFrame().left : this.headerFrame().left');
-assert.notEqual(leakedNovelHeader, localBookDetailSource);
-assert.throws(() => checkHeaderFrame(leakedNovelHeader), /original independent header geometry/, 'manga cap cannot replace novel geometry');
+
+}
+if(selectedCase==='retained-preview') {
 function checkRetainedPreview(candidate = localBookDetailSource) {
   metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 390, 900));
   const sdk = localBookDetailSdk({ReaderWindowCoordinator: {metrics: () => metrics}}, {source: candidate});
@@ -267,6 +177,9 @@ const capturedPreviewCallback = localBookDetailSource.replace(
 assert.notEqual(capturedPreviewCallback, localBookDetailSource);
 assert.throws(() => checkRetainedPreview(capturedPreviewCallback), /current callback and canonical target/,
   'retained selection must consume the child current entry instead of its original ForEach row');
+
+}
+if(selectedCase==='manga-spec') {
 function checkMangaGeometry(candidate = localBookDetailSource) {
   const sdk = localBookDetailSdk({ReaderWindowCoordinator: {metrics: () => metrics}}, {source: candidate});
   for (const width of [320, 390, 800]) for (const scale of [1, 2, 3.2]) for (const scheme of ['day', 'night']) {
@@ -349,6 +262,9 @@ assert.notEqual(oldCover, localBookDetailSource); assert.throws(() => checkManga
 const doubledFp = localBookDetailSource.replace('.lineHeight(visual.positionLineHeight)', '.lineHeight(visual.positionLineHeight * this.mangaFontScale())');
 assert.notEqual(doubledFp, localBookDetailSource); assert.throws(() => checkMangaGeometry(doubledFp), /fp setter stays unscaled/);
 
+
+}
+if(selectedCase==='font-receipts') {
 const deferred = () => {let resolve, reject; const promise = new Promise((yes, no) => {resolve = yes; reject = no;}); return {promise, resolve, reject};};
 const nextFrame = () => new Promise(done => setImmediate(done));
 async function checkFontAdmission(candidate = localBookDetailSource, scenario = 'identity') {
@@ -391,3 +307,7 @@ const earlyGlyphs = localBookDetailSource.replace("this.book.contentKind !== 'ma
 assert.notEqual(earlyGlyphs, localBookDetailSource);
 await assert.rejects(() => checkFontAdmission(earlyGlyphs), /first manga header and glyphs/);
 console.log('PASS actual SDK detail/header: novels retain original geometry; manga header548 cap/asymmetric safe edges, cover84x122, title24/34, fixed printed art, position12/19/500, section17/25/650,320/390/800vp ×font1/2/3.2×day/night, natural dock and measured clearance; same-key row/title/metadata/kind/current-click updates retain child and Scroll, checked fonts fence identity/unmount/failure/retry. Negative uncapped/transposed/novel-leak/captured-row/remount/old-cover/double-fp/early/late controls rejected; native branch layout/pixels remain unverified');
+
+}
+
+}

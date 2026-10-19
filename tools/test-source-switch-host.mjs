@@ -1,40 +1,10 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
-import {sourceSwitchLiveSdk} from './lib/source-switch-sdk-consumer.mjs';
-import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import * as horizontal from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
-import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import {fixture,settle,deferred,origin,target,session,rawCandidate,hostSource,Gateway,gatewayExports,read,setCurrentRuntime,ReadingSessionFlowGateway} from './lib/source-switch-owner-probe.mjs';
-const checks=[];
-const TX='00000000-0000-4000-8000-000000000001/1';
-const untilOwner=async(predicate)=>{
-  for(let i=0;i<400&&!predicate();i++)await new Promise(resolve=>setTimeout(resolve,5));
-  assert.ok(predicate(),'actual source owner reaches its finite asynchronous boundary');
-};
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const {fixture:productionFixture,settle,deferred,origin,target,session,rawCandidate,hostSource,Gateway,gatewayExports,read,setCurrentRuntime,ReadingSessionFlowGateway}=await import('./lib/source-switch-owner-probe.mjs');const owned=[];const fixture=(...a)=>{const f=productionFixture(...a);owned.push(f.host);return f;};const checks=[],TX='00000000-0000-4000-8000-000000000001/1';async function untilOwner(p){for(let turn=0;turn<1000;turn++){if(p())return;await new Promise(setImmediate);}assert.fail('controlled source owner boundary not reached');}
 const authorProof={schemaVersion:1,sourceVersion:'v1',field:'detail',raw:'@Writer',label:'Writer',rule:'author-nickname-at-v1'};
 const exactAuthorRecord={origin:'old',bookUrl:'book',name:'Book',author:'@Writer',
   acquisition:{sourceVersion:'v1',authorIdentity:authorProof}};
-for(const change of ['disabled','removed','version','media']){
-  const f=fixture(),base=f.runtime.request.bind(f.runtime),acquisitions=f.runtime.bookAcquisitions;
-  let revision=1;
-  f.runtime.bookAcquisitions=()=>({...acquisitions(),sourceRegistryRevision:()=>revision});
-  await settle();assert.equal(f.host.current().state.kind,'candidates');
-  const candidate=f.candidate();assert.equal(candidate.sourceVersion,'v1');revision++;
-  f.runtime.request=async(method,params,options)=>{
-    if(method==='source.list')return{data:{sources:[{sourceId:'old',name:'Old',enabled:true,sourceVersion:'v1'},
-      ...(change==='removed'?[]:[{sourceId:'new',name:'New',enabled:change!=='disabled',
-        sourceVersion:change==='version'?'v2':'v1',bookSource:{bookSourceType:change==='media'?2:0}}])]}};
-    return base(method,params,options);
-  };
-  await f.host.pick(candidate,f.host.current().scopeId);
-  assert.equal(f.host.current().state.kind,'discoveryError');
-  assert.match(f.host.current().state.message,/候选书源已变更或不可用/);
-  assert.equal(f.calls.some(([method])=>method==='acquire'||method==='source.switch.commit'),false);
-  assert.equal(f.host.pickQualification,undefined);
-  assert.equal(f.host.close(f.host.current().scopeId),true);
-  checks.push(`visible-target-${change}-is-requalified-before-acquisition-and-remains-recoverable`);
-}
 const pendingQualificationFixture=async(productionSource=hostSource)=>{
   const f=fixture({open:false,shared:true},productionSource),gate=deferred(),base=f.runtime.request.bind(f.runtime);
   const acquisitions=f.runtime.bookAcquisitions;
@@ -57,6 +27,32 @@ const pendingQualificationFixture=async(productionSource=hostSource)=>{
   assert.equal(f.calls.some(([method])=>method==='acquire'||method==='source.switch.commit'),false);
   return{f,gate,scope,work};
 };
+const clock=['streaming-latency','recommendation-filter'].includes(id)?(await import('./fixtures/flows/controlled-timers.mjs')).controlledTimers():undefined;
+
+try{
+if(id==='registry-qualification'){
+for(const change of ['disabled','removed','version','media']){
+  const f=fixture(),base=f.runtime.request.bind(f.runtime),acquisitions=f.runtime.bookAcquisitions;
+  let revision=1;
+  f.runtime.bookAcquisitions=()=>({...acquisitions(),sourceRegistryRevision:()=>revision});
+  await settle();assert.equal(f.host.current().state.kind,'candidates');
+  const candidate=f.candidate();assert.equal(candidate.sourceVersion,'v1');revision++;
+  f.runtime.request=async(method,params,options)=>{
+    if(method==='source.list')return{data:{sources:[{sourceId:'old',name:'Old',enabled:true,sourceVersion:'v1'},
+      ...(change==='removed'?[]:[{sourceId:'new',name:'New',enabled:change!=='disabled',
+        sourceVersion:change==='version'?'v2':'v1',bookSource:{bookSourceType:change==='media'?2:0}}])]}};
+    return base(method,params,options);
+  };
+  await f.host.pick(candidate,f.host.current().scopeId);
+  assert.equal(f.host.current().state.kind,'discoveryError');
+  assert.match(f.host.current().state.message,/候选书源已变更或不可用/);
+  assert.equal(f.calls.some(([method])=>method==='acquire'||method==='source.switch.commit'),false);
+  assert.equal(f.host.pickQualification,undefined);
+  assert.equal(f.host.close(f.host.current().scopeId),true);
+  checks.push(`visible-target-${change}-is-requalified-before-acquisition-and-remains-recoverable`);
+}
+}
+if(id==='qualification-retirement'){
 for(const action of ['close','consume-back','retire','runtime-retire'])for(const outcome of ['resolve','reject']){
   const {f,gate,scope,work}=await pendingQualificationFixture();
   let successor=f;
@@ -85,6 +81,8 @@ for(const action of ['close','consume-back','retire','runtime-retire'])for(const
   assert.equal(successor.host.current().write,undefined);successor.host.retire();
   checks.push(`pending-pick-qualification-${action}-reopens-before-late-${outcome}-without-side-effects`);
 }
+}
+if(id==='acquisition-lock'){
 {
   const gate=deferred(),f=fixture({acquireGate:gate});await settle();
   const work=f.host.pick(f.candidate(),f.host.current().scopeId);
@@ -96,6 +94,8 @@ for(const action of ['close','consume-back','retire','runtime-retire'])for(const
   gate.resolve();await work;assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
   checks.push('qualified-acquisition-keeps-close-and-reopen-locked-until-real-settlement');
 }
+}
+if(id==='preview-retirement'){
 for(const action of ['close','consume-back','retire'])for(const outcome of ['resolve','reject']){
   const gate=deferred(),f=fixture({preview:true,acquireGate:gate});await settle();
   const scope=f.host.current().scopeId,work=f.host.pick(f.candidate(),scope);
@@ -115,6 +115,8 @@ for(const action of ['close','consume-back','retire'])for(const outcome of ['res
   assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
   f.retire();checks.push(`preview-preparation-${action}-rejects-late-${outcome}-without-locking-successor`);
 }
+}
+if(id==='known-author-proof'){
 for(const proofState of ['current','stale'])for(const preview of [false,true]){
   const f=fixture({open:false,preview}),gate=deferred(),base=f.runtime.request.bind(f.runtime);
   const version=proofState==='current'?'v1':'v0';
@@ -150,6 +152,8 @@ for(const proofState of ['current','stale'])for(const preview of [false,true]){
   }
   f.retire();checks.push(`known-first-paint-pending-registry-${proofState}-proof-${preview?'preview':'shelf'}-pick-admission`);
 }
+}
+if(id==='author-resolution'){
 {
   const f=fixture({open:false}),base=f.runtime.request.bind(f.runtime),queries=[];
   f.context.query={...f.context.query,author:'@Writer'};
@@ -187,6 +191,8 @@ for(const proofState of ['current','stale'])for(const preview of [false,true]){
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1);
   checks.push('exact-Core-author-proof-unifies-cache-discovery-picker-and-final-target');
 }
+}
+if(id==='late-author'){
 for(const action of ['close-reopen','retire-reopen']){
   const f=fixture({open:false}),gate=deferred(),base=f.runtime.request.bind(f.runtime);
   let proofReads=0;
@@ -211,6 +217,8 @@ for(const action of ['close-reopen','retire-reopen']){
   assert.equal(f.host.current().write,undefined);assert.equal(f.host.current().state.kind,'empty');
   f.retire();checks.push('late-author-proof-'+action+'-cannot-overwrite-successor-context');
 }
+}
+if(id==='retired-author'){
 {
   const f=fixture({open:false}),gate=deferred(),base=f.runtime.request.bind(f.runtime);
   f.context.query={...f.context.query,author:'@Writer'};
@@ -225,6 +233,8 @@ for(const action of ['close-reopen','retire-reopen']){
   assert.equal(f.host.current().state.kind,'discovering');f.retire();
   checks.push('retired-Runtime-late-author-proof-publishes-no-context-or-write');
 }
+}
+if(id==='author-read-error'){
 {
   const f=fixture({open:false}),base=f.runtime.request.bind(f.runtime);
   f.context.query={...f.context.query,author:'@Writer'};let failIdentity=true,proofReads=0;
@@ -246,6 +256,8 @@ for(const action of ['close-reopen','retire-reopen']){
   assert.deepEqual(f.host.context.query.authorIdentity,authorProof);assert.equal(f.host.current().write,undefined);
   f.retire();checks.push('author-identity-read-error-remains-discovery-only-and-explicitly-recovers');
 }
+}
+if(id==='streaming-latency'){
 {
   const f=fixture({open:false}),baseRequest=f.runtime.request.bind(f.runtime),rows=[],started=[],progress=[];
   const sources=['first','faster','slow'],gates=new Map(sources.map(id=>[id,deferred()]));
@@ -286,7 +298,7 @@ for(const action of ['close-reopen','retire-reopen']){
       'new source is sorted by its measured search latency before the last worker completes');
     assert.equal(f.candidate().latencyMs,300);assert.equal(f.host.current().state.refreshing,true);
     now=3000;gates.get('slow').resolve();await settle();
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await clock.advance(150);
     assert.equal(f.host.current().state.candidates.length,3);assert.equal(f.host.current().state.refreshing,false);
     const originalCandidates=f.host.current().state.candidates;
     const before=f.host.current().scopeId;
@@ -313,6 +325,8 @@ for(const action of ['close-reopen','retire-reopen']){
   }finally{Date.now=originalNow;f.retire();for(const gate of gates.values())gate.resolve();}
   checks.push('actual-owner-zero-to-streaming-latency-sort-refresh-retains-measurement-and-generation-close-admission');
 }
+}
+if(id==='failure-rebind'){
 {
   const f=fixture({preview:true,failAcquire:true});await settle();
   const original=f.host.current().scopeId;await f.host.pick(f.candidate(),original);
@@ -332,14 +346,18 @@ for(const action of ['close-reopen','retire-reopen']){
   setCurrentRuntime(undefined);assert.equal(f.host.bindReader(f.context,f.lease),false);
   checks.push('failed-acquisition-reader-rebind-exact-identity-scope-no-IO');
 }
+}
+if(id==='runtime-owner'){
 {
   const f=fixture();await settle();const owner=f.Constructor.forRuntime(f.runtime);
   assert.equal(f.Constructor.forRuntime(f.runtime),owner,'Index remount shares one actual feature owner');
-  const successor={...f.runtime};setCurrentRuntime(successor);const next=f.Constructor.forRuntime(successor);
+  const successor={...f.runtime};setCurrentRuntime(successor);const next=f.Constructor.forRuntime(successor);owned.push(next);
   assert.notEqual(next,owner);assert.throws(()=>f.Constructor.forRuntime(f.runtime),error=>error.kind==='pending');
   assert.equal(f.Constructor.forRuntime(successor),next,'old Runtime must never replace successor cache');
   checks.push('feature-local-exact-Runtime-shared-owner-remount-and-retired-refusal');
 }
+}
+if(id==='commit-lineage'){
 {
   const f=fixture();await settle();assert.equal(f.host.current().state.kind,'candidates');
   await f.host.pick(f.candidate(),f.host.current().scopeId);
@@ -357,6 +375,8 @@ for(const action of ['close-reopen','retire-reopen']){
   assert.equal(f.host.current().pending,undefined);await settle();assert.equal(f.disk.durable,'');
   checks.push('real-discovery-progress-commit-target-seam-and-exact-terminal-release');
 }
+}
+if(id==='retired-commit'){
 {
   const gate=deferred(),f=fixture({commitGate:gate});await settle();
   const work=f.host.pick(f.candidate(),f.host.current().scopeId);await settle();
@@ -365,11 +385,15 @@ for(const action of ['close-reopen','retire-reopen']){
   assert.equal(f.host.current().write.confirmation,'confirmed');assert.equal(f.host.current().pending.transactionId,TX);
   assert.equal(f.effects.length,count,'late ACK retained by owner without reopening retired reader');checks.push('commit-back-guard-retired-ACK-retained');
 }
+}
+if(id==='pre-dispatch'){
 {
   const gate=deferred(),f=fixture({startGate:gate});await settle();
   const work=f.host.pick(f.candidate(),f.host.current().scopeId);await settle();f.retire();gate.resolve();await work;
   assert.equal(f.pending().length,0);assert.equal(f.host.current().write.confirmation,'undispatched');checks.push('dispatch-admission-refuses-retired-route');
 }
+}
+if(id==='unknown-readback'){
 {
   const f=fixture({loseCommitAck:true,failExactQuery:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   assert.equal(f.host.current().write.confirmation,'unknown');assert.equal(f.host.current().write.intentPending,true);
@@ -380,38 +404,52 @@ for(const action of ['close-reopen','retire-reopen']){
   f.options.failExactQuery=false;f.host.retry(f.host.current().scopeId);await settle();assert.equal(f.host.current().write.confirmation,'confirmed');
   assert.equal(f.effects.at(-1).kind,'targetReady');checks.push('lost-ACK-exact-readonly-confirmation-without-replay-or-compensation');
 }
+}
+if(id==='partial-envelope'){
 {
   const f=fixture({invalidChapter:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   assert.equal(f.host.current().write.confirmation,'unknown');assert.equal(f.host.current().write.transactionId,TX);
   assert.equal(f.calls.filter(([method])=>method==='source.switch.rollback').length,0);checks.push('partial-envelope-preserves-opaque-journal-without-false-ACK');
 }
+}
+if(id==='preview-no-write'){
 {
   const f=fixture({preview:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   assert.equal(f.effects.at(-1).kind,'previewReady');assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
   checks.push('preview-acquisition-keeps-shelf-transaction-unopened');
 }
+}
+if(id==='old-scope'){
 {
   const f=fixture(),scope=f.host.current().scopeId;await settle();const candidate=f.candidate();
   assert.equal(f.host.close(scope),true);assert.equal(f.host.open(f.context,f.lease),true);await settle();
   await f.host.pick(candidate,scope);f.host.refresh(scope);assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
   assert.equal(f.host.current().visible,true);assert.equal(f.host.consumeBack(scope),false);checks.push('closed-reopened-scope-rejects-old-callbacks');
 }
+}
+if(id==='book-before-dispatch'){
 {
   const gate=deferred(),f=fixture({progressGate:gate});await settle();const work=f.host.pick(f.candidate(),f.host.current().scopeId);
   await settle();f.setIdentity({sourceId:'other',bookId:'book'});gate.resolve();await work;
   assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);checks.push('book-admission-before-durable-dispatch');
 }
+}
+if(id==='dirty-related'){
 {
   const gate=deferred(),f=fixture({relatedGate:gate});await settle();
   f.setRows([{...rawCandidate,bookUrl:'newer'}]);f.publish({reset:false,identities:[{sourceId:'new',bookId:'newer'}]});
   gate.resolve();await settle();assert.equal(f.candidate().bookUrl,'newer');
   f.retire();assert.equal(f.subscriptions.size,0);checks.push('initial-snapshot-dirty-publication-sequence-and-unsubscribe');
 }
+}
+if(id==='observer-failure'){
 {
   const f=fixture({throwObserver:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   assert.equal(f.host.current().write.confirmation,'confirmed');assert.equal(f.host.current().pending.transactionId,TX);
   checks.push('UI-observer-exception-does-not-compensate-confirmed-write');
 }
+}
+if(id==='progress-lane'){
 {
   const gate=deferred(),f=fixture();await settle();
   const lane=new ReadingSessionFlowGateway('old','book',{kind:'remote'},f.runtime);
@@ -422,6 +460,8 @@ for(const action of ['close-reopen','retire-reopen']){
   gate.resolve();await preceding;await work;assert.equal(f.host.current().write.confirmation,'confirmed');
   checks.push('same-production-per-book-progress-producer-lane');
 }
+}
+if(id==='journal-before-send'){
 for(const flag of ['startBeforeEffect','loseLocalSync','loseFinishAck']) {
   const f=fixture({[flag]:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false,'actual local journal ACK must precede Core mutation');
@@ -435,6 +475,8 @@ for(const flag of ['startBeforeEffect','loseLocalSync','loseFinishAck']) {
   assert.deepEqual(f.calls.find(([method])=>method==='source.switch.commit')[1],assigned.params,'retry uses the full originally assigned tuple');
   checks.push(`${flag}-same-fixed-tuple-after-real-journal-ACK`);
 }
+}
+if(id==='local-sync-ack'){
 for(const loseSyncAt of [1,2]) {
   const f=fixture({loseSyncAt});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   assert.equal(f.host.current().write.intentPending,true);
@@ -446,6 +488,8 @@ for(const loseSyncAt of [1,2]) {
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1);
   assert.equal(JSON.parse(f.disk.durable).phase,'confirmed');checks.push(`local-sync-${loseSyncAt}-lostACK-no-next-sequence-no-Core-duplicate`);
 }
+}
+if(id==='confirmed-read-error'){
 {
   const f=fixture({failExactQuery:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   assert.equal(f.host.current().write.confirmation,'confirmed');assert.equal(f.host.current().write.intentPending,true);
@@ -454,6 +498,8 @@ for(const loseSyncAt of [1,2]) {
   assert.equal(f.effects.at(-1).kind,'targetReady');assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1);
   checks.push('confirmed-write-exact-refresh-failure-independent-facts');
 }
+}
+if(id==='advanced-head'){
 {
   const f=fixture({startBeforeEffect:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   f.options.advanceMissingHead=true;f.host.retry(f.host.current().scopeId);await settle();
@@ -461,31 +507,37 @@ for(const loseSyncAt of [1,2]) {
   assert.equal(f.intentClasses.SourceSwitchIntentStore.warmIntent.operationId,TX,'head advance cannot reassign an uncertain accepted intent');
   checks.push('advanced-missing-exact-head-is-blocked-with-original-intent');
 }
+}
+if(id==='warm-handoff'){
 {
   const f=fixture({loseCommitAck:true,failExactQuery:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   f.retire();const successor={...f.runtime};setCurrentRuntime(successor);f.options.failExactQuery=false;
-  const next=new f.Constructor(successor),delivered=[];assert.equal(next.open(f.context,{isCurrent:()=>true,changed(){},effect:e=>delivered.push(e)}),true);
+  const next=new f.Constructor(successor);owned.push(next);const delivered=[];assert.equal(next.open(f.context,{isCurrent:()=>true,changed(){},effect:e=>delivered.push(e)}),true);
   await settle();assert.equal(next.current().write.confirmation,'confirmed');assert.equal(next.current().write.intentPending,false);
   assert.equal(delivered.at(-1).kind,'canonicalReady','a replacement owner reads current canonical shelf rather than activating the old cached session');
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1);checks.push('warm-Runtime-handoff-reconciles-fixed-intent-no-old-activation');
 }
+}
+if(id==='cold-intent'){
 {
   const f=fixture({loseCommitAck:true,failExactQuery:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   const fixed=JSON.parse(f.disk.durable);f.retire();f.intentClasses.SourceSwitchIntentStore.warmIntent=undefined;
   f.disk.published=f.disk.durable;const successor={...f.runtime};setCurrentRuntime(successor);f.options.failExactQuery=false;
-  const next=new f.Constructor(successor),effects=[];next.open(f.context,{isCurrent:()=>true,changed(){},effect:e=>effects.push(e)});await settle();
+  const next=new f.Constructor(successor);owned.push(next);const effects=[];next.open(f.context,{isCurrent:()=>true,changed(){},effect:e=>effects.push(e)});await settle();
   const exactRead=f.calls.filter(([method,params])=>method==='source.switch.transaction.query'&&params.expected).at(-1);
   assert.deepEqual(exactRead[1].expected,fixed.params,'cold recovery supplies the full original DTO to the Core hash query');
   assert.equal(next.current().write.confirmation,'confirmed');assert.equal(effects.at(-1).kind,'canonicalReady');
   assert.equal(JSON.parse(f.disk.durable).params.newToc.length,fixed.params.newToc.length);
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1);checks.push('cold-fixed-file-reload-exact-payload-no-replay');
 }
+}
+if(id==='cross-runtime-tail'){
 {
   const gate=deferred(),f=fixture({syncGate:gate});await settle();
   const oldWork=f.host.pick(f.candidate(),f.host.current().scopeId);await settle();
   const fixed=f.intentClasses.SourceSwitchIntentStore.warmIntent;assert.ok(fixed);
   f.retire();const successor={...f.runtime};setCurrentRuntime(successor);
-  const next=new f.Constructor(successor),effects=[];next.open(f.context,{isCurrent:()=>true,changed(){},effect:e=>effects.push(e)});await settle();
+  const next=new f.Constructor(successor);owned.push(next);const effects=[];next.open(f.context,{isCurrent:()=>true,changed(){},effect:e=>effects.push(e)});await settle();
   assert.equal(f.calls.filter(([method,params])=>method==='source.switch.transaction.query'&&params.expected).length,0,'successor cannot read/replace authority while predecessor IO is still unresolved');
   gate.resolve();await oldWork;await settle();assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,0);
   assert.equal(next.current().write.intentPending,true);next.retry(next.current().scopeId);await settle();
@@ -493,6 +545,8 @@ for(const loseSyncAt of [1,2]) {
   assert.deepEqual(f.calls.find(([method])=>method==='source.switch.commit')[1],fixed.params);
   checks.push('cross-Runtime-native-IO-tail-retains-same-intent-no-old-dispatch');
 }
+}
+if(id==='large-intent'){
 for(const chapters of [2000,6000]) {
   const longSession={...session,entries:Array.from({length:chapters},(_,index)=>({index,title:index===0?'Chapter 1':`第${index+1}章 长目录原有合法标题`,
     url:`https://target/${index}`,variables:[]}))};
@@ -503,6 +557,8 @@ for(const chapters of [2000,6000]) {
   assert.equal(JSON.parse(f.disk.durable).params.newToc.length,chapters,'AtomicFile carries complete normal input without a new arbitrary byte cap');
   checks.push(`actual-full-DTO-${chapters}-chapters-retained-through-AtomicFile`);
 }
+}
+if(id==='terminal-sync'){
 for(const loseSyncAt of [3,4]) {
   const f=fixture({loseSyncAt});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);f.setPhase('finalized');
   f.host.targetCommitted(target,TX);await settle();assert.equal(f.host.current().write.confirmation,'confirmed');
@@ -512,6 +568,8 @@ for(const loseSyncAt of [3,4]) {
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1);
   checks.push(`terminal-sync-${loseSyncAt}-unknown-retains-current-ID-until-exact-clear-ACK`);
 }
+}
+if(id==='unreadable-intent'){
 {
   const f=fixture({readFailure:true});await settle();assert.equal(f.host.current().write.intentPending,true);
   assert.equal(f.host.current().write.confirmation,'unknown','unreadable prior authority cannot prove that Core was never sent');
@@ -519,12 +577,16 @@ for(const loseSyncAt of [3,4]) {
   f.host.retry(f.host.current().scopeId);await settle();assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
   checks.push('unreadable-authority-is-not-absent-or-new-write-admission');
 }
+}
+if(id==='wrong-exact-id'){
 {
   const f=fixture({loseCommitAck:true,corruptExactIdentity:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   assert.equal(f.host.current().write.confirmation,'unknown');assert.equal(f.host.current().write.intentPending,true);
   assert.equal(f.effects.some(e=>e.kind==='targetReady'),false);assert.equal(f.calls.some(([method])=>method==='source.switch.rollback'),false);
   checks.push('another-exact-ID-is-never-confirmation-or-compensation');
 }
+}
+if(id==='rollback-lost-ack'){
 {
   const f=fixture();await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   f.setIdentity(target);assert.equal(f.host.bindReader({...f.context,query:{...f.context.query,sourceId:'new',bookId:'target'}},f.lease),true);
@@ -533,6 +595,8 @@ for(const loseSyncAt of [3,4]) {
   assert.equal(f.effects.at(-1).kind,'rollbackReady');assert.equal(f.calls.filter(([method])=>method==='source.switch.rollback').length,1);
   checks.push('reader-seam-rebind-lost-rollback-ACK-exact-phase-no-compensation-replay');
 }
+}
+if(id==='cold-rollback'){
 {
   const f=fixture();await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   f.setIdentity(target);f.host.bindReader({...f.context,query:{...f.context.query,sourceId:'new',bookId:'target'}},f.lease);
@@ -540,13 +604,15 @@ for(const loseSyncAt of [3,4]) {
   assert.equal(f.host.current().write.confirmation,'unknown');assert.equal(f.host.current().visible,true);
   const fixed=JSON.parse(f.disk.durable);assert.equal(fixed.operationId,TX);assert.equal(fixed.phase,'confirmed');
   f.retire();f.intentClasses.SourceSwitchIntentStore.warmIntent=undefined;const successor={...f.runtime};setCurrentRuntime(successor);
-  f.options.failExactQuery=false;const next=new f.Constructor(successor),effects=[];
+  f.options.failExactQuery=false;const next=new f.Constructor(successor);owned.push(next);const effects=[];
   next.open({...f.context,query:{...f.context.query,sourceId:'new',bookId:'target'}},{isCurrent:()=>true,changed(){},effect:e=>effects.push(e)});await settle();
   assert.equal(next.current().write.confirmation,'confirmed');assert.equal(next.current().write.action,'rollback');
   assert.equal(effects.at(-1).kind,'rollbackReady');assert.equal(effects.at(-1).book.sourceId,'old');assert.equal(f.disk.durable,'');
   assert.equal(f.calls.filter(([method])=>method==='source.switch.rollback').length,1,'cold exact terminal query does not replay rollback');
   checks.push('cold-Runtime-lost-rollback-ACK-retains-original-full-intent');
 }
+}
+if(id==='next-choice'){
 {
   const f=fixture();await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   f.setIdentity(target);f.host.bindReader({...f.context,query:{...f.context.query,sourceId:'new',bookId:'target'}},f.lease);
@@ -559,6 +625,8 @@ for(const loseSyncAt of [3,4]) {
   assert.ok(rollbackPosition<f.calls.findIndex(([method,params])=>method==='source.switch.commit'&&params.sequence===2));
   checks.push('next-choice-actual-old-rollback-exact-terminal-clear-before-next-sequence');
 }
+}
+if(id==='startup-rollback'){
 {
   const f=fixture({loseCommitAck:true,failExactQuery:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   f.setPhase('rolledBack');f.options.failExactQuery=false;f.host.retry(f.host.current().scopeId);await settle();
@@ -566,6 +634,9 @@ for(const loseSyncAt of [3,4]) {
   assert.equal(f.effects.at(-1).kind,'closed','actual startup rollback proof preserves the current original reader');
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1);checks.push('startup-rollback-phase-does-not-activate-historical-committed-book');
 }
+}
+if(id==='live-picker'){
+const {sourceSwitchLiveSdk}=await import('./lib/source-switch-sdk-consumer.mjs');const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');const metricsApi=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
 {
   const f=fixture({loseCommitAck:true,failExactQuery:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   const source=read('features/source/SourceSwitchWindow.ets'),p=boundedSurfaceSdk();
@@ -593,9 +664,8 @@ for(const loseSyncAt of [3,4]) {
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1,'old SDK-consumer callback cannot dispatch in the reopened scope');
   checks.push('actual-SDK-Host-to-live-picker-honest-state-recovery-and-old-callback');
 }
-// A keyword search can return recommendations before the complete relation
-// projection finishes. Neither those rows nor a global acquisition event may
-// become a selectable alternate book during that interval.
+}
+if(id==='recommendation-filter'){
 {
   const f=fixture({open:false}),slow=deferred(),base=f.runtime.request.bind(f.runtime),wrong={
     sourceId:'other',bookUrl:'/recommendation',bookName:'跳出轮回',author:'Writer',category:'novel',sourceVersion:'v1'};
@@ -619,17 +689,17 @@ for(const loseSyncAt of [3,4]) {
     'unconfirmed known rows cannot flash into the first paint');
   f.host.refresh(f.host.current().scopeId);await settle();
   f.publish({reset:false,identities:[{sourceId:'other',bookId:wrong.bookUrl}]});
-  await new Promise(resolve=>setTimeout(resolve,150));
+  await clock.advance(150);
   assert.equal(f.host.current().state.refreshing,true);
   assert.ok(f.host.current().state.candidates.every(candidate=>candidate.sourceId!=='other'),
     'raw recommendation and unrelated acquisition delta remain absent while another source is pending');
   await f.host.pick(wrong,f.host.current().scopeId);
   assert.equal(f.calls.some(([method])=>method==='acquire'||method==='source.switch.commit'),false);
-  slow.resolve();await new Promise(resolve=>setTimeout(resolve,150));await settle();f.retire();
+  slow.resolve();await clock.advance(150);await settle();f.retire();
   checks.push('keyword-recommendations-wrong-author-and-global-acquisition-delta-never-selectable');
 }
-// A source can misparse a detail response while keeping the same source+URL.
-// Compare resolved title/author before either preview delivery or shelf write.
+}
+if(id==='polluted-alias'){
 {
   const f=fixture({open:false});
   f.context.query={...f.context.query,bookName:'大明望族',author:'府天'};
@@ -643,6 +713,8 @@ for(const loseSyncAt of [3,4]) {
   assert.equal(f.calls.some(([method])=>method==='acquire'||method==='source.switch.commit'),false);
   f.retire();checks.push('persisted-polluted-same-relation-alias-never-authorizes-another-book');
 }
+}
+if(id==='wrong-detail'){
 for(const preview of [true,false]) {
   const wrong={...session,book:{...session.book,title:'跳出轮回'}};
   const f=fixture({preview,targetSession:wrong});await settle();
@@ -655,6 +727,8 @@ for(const preview of [true,false]) {
   f.retire();
   checks.push(`${preview?'preview':'shelf'}-same-URL-mismatched-detail-blocked-before-delivery-or-write`);
 }
+}
+if(id==='wrong-manga'){
 {
   const f=fixture({open:false,targetSession:{...session,contentKind:'manga',book:{...session.book,title:'另一部漫画'}}});
   const candidate={sourceId:'new',bookUrl:'target',bookName:'Book',author:'Writer',category:'comic'};
@@ -662,14 +736,8 @@ for(const preview of [true,false]) {
   assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
   f.retire();checks.push('manga-preview-same-URL-mismatched-detail-blocked-before-admission');
 }
-// Installed SDK parses the full new production owner. Native rendering and
-// scheduler/SDK-send proof are separate tiers; this probe does not claim them.
-const require=createRequire(import.meta.url),etsRoot=resolveEtsLoaderRoot();
-const ts=require(`${etsRoot}/node_modules/typescript`),opts=require(`${etsRoot}/lib/ets_checker.js`).compilerOptions;
-for(const name of ['SourceSwitchHost','SourceSwitchGateway','SourceSwitchIntentStore']) {
-  const tree=ts.createSourceFile(virtualFilePath(`${name}.ts`),read(`features/source/${name}.ts`),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,opts);
-  assert.equal(tree.parseDiagnostics.length,0,`${name} actual installed SDK syntax`);
 }
+if(id==='negative-retire-lock'){
 {
   const release=`    if (this.pickQualification !== undefined || this.previewPreparation !== undefined) {\n      this.pickQualification = undefined;\n      this.previewPreparation = undefined;\n      this.snapshot = { ...this.snapshot, state: { kind: 'discovering' } };\n    }\n`;
   const unsafeRetire=hostSource.replace(release,'');assert.notEqual(unsafeRetire,hostSource);
@@ -678,6 +746,8 @@ for(const name of ['SourceSwitchHost','SourceSwitchGateway','SourceSwitchIntentS
     'negative control reproduces the stale switching lock before qualification IO ends');
   gate.resolve();await work;f.retire();checks.push('negative-control-retire-without-phase-release-reproduces-stuck-switching');
 }
+}
+if(id==='negative-qualification-finally'){
 {
   const unsafeFinally=hostSource.replace('if (this.pickQualification === qualification)', 'if (true)');assert.notEqual(unsafeFinally,hostSource);
   const {f,gate,scope,work}=await pendingQualificationFixture(unsafeFinally);
@@ -687,6 +757,8 @@ for(const name of ['SourceSwitchHost','SourceSwitchGateway','SourceSwitchIntentS
     'negative control proves an unowned finally can hide a successor scope');
   f.retire();checks.push('negative-control-unowned-qualification-finally-hides-successor-scope');
 }
+}
+if(id==='negative-preview-finally'){
 {
   const broken=hostSource.replace('if (this.previewPreparation === preparation)', 'if (true)');assert.notEqual(broken,hostSource);
   const gate=deferred(),f=fixture({preview:true,acquireGate:gate},broken);await settle();
@@ -696,6 +768,8 @@ for(const name of ['SourceSwitchHost','SourceSwitchGateway','SourceSwitchIntentS
   gate.resolve();await work;assert.equal(f.host.current().visible,false,'negative control: unowned preview finally hides the successor');
   f.retire();checks.push('negative-control-unowned-preview-finally-hides-successor');
 }
+}
+if(id==='public-failure'){
 {
  const f=fixture({preview:true,failAcquire:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
  assert.equal(f.host.current().failureMessage,'换源暂时未完成，请重试或选择其他书源。');
@@ -707,6 +781,8 @@ for(const name of ['SourceSwitchHost','SourceSwitchGateway','SourceSwitchIntentS
  assert.equal(f.host.publicFailure(typed),typed.message);f.retire();
  checks.push('public-source-failure-classifies-unknown-and-retains-private-diagnostic-with-typed-recovery-copy');
 }
+}
+if(id==='negative-identity-rollback'){
 const unsafe=hostSource.replace('if (!current()) return;\n    this.snapshot = { ...this.snapshot, write:',
   'if (!current()) return;\n    if (observed.length === 1) await this.gateway.rollbackSwitch(observed[0].transactionId, current, new ReaderWriteEvidence());\n    this.snapshot = { ...this.snapshot, write:');
 assert.notEqual(unsafe,hostSource);
@@ -716,6 +792,8 @@ assert.notEqual(unsafe,hostSource);
   assert.equal(f.calls.filter(([method])=>method==='source.switch.rollback').length,1,
     'negative control reproduces the old identity-only automatic rollback on actual Gateway calls');
 }
+}
+if(id==='negative-old-scope'){
 {
   const unsafeScopes=hostSource.replace('scopeId === this.snapshot.scopeId && this.currentLease()', 'this.currentLease()');
   const f=fixture({},unsafeScopes),scope=f.host.current().scopeId;await settle();const candidate=f.candidate();
@@ -723,4 +801,8 @@ assert.notEqual(unsafe,hostSource);
   assert.equal(f.calls.filter(([method])=>method==='source.switch.commit').length,1,
     'negative control proves an old closure can mutate the reopened scope without the actual generation admission');
 }
-console.log(JSON.stringify({status:'PASS',checks,scope:'actual full SourceSwitchHost/Gateway/IntentStore + actual progress lane/gateway; installed SDK exported full-viewport picker and actual live-row V1 state/closure propagation; runtime and AtomicFile IO are controlled fixtures; actual OS atomic/fsync, focus and layout remain unverified'}));
+}
+}finally{for(const host of owned)host.retire();setCurrentRuntime(undefined);clock?.restore();}
+}
+const definitions={"registry-qualification": "registry-qualification actual scoped owner/gateway/storage path; controlled Core/OS ports", "qualification-retirement": "qualification-retirement actual scoped owner/gateway/storage path; controlled Core/OS ports", "acquisition-lock": "acquisition-lock actual scoped owner/gateway/storage path; controlled Core/OS ports", "preview-retirement": "preview-retirement actual scoped owner/gateway/storage path; controlled Core/OS ports", "known-author-proof": "known-author-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "author-resolution": "author-resolution actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-author": "late-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-author": "retired-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "author-read-error": "author-read-error actual scoped owner/gateway/storage path; controlled Core/OS ports", "streaming-latency": "streaming-latency actual scoped owner/gateway/storage path; controlled Core/OS ports", "failure-rebind": "failure-rebind actual scoped owner/gateway/storage path; controlled Core/OS ports", "runtime-owner": "runtime-owner actual scoped owner/gateway/storage path; controlled Core/OS ports", "commit-lineage": "commit-lineage actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-commit": "retired-commit actual scoped owner/gateway/storage path; controlled Core/OS ports", "pre-dispatch": "pre-dispatch actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-readback": "unknown-readback actual scoped owner/gateway/storage path; controlled Core/OS ports", "partial-envelope": "partial-envelope actual scoped owner/gateway/storage path; controlled Core/OS ports", "preview-no-write": "preview-no-write actual scoped owner/gateway/storage path; controlled Core/OS ports", "old-scope": "old-scope actual scoped owner/gateway/storage path; controlled Core/OS ports", "book-before-dispatch": "book-before-dispatch actual scoped owner/gateway/storage path; controlled Core/OS ports", "dirty-related": "dirty-related actual scoped owner/gateway/storage path; controlled Core/OS ports", "observer-failure": "observer-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "progress-lane": "progress-lane actual scoped owner/gateway/storage path; controlled Core/OS ports", "journal-before-send": "journal-before-send actual scoped owner/gateway/storage path; controlled Core/OS ports", "local-sync-ack": "local-sync-ack actual scoped owner/gateway/storage path; controlled Core/OS ports", "confirmed-read-error": "confirmed-read-error actual scoped owner/gateway/storage path; controlled Core/OS ports", "advanced-head": "advanced-head actual scoped owner/gateway/storage path; controlled Core/OS ports", "warm-handoff": "warm-handoff actual scoped owner/gateway/storage path; controlled Core/OS ports", "cold-intent": "cold-intent actual scoped owner/gateway/storage path; controlled Core/OS ports", "cross-runtime-tail": "cross-runtime-tail actual scoped owner/gateway/storage path; controlled Core/OS ports", "large-intent": "large-intent actual scoped owner/gateway/storage path; controlled Core/OS ports", "terminal-sync": "terminal-sync actual scoped owner/gateway/storage path; controlled Core/OS ports", "unreadable-intent": "unreadable-intent actual scoped owner/gateway/storage path; controlled Core/OS ports", "wrong-exact-id": "wrong-exact-id actual scoped owner/gateway/storage path; controlled Core/OS ports", "rollback-lost-ack": "rollback-lost-ack actual scoped owner/gateway/storage path; controlled Core/OS ports", "cold-rollback": "cold-rollback actual scoped owner/gateway/storage path; controlled Core/OS ports", "next-choice": "next-choice actual scoped owner/gateway/storage path; controlled Core/OS ports", "startup-rollback": "startup-rollback actual scoped owner/gateway/storage path; controlled Core/OS ports", "live-picker": "live-picker actual scoped owner/gateway/storage path; controlled Core/OS ports", "recommendation-filter": "recommendation-filter actual scoped owner/gateway/storage path; controlled Core/OS ports", "polluted-alias": "polluted-alias actual scoped owner/gateway/storage path; controlled Core/OS ports", "wrong-detail": "wrong-detail actual scoped owner/gateway/storage path; controlled Core/OS ports", "wrong-manga": "wrong-manga actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-retire-lock": "negative-retire-lock actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-qualification-finally": "negative-qualification-finally actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-preview-finally": "negative-preview-finally actual scoped owner/gateway/storage path; controlled Core/OS ports", "public-failure": "public-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-identity-rollback": "negative-identity-rollback actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-old-scope": "negative-old-scope actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

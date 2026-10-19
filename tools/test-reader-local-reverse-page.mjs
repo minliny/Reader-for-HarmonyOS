@@ -1,13 +1,16 @@
-import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { stripTypeScriptTypes } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReadingSurfaceLayoutMap, readingChapterLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
-import { ReadingPaginationIndex, ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
-import { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes } from '../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts';
-import * as style from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
+const selected=selectContractCases({'reverse-assembly':{description:'Actual bounded reverse page metrics, Unicode, exact adjacency, partial edges and stale measurement',resources:[]},'native-title-ownership':{description:'Actual measurement clear/take ownership for title/body plus old-call disposal negative',resources:[]},'retained-lifecycle':{description:'Actual retain/restore and both queued neighbours preserve original request and committed progress',resources:[]}});
+async function run(id){
+const {default:assert}=await import('node:assert/strict');
+const { mkdtempSync, readFileSync, rmSync, writeFileSync }=await import('node:fs');
+const { tmpdir }=await import('node:os');
+const { join }=await import('node:path');
+const { stripTypeScriptTypes }=await import('node:module');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { ReadingSurfaceLayoutMap, readingChapterLayoutMap }=await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+const { ReadingPaginationIndex, ReadingPaginationPrefix }=await import('../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts');
+const { ReadingEntryHandoff, estimateRetainedRemoteSessionBytes }=await import('../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts');
+const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
 
 // Execute production page assembly against explicit native metric receipts.
 // These fixtures prove admission/ownership, not platform shaping or pixels.
@@ -120,6 +123,7 @@ function create(paragraphs, endScalar, { capacity = 25, gap = 3, titleHeight = 0
   });
   return o;
 }
+if(id==='reverse-assembly'){
 
 {
   const o = create([{ text: '远前文', lines: [[3, 90]] }, { text: '甲乙丙丁', lines: [[1, 9], [1, 9], [1, 9], [1, 9]] },
@@ -256,6 +260,8 @@ function create(paragraphs, endScalar, { capacity = 25, gap = 3, titleHeight = 0
   assert.equal(o.previousChapter, 9, 'actual chapter head crosses to previous EOF even without canonical page facts');
 }
 
+
+}else if(id==='native-title-ownership'){
 // Native node allocation is the platform boundary; measure/clear/take below
 // execute the complete production owner with its actual node/controller lists.
 const ownershipSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderNativeTextMeasurement.ets', import.meta.url), 'utf8');
@@ -357,6 +363,8 @@ for (const firstLineFits of [true, false]) {
 console.log('PASS reverse title ownership: real native measurement clear/take, head fit/reject, retained title and old-call negative control');
 console.log('PASS production reverse page: deep/tail bounded native metrics, Unicode, title/gaps, exact adjacency, partial edges and cancellation');
 
+
+}else{
 // The regression requires the combined lifecycle: a measured current page is
 // retained, restored into a new reader, then both neighbours are prepared.
 // Use the real retain/restore/queue and page assembly methods; only native line
@@ -494,3 +502,7 @@ for (const residentStart of [0, 100]) for (const direction of ['next', 'previous
   assert.equal(consumer.visiblePage, page);
 }
 console.log('PASS retained page integration: real measurement/retain/restore/queued neighbours, both orders, partial windows, CRLF/Emoji and mid-line request, canonical completion, cancellation, constant-size ownership and unchanged progress');
+
+}
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

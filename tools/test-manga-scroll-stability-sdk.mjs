@@ -247,28 +247,28 @@ check('real layout change before the visible page must restore the shifted row i
 });
 timers.length = 0; frames.length = 0; owner.restoringAnchor = false;
 
-// Keep the already fixed error ownership semantics in this new fixture:
-// moving the viewport still makes the retained failure's real retry reachable.
+// Local failed tiles retain independent icon cells. Moving the viewport no
+// longer transfers a shared retry card between otherwise unchanged rows.
 lazy.visible = [0, 1]; lazy.reconcile(); nativeFirst = 0; nativeHeight = 375;
 owner.controller.displayedOrdinal = 0;
 tiles.set('0:0', { error: 'READING_IMAGE_HTTP_FAILED' });
 tiles.set('0:1', { error: 'READING_IMAGE_HTTP_FAILED' });
 owner.first = 0; owner.last = 0; owner.publish();
-assert.ok(lazy.rows.get(0).nodes.some(node => node.type === 'Button'));
-assert.ok(!lazy.rows.get(1).nodes.some(node => node.type === 'Button'));
-const failedText = lazy.rows.get(0).nodes.find(node => node.type === 'Text');
+const unavailable=nodes=>nodes.find(node=>node.type==='Image'&&String(node.create).startsWith('app.media.reader_image_unavailable')&&node.width===32&&node.height===32);
+assert.ok(unavailable(lazy.rows.get(0).nodes));assert.ok(unavailable(lazy.rows.get(1).nodes));
+assert.equal(lazy.rows.get(0).nodes.concat(lazy.rows.get(1).nodes).some(node=>node.type==='Button'),false);
+const failedIcon = unavailable(lazy.rows.get(0).nodes);
 const themeMounts = lazy.mounts, themeChanges = lazy.changes;
-owner.errorColor = '#123456'; properties.flush();
-check('retained failed text still updates its theme color through the real SDK dependency', () => {
-  assert.equal(lazy.rows.get(0).nodes.find(node => node.type === 'Text').id, failedText.id);
-  assert.equal(failedText.fontColor, '#123456');
+owner.backgroundPreference='ink';properties.flush();
+check('retained failed icon updates its approved day/night asset through the real SDK dependency', () => {
+  assert.equal(unavailable(lazy.rows.get(0).nodes).id, failedIcon.id);
+  assert.equal(failedIcon.create,'app.media.reader_image_unavailable_theme_night');
   assert.equal(lazy.mounts, themeMounts); assert.equal(lazy.changes, themeChanges);
 });
 const failureKey = lazy.rows.get(1).key;
 owner.first = 1; owner.last = 1; owner.publish();
-assert.notEqual(lazy.rows.get(1).key, failureKey);
-assert.ok(lazy.rows.get(1).nodes.some(node => node.type === 'Button'));
-console.log('PASS error card ownership still transfers on viewport movement; tile eviction remains Controller-owned');
+assert.equal(lazy.rows.get(1).key, failureKey);assert.ok(unavailable(lazy.rows.get(1).nodes));
+console.log('PASS failure icon cells remain stable on viewport movement; tile eviction remains Controller-owned');
 const retryChanges = lazy.changes;
 tiles.set('0:1', { image: { fileUri: 'file://stable-1-retried.png', revision: 'retried' } }); owner.publish();
 check('a retried error row still publishes its ready Image', () => {
@@ -304,8 +304,8 @@ check('horizontal selected page still restores for its own real geometry change'
 });
 
 // An all-failed placeholder window has no geometry and requests no tiles.
-// Moving its viewport must still hand the retry card to the mounted new row;
-// neither setVisible nor setTileWindow emits any Controller publication here.
+// Every logical image already has its local terminal icon; a viewport move
+// requests metadata without transferring a shared message/action actor.
 geometry.clear(); tiles.clear(); pages.clear();
 pages.set(0, { ordinal: 0, status: 'failed', error: 'READING_IMAGE_HTTP_FAILED' });
 pages.set(1, { ordinal: 1, status: 'failed', error: 'READING_IMAGE_HTTP_FAILED' });
@@ -313,19 +313,18 @@ owner.horizontal = false; owner.controller.displayedOrdinal = 0;
 owner.first = 0; owner.last = 1; owner.viewportRangeObserved = false;
 owner.publish(); lazy.visible = [0, 1]; lazy.reconcile();
 owner.restoringAnchor = false; timers.length = 0; frames.length = 0;
-assert.ok(lazy.rows.get(0).nodes.some(node => node.type === 'Button'));
-assert.ok(!lazy.rows.get(1).nodes.some(node => node.type === 'Button'));
+assert.ok(unavailable(lazy.rows.get(0).nodes));assert.ok(unavailable(lazy.rows.get(1).nodes));
 const placeholderKey = lazy.rows.get(1).key, notified = [];
 const realChange = lazy.onDataChange.bind(lazy);
 lazy.onDataChange = index => { notified.push(index); realChange(index); };
 list.onScrollIndex(1, 1); await tick();
-check('failed unknown-geometry viewport transfers retry ownership without a Controller publication', () => {
+check('failed unknown-geometry viewport retains independent icon cells without a Controller publication', () => {
   assert.deepEqual(metadataWindows.at(-1), [1], 'only the actual unknown visible logical page is demanded');
-  assert.equal(owner.error, '', 'terminal row failure must retain its retry without a duplicate global error');
+  assert.equal(owner.error, '', 'terminal row failure retains its local icon without a duplicate global error');
   assert.deepEqual(windows.at(-1), [], 'failed unknown pages have no regional tile work');
-  assert.ok(notified.includes(1), 'the existing mounted blank row must receive its presentation change');
-  assert.notEqual(lazy.rows.get(1).key, placeholderKey);
-  assert.ok(lazy.rows.get(1).nodes.some(node => node.type === 'Button'));
+  assert.equal(lazy.rows.get(1).key, placeholderKey,'scrolling alone cannot recreate an already-painted local icon');
+  assert.ok(unavailable(lazy.rows.get(1).nodes));
+  assert.equal(lazy.rows.get(1).nodes.some(node=>node.type==='Button'),false);
 });
 const failedChanges = lazy.changes, failedWindows = windows.length, failedMetadataWindows = metadataWindows.length;
 list.onScrollIndex(1, 1); await tick();

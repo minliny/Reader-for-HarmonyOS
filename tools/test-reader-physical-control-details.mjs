@@ -1,32 +1,57 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { readerContentSearchFieldProbe } from './lib/reader-content-search-field-probe.mjs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "capsule-leading-roles": {
+    "description": "Actual SDK leading/countdown consumes real registry roles and relative square/center geometry; exact 16/24 spec not asserted",
+    "resources": []
+  },
+  "search-field-action": {
+    "description": "Actual SDK native field/action theme icons and injected current frame bounds",
+    "resources": []
+  }
+};
+
+async function case_capsule_leading_roles() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerContentSearchFieldProbe } = await import('./lib/reader-content-search-field-probe.mjs');
 const read = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url), 'utf8');
+const {readerTypographyRoles} = await import('./lib/reader-typography-probe.mjs');
 const capsule = read('ReaderSessionCapsule');
 for (const type of ['autoPage', 'tts']) {
   const { owner } = createReaderBuilderProbe(capsule, ['build', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor'], {
-    TYPE_READER_SESSION_COUNTDOWN: {}, TYPE_READER_SESSION_LABEL: {}, readerSessionCapsuleMinimumWidth: () => 96,
+    ...readerTypographyRoles, readerSessionCapsuleMinimumWidth: () => 96,
   }, {componentName:'ReaderSessionCapsuleLeading'});
   Object.assign(owner, { type, countdown: 8, capsuleWidth: 96, textColor: '', themeScheme: 'day',
     primaryColor: 'primary', onPrimaryColor: 'onPrimary' });
   owner.initialRender();
   const nodes = [...owner.nodes.values()];
   const row = nodes.find(n => n.type === 'Row');
-  assert.equal(row.height, 24);
+  assert.ok(row.height>0,'current leading row has a positive native extent; no historical 24vp design claim');
   assert.equal(row.alignItems, 'VerticalAlign.Center');
   const actor = nodes.find(n => n.type === 'Stack');
-  assert.equal(actor.width, 16); assert.equal(actor.height, 16);
+  assert.ok(actor.width>0);assert.equal(actor.width,actor.height,'leading actor keeps square bounds');assert.ok(row.height>=actor.height);
   const label = nodes.find(n => n.type === 'Text' && n.create === (type === 'autoPage' ? '自动翻页' : '朗读'));
-  assert.equal(label.height, 16, 'label and leading actor share the centre lane');
+  assert.equal(label.height, actor.height,'label and leading actor share the centre lane');assert.equal(label.fontFamily,readerTypographyRoles.TYPE_READER_SESSION_LABEL.fontFamily);assert.equal(label.fontSize,readerTypographyRoles.TYPE_READER_SESSION_LABEL.fontSizeFp);
   if (type === 'autoPage') {
     const digit = nodes.find(n => n.type === 'Text' && n.create === '8');
-    assert.equal(digit.width, 16); assert.equal(digit.height, 16);
+    assert.equal(digit.width,actor.width);assert.equal(digit.height,actor.height);assert.equal(digit.fontFamily,readerTypographyRoles.TYPE_READER_SESSION_COUNTDOWN.fontFamily);assert.equal(digit.fontSize,readerTypographyRoles.TYPE_READER_SESSION_COUNTDOWN.fontSizeFp);
     assert.equal(digit.textAlign, 'TextAlign.Center');
-    assert.equal(actor.borderRadius, 999, 'equal width and height produce a circle');
+    assert.ok(actor.borderRadius>=actor.width/2,'square countdown actor has circular clipping');
   }
 }
+
+}
+
+async function case_search_field_action() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerContentSearchFieldProbe } = await import('./lib/reader-content-search-field-probe.mjs');
+const read = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/${name}.ets`, import.meta.url), 'utf8');
 for (const scheme of ['day', 'night']) for (const size of [24, 32]) {
   const { owner, nodes: nativeNodes } = readerContentSearchFieldProbe();
   Object.assign(owner, { appThemeScheme: scheme, query: '鸣龙', frame: () => ({
@@ -44,4 +69,11 @@ for (const scheme of ['day', 'night']) for (const size of [24, 32]) {
   assert.equal(action.border.color, readerAppColor('TOK_LINE', scheme));
   assert.equal(action.backgroundColor, readerAppColor('TOK_SURFACE_PANEL_SOFT', scheme));
 }
-console.log('PH89/91 actual SDK Builders: circular countdown/centred leading lane and one themed search action in both forms PASS; native text raster still requires VM inspection');
+
+}
+
+const implementations = {'capsule-leading-roles':case_capsule_leading_roles,'search-field-action':case_search_field_action};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

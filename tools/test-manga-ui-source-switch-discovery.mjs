@@ -1,74 +1,28 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { stripTypeScriptTypes } from 'node:module';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
-const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const { acquisitionCandidateRank } = await import('../entry/src/main/ets/features/common/BookAcquisitionPresentation.ts');
-const searchCandidateRank = (book, now) => acquisitionCandidateRank(book.acquisition, book.sourceRuleVersion, now);
-const gateway = readFileSync(
-  resolve(repo, 'entry/src/main/ets/features/source/SourceSwitchGateway.ts'),
-  'utf8',
-);
+export const CONTRACT_CASES = {
+  "measured-progressive-discovery": {
+    "description": "Actual cross-media Gateway worker completions, live measured ordering and stable ties; controlled clock and RPC",
+    "resources": []
+  },
+  "unpersisted-live-candidates": {
+    "description": "Actual Gateway live accumulator and final relation verification; controlled deferred RPC",
+    "resources": []
+  },
+  "obsolete-and-cancelled-sweep": {
+    "description": "Actual Gateway new-sweep timing owner and cancellation without false failure; controlled clock/RPC",
+    "resources": []
+  },
+  "media-admission": {
+    "description": "Actual manga/text Gateway cache/search admission rejects audio and unrelated results; fake RPC, no Core build/network",
+    "resources": []
+  }
+};
 
-const fetchStart = gateway.indexOf('async fetchTargetToc(');
-const fetchEnd = gateway.indexOf('async commitSwitch(', fetchStart);
-assert.ok(fetchStart >= 0 && fetchEnd > fetchStart, 'fetchTargetToc method must remain present');
-const fetchTargetToc = gateway.slice(fetchStart, fetchEnd);
-
-const detailRequest = fetchTargetToc.indexOf("'book.detail'");
-const tocRequest = fetchTargetToc.indexOf("'book.toc'");
-assert.ok(detailRequest >= 0, 'fetchTargetToc must resolve book.detail');
-assert.ok(tocRequest > detailRequest, 'book.detail must complete before book.toc');
-assert.match(fetchTargetToc, /book:\s*\{\s*bookId\s*\}/);
-assert.match(fetchTargetToc, /bookUrl:\s*bookId/);
-assert.match(fetchTargetToc, /detailSourceId !== sourceId \|\| detailBookId !== bookId/);
-assert.match(fetchTargetToc, /requireString\(detail\.data, 'tocUrl', 'book\.detail'\)/);
-assert.match(fetchTargetToc, /rawVariables === undefined \|\| rawVariables === null/,
-  'book.detail variables are optional per the Core contract; missing/null must not fail-closed');
-assert.match(fetchTargetToc, /requireStringMap\(rawVariables, 'variables', 'book\.detail'\)/);
-assert.match(fetchTargetToc, /\{\s*sourceId,\s*bookId,\s*tocUrl,\s*variables\s*\}/);
-assert.doesNotMatch(fetchTargetToc, /'book\.toc',\s*\{\s*sourceId,\s*bookId\s*\}/);
-
-assert.match(gateway, /private requireStringMap\([\s\S]*typeof variableValue !== 'string'/);
-assert.match(gateway, /candidate\.trim\(\)\.length === 0/);
-assert.match(gateway, /'book\.search',[\s\S]*sourceId:\s*source\.sourceId, keyword, page:\s*1/);
-assert.doesNotMatch(gateway, /'change\.bookSource'/,
-  'per-source discovery keeps actual search errors instead of a soft-skipped batch');
-assert.match(gateway, /decodeBookSearchResult\(raw, searchSource/,
-  'discovery uses the shared production live-search decoder');
-assert.match(gateway, /SOURCE_SWITCH_DISCOVERY_CONCURRENCY\s*=\s*8/);
-assert.match(gateway, /runBookSourceWorkers\(sources, SOURCE_SWITCH_DISCOVERY_CONCURRENCY/);
-assert.match(gateway, /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/);
-assert.match(gateway, /deduplicateSourceSwitchCandidates\(candidates\)/);
-assert.match(gateway, /requireString\(result\.data, 'transactionId', 'source\.switch\.commit'\)/);
-assert.match(gateway, /result\.data\['phase'\] !== 'pending'/);
-assert.match(gateway, /'source\.switch\.pending\.list'/);
-assert.match(gateway, /const pending: PendingSourceSwitch\[\]/);
-assert.match(gateway, /pending\.push\(\{/);
-assert.match(gateway, /const matchedChapter = this\.decodeMatchedChapter\(result\.data\['matchedChapter'\]\)/);
-assert.doesNotMatch(gateway, /rollbackToken|SourceSwitchRollbackToken/,
-  'the Core-owned compensation journal must never cross into Harmony');
-
-// Reuse the entire current production Gateway and its actual typed dependencies.
-// An old data-URL concatenation omitted new SDK/error imports and was unable
-// to resolve relative imports; it must not freeze an obsolete Gateway copy.
+async function case_measured_progressive_discovery() {
+const { default: assert } = await import('node:assert/strict');
 const {Gateway:SourceSwitchGateway,gatewayExports}=await import('./lib/source-switch-owner-probe.mjs');
-const {sourceSwitchCandidateKey,buildSourceSwitchCommitParams}=gatewayExports;
-const sdkSource = stripTypeScriptTypes(readFileSync(resolve(repo, 'entry/vendor/core-harmony/sdk/reader_core.ts'), 'utf8'));
-const { ReaderCoreRequestError } = await import(`data:text/javascript;base64,${Buffer.from(sdkSource).toString('base64')}`);
-function networkFailure(phase, envelope) {
-  const details = { category:'NETWORK_ENVIRONMENT', phase, hostErrorCode:'NETWORK_ERROR' };
-  // Native failHostRequest supplies CoreError without HostErrorDiagnostics.
-  // Core host_error_with_identity promotes category and nests the rest in cause.
-  return new ReaderCoreRequestError({ protocolVersion:1, type:'error', requestId:2,
-    error:{code:'INTERNAL', message:phase==='dns'
-      ?'当前网络无法解析书源域名，请检查代理或网络连接后重试':'代理路由失败', retryable:true,
-      details:envelope==='native-cause'
-        ?{category:'NETWORK_ENVIRONMENT',cause:details,host:{operationId:1,requestId:2,capability:'http.execute'}}
-        :{category:'NETWORK_ENVIRONMENT',host:{diagnostics:{details}}}} });
-}
+const {sourceSwitchCandidateKey}=gatewayExports;
 function relatedData(books, extra = {}) {
  return { books: books.map(book => ({...book, relationKey: 'relation', relationRevision: '1'})),
   sourceVersions: [...new Set(books.map(book => book.origin))].map(sourceId => ({sourceId, sourceVersion: 'v1', enabled: true})),
@@ -85,10 +39,6 @@ async function untilProgress(predicate) {
 }
 const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'Current Book', author: 'Writer',
   currentChapterIndex: 0, currentChapterTitle: '' };
-
-// Real per-source worker completions drive the production projection. Delayed
-// requests prove first paint, reordering, and acquisition updates do not await
-// the full batch; all timing values come from the request boundary clock.
 {
   const originalNow = Date.now;
   let now = 10000;
@@ -167,6 +117,28 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
   } finally { Date.now = originalNow; }
 }
 
+}
+
+async function case_unpersisted_live_candidates() {
+const { default: assert } = await import('node:assert/strict');
+const {Gateway:SourceSwitchGateway,gatewayExports}=await import('./lib/source-switch-owner-probe.mjs');
+const {sourceSwitchCandidateKey}=gatewayExports;
+function relatedData(books, extra = {}) {
+ return { books: books.map(book => ({...book, relationKey: 'relation', relationRevision: '1'})),
+  sourceVersions: [...new Set(books.map(book => book.origin))].map(sourceId => ({sourceId, sourceVersion: 'v1', enabled: true})),
+  snapshotRevision: 'snapshot', complete: true, ...extra };
+}
+function progressiveDeferred() {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+async function untilProgress(predicate) {
+  for (let turn = 0; turn < 300 && !predicate(); turn++) await new Promise(resolve => setTimeout(resolve, 1));
+  assert.ok(predicate(), 'expected progressive publication before the unresolved source completes');
+}
+const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'Current Book', author: 'Writer',
+  currentChapterIndex: 0, currentChapterTitle: '' };
 // A live seed may arrive while the durable relation is still unchanged. The
 // in-memory accumulator publishes it immediately, while the debounced batch
 // identity check retains missing live rows until the final relation pass.
@@ -213,6 +185,28 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
     'queued older/acquisition reads cannot swallow the already admitted unpersisted candidate');
 }
 
+}
+
+async function case_obsolete_and_cancelled_sweep() {
+const { default: assert } = await import('node:assert/strict');
+const {Gateway:SourceSwitchGateway,gatewayExports}=await import('./lib/source-switch-owner-probe.mjs');
+const {sourceSwitchCandidateKey}=gatewayExports;
+function relatedData(books, extra = {}) {
+ return { books: books.map(book => ({...book, relationKey: 'relation', relationRevision: '1'})),
+  sourceVersions: [...new Set(books.map(book => book.origin))].map(sourceId => ({sourceId, sourceVersion: 'v1', enabled: true})),
+  snapshotRevision: 'snapshot', complete: true, ...extra };
+}
+function progressiveDeferred() {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+async function untilProgress(predicate) {
+  for (let turn = 0; turn < 300 && !predicate(); turn++) await new Promise(resolve => setTimeout(resolve, 1));
+  assert.ok(predicate(), 'expected progressive publication before the unresolved source completes');
+}
+const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'Current Book', author: 'Writer',
+  currentChapterIndex: 0, currentChapterTitle: '' };
 // Even without a caller guard, a newer sweep owns its samples. An older source
 // reply must not overwrite timing, publish, or turn cancellation into failure.
 {
@@ -261,8 +255,29 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
   assert.deepEqual(await run, { kind: 'noSources' });
   assert.deepEqual(publications, [[]], 'cancellation emits neither an empty completion nor a false source failure');
 }
-console.log('PASS progressive source discovery: early rows, live acquisition projection, measured search ordering, stable ties, legacy exclusion and generation-safe cancellation');
 
+}
+
+async function case_media_admission() {
+const { default: assert } = await import('node:assert/strict');
+const {Gateway:SourceSwitchGateway,gatewayExports}=await import('./lib/source-switch-owner-probe.mjs');
+const {sourceSwitchCandidateKey}=gatewayExports;
+function relatedData(books, extra = {}) {
+ return { books: books.map(book => ({...book, relationKey: 'relation', relationRevision: '1'})),
+  sourceVersions: [...new Set(books.map(book => book.origin))].map(sourceId => ({sourceId, sourceVersion: 'v1', enabled: true})),
+  snapshotRevision: 'snapshot', complete: true, ...extra };
+}
+function progressiveDeferred() {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+async function untilProgress(predicate) {
+  for (let turn = 0; turn < 300 && !predicate(); turn++) await new Promise(resolve => setTimeout(resolve, 1));
+  assert.ok(predicate(), 'expected progressive publication before the unresolved source completes');
+}
+const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'Current Book', author: 'Writer',
+  currentChapterIndex: 0, currentChapterTitle: '' };
 // The reused primitives must preserve manga/text admission despite same-name relations.
 {
  const sources = ['comic-a','comic-b','novel','audio'].map((sourceId,index)=>({sourceId,name:sourceId,enabled:true,sourceVersion:'v1',bookSource:{bookSourceType:index<2?2:index===2?0:1}}));
@@ -292,4 +307,11 @@ console.log('PASS progressive source discovery: early rows, live acquisition pro
  assert.deepEqual(next.map(row=>row.bookUrl),result.candidates.map(row=>row.bookUrl));
  await assert.rejects(gateway.refreshCandidates({...query,currentChapterIndex:-1}),/non-negative/);
 }
-console.log('PASS manga/text discovery and same-type cached relation filtering; unrelated search-result rejection; remeasure keeps identities');
+
+}
+
+const implementations = {'measured-progressive-discovery':case_measured_progressive_discovery,'unpersisted-live-candidates':case_unpersisted_live_candidates,'obsolete-and-cancelled-sweep':case_obsolete_and_cancelled_sweep,'media-admission':case_media_admission};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

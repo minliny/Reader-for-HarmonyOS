@@ -1,15 +1,18 @@
-import { coreCliPath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { stripTypeScriptTypes } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import {
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { coreCliPath }=await import('./lib/tool-environment.mjs');
+
+const { readFileSync }=await import('node:fs');
+const { spawnSync }=await import('node:child_process');
+const { fileURLToPath }=await import('node:url');
+const { stripTypeScriptTypes }=await import('node:module');
+
+const {
   applyTencentPictureSourceCorrection, TENCENT_REVISIONS, TENCENT_SOURCE_ID,
   TENCENT_CONTENT_RULE, TENCENT_PREVIOUS_CONTENT_RULE,
-} from './tencent-picture-source-correction.mjs';
-import { RULE_PAYLOAD_FIELDS, ruleFingerprint, sha256Hex, validateBundledMetadata } from './source-supply-lib.mjs';
+}=await import('./tencent-picture-source-correction.mjs');
+const { RULE_PAYLOAD_FIELDS, ruleFingerprint, sha256Hex, validateBundledMetadata }=await import('./source-supply-lib.mjs');
 
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 const sources = JSON.parse(read('../entry/src/main/resources/rawfile/reader-tested-book-source-collection.json'));
@@ -38,7 +41,10 @@ const previous = current.map((actual, index) => {
   }
   return old;
 });
-const original = structuredClone(previous);
+
+const original=structuredClone(previous);
+
+if(id==='correction'){
 assert.deepEqual(applyTencentPictureSourceCorrection(previous), current);
 assert.deepEqual(applyTencentPictureSourceCorrection(previous), current, 'idempotent');
 const corpusCandidates = current.map(actual => {
@@ -60,10 +66,12 @@ for (let index = 0; index < original.length; index += 1) {
 const corpus = JSON.parse(read('../../Reader-Core/tests/fixtures/corpus/sources/src-2196-6781cc801619.json'));
 assert.equal(ruleFingerprint(corpus), TENCENT_REVISIONS[1].correctedFingerprint,
   'current Core source and packaged source agree');
-assert.match(read('./refresh-source-supply-manifest.mjs'), /applyTencentPictureSourceCorrection\(sources\)/);
 
-// Execute the production RuntimeOwner upgrade path, including the real alias
-// conflict guard. It protects edits outside the historical rule fingerprint.
+
+
+}
+if(id==='owner-alias'){
+const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 const supply = read('../entry/src/main/ets/app/BundledBookSourceSupply.ts');
 const methods = stripTypeScriptTypes(supply.slice(supply.indexOf('function canonicalJson'), supply.indexOf('type StoredLedger')))
   .replace(/^export /gm, '');
@@ -117,9 +125,11 @@ for (let index = 0; index < current.length; index += 1) {
   assert.deepEqual(discoveryUpgrade.ruleExplore, discovery.ruleExplore);
 }
 
-// Real production protocol and QuickJS parser, using the exact public DATA and
-// nonce script bytes captured from chapter 531040/1. No network is needed.
+
+}
+if(id==='core-pages'){
 const cli = coreCliPath();
+const {createHash}=await import('node:crypto');console.log(JSON.stringify({kind:'reader-contract-tool-evidence',cli,cliSha256:createHash('sha256').update(readFileSync(cli)).digest('hex'),autoBuild:false,sourceProvenance:'UNPROVEN',fixture:'Reader-Core/tests/fixtures/manga/tencent-free-chapter-531040-1.html',fixtureBoundary:'captured public DATA/nonce from one chapter; offline replay only'}));
 const html = read('../../Reader-Core/tests/fixtures/manga/tencent-free-chapter-531040-1.html');
 const expected = JSON.parse(read('../../Reader-Core/tests/fixtures/manga/tencent-free-chapter-531040-1-pages.json'));
 assert.equal(expected.length, 36);
@@ -139,10 +149,14 @@ function extract(source, id) {
 for (let index = 0; index < current.length; index += 1) {
   const before = extract(original[index], 970 + index * 2);
   assert.equal(before.type, 'error');
-  assert.match(before.error.message, /Syntax: expecting ';'/);
+  assert.equal(before.error.code,'INTERNAL','legacy JS rule fails at production extraction boundary; engine wording is not a contract');
   const after = extract(current[index], 971 + index * 2);
   assert.equal(after.type, 'result', JSON.stringify(after));
   assert.deepEqual(after.data.pages.map(page => page.url), expected,
     'both controlled source variants yield the same 36 ordered picture URLs without ads');
 }
-console.log('Tencent pinned v7 correction: exact revisions/aliases/history retained; actual Owner custom/alias protections; both production manga replays 36 pages; original JS error reproduced: PASS');
+
+}
+}
+const definitions={"correction": "Pinned current supply correction and prior alias revisions", "owner-alias": "Actual RuntimeOwner guards user aliases/deletions/discovery", "core-pages": "Existing Core CLI offline captured Tencent chapter parser; exact ordered pages and old rule failure code"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

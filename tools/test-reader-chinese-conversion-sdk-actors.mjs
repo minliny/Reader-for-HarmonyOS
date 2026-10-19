@@ -1,17 +1,22 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {createRequire} from 'node:module';
-import {fixture,compile,until} from './lib/rules-mutation-durable-probe.mjs';
-import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
-import {choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier} from './lib/reader-choice-row-probe.mjs';
-import {readerControlAppearanceEndpoint} from '../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts';
-import {appearanceSelectMenuHeight} from '../entry/src/main/ets/features/common/ReaderSelectAppearanceStyle.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'library-identity':{description:'Current shared appearance actor: retained Props, stale row/finish and teardown admission',resources:[]},
+ 'durable-recovery':{description:'One current SDK actor journey through existing CLI durable original receipt recovery',resources:[]},
+ 'legacy-full-compatibility':{description:'Explicit legacy FullPanel diagnostic, excluded from current release prerequisite',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const {readFileSync}=await import('node:fs');
+const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
+const {choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier}=await import('./lib/reader-choice-row-probe.mjs');
+const {readerControlAppearanceEndpoint}=await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts');
+const {appearanceSelectMenuHeight}=await import('../entry/src/main/ets/features/common/ReaderSelectAppearanceStyle.ts');
 const read=name=>readFileSync(new URL(`../entry/src/main/ets/features/${name}.ets`,import.meta.url),'utf8');
 const panel=read('common/ReaderSelectPanel');
-const library=read('reading/ReaderControlAppearanceContent'),full=read('reading/ReaderAppearanceFullPanel');
-const parents={library:read('reading/ReaderControlPanel'),full:read('reading/ReaderAppearanceMotionStage')};
+const library=selectedCase==='legacy-full-compatibility'?'':read('reading/ReaderControlAppearanceContent'),full=selectedCase==='legacy-full-compatibility'?read('reading/ReaderAppearanceFullPanel'):'';
+const parents={library:selectedCase==='legacy-full-compatibility'?'':read('reading/ReaderControlPanel'),full:selectedCase==='legacy-full-compatibility'?read('reading/ReaderAppearanceMotionStage'):''};
 const common=['chineseConversionIdentity','chineseConversionMode','onChineseConversionChange'];
 const libraryNames=[...common,'appThemeScheme','reduceMotion','motionProgress','interactionEnabled','onMotionChanged','onInputChanged',
   'openSelect','selectClosing','selectIdentity','selectGeneration','selectAnchorX','selectAnchorY','onTemporaryLayerChange',
@@ -49,7 +54,7 @@ function harness(kind,parentSource=parents[kind],dispatch){
   return{p,parent,leaf,calls,finishes,selectors,click,open};
 }
 let cases=0;
-for(const kind of ['library','full']){
+for(const kind of selectedCase==='durable-recovery'?[]:selectedCase==='legacy-full-compatibility'?['full']:['library']){
   const h=harness(kind),old=h.selectors()[0],oldClick=h.click(old,'繁转简');
   const leaf=h.leaf,leafCount=h.parent.children.size,oldFn=leaf.onChineseConversionChange;
   h.parent.updateStateVars({chineseConversionIdentity:'reader:2',chineseConversionMode:'s2t'});h.p.properties.flush();
@@ -65,7 +70,7 @@ for(const kind of ['library','full']){
   retiredClick();if(h.finishes.length)h.finishes.shift()();assert.equal(h.calls.length,1);
   h.click(h.selectors().at(-1),'原文')();if(h.finishes.length)h.finishes.pop()();assert.equal(h.calls.length,2);cases++;
 }
-for(const kind of ['library','full']){
+for(const kind of selectedCase==='durable-recovery'?[]:selectedCase==='legacy-full-compatibility'?['full']:['library']){
   const h=harness(kind),select=h.selectors()[0];h.click(select,'繁转简')();
   // Real legacy compatibility selection is published on native finish. Library
   // commits immediately, but its old finish still cannot close a reopened layer.
@@ -74,7 +79,7 @@ for(const kind of ['library','full']){
   assert.equal(h.leaf.openSelect,'language','late native finish cannot close successor selection');
   select.aboutToDisappear();h.click(select,'简转繁')();assert.equal(h.calls.length,before);cases++;
 }
-for(const kind of ['library','full']){
+for(const kind of selectedCase==='durable-recovery'?[]:selectedCase==='legacy-full-compatibility'?['full']:['library']){
   const h=harness(kind),select=h.selectors()[0],old=h.click(select,'繁转简');
   h.leaf.aboutToDisappear();old();if(h.finishes.length)h.finishes.shift()();assert.equal(h.calls.length,0,'actual leaf teardown retires old physical intent');
   h.leaf.aboutToAppear();h.open();h.leaf.selectOverlay();old();if(h.finishes.length)h.finishes.shift()();assert.equal(h.calls.length,0,'old leaf callback does not inherit re-entry');
@@ -82,12 +87,17 @@ for(const kind of ['library','full']){
 }
 // Negative control: the old direct callback value + no live forwarding cannot
 // serve a retained child after an actor change. This is why identity is a Prop.
-{
+if(selectedCase==='library-identity'){
   const broken=parents.library.replace('this.onChineseConversionChange(mode, identity)','this.onChineseConversionChange(mode)');
   const h=harness('library',broken);h.parent.updateStateVars({chineseConversionIdentity:'reader:2',chineseConversionMode:'none'});h.p.properties.flush();
   h.click(h.selectors().at(-1),'繁转简')();assert.equal(h.calls[0].identity,undefined);cases++;
 }
-{
+if(selectedCase==='durable-recovery'){
+  const {fixture,compile,until,cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');
+  const {createRequire}=await import('node:module');
+  const {resolveEtsLoaderRoot}=await import('./lib/tool-environment.mjs');
+  console.log(JSON.stringify({kind:'reader-existing-tool-evidence',...durableFixtureToolEvidence()}));
+  try {
   const f=await fixture(true),require=createRequire(import.meta.url);
   const sdkPath=resolveEtsLoaderRoot();
   const ts=require(`${sdkPath}/node_modules/typescript`),options=require(`${sdkPath}/lib/ets_checker.js`).compilerOptions;
@@ -112,5 +122,9 @@ for(const kind of ['library','full']){
   h.click(h.selectors().at(-1),'简转繁')();await until(()=>r.chineseConversionLoaded);
   assert.equal(r.chineseConversionMode,'t2s','actual SDK choice recovers original fixed mode, not replacement draft');assert.equal(f.writes().length,1);
   assert.equal(f.disk(),'');cases++;
+  } finally { await cleanupDurableFixtures(); }
 }
-console.log(`PASS ${cases} actual SDK parent→retained appearance leaf→shared selector/choice physical callback journeys; lifecycle/identity guards and current Props preserved. Native removal/layout remain separate target evidence.`);
+console.log(`PASS ${selectedCase}: ${cases} actual SDK parent→retained appearance leaf→shared selector/choice physical callback journeys; lifecycle/identity guards and current Props preserved. Native removal/layout remain separate target evidence.`);
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

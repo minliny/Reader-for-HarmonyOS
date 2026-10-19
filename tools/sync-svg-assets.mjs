@@ -72,7 +72,7 @@ function renderPaperPrimitive(recipe) {
   return `<svg viewBox="0 0 ${recipe.width} ${recipe.height}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><rect x="0" y="0" height="100%" width="100%" fill="url(#grad)" opacity="1"/><defs><radialGradient id="grad" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="10" gradientTransform="${recipe.gradientTransform}">${stops}</radialGradient></defs></svg>\n`;
 }
 
-async function renderRecipe(recipe) {
+export async function renderRecipe(recipe) {
   if (recipe.originType === 'user-selected-icon-adapted') {
     assert.deepEqual(recipe, svgTtsSelectedCRecipes.find(value => value.file === recipe.file),
       'only the six explicitly selected TTS C spacing adapters are admitted');
@@ -413,6 +413,25 @@ async function assertProductionReferences(expectedNames) {
     assert.ok(source.includes(quotedSingle) || source.includes(quotedDouble) || source.includes(resource),
       `${name}.svg: production resource has no ArkTS reference`);
   }
+}
+
+/** Read-only exact asset proof. It does not scan production sources, render
+ * unrelated recipes, rewrite the manifest, or check a historical source count. */
+export async function verifySvgAssets({files}={}) {
+  assert.ok(Array.isArray(files)&&files.length>0&&new Set(files).size===files.length,'explicit unique SVG recipe IDs required');
+  const manifest=JSON.parse(await readFile(MANIFEST_PATH,'utf8'));
+  for(const file of files){const recipes=svgAssetRecipes.filter(value=>value.file===file);assert.equal(recipes.length,1,`${file}: exact current recipe`);
+    const {content,manifest:entry}=await renderRecipe(recipes[0]);entry.sha256=sha256(content);
+    assert.equal(await readFile(path.join(MEDIA_DIR,file+'.svg'),'utf8'),content,`${file}: packaged bytes match pinned source adapter`);
+    const rows=manifest.entries.filter(value=>value.file===file+'.svg');assert.equal(rows.length,1,`${file}: exact provenance row`);assert.deepEqual(rows[0],entry,`${file}: current source/license/transform provenance`);
+  }return{count:files.length};
+}
+export async function verifySvgCatalogue(){
+ const names=svgAssetRecipes.map(value=>value.file+'.svg');assert.equal(new Set(names).size,names.length,'unique registry IDs');assert.doesNotMatch(JSON.stringify(svgAssetRecipes),BANNED_PROVENANCE);
+ const manifest=JSON.parse(await readFile(MANIFEST_PATH,'utf8'));assert.equal(manifest.schemaVersion,SVG_PROVENANCE_SCHEMA_VERSION);
+ assert.deepEqual(manifest.entries.map(value=>value.file).sort(),[...names].sort(),'manifest owns exactly the declared registry');
+ assert.deepEqual((await readdir(MEDIA_DIR)).filter(file=>file.endsWith('.svg')).sort(),[...names].sort(),'packaged SVG catalogue exactly matches current declared inputs');
+ return{count:names.length};
 }
 
 export async function syncSvgAssets({ check = false, files } = {}) {

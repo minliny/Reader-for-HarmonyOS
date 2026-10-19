@@ -1,36 +1,37 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
+export const CONTRACT_CASES = {
+  "current-sdk-actions": {
+    "description": "Actual SDK live/removed/disabled/retired actions on current finite variants; no prescribed registry AST shape",
+    "resources": []
+  },
+  "arkts-registry-compatibility": {
+    "description": "Installed official SDK formal semantic/lint check for selected current production action spec and legal branch/order variants",
+    "resources": []
+  }
+};
+
+async function case_current_sdk_actions() {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { createHash } = await import('node:crypto');
+const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const source = read('features/common/ReaderActionSheetContent.ets');
-// ArkTS requires the registry literal to have a declared interface. A mapped
-// Record type lowers in the SDK probe but fails the real ArkTS checker.
-const loader=resolveEtsLoaderRoot();
-const require=createRequire(import.meta.url),ts=require(loader+'/node_modules/typescript');
-function verifyRegistryContext(candidate){
-  const parsed=ts.createSourceFile(virtualFilePath('ReaderSurfaceSpecs.ets'),candidate,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(loader+'/lib/ets_checker.js').compilerOptions);
-  const registry=parsed.statements.filter(ts.isVariableStatement).flatMap(statement=>[...statement.declarationList.declarations]).find(declaration=>declaration.name.getText(parsed)==='ACTION_SHEET_SPECS');
-  assert.ok(registry&&ts.isTypeReferenceNode(registry.type),'actual action-sheet registry has a declared type');
-  const declaration=parsed.statements.find(node=>ts.isInterfaceDeclaration(node)&&node.name.getText(parsed)===registry.type.typeName.getText(parsed));
-  assert.ok(declaration,'action-sheet registry object literal requires an explicit declared interface');
-  assert.deepEqual(declaration.members.map(member=>[member.name.getText(parsed),member.type.getText(parsed)]),[['grouped','ActionSheetSurfaceSpec'],['quick','ActionSheetSurfaceSpec']]);
-  assert.deepEqual(registry.initializer.properties.map(property=>property.name.getText(parsed)),['grouped','quick'],'both finite recipes remain present without widening the registry');
-  const resolver=parsed.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text==='resolveActionSheetSpec');
-  assert.equal(resolver?.body?.statements.length,1,'actual finite selector has one return');
-  const returned=resolver.body.statements[0];assert.ok(ts.isReturnStatement(returned)&&ts.isConditionalExpression(returned.expression),'the explicit interface selector must use direct fields instead of dynamic indexing');
-  const selection=returned.expression;
-  assert.equal(selection.condition.getText(parsed),"id === 'quick'");
-  assert.ok(ts.isPropertyAccessExpression(selection.whenTrue)&&ts.isPropertyAccessExpression(selection.whenFalse),'both finite branches read declared fields directly');
-  assert.deepEqual([selection.whenTrue.getText(parsed),selection.whenFalse.getText(parsed)],['ACTION_SHEET_SPECS.quick','ACTION_SHEET_SPECS.grouped'],'both variant recipes retain their original admission');
+class NativeColorFilter {
+  constructor(matrix) { assert.equal(matrix.length,20);this.matrix=[...matrix]; }
 }
-const specSource=read('features/common/ReaderSurfaceSpecs.ets');verifyRegistryContext(specSource);
-assert.throws(()=>verifyRegistryContext(specSource.replace('const ACTION_SHEET_SPECS: ActionSheetSpecs =','const ACTION_SHEET_SPECS: Record<ActionSheetSpecId, ActionSheetSurfaceSpec> =')),/requires an explicit declared interface/,'the original mapped-type object literal is rejected before packaging');
-const indexedSelector=specSource.replace("return id === 'quick' ? ACTION_SHEET_SPECS.quick : ACTION_SHEET_SPECS.grouped;",'return ACTION_SHEET_SPECS[id];');
-assert.notEqual(indexedSelector,specSource,'negative control mutates the actual production selector');
-assert.throws(()=>verifyRegistryContext(indexedSelector),/direct fields instead of dynamic indexing/,'the old index access against the explicit interface is rejected before packaging');
+const nativeColorMetrics={resourceColor(value){
+  assert.match(value,/^#[\dA-F]{8}$/i);
+  return {alpha:parseInt(value.slice(1,3),16),red:parseInt(value.slice(3,5),16),
+    green:parseInt(value.slice(5,7),16),blue:parseInt(value.slice(7,9),16)};
+}};
+const iconPlatform={ColorMetrics:nativeColorMetrics,ColorFilter:NativeColorFilter};
+const applyMatrix=(matrix,rgba)=>Array.from({length:4},(_,row)=>
+  rgba.reduce((value,channel,index)=>value+matrix[row*5+index]*channel,matrix[row*5+4]));
 const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
 const actions = [
   new sdk.deps.ReaderActionSheetAction('source', '更换书源', '阅读', '', '', true, undefined, 'default', true),
@@ -58,10 +59,9 @@ for (const variant of ['grouped', 'quick']) {
   assert.ok(nodes.some(node => node.type === 'Text' && node.create === '移出书架' &&
     node.fontColor === sdk.deps.readerAppColor('TOK_DOWNLOAD_DANGER', 'day')), `${variant}: actual danger label uses the theme role`);
   assert.equal(nodes.filter(node => node.type === 'Image' && String(node.create).includes('reader_chevron_right')).length,
-    variant === 'quick' ? 1 : 3, `${variant}: navigation arrows appear on list entries`);
-  assert.ok(nodes.filter(node => node.type === 'Text').every(node =>
-    node.fontFamily === (node.fontWeight === 700 ? 'ReaderNotoSansSCUIBold' : 'ReaderNotoSansSCUIRegular')),
-    `${variant}: every actual Text owns the matching static face`);
+    actions.filter(action=>action.showChevron).length, `${variant}: current action navigation flags determine arrows`);
+  const spec=sdk.deps.resolveActionSheetSpec(variant);
+  assert.ok(nodes.filter(node=>node.type==='Text').every(node=>[spec.regularFontFamily,spec.labelFontFamily].includes(node.fontFamily)),`${variant}: actual text consumes current finite production typography roles`);
   const buttons = nodes.filter(node => node.onClick);
   buttons[variant === 'quick' ? buttons.length - 1 : 0].onClick();
   assert.equal(calls.length, 1);
@@ -86,7 +86,41 @@ for (const variant of ['grouped', 'quick']) {
   assert.equal(calls.length, 1, `${variant}: retired component refuses action dispatch`);
 }
 
-assert.doesNotMatch(source, /private (row|quickAction|action|commit)\s*\(/, 'facade owns no second renderer or admission implementation');
-assert.equal(new sdk.deps.ReaderActionSheetAction('compat', '兼容动作') instanceof sdk.deps.ReaderMenuActionView, true, 'compatibility DTO belongs to the existing action family');
 
-console.log('PASS actual SDK shared action-sheet content: grouped section headings, quick top-row grouping, state detail, chevron slots, danger treatment, and one callback per action');
+}
+
+async function case_arkts_registry_compatibility() {
+const { default: assert } = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {createRequire} = await import('node:module');
+const {resolveEtsLoaderRoot,virtualFilePath} = await import('./lib/tool-environment.mjs');
+const root=resolveEtsLoaderRoot(),req=createRequire(import.meta.url),ts=req(root+'/node_modules/typescript'),checker=req(root+'/lib/ets_checker.js');
+const path=virtualFilePath('ActionSheetRegistryCompatibility.ets');
+const options={...checker.compilerOptions,target:ts.ScriptTarget.ES2021,lib:['lib.es2021.d.ts'],module:ts.ModuleKind.CommonJS,strict:true,noEmit:true,skipLibCheck:true,allowNonTsExtensions:true,needDoArkTsLinter:true,isCompatibleVersion:false,etsLoaderPath:root};
+function check(text){const host=ts.createCompilerHost(options),original=host.getSourceFile,exists=host.fileExists;
+ host.fileExists=p=>p===path||exists(p);host.getSourceFile=(p,v,...r)=>{const f=p===path?ts.createSourceFile(p,text,v,true,ts.ScriptKind.ETS,options):original(p,v,...r);if(f)f.version='1';return f;};
+ const builder=ts.createSemanticDiagnosticsBuilderProgram([path],options,host);
+ const diagnostics=[...builder.getSyntacticDiagnostics(),...builder.getSemanticDiagnostics(),...ts.ArkTSLinter_1_1.runArkTSLinter(builder,undefined,()=>{},'1.1')].filter(d=>d.file?.fileName===path);
+ return diagnostics.map(d=>({code:d.code,message:ts.flattenDiagnosticMessageText(d.messageText,' ')}));
+}
+const raw=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets',import.meta.url),'utf8');
+const tree=ts.createSourceFile(path,raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+const names=new Set(['ActionSheetSpecId','ActionSheetSurfaceSpec','ActionSheetSpecs','ACTION_SHEET_SPECS','ACTION_SHEET_SPEC','resolveActionSheetSpec']);
+const selected=tree.statements.filter(node=>names.has(node.name?.getText(tree))||(ts.isVariableStatement(node)&&node.declarationList.declarations.some(d=>names.has(d.name.getText(tree))))).map(n=>n.getText(tree).replace(/^export /,''));
+assert.ok(selected.some(text=>text.includes('function resolveActionSheetSpec')),'actual production resolver selected');
+const visualRaw=readFileSync(new URL('../entry/src/main/ets/features/source/SourceSwitchVisual.ts',import.meta.url),'utf8');
+const visualTree=ts.createSourceFile(path,visualRaw,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
+const visual=visualTree.statements.filter(node=>node.name?.getText(visualTree)==='SourceSwitchVisualSpec'||(ts.isVariableStatement(node)&&node.declarationList.declarations.some(d=>d.name.getText(visualTree)==='SOURCE_SWITCH_VISUAL'))).map(n=>n.getText(visualTree).replace(/^export /,'')).join('\n');
+const source="type ReaderAppColorRole = string;\n"+visual+'\n'+selected.join('\n');
+assert.deepEqual(check(source),[],'current production action spec/resolver passes installed formal SDK compiler and ArkTS lint without a prescribed branch shape');
+const positive='class Entry { value: number = 1; } interface Entries { quick: Entry; grouped: Entry; } const entries: Entries = {grouped:new Entry(),quick:new Entry()}; function select(id:string):Entry { if(id === "quick") return entries.quick; return entries.grouped; }';
+assert.deepEqual(check(positive),[],'equivalent if-selector and member order remain legal');
+assert.ok(check(positive.replace('value: number = 1','value: number = "wrong"')).length>0,'official compiler rejects a real incompatible typed field');
+
+}
+
+const implementations = {'current-sdk-actions':case_current_sdk_actions,'arkts-registry-compatibility':case_arkts_registry_compatibility};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

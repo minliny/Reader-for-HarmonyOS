@@ -1,12 +1,20 @@
-import { compileHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
-import {readableAdmissionFixture} from './lib/bookshelf-readable-admission-probe.mjs';
-import {ReaderStartupContentOwner} from '../entry/src/main/ets/app/ReaderStartupContentOwner.ts';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
-import { createHash } from 'node:crypto';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"index-admission": {"description": "实际Index readable admission/membership stale拒绝", "resources": []}, "stage-recovery": {"description": "真实Host abandoned stages/hash完整性假文件端口", "resources": []}, "import-finalize": {"description": "实际parse/persist/add lostACK与确定拒绝资产归属", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { compileHost, setRuntime } = await import('./lib/reading-entry-owner-probe.mjs');
+const {readableAdmissionFixture} = await import('./lib/bookshelf-readable-admission-probe.mjs');
+const {ReaderStartupContentOwner} = await import('../entry/src/main/ets/app/ReaderStartupContentOwner.ts');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { registerHooks, stripTypeScriptTypes } = await import('node:module');
+const { createHash } = await import('node:crypto');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { ReaderStartupTrace } = await import('../entry/src/main/ets/app/ReaderStartupTrace.ts');
+
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const {ReaderCoreRequestError}=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
 const readingEvidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
@@ -22,6 +30,7 @@ function method(source,name){
  const b=source.indexOf('\n  private ',a+1);return source.slice(a,b<0?source.length:b).replace(/\n  \/\*\*[\s\S]*$/,'');
 }
 const index=read('entry/src/main/ets/pages/Index.ets');
+if(selectedCase==='index-admission') {
 for(const fails of [false,true]){
  const pending=deferred();const f=readableAdmissionFixture({add:()=>pending.promise});
  f.page.addDetailBook();assert.equal(f.page.shelfOperation.removalKey,'','pending add cannot block reading a different book');
@@ -121,6 +130,9 @@ for (const scenario of ['offscreen-existing','not-on-shelf','stale-lookup']) {
  if(scenario==='offscreen-existing')assert.equal(h.detailInBookshelf,true);
 }
 console.log('PASS search preview uses exact Core membership before source fallback; partial shelf and stale membership lookup cannot substitute a saved source');
+
+}
+if(selectedCase==='stage-recovery') {
 const registry=read('entry/src/main/ets/app/ReaderHostRegistry.ts');
 const recoveryMethods=[
  method(registry,'async recoverAbandonedStages()'),
@@ -160,6 +172,9 @@ const Recovery=new Function('fileIo','cryptoFramework','hilog','LOG_DOMAIN','err
 }
 console.log('PASS: active detail admission retains one shared refresh with success/failure/stale guards; startup preserves complete EPUB resources');
 
+
+}
+if(selectedCase==='import-finalize') {
 // An import.persist reply lost after Core commits must not destroy lazy EPUB resources.
 const importSource=read('entry/src/main/ets/features/bookshelf/LocalBookImportGateway.ts');
 const importMethods=[
@@ -271,3 +286,7 @@ console.log('PASS: lost bookshelf.add reply remains pending without compensation
  assert.equal(assetRollbacks,1);
 }
 console.log('PASS: deterministic bookshelf.add rejection never reports an older shelf row as a new commit');
+
+}
+
+}

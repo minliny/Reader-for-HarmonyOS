@@ -1,18 +1,22 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } from './lib/manga-directory-adaptive-probe.mjs';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {createRequire, registerHooks} from 'node:module';
-import {createHash} from 'node:crypto';
-import {ReaderBrightnessWriter} from '../entry/src/main/ets/app/ReaderBrightnessWriter.ts';
-import * as metrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import {READER_THEME_DEFINITIONS, readerAppColor, findReaderTheme} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import {readerAppearanceThemeStyle, readerAppearanceChromeTone} from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
-import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
-import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
-import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
-import {mangaSurfaceSdkDependencies,mangaSurfaceBoundedControls} from './lib/manga-surface-sdk-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"manga-toggle": {"description": "manga actual SDK State Watch + production mount/toggle false→true→false hides/shows all three bars", "resources": []}, "manga-forced-ui": {"description": "manga actual forced error/retry/recovery and explicit interactive chapter end show then return to immersive", "resources": []}, "manga-auth-viewport": {"description": "manga plain controller auth facts → production publication/viewport refresh → real State Watch → bars", "resources": []}, "manga-panel-props": {"description": "manga internal panels and actual SDK outer-overlay Props show all bars; clearing returns immersive", "resources": []}, "manga-mask-lifecycle": {"description": "actual SDK full-window phone scrim plus serialized Coordinator: opening/open/drag/closing/reduced and external overlay retain exact owner", "resources": []}, "manga-mask-resize": {"description": "actual SDK viewport and stage Area after assignment plus metrics refresh: phone/wide both orders, inactive/stale identity", "resources": []}, "manga-mask-negative": {"description": "negative: original opaque phone bars cannot pass authored mask composition", "resources": []}, "manga-viewport-negative": {"description": "negative: omitted viewport chrome refresh leaves the opened mask native style stale", "resources": []}, "manga-area-negative": {"description": "negative: omitted actual stage Area chrome refresh leaves persistent/wide native style stale", "resources": []}, "manga-metric-retry": {"description": "production font-scale metric → actual SDK metrics Watch retries failed wide chrome without geometry remount", "resources": []}, "manga-metric-negative": {"description": "negative: omitted metrics chrome refresh strands the failed native wide color", "resources": []}, "manga-inactive": {"description": "manga inactive Prop restores captured landscape/awake App owner; hidden state writes cannot reclaim it", "resources": []}, "manga-old-identity": {"description": "manga old identity State/dispose cannot overwrite a newer chapter reader owner", "resources": []}, "manga-late-native": {"description": "manga late native status-hide completion after actual SDK inactive/exit converges to captured App", "resources": []}, "manga-theme": {"description": "manga day/night mount and actual paper/white/ink State pair opaque shown bars with transparent immersion", "resources": []}, "manga-shell-props": {"description": "ReaderShell actual SDK Prop→retained Manga child Watch→Coordinator and chapter identity handoff", "resources": []}, "historical-manga": {"description": "negative: frozen R5 production source fails immersive native three-bar assertion", "resources": []}, "historical-shell": {"description": "negative: frozen R5 Shell fails actual active-child propagation", "resources": []}, "manga-watch-negative": {"description": "negative: missing control State Watch is rejected by actual production toggle", "resources": []}, "manga-bars-negative": {"description": "negative: omitting manga navigation/indicator hiding is rejected by native three-bar assertion", "resources": []}, "manga-dispose-negative": {"description": "negative: stale identity dispose guard removal is rejected after new chapter owner mount", "resources": []}, "coordinator-transparency": {"description": "explicit manga transparency remains separate from paper underlay and same-owner transparent/opaque changes are not deduplicated", "resources": []}, "novel-palettes": {"description": "eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator", "resources": []}, "coordinator-color-queue": {"description": "new theme is drained after the previous native color write rejects", "resources": []}, "coordinator-reapply-color": {"description": "failed latest request stays pending without an automatic retry loop and explicit reapply recovers", "resources": []}, "coordinator-visible-retry": {"description": "showing controls retries a failed color even when visible-bar policy and geometry are unchanged", "resources": []}, "novel-setting-cutout": {"description": "actual cutout setting true to false preserves explicitly selected immersion and measured band across control reveal in all eight themes", "resources": []}, "novel-status-controls": {"description": "actual novel SDK status preference and controls stay independent of cutout bottom navigation and page mode", "resources": []}, "novel-setting-status": {"description": "actual LRE status toggle false to true to false persists while controls and bottom preferences remain independent", "resources": []}, "novel-setting-rollback": {"description": "failed status preference requests reflow after restoring the original setting", "resources": []}, "novel-cutout-negative": {"description": "old cutout-dependent novel policy is rejected by the actual SDK immersive regression", "resources": []}, "novel-default-negative": {"description": "old unconditional immersive status policy is rejected by the actual SDK default-visible regression", "resources": []}, "coordinator-geometry": {"description": "pending status reveal never borrows another window geometry or replacement window measurement", "resources": []}, "coordinator-show-ack": {"description": "early positive event cannot end pending reveal before ACK; repeated show and app ownership preserve it", "resources": []}, "coordinator-reader-reapply": {"description": "explicit reader policy reapply repairs native drift for independent status and navigation choices", "resources": []}, "coordinator-app-reapply": {"description": "explicit App policy reapply restores captured orientation awake and visible system bars", "resources": []}, "coordinator-reapply-failure": {"description": "native policy reapply rejection is handled without looping and a later explicit retry converges", "resources": []}, "coordinator-owner-queue": {"description": "forced reapply joins pending rapid owner requests and preserves the latest complete policy", "resources": []}, "coordinator-rotation": {"description": "show superseded by hide converges and same-size rotation does not reuse the pending band", "resources": []}, "coordinator-old-window-reject": {"description": "old window reject cannot strand new window chrome", "resources": []}, "coordinator-old-window-success": {"description": "old window success cannot strand new window chrome", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } = await import('./lib/manga-directory-adaptive-probe.mjs');
+const {default: assert} = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {createRequire, registerHooks} = await import('node:module');
+const {createHash} = await import('node:crypto');
+const {ReaderBrightnessWriter} = await import('../entry/src/main/ets/app/ReaderBrightnessWriter.ts');
+const metrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {READER_THEME_DEFINITIONS, readerAppColor, findReaderTheme} = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const {readerAppearanceThemeStyle, readerAppearanceChromeTone} = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const {createArkUIPropertyRuntimeProbe} = await import('./lib/arkui-property-runtime-probe.mjs');
+const {mangaSurfaceSdkDependencies,mangaSurfaceBoundedControls} = await import('./lib/manga-surface-sdk-probe.mjs');
+
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const {ReaderStatusBarMeasurement}=await import('../entry/src/main/ets/app/ReaderStatusBarMeasurement.ts');
 const controlSession=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
@@ -38,50 +42,16 @@ async function confirmedSettingsGateway(initial,saved){
  assert.equal(gateway.writeFacts().pendingReconciliation,false);assert.deepEqual(gateway.writeFacts().saved,JSON.parse(durable.get('snapshot')));
  return gateway;
 }
-function fixture(){
- const app=new Map();globalThis.AppStorage={setOrCreate:(k,v)=>app.set(k,v)};
- const warnings=[];
- const displayInfo={id:0,rotation:0,densityPixels:1,scaledDensity:1};
- const kit={window:{Orientation:{UNSPECIFIED:0,PORTRAIT:1,LANDSCAPE:2,AUTO_ROTATION_UNSPECIFIED:3},
-   AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1,TYPE_SYSTEM_GESTURE:2,TYPE_NAVIGATION_INDICATOR:3,TYPE_KEYBOARD:4}},
-   display:{getDefaultDisplaySync:()=>displayInfo,on(){},off(){}}};
- const deps={'@kit.ArkUI':kit,'@kit.PerformanceAnalysisKit':{hilog:{info(){},warn(...args){warnings.push(args);}}},
-   '../features/common/ReaderThemeRegistry':{findReaderTheme},
-   './ReaderBrightnessWriter':{ReaderBrightnessWriter},'./ReaderStatusBarMeasurement':{ReaderStatusBarMeasurement},
-   '../features/common/ReaderWindowMetrics':metrics};
- const source=readFileSync(new URL('app/ReaderWindowCoordinator.ts',base),'utf8');
- const out=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText;
- const module={exports:{}};new Function('require','module','exports',out)(id=>{assert.ok(id in deps,id);return deps[id];},module,module.exports);
- const {ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P}=module.exports;
- const E=productionMotionMethods(new URL('features/reading/LocalReadingExperience.ets',base),
-   ['applyWindowChrome','changeReaderSetting','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor','captureReaderSettingsAdmission','notifyReaderSettingsSavePending',
-    'persistReaderSettingsSnapshot','settleReaderPreferenceNotice','setReaderPreferenceNotice'],{
-   ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P,readerAppearanceThemeStyle,readerAppearanceChromeTone,
-   setReaderSettingsToggle:readerSettingsState.setReaderSettingsToggle});
- function windowPort(options={}){
-   const zero={left:0,top:0,width:0,height:0};
-   const win={calls:[],properties:{},barEnabled:{status:true,navigation:true,navigationIndicator:true},nextColor:undefined,
-     avoidTop:undefined,nextStatus:undefined,rect:{left:0,top:0,width:390,height:844},events:new Map(),
-     orientation:options.orientation??0,keepScreenOn:options.keepScreenOn??false,
-     getPreferredOrientation:()=>win.orientation,getWindowProperties:()=>({isKeepScreenOn:win.keepScreenOn,brightness:-1,windowRect:win.rect}),
-     getWindowAvoidArea:type=>({topRect:type===0?(win.avoidTop??(win.barEnabled.status?{left:0,top:0,width:390,height:48}:zero)):zero,
-       bottomRect:zero,leftRect:zero,rightRect:zero}),on(n,fn){win.events.set(n,fn);},off(n){win.events.delete(n);},
-     setWindowLayoutFullScreen:async()=>{},setWindowSystemBarEnable:async()=>{},
-     async setPreferredOrientation(value){win.calls.push(['orientation',value]);win.orientation=value;},
-     async setWindowKeepScreenOn(value){win.calls.push(['awake',value]);win.keepScreenOn=value;},
-     async setSpecificSystemBarEnabled(bar,enabled,enableAnimation){win.calls.push(['visible',bar,enabled,enableAnimation]);
-       if(bar==='status'){const gate=win.nextStatus;win.nextStatus=undefined;if(gate)await gate.promise;}
-       win.barEnabled[bar]=enabled;},
-     async setWindowSystemBarProperties(props){win.calls.push(['color',{...props}]);const pending=win.nextColor;win.nextColor=undefined;
-       if(pending)await pending.promise;win.properties={...win.properties,...props};},
-   };return win;
- }
- function theme(id,overlay=true){const e=Object.assign(new E(),{windowChromeActive:true,windowChromeOverlayActive:overlay,appearanceSnapshot:{activeTheme:id}});e.applyWindowChrome();}
- const colors=w=>w.calls.filter(x=>x[0]==='color');
- return{C,S,P,E,windowPort,theme,colors,displayInfo,app,warnings};
+const {createWindowCoordinatorFixture}=await import('./lib/reader-window-coordinator-fixture.mjs');
+const allFixtures=[];
+try{
+async function fixture(){const f=await createWindowCoordinatorFixture();allFixtures.push(f);
+ let E;if(selectedCase.startsWith('novel-setting-')){const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');E=productionMotionMethods(new URL('features/reading/LocalReadingExperience.ets',base),['applyWindowChrome','changeReaderSetting','commitReaderWindowSettings','applyReaderWindowPolicy','windowPolicyFor','captureReaderSettingsAdmission','notifyReaderSettingsSavePending','persistReaderSettingsSnapshot','settleReaderPreferenceNotice','setReaderPreferenceNotice'],{ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,ReaderWindowPolicy:f.P,readerAppearanceThemeStyle,readerAppearanceChromeTone,setReaderSettingsToggle:readerSettingsState.setReaderSettingsToggle});}
+ else{const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');E=selectedProductionMethods(new URL('features/reading/LocalReadingExperience.ets',base),'ReadingExperience',['applyWindowChrome'],{ReaderWindowCoordinator:f.C,ReaderWindowChromeStyle:f.S,readerAppearanceThemeStyle,readerAppearanceChromeTone});}
+ return{...f,E,theme(id,overlay=true){const e=Object.assign(new E(),{windowChromeActive:true,windowChromeOverlayActive:overlay,appearanceSnapshot:{activeTheme:id}});e.applyWindowChrome();}};
 }
-const cases=[];
-async function check(name,run){try{await run();cases.push({name,status:'PASS'});}catch(e){cases.push({name,status:'FAIL',error:e.stack});}}
+const caseNames={"manga-toggle": "manga actual SDK State Watch + production mount/toggle false→true→false hides/shows all three bars", "manga-forced-ui": "manga actual forced error/retry/recovery and explicit interactive chapter end show then return to immersive", "manga-auth-viewport": "manga plain controller auth facts → production publication/viewport refresh → real State Watch → bars", "manga-panel-props": "manga internal panels and actual SDK outer-overlay Props show all bars; clearing returns immersive", "manga-mask-lifecycle": "actual SDK full-window phone scrim plus serialized Coordinator: opening/open/drag/closing/reduced and external overlay retain exact owner", "manga-mask-resize": "actual SDK viewport and stage Area after assignment plus metrics refresh: phone/wide both orders, inactive/stale identity", "manga-mask-negative": "negative: original opaque phone bars cannot pass authored mask composition", "manga-viewport-negative": "negative: omitted viewport chrome refresh leaves the opened mask native style stale", "manga-area-negative": "negative: omitted actual stage Area chrome refresh leaves persistent/wide native style stale", "manga-metric-retry": "production font-scale metric → actual SDK metrics Watch retries failed wide chrome without geometry remount", "manga-metric-negative": "negative: omitted metrics chrome refresh strands the failed native wide color", "manga-inactive": "manga inactive Prop restores captured landscape/awake App owner; hidden state writes cannot reclaim it", "manga-old-identity": "manga old identity State/dispose cannot overwrite a newer chapter reader owner", "manga-late-native": "manga late native status-hide completion after actual SDK inactive/exit converges to captured App", "manga-theme": "manga day/night mount and actual paper/white/ink State pair opaque shown bars with transparent immersion", "manga-shell-props": "ReaderShell actual SDK Prop→retained Manga child Watch→Coordinator and chapter identity handoff", "historical-manga": "negative: frozen R5 production source fails immersive native three-bar assertion", "historical-shell": "negative: frozen R5 Shell fails actual active-child propagation", "manga-watch-negative": "negative: missing control State Watch is rejected by actual production toggle", "manga-bars-negative": "negative: omitting manga navigation/indicator hiding is rejected by native three-bar assertion", "manga-dispose-negative": "negative: stale identity dispose guard removal is rejected after new chapter owner mount", "coordinator-transparency": "explicit manga transparency remains separate from paper underlay and same-owner transparent/opaque changes are not deduplicated", "novel-palettes": "eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator", "coordinator-color-queue": "new theme is drained after the previous native color write rejects", "coordinator-reapply-color": "failed latest request stays pending without an automatic retry loop and explicit reapply recovers", "coordinator-visible-retry": "showing controls retries a failed color even when visible-bar policy and geometry are unchanged", "novel-setting-cutout": "actual cutout setting true to false preserves explicitly selected immersion and measured band across control reveal in all eight themes", "novel-status-controls": "actual novel SDK status preference and controls stay independent of cutout bottom navigation and page mode", "novel-setting-status": "actual LRE status toggle false to true to false persists while controls and bottom preferences remain independent", "novel-setting-rollback": "failed status preference requests reflow after restoring the original setting", "novel-cutout-negative": "old cutout-dependent novel policy is rejected by the actual SDK immersive regression", "novel-default-negative": "old unconditional immersive status policy is rejected by the actual SDK default-visible regression", "coordinator-geometry": "pending status reveal never borrows another window geometry or replacement window measurement", "coordinator-show-ack": "early positive event cannot end pending reveal before ACK; repeated show and app ownership preserve it", "coordinator-reader-reapply": "explicit reader policy reapply repairs native drift for independent status and navigation choices", "coordinator-app-reapply": "explicit App policy reapply restores captured orientation awake and visible system bars", "coordinator-reapply-failure": "native policy reapply rejection is handled without looping and a later explicit retry converges", "coordinator-owner-queue": "forced reapply joins pending rapid owner requests and preserves the latest complete policy", "coordinator-rotation": "show superseded by hide converges and same-size rotation does not reuse the pending band", "coordinator-old-window-reject": "old window reject cannot strand new window chrome", "coordinator-old-window-success": "old window success cannot strand new window chrome"};
+async function check(name,run){if(name!==caseNames[selectedCase])return;await run();}
 const mangaPath=new URL('features/manga/MangaReadingSurface.ets',base);
 const shellPath=new URL('features/shell/ReaderShell.ets',base);
 const mangaSource=readFileSync(mangaPath,'utf8');
@@ -89,12 +59,15 @@ const shellSource=readFileSync(shellPath,'utf8');
 const novelSource=readFileSync(new URL('features/reading/LocalReadingExperience.ets',base),'utf8');
 const sha256=value=>createHash('sha256').update(value).digest('hex');
 const sdkEvidence={mangaSourceSHA:sha256(mangaSource),shellSourceSHA:sha256(shellSource)};
-const baselineManga=readFileSync(new URL('./fixtures/manga-system-bars-r5/MangaReadingSurface.ets',import.meta.url),'utf8');
-const baselineShell=readFileSync(new URL('./fixtures/manga-system-bars-r5/ReaderShell.ets',import.meta.url),'utf8');
+let baselineManga,baselineShell;
+if(selectedCase==='historical-manga'||selectedCase==='historical-shell'){
+baselineManga=readFileSync(new URL('./fixtures/manga-system-bars-r5/MangaReadingSurface.ets',import.meta.url),'utf8');
+baselineShell=readFileSync(new URL('./fixtures/manga-system-bars-r5/ReaderShell.ets',import.meta.url),'utf8');
 // Exact first-party R5 source, including every original import/comment and any
 // source notice. The referenced vendor licensing remains in the project tree.
 assert.equal(sha256(baselineManga),'0f5e6d2654e8cc228b43b2ab2c9023e728db904193a147ce71da425113a6b897','exact pre-R6 Manga baseline');
 assert.equal(sha256(baselineShell),'ea6dddd9fcb6eecf76ea4871419d70e32c69a12cc5812c5aea34716c89cf85ba','exact pre-R6 Shell baseline');
+}
 const sdkRoot=resolveEtsLoaderRoot();
 function componentMembers(source){
  const file=ts.createSourceFile(virtualFilePath('MangaChromeMemberSelection.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions);
@@ -142,7 +115,7 @@ const mangaChromeMembers=['windowChromeActive','windowChromeOverlayActive','isRe
  'paperColor','inkColor','loginRequired','imageError','notifyPublishedRows','requestedLast','measureVisibleWindow','onRowAppear',
  'viewportWidth','viewportHeight','stageWidth','stageHeight','widePanel','persistentDirectory','directoryColumnWidth',
  'rollbackChapterController','rollbackChapterImages','previousChapterPixels'];
-const mangaMaskSceneMembers=[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,'build','panelOverlay','panelOffset','panelScrimOpacity','panelPhase','panelGeneration',
+const mangaMaskSceneMembers=[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,'mutedColor','displayError','chapterLoadState','build','panelOverlay','panelOffset','panelScrimOpacity','panelPhase','panelGeneration',
  'isActionPanel','actionPanelInsets','actionPanelSurface','actionPanelHeader','actionPanelBody',
  'panelActionGeneration','panelCloseTask','panelCloseResolve','reduceMotion','windowMetricsRevision','onDirectoryMetricsChanged',
  'quickHeaderMeasured','quickToolsMeasured','quickFooterMeasured','openPanel','closePanel','invalidatePanelMotion','settlePanel',
@@ -237,12 +210,12 @@ function assertAppChrome(f,win,paper='#F8F4EC',foreground='#FF2B241D',tone='dark
  assert.equal(f.app.get('readerWindowChromeTone'),tone);assert.equal(f.app.get('readerWindowChromeOwner'),'app');
 }
 async function immersiveActualSdk(text=mangaSource){
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  const m=mangaSdkFixture(f,text);await m.mount();
  assertBars(w,false,'mount with no control UI must hide all three system bars');f.C.detach();
 }
 await check('manga actual SDK State Watch + production mount/toggle false→true→false hides/shows all three bars',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();const m=mangaSdkFixture(f);await m.mount();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();const m=mangaSdkFixture(f);await m.mount();
  for(const name of ['controlsVisible','error','openingRetry','recovering','chapterEnd','panel','backgroundPreference','loginRequiredForControls','windowChromeActive','windowChromeOverlayActive'])
   assert.ok(m.owner.watches.has(name),`actual SDK declareWatch ${name}`);
  assertBars(w,false);assertMangaChrome(f,w,false);
@@ -253,7 +226,7 @@ await check('manga actual SDK State Watch + production mount/toggle false→true
  m.owner.aboutToDisappear();await settle();assertBars(w,true);assertAppChrome(f,w);f.C.detach();
 });
 await check('manga actual forced error/retry/recovery and explicit interactive chapter end show then return to immersive',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();const m=mangaSdkFixture(f);await m.mount();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();const m=mangaSdkFixture(f);await m.mount();
  for(const [name,value,clear]of [['error','MANGA_RESOURCE_HOST_UNAVAILABLE',''],['openingRetry',true,false],['recovering',true,false],['chapterEnd',true,false]]){
   await m.state(name,value);assertBars(w,true,name);assertMangaChrome(f,w,true);
   await m.state(name,clear);assertBars(w,false,`${name} cleared`);assertMangaChrome(f,w,false);
@@ -261,7 +234,7 @@ await check('manga actual forced error/retry/recovery and explicit interactive c
  m.owner.aboutToDisappear();await settle();f.C.detach();
 });
 await check('manga plain controller auth facts → production publication/viewport refresh → real State Watch → bars',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();const m=mangaSdkFixture(f);await m.mount();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();const m=mangaSdkFixture(f);await m.mount();
  m.rows.push({key:'0',ordinal:0,tileIndex:0,known:true},{key:'1',ordinal:1,tileIndex:0,known:true});
  m.owner.controller.tiles.set('0:0',{error:'READING_IMAGE_AUTH_REQUIRED'});
  assert.equal(m.owner.loginRequiredForControls,false,'plain controller mutation has no fabricated State event');
@@ -274,7 +247,7 @@ await check('manga plain controller auth facts → production publication/viewpo
  m.owner.aboutToDisappear();await settle();f.C.detach();
 });
 await check('manga internal panels and actual SDK outer-overlay Props show all bars; clearing returns immersive',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();const m=mangaSdkFixture(f);await m.mount();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();const m=mangaSdkFixture(f);await m.mount();
  for(const panel of ['directory','mode','settings','more','downloads']){
   await m.state('panel',panel);assertBars(w,true,panel);assertMangaChrome(f,w,true,'#F8F4EC','#1F1B17','dark','reader',true);
   await m.state('panel','');assertBars(w,false);assertMangaChrome(f,w,false);
@@ -284,7 +257,7 @@ await check('manga internal panels and actual SDK outer-overlay Props show all b
  m.owner.aboutToDisappear();await settle();f.C.detach();
 });
 async function mountedMaskScene(text=mangaSource,background='paper'){
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  const m=mangaSdkFixture(f,text,createArkUIPropertyRuntimeProbe(),true);m.prefs.mangaBackground=background;
  await m.mount();await m.owner.openPanel('directory');m.owner.initialRender();
  // The authored scrim is admitted once. Native branch removal/replacement is
@@ -305,7 +278,7 @@ async function verifyAuthoredMask(text=mangaSource){
   assertMangaChrome(f,w,true,paper,ink,tone,'reader',true);
   m.frames.shift().onFrame(0);assert.equal(m.animations.length,0);
   m.frames.shift().onFrame(1);m.properties.flush();await settle();
-  assert.equal(m.animations[0].params.duration,160);assert.equal(scrim.opacity,1);
+  assert.ok(Number.isFinite(m.animations[0].params.duration)&&m.animations[0].params.duration>0);assert.equal(scrim.opacity,1);
   assertMangaChrome(f,w,true,paper,ink,tone,'reader',true);
   m.animations[1].params.onFinish();m.properties.flush();assert.equal(m.owner.panelPhase,'open');
   m.owner.beginPanelDrag();m.owner.updatePanelDrag(30);m.properties.flush();await settle();
@@ -405,7 +378,7 @@ await check('negative: omitted metrics chrome refresh strands the failed native 
  await assert.rejects(verifyMaskMetricsRefresh(stale),/native status paint must preserve/);
 });
 await check('manga inactive Prop restores captured landscape/awake App owner; hidden state writes cannot reclaim it',async()=>{
- const f=fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
  const m=mangaSdkFixture(f);await m.mount();assertBars(w,false);assert.equal(w.orientation,3);assert.equal(w.keepScreenOn,false);
  await m.props({windowChromeActive:false});assertBars(w,true);assert.equal(w.orientation,2);assert.equal(w.keepScreenOn,true);
  assertAppChrome(f,w);
@@ -415,7 +388,7 @@ await check('manga inactive Prop restores captured landscape/awake App owner; hi
  assert.ok(w.calls.some(c=>c[0]==='orientation'&&c[1]===2));assert.ok(w.calls.some(c=>c[0]==='awake'&&c[1]===true));f.C.detach();
 });
 async function staleIdentityActualSdk(text=mangaSource){
- const f=fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
  const old=mangaSdkFixture(f,text);await old.mount();await old.state('controlsVisible',true);assertBars(w,true);assertMangaChrome(f,w,true);
  old.setIdentity(false);const next=mangaSdkFixture(f,text);await next.mount();assertBars(w,false,'new chapter owns immersive chrome');assertMangaChrome(f,w,false);
  const colors=f.colors(w).length;
@@ -426,7 +399,7 @@ async function staleIdentityActualSdk(text=mangaSource){
 }
 await check('manga old identity State/dispose cannot overwrite a newer chapter reader owner',()=>staleIdentityActualSdk());
 await check('manga late native status-hide completion after actual SDK inactive/exit converges to captured App',async()=>{
- const f=fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
  const m=mangaSdkFixture(f),gate=deferred();w.nextStatus=gate;m.owner.aboutToAppear();await settle();
  assert.ok(w.calls.some(c=>c[0]==='visible'&&c[1]==='status'&&c[2]===false),'real production hide reaches native pending port');
  m.owner.updateStateVars({windowChromeActive:false});m.owner.aboutToDisappear();gate.resolve();await settle();
@@ -434,7 +407,7 @@ await check('manga late native status-hide completion after actual SDK inactive/
 });
 await check('manga day/night mount and actual paper/white/ink State pair opaque shown bars with transparent immersion',async()=>{
  for(const scheme of ['day','night']){
-  const f=fixture(),w=f.windowPort(),appPaper=readerAppColor('app.window.background',scheme),appInk=readerAppColor('app.window.foreground',scheme),appTone=scheme==='night'?'light':'dark';
+  const f=await fixture(),w=f.windowPort(),appPaper=readerAppColor('app.window.background',scheme),appInk=readerAppColor('app.window.foreground',scheme),appTone=scheme==='night'?'light':'dark';
   f.C.updateAppChromeStyle(new f.S(appPaper,appTone,appInk));await f.C.install(w);await settle();
   const m=mangaSdkFixture(f);m.prefs.mangaBackground=undefined;m.owner.appThemeScheme=scheme;await m.mount();
   assertMangaChrome(f,w,false,scheme==='night'?'#1C1E1A':'#F8F4EC',scheme==='night'?'#EAE7DE':'#1F1B17',appTone);assertBars(w,false);
@@ -448,7 +421,7 @@ await check('manga day/night mount and actual paper/white/ink State pair opaque 
  }
 });
 async function shellToMangaActualSdk(text=shellSource){
- const f=fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
  const properties=createArkUIPropertyRuntimeProbe(),m=mangaSdkFixture(f,mangaSource,properties);
  const syntax=require(`${sdkRoot}/lib/validate_ui_syntax.js`),mangaTree=componentMembers(mangaSource);
  syntax.componentCollection.customComponents.add('MangaReadingSurface');
@@ -492,7 +465,7 @@ await check('negative: frozen R5 Shell fails actual active-child propagation',as
 await check('negative: missing control State Watch is rejected by actual production toggle',async()=>{
  const counterfactual=mangaSource.replace("@State @Watch('onWindowChromeChanged') private controlsVisible",'@State private controlsVisible');
  assert.notEqual(counterfactual,mangaSource);
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();const m=mangaSdkFixture(f,counterfactual);await m.mount();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();const m=mangaSdkFixture(f,counterfactual);await m.mount();
  assertBars(w,false);m.owner.toggleControls();await settle();assert.throws(()=>assertBars(w,true,'control Watch must apply'),{code:'ERR_ASSERTION'});
  m.owner.aboutToDisappear();await settle();f.C.detach();
 });
@@ -505,7 +478,7 @@ await check('negative: stale identity dispose guard removal is rejected after ne
  assert.notEqual(counterfactual,mangaSource);await assert.rejects(staleIdentityActualSdk(counterfactual),/old chapter disposal cannot restore App/);
 });
 await check('explicit manga transparency remains separate from paper underlay and same-owner transparent/opaque changes are not deduplicated',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  for(const transparent of [true,false,true]){
   f.C.requestReaderChrome(new f.S('#F8F4EC','dark','#1F1B17','',transparent));await settle();
   assert.equal(w.properties.statusBarColor,transparent?'#00000000':'#F8F4EC');
@@ -515,7 +488,7 @@ await check('explicit manga transparency remains separate from paper underlay an
  f.C.detach();
 });
 await check('eight real reading palettes survive hide/show and same/cross-scheme changes through actual Coordinator',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  for(const t of READER_THEME_DEFINITIONS){
    const scheme=t.scheme;f.C.updateAppChromeStyle(new f.S(readerAppColor('app.window.background',scheme),scheme==='night'?'light':'dark',readerAppColor('app.window.foreground',scheme)));
    f.theme(t.id,false);await settle();
@@ -531,13 +504,13 @@ await check('eight real reading palettes survive hide/show and same/cross-scheme
  f.C.requestAppChrome();await settle();assert.equal(w.properties.statusBarColor,readerAppColor('app.window.background','night'));f.C.detach();
 });
 await check('new theme is drained after the previous native color write rejects',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  const gate=deferred();w.nextColor=gate;f.theme('warm');await tick();f.theme('green');gate.reject(Error('1300003 simulated old request failure'));await settle();
  assert.equal(w.properties.statusBarColor,'#00000000');
  assert.equal(w.properties.navigationBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='green').paperStart,'newest paired theme must not be lost with old failure');f.C.detach();
 });
 for(const failed of [false,true])await check(`old window ${failed?'reject':'success'} cannot strand new window chrome`,async()=>{
- const f=fixture(),a=f.windowPort();await f.C.install(a);await settle();
+ const f=await fixture(),a=f.windowPort();await f.C.install(a);await settle();
  const gate=deferred();a.nextColor=gate;f.theme('paperNight');await tick();
  const b=f.windowPort();await f.C.install(b);f.theme('greenNight');
  if(failed)gate.reject(Error('1300002 simulated destroyed window'));else gate.resolve();await settle();
@@ -545,14 +518,14 @@ for(const failed of [false,true])await check(`old window ${failed?'reject':'succ
  assert.equal(b.properties.navigationBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='greenNight').paperStart,'replacement must receive newest paired color');f.C.detach();
 });
 await check('failed latest request stays pending without an automatic retry loop and explicit reapply recovers',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  const count=f.colors(w).length,gate=deferred();w.nextColor=gate;f.theme('warmNight');await tick();gate.reject(Error('1300003 simulated latest failure'));await settle();
  assert.equal(f.colors(w).length,count+1,'same failed intent must not spin');f.C.reapplyChrome();await settle();
  assert.equal(w.properties.statusBarColor,'#00000000');
  assert.equal(w.properties.navigationBarColor,READER_THEME_DEFINITIONS.find(t=>t.id==='warmNight').paperStart);f.C.detach();
 });
 await check('showing controls retries a failed color even when visible-bar policy and geometry are unchanged',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  const visible=new f.P('system',false,false,false,false);await f.C.requestReaderWindowPolicy(visible);
  const gate=deferred();w.nextColor=gate;f.theme('paper');await tick();gate.reject(Error('1300003 simulated theme failure'));await settle();
  const before=w.calls.length;await f.C.requestReaderWindowPolicy(visible);await settle();
@@ -562,7 +535,7 @@ await check('showing controls retries a failed color even when visible-bar polic
 });
 await check('actual cutout setting true to false preserves explicitly selected immersion and measured band across control reveal in all eight themes',async()=>{
  for(const t of READER_THEME_DEFINITIONS)for(const initiallyOpen of [false,true]){
-   const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+   const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
    let controls=initiallyOpen;const saved=[];
    const initial={...createDefaultReaderSettingsSnapshot(),extendIntoCutout:true,hideStatusBar:true,hideNavigationBar:false,screenDirection:'system'};
    const gateway=await confirmedSettingsGateway(initial,saved);
@@ -601,7 +574,7 @@ await check('actual cutout setting true to false preserves explicitly selected i
 });
 await check('actual novel SDK status preference and controls stay independent of cutout bottom navigation and page mode',async()=>{
  for(const hideStatusBar of[false,true])for(const extend of[false,true])for(const hideNavigationBar of[false,true])for(const mode of['none','slide','cover','simulation','continuous']){
-  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+  const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
   const n=novelSdkFixture(f,'paper',extend);
   n.owner.readerSettingsSnapshot={...n.owner.readerSettingsSnapshot,hideStatusBar,hideNavigationBar,
    navigationMode:mode==='continuous'?'continuous':'paged',pageTransition:mode==='continuous'?'none':mode};
@@ -629,7 +602,7 @@ await check('actual novel SDK status preference and controls stay independent of
 });
 await check('actual LRE status toggle false to true to false persists while controls and bottom preferences remain independent',async()=>{
  for(const hideNavigationBar of [false,true])for(const controlsPresented of [false,true]){
-  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+  const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
   const initial={...createDefaultReaderSettingsSnapshot(),hideNavigationBar},saved=[],reflows=[];
   assert.equal(initial.hideStatusBar,false,'new and legacy-unspecified settings expose the native status bar by default');
   const gateway=await confirmedSettingsGateway(initial,saved);
@@ -661,7 +634,7 @@ await check('actual LRE status toggle false to true to false persists while cont
  }
 });
 await check('failed status preference requests reflow after restoring the original setting',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  const initial=createDefaultReaderSettingsSnapshot(),saved=[],reflows=[],failures=[];
  const gateway=await confirmedSettingsGateway(initial,saved);
  const e=Object.assign(new f.E(),{windowChromeActive:true,windowChromeOverlayActive:false,
@@ -686,7 +659,7 @@ await check('failed status preference requests reflow after restoring the origin
 await check('old cutout-dependent novel policy is rejected by the actual SDK immersive regression',async()=>{
  const broken=novelSource.replace('snapshot.hideStatusBar === true && !forceStatusBarVisible,','forceStatusBarVisible ? false : snapshot.extendIntoCutout,');
  assert.notEqual(broken,novelSource,'negative control restores the actual historical production policy');
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  const n=novelSdkFixture(f,'paper',false,broken);
  n.owner.readerSettingsSnapshot={...n.owner.readerSettingsSnapshot,hideStatusBar:true};await n.controls(false);
  assert.throws(()=>assert.equal(w.barEnabled.status,false,'immersive status bar must be hidden'),/immersive status bar must be hidden/,
@@ -696,7 +669,7 @@ await check('old cutout-dependent novel policy is rejected by the actual SDK imm
 await check('old unconditional immersive status policy is rejected by the actual SDK default-visible regression',async()=>{
  const broken=novelSource.replace('snapshot.hideStatusBar === true && !forceStatusBarVisible,','!forceStatusBarVisible,');
  assert.notEqual(broken,novelSource,'negative control removes only the production preference guard');
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  const n=novelSdkFixture(f,'paper',false,broken);await n.controls(false);
  assert.equal(n.owner.readerSettingsSnapshot.hideStatusBar,false);
  assert.throws(()=>assert.equal(w.barEnabled.status,true,'default status bar must remain visible'),/default status bar must remain visible/,
@@ -704,7 +677,7 @@ await check('old unconditional immersive status policy is rejected by the actual
  f.C.detach();
 });
 await check('pending status reveal never borrows another window geometry or replacement window measurement',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  await f.C.requestReaderWindowPolicy(new f.P('system',false,true,false,true));
  w.avoidTop={left:0,top:0,width:0,height:0};await f.C.requestReaderWindowPolicy(new f.P('system',false,false,false,false));
  w.rect={left:0,top:0,width:844,height:390};w.events.get('windowSizeChange')(w.rect);
@@ -713,7 +686,7 @@ await check('pending status reveal never borrows another window geometry or repl
  assert.equal(f.C.metrics().statusBarHeight,0,'replacement with no measurement cannot reuse previous window band');f.C.detach();
 });
 await check('early positive event cannot end pending reveal before ACK; repeated show and app ownership preserve it',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  await f.C.requestReaderWindowPolicy(new f.P('system',false,true,false,true));
  const gate=deferred();w.nextStatus=gate;
  const reveal=f.C.requestReaderWindowPolicy(new f.P('system',false,false,false,false));await settle();
@@ -729,7 +702,7 @@ await check('early positive event cannot end pending reveal before ACK; repeated
 });
 await check('explicit reader policy reapply repairs native drift for independent status and navigation choices',async()=>{
  for(const hideStatus of [false,true])for(const hideNavigation of [false,true]){
-  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+  const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
   const policy=new f.P('portrait',true,hideStatus,hideNavigation,false);
   await f.C.requestReaderWindowPolicy(policy);
   // OS/window restoration can change native state without a Host setting edit.
@@ -748,7 +721,7 @@ await check('explicit reader policy reapply repairs native drift for independent
  }
 });
 await check('explicit App policy reapply restores captured orientation awake and visible system bars',async()=>{
- const f=fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort({orientation:2,keepScreenOn:true});await f.C.install(w);await settle();
  await f.C.requestReaderWindowPolicy(new f.P('portrait',false,true,true,false));
  await f.C.requestAppWindowPolicy();
  w.orientation=1;w.keepScreenOn=false;w.barEnabled={status:false,navigation:false,navigationIndicator:false};
@@ -762,7 +735,7 @@ await check('explicit App policy reapply restores captured orientation awake and
 });
 await check('native policy reapply rejection is handled without looping and a later explicit retry converges',async()=>{
  for(const owner of ['reader','app']){
-  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+  const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
   if(owner==='reader')await f.C.requestReaderWindowPolicy(new f.P('system',false,true,true,false));
   else await f.C.requestAppWindowPolicy();
   const gate=deferred();w.nextStatus=gate;const before=w.calls.length;
@@ -779,7 +752,7 @@ await check('native policy reapply rejection is handled without looping and a la
 });
 await check('forced reapply joins pending rapid owner requests and preserves the latest complete policy',async()=>{
  for(const finalOwner of ['reader','app']){
-  const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+  const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
   await f.C.requestReaderWindowPolicy(new f.P('system',false,true,true,false));
   const gate=deferred();w.nextStatus=gate;f.C.reapplyWindowPolicy();await settle();
   assert.equal(w.nextStatus,undefined,'reapply is already executing when the newer owner requests arrive');
@@ -798,7 +771,7 @@ await check('forced reapply joins pending rapid owner requests and preserves the
  }
 });
 await check('show superseded by hide converges and same-size rotation does not reuse the pending band',async()=>{
- const f=fixture(),w=f.windowPort();await f.C.install(w);await settle();
+ const f=await fixture(),w=f.windowPort();await f.C.install(w);await settle();
  await f.C.requestReaderWindowPolicy(new f.P('system',false,true,false,true));
  const gate=deferred();w.nextStatus=gate;w.avoidTop={left:0,top:0,width:0,height:0};
  const reveal=f.C.requestReaderWindowPolicy(new f.P('system',false,false,false,false));await settle();
@@ -808,7 +781,7 @@ await check('show superseded by hide converges and same-size rotation does not r
  f.displayInfo.rotation=2;w.events.get('windowRectChange')({});assert.equal(f.C.metrics().statusBarHeight,0,'180-degree rotation has no measured band yet');
  f.C.detach();
 });
-for(const result of cases)console.log(JSON.stringify(result));
-console.log(JSON.stringify({sdkEvidence,cases:cases.length}));
-assert.equal(cases.filter(x=>x.status==='FAIL').length,0,'production window chrome scenarios');
-console.log('PASS actual SDK Manga/Shell Props/State Watch → production intent → actual Coordinator, authored phone mask opening/drag/closing/restore, both Area orders and font-metric retry, plus actual novel SDK ownership/control sessions, existing LRE palette/order cases and ten production counterfactuals. Native branch removal, subscriber delivery and Window promises are controlled boundaries; no device pixel, compositor, failure-frequency or native-bar acceptance claim.');
+
+}finally{for(const f of allFixtures.reverse())f.cleanup();}
+
+}

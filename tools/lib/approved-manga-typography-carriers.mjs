@@ -14,19 +14,24 @@ export const novelSourceSwitchSuccessorPath = 'tools/fixtures/design/novel-sourc
 export const novelSourceSwitchSuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/novel-source-switch-successor-20261006.json', import.meta.url), 'utf8'));
 const novelPaths = ['entry/src/main/ets/features/source/SourceSwitchWindow.ets', 'entry/src/main/ets/features/source/SourceSwitchProgress.ets'];
 const completionPath = 'entry/src/main/ets/features/source/SourceSwitchCompletionOverlay.ets';
-assert.equal(novelSourceSwitchSuccessor.schema, 1);
-assert.equal(novelSourceSwitchSuccessor.visualSpecSource, '../Reader-UI/design/source-switch/source-switch.visual.json', 'one finite independent selected source visual spec');
-assert.equal(createHash('sha256').update(readFileSync(new URL('../../'+novelSourceSwitchSuccessor.visualSpecSource,import.meta.url))).digest('hex'),
-  novelSourceSwitchSuccessor.visualSpecSha256, 'selected typography witness binds current independent visual source');
-assert.equal(SOURCE_SWITCH_VISUAL_SHA256,novelSourceSwitchSuccessor.visualSpecSha256,'generated native spec and exact selected witness bind the same design source');
-assert.deepEqual(novelSourceSwitchSuccessor.files.map(entry => entry.path), novelPaths, 'only the two exact selected novel source actors');
-assert.equal(novelSourceSwitchSuccessor.completion?.path,completionPath,'one exact selected completion view, separate from historical source actors');
-assert.equal(novelSourceSwitchSuccessor.completion.carriers.length,1,'completion view has one finite toast text actor');
-assert.deepEqual(Object.keys(novelSourceSwitchSuccessor.completion.roles),['TYPE_SOURCE_SWITCH_NOVEL_TOAST'],'completion view cannot admit another public role');
-assert.deepEqual(novelSourceSwitchSuccessor.completion.architectureCounts,{fontSize:0,backgroundColor:1},'one exact completion background and zero private text budget');
-assert.equal(novelSourceSwitchSuccessor.historicalFixture, 'tools/fixtures/design/approved-manga-typography-carriers-20261005.json');
-assert.equal(createHash('sha256').update(readFileSync(new URL('../fixtures/design/approved-manga-typography-carriers-20261005.json', import.meta.url))).digest('hex'),
-  novelSourceSwitchSuccessor.historicalFixtureSha256, 'historical manga typography fixture stays immutable');
+/** Explicit witness maintenance; importing/querying one consumer does not validate unrelated families. */
+export function validateNovelSourceSwitchTypographySuccessor() {
+  assert.equal(novelSourceSwitchSuccessor.schema, 1);
+  assert.equal(novelSourceSwitchSuccessor.visualSpecSource, '../Reader-UI/design/source-switch/source-switch.visual.json', 'one finite independent selected source visual spec');
+  assert.equal(createHash('sha256').update(readFileSync(new URL('../../'+novelSourceSwitchSuccessor.visualSpecSource,import.meta.url))).digest('hex'),
+    novelSourceSwitchSuccessor.visualSpecSha256, 'selected typography witness binds current independent visual source');
+  assert.equal(SOURCE_SWITCH_VISUAL_SHA256,novelSourceSwitchSuccessor.visualSpecSha256,'generated native spec and exact selected witness bind the same design source');
+  assert.deepEqual(novelSourceSwitchSuccessor.files.map(entry => entry.path), novelPaths, 'only the two exact selected novel source actors');
+  assert.equal(novelSourceSwitchSuccessor.completion?.path,completionPath,'one exact selected completion view, separate from historical source actors');
+  assert.equal(novelSourceSwitchSuccessor.completion.carriers.length,1,'completion view has one finite toast text actor');
+  assert.deepEqual(Object.keys(novelSourceSwitchSuccessor.completion.roles),['TYPE_SOURCE_SWITCH_NOVEL_TOAST'],'completion view cannot admit another public role');
+  assert.deepEqual(novelSourceSwitchSuccessor.completion.architectureCounts,{fontSize:0,backgroundColor:1},'one exact completion background and zero private text budget');
+  assert.equal(novelSourceSwitchSuccessor.historicalFixture, 'tools/fixtures/design/approved-manga-typography-carriers-20261005.json');
+  assert.equal(createHash('sha256').update(readFileSync(new URL('../fixtures/design/approved-manga-typography-carriers-20261005.json', import.meta.url))).digest('hex'),
+    novelSourceSwitchSuccessor.historicalFixtureSha256, 'historical manga typography fixture stays immutable');
+  for (const entry of novelSourceSwitchSuccessor.files) retainsHistoricalCarriers(entry);
+  return novelSourceSwitchSuccessor;
+}
 /** A new selected novel actor cannot erase, edit or copy a retained manga
  * carrier. Check multiplicity as well as owner/method/tuple/AUTO identity. */
 function retainsHistoricalCarriers(entry) {
@@ -46,7 +51,6 @@ function retainsHistoricalCarriers(entry) {
     }
   }
 }
-for (const entry of novelSourceSwitchSuccessor.files) retainsHistoricalCarriers(entry);
 
 export const mangaDirectoryTypographySuccessorPath = 'tools/fixtures/design/manga-directory-typography-successor-20261006.json';
 export const mangaDirectoryTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/manga-directory-typography-successor-20261006.json', import.meta.url), 'utf8'));
@@ -112,7 +116,6 @@ export function validateMangaDirectoryTypographySuccessor(successor, readSource 
   }
   return successor;
 }
-validateMangaDirectoryTypographySuccessor(mangaDirectoryTypographySuccessor);
 
 export const sharedSourceSwitchTypographySuccessorPath = 'tools/fixtures/design/shared-source-switch-typography-successor-20261007.json';
 export const sharedSourceSwitchTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/shared-source-switch-typography-successor-20261007.json', import.meta.url), 'utf8'));
@@ -162,7 +165,6 @@ export function validateSharedSourceSwitchTypographySuccessor(successor, readSou
   }
   return successor;
 }
-validateSharedSourceSwitchTypographySuccessor(sharedSourceSwitchTypographySuccessor);
 
 export const sourceSwitchFrameSuccessorPath = 'tools/fixtures/design/source-switch-frame-successor-20261014.json';
 export const sourceSwitchFrameSuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/source-switch-frame-successor-20261014.json', import.meta.url), 'utf8'));
@@ -187,7 +189,6 @@ export function validateSourceSwitchFrameSuccessor(successor, readSource = direc
   assert.deepEqual(entry.delegate, { component: 'ReaderBoundedSurface', file: 'entry/src/main/ets/features/common/ReaderBoundedSurface.ets', method: 'novelDrawer', specId: "'source-switch-drawer'" }, 'one exact existing-frame binding');
   return successor;
 }
-validateSourceSwitchFrameSuccessor(sourceSwitchFrameSuccessor);
 
 export const unifiedActionSheetTypographySuccessorPath = 'tools/fixtures/design/unified-action-sheet-typography-successor-20261014.json';
 export const unifiedActionSheetTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/unified-action-sheet-typography-successor-20261014.json', import.meta.url), 'utf8'));
@@ -224,7 +225,6 @@ export function validateUnifiedActionSheetTypographySuccessor(successor, readSou
   }
   return successor;
 }
-validateUnifiedActionSheetTypographySuccessor(unifiedActionSheetTypographySuccessor);
 
 function validatesActionSheetDelegate(source, entry) {
   const tree = ts.createSourceFile(entry.path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
@@ -317,7 +317,6 @@ export function validateMangaDirectoryWorktreeSuccessor(successor, readSource = 
   }
   return successor;
 }
-validateMangaDirectoryWorktreeSuccessor(mangaDirectoryWorktreeSuccessor);
 
 export const directoryRecoveryTypographySuccessorPath = 'tools/fixtures/design/directory-recovery-typography-successor-20261016.json';
 export const directoryRecoveryTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/directory-recovery-typography-successor-20261016.json', import.meta.url), 'utf8'));
@@ -360,7 +359,6 @@ export function validateDirectoryRecoveryTypographySuccessor(successor = directo
   }
   return successor;
 }
-validateDirectoryRecoveryTypographySuccessor();
 function validatesDirectoryRecoveryActors(source, entry) {
   const actors = auditNativeTextElements(source, entry.path).filter(node => node.text === recoveryText[recoveryPaths.indexOf(entry.path)])
     .map(node => ({ method: node.method, kind: node.kind, text: node.text, attributes: node.attributes }));
@@ -375,11 +373,22 @@ function validatesDirectoryRecoveryActors(source, entry) {
   }
 }
 
+
+export const messageTypographySuccessor = JSON.parse(readFileSync(new URL('../fixtures/design/message-style-typography-successor-20261019.json', import.meta.url), 'utf8'));
+export function validateMessageTypographySuccessor() {
+  assert.equal(messageTypographySuccessor.schema, 1);
+  const digest = value => createHash('sha256').update(value).digest('hex');
+  assert.equal(digest(readFileSync(new URL('../../' + messageTypographySuccessor.scopePath, import.meta.url))),
+    messageTypographySuccessor.scopeSha256, 'message typography binds the exact user-reviewed scope');
+  for (const previous of messageTypographySuccessor.previousFixtures)
+    assert.equal(digest(readFileSync(new URL('../../' + previous.path, import.meta.url))), previous.sha256,
+      'message successor preserves the immutable previous fixture: ' + previous.path);
+}
 export const typographyCarrierShape = node => JSON.parse(JSON.stringify({ owner: node.owner, method: node.method, kind: node.kind, text: node.text,
   modifiers: Object.fromEntries(Object.entries(node.modifiers).map(([property, value]) => [property, { expression: value.expression, extra: value.extra }])) }));
 export const approvedTypographyFile = file => {
   const fullPath = file.startsWith('entry/') ? file : 'entry/src/main/ets/' + (file.startsWith('features/') || file.startsWith('pages/') ? file : 'features/' + file);
-  return directoryRecoveryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryWorktreeSuccessor.files.find(entry => entry.path === fullPath) ?? sourceSwitchFrameSuccessor.files.find(entry => entry.path === fullPath) ?? unifiedActionSheetTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? sharedSourceSwitchTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
+  return messageTypographySuccessor.files.find(entry => entry.path === fullPath) ?? directoryRecoveryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryWorktreeSuccessor.files.find(entry => entry.path === fullPath) ?? sourceSwitchFrameSuccessor.files.find(entry => entry.path === fullPath) ?? unifiedActionSheetTypographySuccessor.files.find(entry => entry.path === fullPath) ?? mangaDirectoryTypographySuccessor.files.find(entry => entry.path === fullPath) ?? sharedSourceSwitchTypographySuccessor.files.find(entry => entry.path === fullPath) ?? novelSourceSwitchSuccessor.files.find(entry => entry.path === fullPath) ?? (fullPath===completionPath?novelSourceSwitchSuccessor.completion:undefined) ?? approvedMangaTypography.files.find(entry => entry.path === fullPath);
 };
 /** A finite approved reference or selected demo contract, separate from shared roles.
  * Every concrete file/struct/method/native text carrier and all five authored
@@ -390,6 +399,30 @@ export const approvedTypographyFile = file => {
 export function approvedTypographyContract(source, file) {
   const entry = approvedTypographyFile(file);
   if (!entry) return { registered: false, has: () => false, count: 0 };
+  if (messageTypographySuccessor.files.includes(entry)) {
+    validateMessageTypographySuccessor();
+    const actual = auditTypographyConsumers(source, entry.path).map(typographyCarrierShape);
+    assert.deepEqual(actual, entry.carriers, 'exact reviewed message successor carriers: ' + entry.path);
+    const remaining = actual.map(carrier => JSON.stringify(carrier));
+    for (const retained of entry.retainedPreviousCarriers) {
+      const index = remaining.indexOf(JSON.stringify(retained));
+      assert.ok(index >= 0, 'normal non-message typography survives with original multiplicity');
+      remaining.splice(index, 1);
+    }
+    const native = approvedNativeCarrierFacts(source, entry.path);
+    assert.deepEqual(native, entry.nativeDefaults, 'message successor retains explicit native AUTO omissions');
+    assert.deepEqual(approvedNativeAllCarrierFacts(source, entry.path), entry.nativeActors, 'exact native message actors and retained paint');
+    const imports = typographyRoleImports(source, entry.path);
+    for (const [name, tuple] of Object.entries(entry.roles)) {
+      assert.ok(imports.has(name), 'actual message successor role import: ' + name);
+      assert.deepEqual(JSON.parse(JSON.stringify(readerTypographyRoles[name])), tuple, 'message public tuple changed: ' + name);
+    }
+    const keys = new Set(actual.map(carrier => JSON.stringify(carrier)));
+    const nativeKeys = new Set(native.map(carrier => JSON.stringify(carrier)));
+    return { registered: true, entry, count: actual.length,
+      has: node => keys.has(JSON.stringify(typographyCarrierShape(node))),
+      hasNative: node => nativeKeys.has(JSON.stringify(approvedNativeCarrierShape(node, approvedNativeOwner(source, entry.path, node.line)))) };
+  }
   if (directoryRecoveryTypographySuccessor.files.includes(entry)) {
     validateDirectoryRecoveryTypographySuccessor();
     validatesDirectoryRecoveryActors(source, entry);

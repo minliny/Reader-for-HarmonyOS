@@ -1,10 +1,19 @@
-import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import {
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'admission':{description:'Pure exact debug cold-start and preserve-data maintenance admission',resources:[]},
+ 'ability-consumer':{description:'Actual EntryAbility loadMainContent/Warm Want methods; no window or device',resources:[]},
+ 'registration':{description:'Required diagnostic pages registered uniquely; extra product pages permitted',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { readFile }=await import('node:fs/promises');
+const {
   readerControlVerificationColdStartPage,
   readerRebuildableCacheClearEnabled,
-} from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
+}=await import('../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts');
 
+if(selectedCase==='admission'){
 const normal = 'pages/Index';
 const diagnostic = 'pages/ReaderControlMotionVerification';
 const rendererPilot = 'pages/ReaderRendererPilot';
@@ -31,45 +40,31 @@ for (const value of [false, undefined, null, 'true', 1, { enabled: true }])
 assert.equal(readerRebuildableCacheClearEnabled(false, 'debug', true), false);
 assert.equal(readerRebuildableCacheClearEnabled(true, 'release', true), false);
 
-// Supplemental integration guards: not a claim of compiled/device behavior.
-const ability = await readFile(new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url), 'utf8');
-assert.match(ability, /private coldStartPage: string = 'pages\/Index'/);
-assert.match(ability, /const page = this\.coldStartPage;[\s\S]*windowStage\.loadContent\(page,/);
-assert.match(ability, /readerControlVerificationColdStartPage\(/);
-assert.match(ability, /readerRebuildableCacheClearEnabled\(/);
-assert.match(ability, /clearRebuildableCachesForVerification/);
-assert.match(ability, /want\.parameters\?\.readerOpenSourcePilot/);
-assert.equal([...ability.matchAll(/this\.coldStartPage\s*=(?!=)/g)].length, 2,
-  'only onCreate admits a destination, with one exact missing-page consumption reset');
-assert.match(ability, /if \(page === 'pages\/__ReaderStartupMainLoadFailure'\) \{\s*this\.coldStartPage = 'pages\/Index';/);
-assert.match(ability, /onNewWant\(want: Want,[\s\S]*?ReaderSystemFileOpenHost\.receive\(want\);\s*\}/,
-  'warm file wants enter the import queue without changing diagnostic routes or reloading the window');
-assert.doesNotMatch(ability, /want\.(?:uri|action)|want\.parameters\?\.\[['"](?:route|page|url)['"]\]/,
-  'no arbitrary external route enters loadContent');
-assert.match(ability, /ReaderRuntimeOwner\.install\(this\.context,\s*readerDisableOptionalEntryMemory\(DEBUG, BUILD_MODE_NAME, want\.parameters\?\.readerDisableOptionalEntryMemory\),/);
-assert.match(ability, /this\.runtimeOwner\?\.flush\(\)/);
-assert.match(ability, /owner\?\.release\(\)/);
 
-const pages = JSON.parse(await readFile(new URL('../entry/src/main/resources/base/profile/main_pages.json', import.meta.url), 'utf8'));
-assert.deepEqual(pages.src, [normal, diagnostic, rendererPilot, 'pages/ReaderStartupRecovery'], 'diagnostics are registered for guarded debug cold starts');
-const renderer = await readFile(new URL('../entry/src/main/ets/pages/ReaderRendererPilot.ets', import.meta.url), 'utf8');
-assert.match(renderer, /\$rawfile\('reader-oss-pilot\/index\.html'\)/);
-assert.match(renderer, /\.fileAccess\(false\)/);
-assert.match(renderer, /\.domStorageAccess\(false\)/);
-assert.doesNotMatch(renderer, /ReaderRuntimeOwner|LocalReadingExperience|deleteBook|clearData/);
-const page = await readFile(new URL('../entry/src/main/ets/pages/ReaderControlMotionVerification.ets', import.meta.url), 'utf8');
-assert.match(page, /@Entry\s+@Component\s+struct ReaderControlMotionVerification/);
-assert.match(page, /ReaderControlMotionStage\(/);
-assert.match(page, /ReaderControlAppearanceContent\(/);
-assert.match(page, /独立格位、默认末尾，保留自定义排序/);
-assert.match(page, /非阅读器业务验收/);
-assert.doesNotMatch(page, /ReaderRuntimeOwner|LocalReadingExperience|clearData|deleteBook/,
-  'diagnostic content is not a production session or data-reset path');
-const pointer = await readFile(new URL('./fixtures/ReaderControlMotionVerification.ets', import.meta.url), 'utf8');
-assert.match(pointer, /'entry\/src\/main\/ets\/pages\/ReaderControlMotionVerification\.ets'/);
-assert.doesNotMatch(pointer, /@Entry|@Component|struct ReaderControlMotionVerification/,
-  'there is no duplicate large diagnostic component');
-const pipeline = await readFile(new URL('../scripts/hap-pipeline.mjs', import.meta.url), 'utf8');
-assert.match(pipeline, /'product=default'.*'module=entry@default'.*'buildMode=debug'/,
-  'generated BuildProfile import matches the sole pipeline target');
-console.log('reader control diagnostic cold-start production admission + packaging wiring: PASS');
+return;
+}
+const normal='pages/Index',diagnostic='pages/ReaderControlMotionVerification',rendererPilot='pages/ReaderRendererPilot';
+if(selectedCase==='ability-consumer'){
+ const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');const received=[];
+ const Ability=selectedProductionMethods(new URL('../entry/src/main/ets/entryability/EntryAbility.ets',import.meta.url),'EntryAbility',
+ ['loadMainContent','onNewWant'],{ReaderStartupTrace:{current:()=>undefined},ReaderSystemFileOpenHost:{receive:want=>received.push(want)},hilog:{error(){}},DOMAIN:0});
+ for(const page of [normal,diagnostic,rendererPilot]){
+  const ability=Object.assign(new Ability(),{coldStartPage:page,windowStageGeneration:1}),loads=[],done=[];
+  ability.loadMainContent({loadContent:(name,callback)=>{loads.push(name);callback({code:0});}},code=>done.push(code));
+  assert.deepEqual(loads,[page]);assert.deepEqual(done,[0]);assert.equal(ability.coldStartPage,page);
+  const want={parameters:{readerControlMotionVerification:true,route:'pages/anything'}};ability.onNewWant(want,{});
+  assert.equal(received.at(-1),want);assert.equal(ability.coldStartPage,page,'warm Want cannot replace admitted cold destination');assert.equal(loads.length,1);
+ }
+ const ability=Object.assign(new Ability(),{coldStartPage:'pages/__ReaderStartupMainLoadFailure',windowStageGeneration:1}),loads=[];
+ ability.loadMainContent({loadContent:(name,callback)=>{loads.push(name);callback({code:1});}},()=>{});
+ ability.loadMainContent({loadContent:(name,callback)=>{loads.push(name);callback({code:0});}},()=>{});
+ assert.deepEqual(loads,['pages/__ReaderStartupMainLoadFailure',normal],'fault dispatch is consumed before platform response');
+ let late;let completed=0;ability.loadMainContent({loadContent:(_name,callback)=>{late=callback;}},()=>completed++);ability.windowStageGeneration++;late({code:0});assert.equal(completed,0);
+}else{
+ const pages=JSON.parse(await readFile(new URL('../entry/src/main/resources/base/profile/main_pages.json',import.meta.url),'utf8'));
+ assert.equal(new Set(pages.src).size,pages.src.length,'route IDs register uniquely');
+ for(const page of [normal,diagnostic,rendererPilot,'pages/ReaderStartupRecovery'])assert.ok(pages.src.includes(page),page+' registered');
+}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

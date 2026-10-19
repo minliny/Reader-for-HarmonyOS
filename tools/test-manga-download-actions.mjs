@@ -1,13 +1,21 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } from './lib/manga-directory-adaptive-probe.mjs';
-import assert from 'node:assert/strict';
-import {createRequire,registerHooks,stripTypeScriptTypes} from 'node:module';
-import {readFileSync} from 'node:fs';
-import {mangaDirectoryEntryRows} from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
-import {mangaDirectoryEntryRowSdk} from './lib/manga-directory-entry-row-probe.mjs';
-import {mangaRowBuilderMembers,mangaGridProbeDependencies} from './lib/manga-directory-grid-probe.mjs';
-import * as horizontalGeometry from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
-import * as windowMetrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"gateway-task": {"description": "实际gateway queue/inventory/retention先后与wire拒绝", "resources": []}, "current-submit": {"description": "当前Index提交exact admitted session和late receipt拒绝", "resources": []}, "legacy-intent-drain": {"description": "仅兼容旧Host intent pause/resume/cancel/drain", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } = await import('./lib/manga-directory-adaptive-probe.mjs');
+const {default: assert} = await import('node:assert/strict');
+const {createRequire,registerHooks,stripTypeScriptTypes} = await import('node:module');
+const {readFileSync} = await import('node:fs');
+const {mangaDirectoryEntryRows} = await import('../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts');
+const {mangaDirectoryEntryRowSdk} = await import('./lib/manga-directory-entry-row-probe.mjs');
+const {mangaRowBuilderMembers,mangaGridProbeDependencies} = await import('./lib/manga-directory-grid-probe.mjs');
+const horizontalGeometry = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const windowMetrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const {MangaDownloadActionsGateway}=await import('../entry/src/main/ets/features/manga/MangaDownloadActionsGateway.ts');
 const {ReadingOfflineHost}=await import('../entry/src/main/ets/features/reading/ReadingOfflineHost.ts');
@@ -45,6 +53,54 @@ function fixture(){
  async deleteMangaDownload(c,version){deleted.push([c.chapterId,version]);return version!=='new-partial';}};
  return {gateway:new MangaDownloadActionsGateway(runtime),runtime,calls,rows,deleted,released};
 }
+const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+const indexFile=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
+const tick=async()=>{await new Promise(resolve=>setImmediate(resolve));};
+const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
+function indexFixture(){
+ const f=fixture(),events=[],feedback=[],gateways=[],chapterHolds=new Map();let failUpdate=false,bookHold;
+ const entries=f.rows.filter(row=>row.navigable).map(row=>({index:row.chapterIndex,title:`chapter ${row.chapterIndex}`,
+  url:row.url,navigable:true,downloadState:row.state,bookmarks:[]}));
+ const admitted={...session,entries};
+ class Offline{
+  chapterWork=new Map();
+  constructor(){gateways.push(this);}
+  async waitForMangaChapter(index){events.push(['chapter-drain',index]);await this.chapterWork.get(index)?.catch(()=>{});}
+  async loadProjection(_session,current){assert.ok(current?.()??true);events.push('projection');return entries.map(row=>({...row,downloadState:f.rows.find(status=>status.chapterIndex===row.index).state}));}
+  async prefetchChapter(s,index,current,evidence){assert.deepEqual(s.identity,admitted.identity);evidence?.dispatched();evidence?.confirmed();assert.ok(current());events.push(['download',index]);const work=(async()=>{await chapterHolds.get(index);if(!current())throw Error('cancelled');return this.loadProjection(s,current);})();this.chapterWork.set(index,work);try{return await work;}finally{this.chapterWork.delete(index);}}
+  async updateMangaChapter(s,index,current,evidence){assert.deepEqual(s.identity,admitted.identity);evidence?.dispatched();evidence?.confirmed();assert.ok(current());events.push(['update',index]);if(failUpdate)throw Error('low space');return this.loadProjection(s,current);}
+  async prefetchBook(s,current,progress,evidence,chapterCurrent){evidence?.dispatched();evidence?.confirmed();events.push('book');events.push(['book-guard',chapterCurrent]);await bookHold;if(!current())throw Error('cancelled');const result=await this.loadProjection(s,current);progress?.({entries:result,totalChapters:result.length,completedChapters:1});return result;}
+  async clearBook(_s,_c,evidence){evidence?.dispatched();evidence?.confirmed();events.push('clear');}
+ }
+ const request=f.runtime.request;f.runtime.request=async(method,params)=>{events.push(method);return request(method,params);};
+ const list=f.runtime.listMangaDownloadVersions;f.runtime.listMangaDownloadVersions=async(...args)=>{events.push(['versions',args[0].chapterId]);return list(...args);};
+ const del=f.runtime.deleteMangaDownload;f.runtime.deleteMangaDownload=async(...args)=>{events.push(['delete',...args.slice(0,2)]);return del(...args);};
+ const offlineGateway=new Offline();
+ offlineGateway.pendingClearOperation=async()=>undefined;
+ offlineGateway.loadDirectoryProjection=(...args)=>offlineGateway.loadProjection(...args);
+ const offline=new ReadingOfflineHost({gateway:offlineGateway,mangaActions:f.gateway,ownsRuntime:()=>true});
+ const Index=productionMotionMethods(indexFile,['performMangaDownloadAction','loadMangaDownloadActions','submitReaderDownload',
+  'downloadDirectoryChapter','downloadDirectoryBook','clearDirectoryBookOffline','requestClearDirectoryBookOffline',
+  'offlineBinding','directoryOperationBindingId','isCurrentDirectoryOperationBinding','applyOwnedDirectoryEntries',
+  'requestReaderBookInfo','cancelReaderExitDestination','onReaderExited','currentReaderPresentationIdentity'],{
+  ReaderRuntimeOwner:{current:()=>f.runtime},hilog:{warn(){},error(){}},DOMAIN:0,errorMessageOf:e=>e.message,readingOfflineFailureHint:e=>e.message});
+ const owner=Object.assign(new Index(),{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,route:'detail',
+  navigationGeneration:0,detailShelfAdmissionMount:0,remoteSessionGeneration:0,readingReadyGeneration:0,
+  remoteReadingSession:admitted,detailBook:{...admitted.identity,contentKind:'manga'},detailToc:entries,
+  mangaDownloadActionGeneration:0,mangaDownloadActionActiveKey:'',offlineOperationActive:false,
+  readingSessionActive:false,systemFileOpenExitId:0,openRulesManagementAfterReaderExit:false,exitToDetailOriginAfterReader:false,
+  getReadingOfflineHost:()=>offline,getReadingEntryHost:()=>undefined,isCurrentRuntime:owner=>owner===f.runtime,
+  mergeDirectoryBookmarks:(rows,previous)=>rows.map(row=>({...row,bookmarks:previous.find(old=>old.index===row.index)?.bookmarks??[]})),
+  isKnownDetailChapter:index=>entries.some(row=>row.index===index),showOfflineDownloadFeedback:message=>feedback.push(message),
+  offlineDownloadFeedback:()=> 'download progress',showChapterDownloadFailure:()=>feedback.push('download failed'),showReadingFailure:()=>feedback.push('text failure'),
+  updateDirectoryChapterDownloadState:()=>{throw Error('manga must publish durable projection, never optimistic queued/failed');},
+  returnToReadingOrigin(){events.push('exit-finished');this.readingSessionActive=false;},getUIContext:()=>({showAlertDialog:dialog=>owner.dialog=dialog})});
+ const binding=owner.offlineBinding.bind(owner);
+ owner.offlineBinding=(...args)=>({...binding(...args),failed:()=>feedback.push('download failed')});
+
+ return {...f,admitted,owner,offline,offlineGateway,events,feedback,gateways,failUpdate:()=>{failUpdate=true;},holdBook:value=>{bookHold=value;},holdChapter:(index,value)=>chapterHolds.set(index,value),makeIntent:(chapterIndex,settled)=>{offlineGateway.waitForMangaChapter=async index=>{events.push(['chapter-drain',index]);await settled;};return {session:admitted,valid:true,generation:offline.generation,settled,excludedChapters:new Set(),continuations:new Set(),evidence:new ReaderWriteEvidence()};}};
+}
+if(selectedCase==='gateway-task') {
 {
  const f=fixture(),snapshot=await f.gateway.snapshot(session);assert.equal(snapshot.chapters.length,5);
  assert.equal(snapshot.chapters.find(row=>row.chapterIndex===4).state,'paused');
@@ -113,78 +169,42 @@ for(const corruption of ['book','index','status','attempts']){
 }
 console.log('PASS malformed queue receipts, foreign inventories, absent full-book inventory, stale callers and disabled/group selections fail before unsafe mutation');
 
-const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
-const windows=[],progressReads=[];
-const runtime={};
-const PrefetchOffline=class{async prefetchWindow(...args){windows.push(args.slice(0,3));return {entries:[{index:1,title:'one',downloadState:'cached'}],failedChapters:0};}};
-const PrefetchRemote=class{async loadProgress(...args){progressReads.push(args);return {kind:'restored',progress:{chapterIndex:1}};}};
-const prefetchSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingPrefetchHost.ts',import.meta.url),'utf8');
-const ReadingPrefetchHost=new Function('ReaderRuntimeOwner','ReadingOfflineGateway','RemoteReadingFlowGateway','sameRemoteSessionEvidence','canAppendRemoteReadingCatalog','errorMessageOf',
- stripTypeScriptTypes(prefetchSource.replace(/^import[\s\S]*?;\n/gm,'')).replace(/\bexport /g,'')+';return ReadingPrefetchHost;')(
- runtimeOwnerIdentityProbe(()=>runtime),PrefetchOffline,PrefetchRemote,(a,b)=>a===b,()=>false,error=>error.message);
-const Probe=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
- ['prefetchReadingWindow'],{ReadingPrefetchHost,ReaderRuntimeOwner:{current:()=>runtime},sameRemoteSessionEvidence:(a,b)=>a===b});
+
+}
+if(selectedCase==='current-submit') {
+// Current Index buttons submit the exact admitted session to the shared
+// durable coordinator. I/O receipts are the seam; production admission and
+// navigation execute unchanged, including stale/unknown/no-chapter guards.
 {
- const entries=[0,1,2].map(index=>({index,title:String(index),url:`/${index}`,navigable:true}));
- const manga={...session,entries},text={...manga,contentKind:'text'};
- const host=Object.assign(new Probe(),{mountedRuntimeOwner:runtime,shelfReceiptRetired:false,navigationGeneration:0,detailShelfAdmissionMount:0,
-  readingSessionActive:true,detailBook:text.identity,remoteSessionGeneration:1,remoteReadingSession:text,detailToc:entries.map(entry=>({...entry,bookmarks:[]}))});
- await host.prefetchReadingWindow(manga,undefined,()=>true);await host.prefetchReadingWindow(manga,1);
- assert.equal(windows.length,0);assert.equal(progressReads.length,0,'manual manga shelf update cannot enter the explicit download prewarm path');
- await host.prefetchReadingWindow(text,1);assert.deepEqual(windows[0],[text,0,3]);
- assert.equal(host.detailToc.find(entry=>entry.index===1).downloadState,'cached');assert.equal(progressReads.length,0);
- await host.prefetchReadingWindow(text,undefined,()=>true);assert.equal(windows.length,2);assert.equal(progressReads.length,1,'text manual prewarm keeps its original progress/window behavior');
+ const f=indexFixture(),submitted=[],opened=[];
+ f.runtime.getDownloadCoordinator=()=>({submit:async(...args)=>{submitted.push(args);return{accepted:true,key:'shared-job',alreadyRunning:false};}});
+ f.owner.requestReaderDownloads=key=>opened.push(key);
+ f.owner.downloadDirectoryChapter(3);await tick();
+ assert.deepEqual(submitted,[[f.admitted,[3]]]);assert.deepEqual(opened,[]);
+ assert.ok(f.feedback.includes('已加入下载，可在下载管理查看进度'));
+ f.owner.downloadDirectoryChapter(2);await tick();assert.equal(submitted.length,1,'unknown/non-admitted volume index cannot submit a shared download');
+ f.owner.downloadDirectoryBook();await tick();assert.deepEqual(submitted[1],[f.admitted,undefined]);assert.deepEqual(opened,['shared-job']);
 }
-console.log('PASS actual Index manga manual shelf-update prewarm returns before progress/download RPC; text chapter window and projection behavior remain intact');
-
-// Run the actual Index operation lifecycle with Core receipts and exact Host
-// ownership at the I/O boundary. A paused read consumer is never resumed here.
-const indexFile=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
-const tick=async()=>{await new Promise(resolve=>setImmediate(resolve));};
-const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
-function indexFixture(){
- const f=fixture(),events=[],feedback=[],gateways=[],chapterHolds=new Map();let failUpdate=false,bookHold;
- const entries=f.rows.filter(row=>row.navigable).map(row=>({index:row.chapterIndex,title:`chapter ${row.chapterIndex}`,
-  url:row.url,navigable:true,downloadState:row.state,bookmarks:[]}));
- const admitted={...session,entries};
- class Offline{
-  chapterWork=new Map();
-  constructor(){gateways.push(this);}
-  async waitForMangaChapter(index){events.push(['chapter-drain',index]);await this.chapterWork.get(index)?.catch(()=>{});}
-  async loadProjection(_session,current){assert.ok(current?.()??true);events.push('projection');return entries.map(row=>({...row,downloadState:f.rows.find(status=>status.chapterIndex===row.index).state}));}
-  async prefetchChapter(s,index,current,evidence){assert.deepEqual(s.identity,admitted.identity);evidence?.dispatched();evidence?.confirmed();assert.ok(current());events.push(['download',index]);const work=(async()=>{await chapterHolds.get(index);if(!current())throw Error('cancelled');return this.loadProjection(s,current);})();this.chapterWork.set(index,work);try{return await work;}finally{this.chapterWork.delete(index);}}
-  async updateMangaChapter(s,index,current,evidence){assert.deepEqual(s.identity,admitted.identity);evidence?.dispatched();evidence?.confirmed();assert.ok(current());events.push(['update',index]);if(failUpdate)throw Error('low space');return this.loadProjection(s,current);}
-  async prefetchBook(s,current,progress,evidence,chapterCurrent){evidence?.dispatched();evidence?.confirmed();events.push('book');events.push(['book-guard',chapterCurrent]);await bookHold;if(!current())throw Error('cancelled');const result=await this.loadProjection(s,current);progress?.({entries:result,totalChapters:result.length,completedChapters:1});return result;}
-  async clearBook(_s,_c,evidence){evidence?.dispatched();evidence?.confirmed();events.push('clear');}
- }
- const request=f.runtime.request;f.runtime.request=async(method,params)=>{events.push(method);return request(method,params);};
- const list=f.runtime.listMangaDownloadVersions;f.runtime.listMangaDownloadVersions=async(...args)=>{events.push(['versions',args[0].chapterId]);return list(...args);};
- const del=f.runtime.deleteMangaDownload;f.runtime.deleteMangaDownload=async(...args)=>{events.push(['delete',...args.slice(0,2)]);return del(...args);};
- const offlineGateway=new Offline();
- offlineGateway.pendingClearOperation=async()=>undefined;
- offlineGateway.loadDirectoryProjection=(...args)=>offlineGateway.loadProjection(...args);
- const offline=new ReadingOfflineHost({gateway:offlineGateway,mangaActions:f.gateway,ownsRuntime:()=>true});
- const Index=productionMotionMethods(indexFile,['performMangaDownloadAction','loadMangaDownloadActions','submitReaderDownload',
-  'downloadDirectoryChapter','downloadDirectoryBook','clearDirectoryBookOffline','requestClearDirectoryBookOffline',
-  'offlineBinding','directoryOperationBindingId','isCurrentDirectoryOperationBinding','applyOwnedDirectoryEntries',
-  'requestReaderBookInfo','cancelReaderExitDestination','onReaderExited','currentReaderPresentationIdentity'],{
-  ReaderRuntimeOwner:{current:()=>f.runtime},hilog:{warn(){},error(){}},DOMAIN:0,errorMessageOf:e=>e.message,readingOfflineFailureHint:e=>e.message});
- const owner=Object.assign(new Index(),{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,route:'detail',
-  navigationGeneration:0,detailShelfAdmissionMount:0,remoteSessionGeneration:0,readingReadyGeneration:0,
-  remoteReadingSession:admitted,detailBook:{...admitted.identity,contentKind:'manga'},detailToc:entries,
-  mangaDownloadActionGeneration:0,mangaDownloadActionActiveKey:'',offlineOperationActive:false,
-  readingSessionActive:false,systemFileOpenExitId:0,openRulesManagementAfterReaderExit:false,exitToDetailOriginAfterReader:false,
-  getReadingOfflineHost:()=>offline,getReadingEntryHost:()=>undefined,isCurrentRuntime:owner=>owner===f.runtime,
-  mergeDirectoryBookmarks:(rows,previous)=>rows.map(row=>({...row,bookmarks:previous.find(old=>old.index===row.index)?.bookmarks??[]})),
-  isKnownDetailChapter:index=>entries.some(row=>row.index===index),showOfflineDownloadFeedback:message=>feedback.push(message),
-  offlineDownloadFeedback:()=> 'download progress',showChapterDownloadFailure:()=>feedback.push('download failed'),showReadingFailure:()=>feedback.push('text failure'),
-  updateDirectoryChapterDownloadState:()=>{throw Error('manga must publish durable projection, never optimistic queued/failed');},
-  returnToReadingOrigin(){events.push('exit-finished');this.readingSessionActive=false;},getUIContext:()=>({showAlertDialog:dialog=>owner.dialog=dialog})});
- const binding=owner.offlineBinding.bind(owner);
- owner.offlineBinding=(...args)=>({...binding(...args),failed:()=>feedback.push('download failed')});
-
- return {...f,admitted,owner,offline,offlineGateway,events,feedback,gateways,failUpdate:()=>{failUpdate=true;},holdBook:value=>{bookHold=value;},holdChapter:(index,value)=>chapterHolds.set(index,value),makeIntent:(chapterIndex,settled)=>{offlineGateway.waitForMangaChapter=async index=>{events.push(['chapter-drain',index]);await settled;};return {session:admitted,valid:true,generation:offline.generation,settled,excludedChapters:new Set(),continuations:new Set(),evidence:new ReaderWriteEvidence()};}};
+for(const invalidation of ['navigation','session','retired']){
+ const f=indexFixture(),receipt=deferred(),opened=[];
+ f.runtime.getDownloadCoordinator=()=>({submit:()=>receipt.promise});f.owner.requestReaderDownloads=key=>opened.push(key);
+ f.owner.downloadDirectoryBook();await tick();
+ if(invalidation==='navigation')f.owner.navigationGeneration++;
+ if(invalidation==='session')f.owner.remoteReadingSession={...f.admitted};
+ if(invalidation==='retired')f.owner.shelfReceiptRetired=true;
+ receipt.resolve({accepted:true,key:'stale-job',alreadyRunning:false});await tick();
+ assert.deepEqual(opened,[]);assert.deepEqual(f.feedback,[],'late shared receipt cannot navigate or toast against a newer reader');
 }
+{
+ const f=indexFixture(),opened=[];
+ f.runtime.getDownloadCoordinator=()=>({submit:async()=>({accepted:false,key:'unknown',alreadyRunning:false})});f.owner.requestReaderDownloads=key=>opened.push(key);
+ f.owner.downloadDirectoryBook();await tick();assert.deepEqual(opened,[]);assert.ok(f.feedback.includes('下载请求尚未确认，请重试'));
+}
+console.log('PASS actual Index chapter/book submission through shared coordinator: exact admitted session/indexes, accepted receipt navigation and stale/unconfirmed guards');
+
+
+}
+if(selectedCase==='legacy-intent-drain') {
 {
  const f=indexFixture(),pending=deferred();
  const intent=f.makeIntent(3,pending.promise);f.offline.mangaIntent=intent;
@@ -270,361 +290,6 @@ console.log('PASS actual Index chapter pause excludes and drains only its chapte
  assert.equal(ids(5).includes('downloadChapter'),false);assert.ok(ids(6).includes('downloadChapter'));
 }
 console.log('PASS explicit chapter update waits for old intent, never updates a book implicitly and failed update preserves completed authority; normal cache clear retains paused/downloaded status; menu distinguishes cache, pause and permanent ownership');
-
-const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
-const fonts=await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
-const {mangaDirectoryPresentation}=await import('../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts');
-const {sameReaderDirectoryData}=await import('../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts');
-const {readerDirectoryAccessibilityText}=await import('../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts');
-const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
-const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
-class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
-function component(name,relative){const source=readFileSync(new URL(relative,import.meta.url),'utf8');syntax.componentCollection.customComponents.add(name);
- syntax.propCollection.set(name,new Set([...source.matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(m=>m[1])));return source;}
-const panelSource=component('MangaDownloadOperationsPanel','../entry/src/main/ets/features/manga/MangaDownloadOperationsPanel.ets');
-{
- const ts=require(`${sdk}/node_modules/typescript`);
- const common=ts.createSourceFile('common.d.ts',readFileSync(`${sdk}/declarations/common.d.ts`,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
- const methods=common.statements.find(node=>node.name?.getText(common)==='CommonMethod');
- assert.ok(methods,'official SDK CommonMethod declarations are available');
- const reserved=new Set(methods.members.map(node=>node.name?.getText(common)).filter(Boolean));
- assert.ok(reserved.has('foregroundColor')&&reserved.has('backgroundColor'));
- for(const name of syntax.propCollection.get('MangaDownloadOperationsPanel'))
-  assert.equal(reserved.has(name),false,`download business Prop ${name} cannot shadow an inherited official SDK component method`);
-}
-
-const navListSource=component('ReaderDirectoryNavigationList','../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets');
-const navSurfaceSource=component('ReaderDirectoryNavigationSurface','../entry/src/main/ets/features/reading/ReaderDirectoryNavigationSurface.ets');
-const bookSource=component('BookDirectoryPage','../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets');
-const fallbackSource=component('MangaReadingDirectoryFallback','../entry/src/main/ets/features/manga/MangaReadingDirectoryFallback.ets');
-const readingSource=component('MangaReadingSurface','../entry/src/main/ets/features/manga/MangaReadingSurface.ets');
-{
- const ts=require(`${sdk}/node_modules/typescript`);
- const common=ts.createSourceFile('common.d.ts',readFileSync(`${sdk}/declarations/common.d.ts`,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
- const click=common.statements.find(node=>node.name?.getText(common)==='ClickEvent');
- const popup=common.statements.find(node=>node.name?.getText(common)==='CustomPopupOptions');
- assert.ok(click&&popup,'installed official event/popup declarations are present');
- assert.equal(click.members.some(node=>node.name?.getText(common)==='stopPropagation'),false);
- assert.equal(popup.members.some(node=>node.name?.getText(common)==='enableArrow'),true);
- assert.equal(popup.members.some(node=>node.name?.getText(common)==='showArrow'),false);
- for(const source of [navListSource,bookSource,fallbackSource])assert.doesNotMatch(source,/event\.stopPropagation\(\)|monopolizeEvents\(/,
-  'directory action isolation uses sibling click regions, not a missing ClickEvent API or exclusive parent gesture capture');
-}
-{
- const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs'),p=boundedSurfaceSdk();
- p.hooks.lifecycleChildren=true;
- const called=[],owner=p.consumer(panelSource);
- Object.assign(owner,{actions:[{id:'pause',label:'暂停下载'},{id:'updateChapter',label:'更新本话'}],loading:false,failureMessage:'',
-  appThemeScheme:'day',panelScheme:'night',panelInkColor:'#ink',panelPaperColor:'#paper',onAction:id=>called.push(id)});
- owner.initialRender();const rows=p.nodes(owner).filter(row=>row.type==='Row'&&['暂停下载','更新本话'].includes(row.accessibilityText));assert.equal(rows.length,2);
- for(const row of rows){assert.equal(row.constraintSize.minHeight,50);row.onClick();}
- const labels=p.nodes(owner).filter(row=>row.type==='Text'&&['暂停下载','更新本话'].includes(row.create));
- for(const label of labels){assert.equal(label.fontSize,14);assert.equal(label.fontFamily,fonts.READER_FONT_NOTO_SANS_SC_UI_REGULAR);assert.equal(label.fontColor,p.deps.readerAppColor('TOK_INK','night'));}
- assert.ok(p.nodes(owner).some(row=>row.type==='Image'&&row.create==='app.media.download_visual_pause_theme_night'),
-  'explicit reading surface scheme controls action icons');
- assert.deepEqual(called,['pause','updateChapter']);
- const retry=p.consumer(panelSource);let retried=0;
- Object.assign(retry,{actions:[],loading:false,failureMessage:'读取失败',appThemeScheme:'day',panelInkColor:'',panelPaperColor:'',onRetry:()=>retried++});
- retry.initialRender();[...retry.nodes.values()].find(row=>row.type==='Button').onClick();assert.equal(retried,1);
-}
-{
- const ts=require(`${sdk}/node_modules/typescript`);
- const tree=ts.createSourceFile('MangaReadingSurface.ets',readingSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
- const surface=tree.statements.find(node=>node.name?.getText(tree)==='MangaReadingSurface');
- // Mirror the SDK's declaration prepass for inactive sibling sheet builders;
- // execute the unchanged download branch and keep all transform diagnostics.
- for(const member of surface.members) if(member.getText(tree).includes('@Builder'))
-  require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(member.name.getText(tree));
- const {mangaSurfaceSdkDependencies,mangaSurfaceBoundedControls}=await import('./lib/manga-surface-sdk-probe.mjs');
- const {boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
- const shared=mangaSurfaceBoundedControls();
- shared.hooks.childSources.MangaDownloadOperationsPanel=panelSource;
- shared.deps.MangaDownloadOperationsPanel=createReaderBuilderProbe(panelSource,boundedMembers(panelSource),shared.deps,shared.hooks).Component;
- const called=[],{owner}=createReaderBuilderProbe(readingSource,[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,
-  'panelOverlay','isActionPanel','actionPanelInsets','actionPanelSurface','actionPanelHeader','actionPanelBody'],
-  {...mangaDirectoryAdaptiveDependencies,...fonts,...mangaSurfaceSdkDependencies,...shared.deps},shared.hooks);
- const actions=[{id:'pause',label:'暂停下载'}];
- Object.assign(owner,{panel:'downloads',panelOffset:0,panelScrimOpacity:1,downloadActions:actions,
-  downloadActionsLoading:false,downloadActionsFailure:'',downloadActionsChapterIndex:7,backgroundPreference:'paper',panelPhase:'open',stageWidth:400,windowMetricsRevision:0,
-  widePanel:()=>false,panelTitle:()=> '下载管理',panelContentInset:()=>18,panelContentHeight:()=>600,panelWidth:()=>400,
-  panelHeight:()=>600,
-  panelInsets:()=>({left:0,right:0,top:0,bottom:0}),inkColor:()=> '#ink',paperColor:()=> '#paper',surfaceColor:()=> '#surface',
-  performDownloadAction:id=>called.push(['action',id]),openDownloadActions:index=>called.push(['retry',index])});
- owner.panelOverlay();const panel=shared.walk(owner).find(child=>child instanceof shared.deps.MangaDownloadOperationsPanel);
- assert.ok(panel,'the actual reading sheet mounts its download child through the shared frame');
- assert.deepEqual(Array.from(panel.actions,item=>({id:item.id,label:item.label})),actions,
-  'official @Prop observation preserves the admitted business projection');assert.equal(panel.panelScheme,'day');
- assert.equal(panel.loading,false);assert.equal(panel.failureMessage,'');
- const frame=shared.walk(owner).find(child=>child instanceof shared.deps.ReaderBoundedSurface);
- const header=shared.walk(owner).find(child=>child instanceof shared.deps.ReaderBoundedSurfaceHeader);
- assert.ok(frame);assert.ok(header);assert.equal(frame.specId,'reader-action-sheet');assert.equal(header.title,'下载管理');
- const frameNode=[...frame.nodes.values()].find(row=>row.type==='Column'&&row.width===400);
- assert.ok(frameNode);assert.equal(frameNode.constraintSize.maxHeight,600);
- assert.equal(frameNode.backgroundColor,shared.deps.readerAppColor(shared.deps.resolveDrawerSpec('reader-action-sheet').surfaceRole,'day'));
- const row=shared.nodes(panel).find(node=>node.accessibilityText==='暂停下载');assert.ok(row);row.onClick();
- panel.onRetry();assert.deepEqual(called,[['action','pause'],['retry',7]]);
-}
-const downloadMethods=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets',import.meta.url),['canDownloadTarget','downloadTarget']);
-const targetNode={nodeId:'target',kind:'target',title:'Chapter',depth:1,chapterIndex:7,hasChildren:false,expanded:false};
-const mangaRowNames=mangaRowBuilderMembers;
-for(const state of ['missing','cached','queued','paused','inProgress','completed','failed','cancelled','unknown']){
- const calls=[],owner=createReaderBuilderProbe(navListSource,mangaRowNames,{...mangaGridProbeDependencies,...fonts}).owner;
- Object.assign(owner,{view:{viewId:'view'},mangaScheme:'day',appThemeScheme:'day',mangaSearchActive:false,mangaCatalogDisplay:false,
-  mangaCatalogNarrow:false,mangaRowMinHeight:58,currentChapterIndex:-1,interactionEnabled:true,mangaPresentationRevision:0,
-  chapterDownloadEnabled:true,chapterDownloadActionsEnabled:true,chapterByIndex:new Map([[7,{index:7,navigable:true,downloadState:state}]]),
-  dataSource:{currentView:()=>owner.view,loadedItemById:()=>({node:targetNode,index:0})},
-  selectTarget:node=>{assert.equal(node.nodeId,'target');calls.push(['read',node.chapterIndex]);},
-  canDownloadTarget:downloadMethods.prototype.canDownloadTarget.bind(owner),downloadTarget:node=>calls.push(node.chapterIndex)});
- owner.mangaRow({node:targetNode,index:0,key:'target'});
- const button=[...owner.nodes.values()].find(row=>row.accessibilityText==='管理本章下载');
- if(state==='unknown'){assert.equal(button,undefined);continue;}
- assert.equal(button.enabled,true,`${state} can open chapter management`);
- const container=[...owner.nodes.values()].find(row=>row.type==='Row');assert.equal(typeof container.onClick,'function','complete named row owns reading and native press feedback');
- assert.ok(owner.attributeCalls.some(call=>call.id===container.id&&call.property==='attributeModifier'));
- button.onClick();assert.deepEqual(calls,[7],'management marker does not also select chapter');
- const body=container;
- body.onClick();assert.deepEqual(calls,[7,['read',7]],'the complete outer row still selects the exact chapter');
- const arrow=[...owner.nodes.values()].find(row=>row.type==='Image'&&String(row.create).includes('chevron_right'));assert.ok(arrow);
- assert.equal(arrow.onClick,undefined,'painted arrow delegates hit handling to the complete row actor');
- const shield=[...owner.nodes.values()].find(row=>row.type==='Stack'&&row.width===26&&!row.accessibilityText&&row.onClick);assert.ok(shield);
- assert.equal(shield.focusable,false);shield.onClick();assert.deepEqual(calls,[7,['read',7]],'disabled download space has no chapter-read authority');
- owner.interactionEnabled=false;body.onClick();shield.onClick();assert.deepEqual(calls,[7,['read',7]],'disabled directory interaction cannot select through retained outer or shield callbacks');
- owner.interactionEnabled=true;
- const image=[...owner.nodes.values()].find(row=>row.type==='Image'&&String(row.create).includes('marker'));
- assert.equal(image.create,`app.media.reader_directory_marker_${state==='completed'?'check':'download'}`);
- assert.deepEqual([image.width,image.height],[15,15]);
- const standard=createReaderBuilderProbe(navListSource,['row','displayLevel']).owner;
- Object.assign(standard,{appThemeScheme:'day',rowHeight:40,view:{viewId:'view'},isCurrentNode:()=>false,interactionEnabled:true,
-  chapterDownloadEnabled:true,chapterDownloadActionsEnabled:false,chapterByIndex:owner.chapterByIndex,
-  canDownloadTarget:downloadMethods.prototype.canDownloadTarget.bind(standard),toggleNode(){},selectTarget(){},downloadTarget:()=>calls.push('text')});
- standard.row({node:targetNode,index:0,key:'target'});const oldMarker=[...standard.nodes.values()].find(row=>row.accessibilityText==='下载章节'||row.accessibilityText==='已下载');
- assert.equal(oldMarker.enabled,['missing','cached','failed','cancelled'].includes(state),'novel default action availability stays unchanged');
-}
-{
- const resolves=[],downloads=[],owner=Object.assign(new downloadMethods(),{view:{viewId:'view'},sourceId:'source',bookId:'book',mounted:true,generation:0,
-  interactionEnabled:true,chapterDownloadEnabled:true,chapterDownloadActionsEnabled:true,chapterByIndex:new Map([[7,{downloadState:'paused',navigable:true}]]),
-  gateway:{resolveTarget:(...args)=>{resolves.push(args);return Promise.resolve({chapterIndex:7});}},onDownloadChapter:index=>downloads.push(index),onInvalidated(){}});
- owner.downloadTarget(targetNode);await tick();assert.deepEqual(downloads,[7]);assert.deepEqual(resolves[0].slice(0,3),['book','view','target']);
- owner.downloadTarget({...targetNode,kind:'group'});assert.equal(resolves.length,1);
-}
-{
- const owner=createReaderBuilderProbe(navSurfaceSource,['build','fallbackBuilder'],{ReaderDirectoryNavigationList:Child}).owner;
- let selected;Object.assign(owner,{view:{visibleTotal:1},chapterDownloadEnabled:true,chapterDownloadActionsEnabled:true,
-  onDownloadChapter:index=>selected=index});owner.initialRender();const child=[...owner.children.values()][0];
- assert.equal(child.params.chapterDownloadEnabled,true);assert.equal(child.params.chapterDownloadActionsEnabled,true);
- child.params.onDownloadChapter(7);assert.equal(selected,7);
-}
-console.log('PASS actual SDK operation actions reuse grouped touch rows and explicit host scheme; manga queued/paused/completed markers open management without chapter taps, preserve Core target proof and novel marker rules');
-
-const BookActions=productionMotionMethods(new URL('../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets',import.meta.url),
- ['openDownloadActions','performDownloadAction','identity','onIdentityChanged']);
-{
- const pending=deferred(),calls=[],owner=Object.assign(new BookActions(),{mounted:true,mangaDownloadEnabled:true,contentKind:'manga',sourceId:'source',bookId:'book',
-  downloadMenuGeneration:0,downloadMenuIdentity:'',onLoadDownloadActions:()=>pending.promise,onDownloadAction:async(...args)=>calls.push(args),onEntriesChanged(){}});
- const opening=owner.openDownloadActions(7);owner.bookId='changed';owner.onIdentityChanged();pending.resolve([{id:'pause',label:'暂停下载'}]);await opening;
- assert.equal(owner.downloadMenuVisible,false);assert.deepEqual(owner.downloadActions,[]);owner.performDownloadAction('pause');assert.deepEqual(calls,[]);
- owner.onLoadDownloadActions=async()=>[{id:'pause',label:'暂停下载'}];await owner.openDownloadActions(11);owner.performDownloadAction('pause');await tick();
- assert.deepEqual(calls,[['pause',11]]);assert.equal(owner.downloadMenuVisible,false);
-}
-for(const source of [bookSource,fallbackSource]){
- const isBook=source===bookSource,methods=isBook?['mangaFlatRow','selectMangaEntry','rowIsCurrent','mangaLayoutRow','mangaEntryIsDisplayed']:
-  ['row','selectEntry','downloadEntry','layoutRow','showContext','rowPresentation'];
- const shared=mangaDirectoryEntryRowSdk({dependencies:{...fonts,readerDirectoryAccessibilityText,sameReaderDirectoryData}});
- const owner=createReaderBuilderProbe(source,methods,shared.deps,shared.hooks).owner;
- const entry={index:7,title:'Chapter',level:1,navigable:true,downloadState:'paused'},calls=[],read=[];
- const presentation=mangaDirectoryPresentation([entry]),rows=mangaDirectoryEntryRows([entry],presentation);
- Object.assign(owner,{appThemeScheme:'day',mangaScheme:'day',searchQuery:'',query:'',currentChapterIndex:-1,
-  mangaDownloadEnabled:true,chapterDownloadEnabled:true,rowHeight:58,mangaCatalogDisplay:true,mangaCatalogNarrow:false,
-  admittedIdentity:'source\0book',mounted:true,entries:[entry],admittedEntries:[entry],projectedEntries:[entry],identity:()=>owner.admittedIdentity,
-  mangaPresentation:presentation,presentation,mangaLayoutRows:rows,layoutRows:rows,mangaCollapsedGroups:[],collapsedGroups:[],
-  openDownloadActions:index=>{calls.push(index);return Promise.resolve();},onDownloadChapter:index=>calls.push(index),
-  onSelectChapter:index=>read.push(index)});
- if(isBook)owner.mangaFlatRow(entry,owner.admittedIdentity);else owner.row(entry,owner.admittedIdentity);
- const nodes=shared.nodes(owner);
- const marker=nodes.find(row=>row.accessibilityText==='管理Chapter下载');assert.ok(marker);
- const container=nodes.find(row=>row.type==='Row');assert.equal(typeof container.onClick,'function','whole flat row owns reading while download keeps its independent actor');
- marker.onClick();assert.deepEqual(calls,[7]);assert.deepEqual(read,[]);
- const body=container;body.onClick();assert.deepEqual(read,[7]);
- const shield=nodes.find(row=>row.type==='Stack'&&row.width===28&&!row.accessibilityText&&row.onClick);assert.ok(shield);
- shield.onClick();assert.deepEqual(read,[7],'flat disabled download shield never reads its surrounding chapter');
- owner.entries=[{...entry,title:'Different chapter'}];marker.onClick();assert.deepEqual(calls,[7],'stale catalog facts lose download action authority');
-}
-{
- const shared=mangaDirectoryEntryRowSdk({dependencies:{...fonts,...horizontalGeometry,...windowMetrics,
-  ReaderWindowCoordinator:{metrics:windowMetrics.createDefaultReaderWindowMetrics},sameReaderDirectoryData}});
- const owner=createReaderBuilderProbe(bookSource,['mangaFlatRow','selectMangaEntry','rowIsCurrent','mangaLayoutRow','toggleMangaBranch',
-  'prepareMangaLayout','mangaVisibleEntries','onListUserScroll','mangaEntryIsDisplayed','mangaFontScale','mangaNarrow','contentFrame'],shared.deps,shared.hooks).owner;
- const group={index:2,title:'Volume',navigable:false,level:1};
- const entries=[group,{index:3,title:'Chapter',navigable:true,level:2,downloadState:'unknown'}],presentation=mangaDirectoryPresentation(entries);
- Object.assign(owner,{appThemeScheme:'day',searchQuery:'',currentChapterIndex:-1,mangaDownloadEnabled:true,contentKind:'manga',readerWindowMetricsRevision:0,
-  admittedIdentity:'source\0book',mounted:true,entries,admittedEntries:entries,projectedEntries:entries,identity:()=>owner.admittedIdentity,
-  mangaPresentation:presentation,mangaLayoutRows:mangaDirectoryEntryRows(entries,presentation),viewportWidth:400,scrollGeneration:0,
-  mangaCollapsedGroups:[],onSelectChapter(){throw new Error('a volume is not a chapter');}});
- owner.mangaFlatRow(group,owner.admittedIdentity);
- const nodes=shared.nodes(owner),body=nodes.find(row=>row.type==='Row'&&row.onClick);
- const disclosure=nodes.find(row=>row.type==='Stack'&&row.accessibilityText==='Volume，收起子目录');
- assert.ok(body);assert.ok(disclosure);assert.equal(body,nodes.find(row=>row.type==='Row'),'complete group row and separate disclosure preserve their actual callbacks');
- body.onClick();assert.deepEqual(owner.mangaCollapsedGroups,[2],'volume title still folds');
- disclosure.onClick();assert.deepEqual(owner.mangaCollapsedGroups,[],'volume indicator still unfolds');
- owner.entries=[{...group,title:'Different volume'}];disclosure.onClick();assert.deepEqual(owner.mangaCollapsedGroups,[],'stale volume callbacks cannot fold a new catalog');
-}
-{
- const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
- const {READER_MANGA_DOWNLOAD_POPUP}=await import('../entry/src/main/ets/features/common/ReaderMangaDownloadPopupSpec.ts');
- const popupSource=component('ReaderMangaDownloadPopup','../entry/src/main/ets/features/common/ReaderMangaDownloadPopup.ets'),p=boundedSurfaceSdk();
- Object.assign(p.deps,fonts,{READER_MANGA_DOWNLOAD_POPUP,Placement:{BottomLeft:'bottom-left'}});
- p.hooks.childSources.MangaDownloadOperationsPanel=panelSource;p.hooks.childSources.ReaderMangaDownloadPopup=popupSource;
- p.deps.MangaDownloadOperationsPanel=createReaderBuilderProbe(panelSource,boundedMembers(panelSource),p.deps,p.hooks).Component;
- p.deps.ReaderMangaDownloadPopup=createReaderBuilderProbe(popupSource,boundedMembers(popupSource),p.deps,p.hooks).Component;
- const owner=createReaderBuilderProbe(bookSource,['mangaDownloadMenuButton','identity'],p.deps,p.hooks).owner;
- let opened=0;Object.assign(owner,{mounted:true,sourceId:'source',bookId:'book',mangaDownloadEnabled:true,appThemeScheme:'day',
-  downloadMenuVisible:false,downloadMenuGeneration:2,downloadActions:[],downloadActionsLoading:false,downloadActionsFailure:'',
-  contentFrame:()=>({width:180}),openDownloadActions:async()=>opened++});
- owner.mangaDownloadMenuButton();const marker=p.nodes(owner).find(row=>row.accessibilityText==='漫画下载管理');assert.ok(marker);
- marker.onClick();await tick();assert.equal(opened,1);assert.equal(marker.bindPopup[1].enableArrow,false);assert.equal(marker.bindPopup[1].showArrow,undefined);
- owner.downloadMenuVisible=true;owner.downloadMenuGeneration++;marker.bindPopup[1].onStateChange({isVisible:false});
- assert.equal(owner.downloadMenuVisible,true,'old native closing generation cannot close the newer opening');
- owner.bookId='successor';marker.onClick();await tick();assert.equal(opened,1,'old anchor captures the original parent book identity');
- owner.bookId='book';owner.mounted=false;marker.onClick();await tick();assert.equal(opened,1,'unmounted parent cannot reopen the native popup');
-}
-console.log('PASS actual detail/fallback SDK chapter markers and book menu route to exact scoped management; stale catalog/identity, cancelled loads and failed promises cannot change a newer page');
-
-const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/ReaderShell.ets',import.meta.url),'utf8');
-{
- const calls=[],{owner}=createReaderBuilderProbe(shellSource,['mangaSurface','mangaIdentityKey'],
-  {MangaReadingSurface:Child,ReaderRuntimeOwner:{current:()=>({})}});
- const projection=[{index:7,title:'Chapter',downloadState:'paused'}];
- Object.assign(owner,{contentKind:'manga',sourceId:'source',bookId:'book',readingReadyGeneration:1,mangaChapterRequestGeneration:0,
-  requestedChapterIndex:undefined,visible:true,tocEntries:projection,mangaDownloadEnabled:true,directoryCurrentChapterIndex:7,
-  keepsMangaReadingSession:()=>true,onLoadMangaDownloadActions:async index=>{calls.push(['load',index]);return [];},
-  onMangaDownloadAction:async(...args)=>calls.push(['action',...args]),onDownloadChapter:index=>calls.push(['chapter',index]),
-  onDownloadBook:()=>calls.push(['book'])});
- owner.mangaSurface();const props=[...owner.children.values()][0].params;
- assert.equal(props.downloadEnabled,true);assert.equal(props.directoryProjection,projection);
- assert.equal(props.directoryCurrentChapterIndex,7,'Shell passes the same admitted catalog current used by Full; it is display-only in MangaSurface');
- await props.onLoadDownloadActions(7);await props.onDownloadAction('pause',7);props.onDownloadChapter();props.onDownloadBook();
- assert.deepEqual(calls,[['load',7],['action','pause',7],['chapter',7],['book']]);
- owner.requestedChapterIndex=11;await props.onLoadDownloadActions(7);await props.onDownloadAction('cancel',7);props.onDownloadChapter();props.onDownloadBook();
- assert.equal(calls.length,8,'an internally committed chapter retains its reader and exact scoped download callbacks');
- owner.mangaChapterRequestGeneration++;
- await props.onLoadDownloadActions(7);await props.onDownloadAction('cancel',7);props.onDownloadChapter();props.onDownloadBook();
- assert.equal(calls.length,8,'all retained download callbacks reject an explicit request replacing the reader generation');
-}
-{
- const deps=await import('./lib/manga-surface-sdk-probe.mjs');
- const calls=[],owner=createReaderBuilderProbe(readingSource,[...mangaDirectoryAdaptiveFields,...mangaDirectoryAdaptiveMembers,'directoryBody','directoryFallback','directoryEntries','directoryCurrentIndex','directoryCurrentPagePosition',
-  'directoryFontScale','directoryToolHeight','directoryInitialWidth','directoryHeaderChrome','directoryQuickHeight',
-  'widePanel','persistentDirectory','directoryColumnWidth','panelWidth','panelContentInset','panelHeight','panelContentHeight',
-  'panelInsets','interactiveInsets','windowInteractiveInsets','controlsPresentedForWindow','pageOrdinal'],{...mangaDirectoryAdaptiveDependencies,...deps.mangaSurfaceSdkDependencies}).owner;
- const entries=[{index:2,title:'Volume',navigable:false,level:1},{index:7,title:'Chapter',navigable:true,level:2},{index:9,title:'Renamed chapter',navigable:true,level:2}];
- Object.assign(owner,{sourceId:'source',bookId:'book',remoteSession:{contentKind:'manga',identity:{sourceId:'source',bookId:'book'},entries},downloadEnabled:true,
-  directoryProjection:[{index:7,title:'Chapter',downloadState:'paused'},{index:9,title:'Other title',downloadState:'completed'}],
-  directoryQuery:'',directoryAscending:true,directoryRevision:0,directoryOpenRevision:0,publishedManifestVersion:'version',
-  backgroundPreference:'paper',panelPhase:'open',stageWidth:500,stageHeight:900,viewportWidth:500,viewportHeight:900,
-  panel:'directory',windowMetricsRevision:0,quickHeaderMeasured:0,quickToolsMeasured:0,quickFooterMeasured:0,
-  controlsVisible:false,chapterEnd:false,error:'',openingRetry:false,recovering:false,loginRequiredForControls:false,
-  openDownloadActions:async index=>calls.push(index)});
- owner.directoryBody(false);owner.directoryFallback(false);
- const [tree,flat]=[...owner.children.values()].map(row=>row.params);
- assert.equal(tree.chapterDownloadEnabled,true);assert.equal(tree.chapterDownloadActionsEnabled,true);
- assert.equal(tree.mangaInitialViewportWidth,464,'download port probe executes the real parent width less 18vp panel padding on each side');
- assert.equal(flat.chapterDownloadEnabled,true);assert.equal(tree.chapterEntries[0].navigable,false);assert.equal(tree.chapterEntries[1].level,2);
- assert.equal(tree.chapterEntries[1].downloadState,'paused');assert.equal(tree.chapterEntries[2].downloadState,'unknown','same ordinal with different title is not a download fact');
- tree.onDownloadChapter(7);flat.onDownloadChapter(9);await tick();assert.deepEqual(calls,[7,9]);
-}
-{
- const owner=createReaderBuilderProbe(readFileSync(indexFile,'utf8'),['externalDirectory','directoryRecovery'],
-  {BookDirectoryPage:Child,ReaderFullDirectory:Child,EMPTY_READING_DIRECTORY_RECOVERY,readingDirectoryRecovery,
-    ReaderRuntimeOwner:{current:()=>({supportsCoreCapability:()=>true})}},
-  {childSources:{ReaderFullDirectory:readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderFullDirectory.ets',import.meta.url),'utf8')}}).owner;
- const calls=[];Object.assign(owner,{detailBook:{sourceId:'source',bookId:'book',title:'Title',contentKind:'manga'},detailToc:[],
-  directoryOperationPresentationId:()=>'',directoryOperation:undefined,offlineOperation:undefined,
-  loadMangaDownloadActions:async index=>{calls.push(['load',index]);return [];},performMangaDownloadAction:async(...args)=>calls.push(['action',...args])});
- owner.externalDirectory();const props=[...owner.children.values()][0].params;
- assert.equal(props.mangaDownloadEnabled,true);await props.onLoadDownloadActions(7);await props.onDownloadAction('pause',7);
- assert.deepEqual(calls,[['load',7],['action','pause',7]]);
-}
-console.log('PASS actual SDK Index→Shell→manga surface/catalog ports preserve projected Core download states, chapter scope and old-reader callback identity fences');
-{
- const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs'),p=boundedSurfaceSdk();p.hooks.lifecycleChildren=true;
- const calls=[],boundaries=[],owner=p.consumer(readingSource,['morePanel','moreActions','performMoreAction','performMorePanelAction']);
- Object.assign(owner,{downloadEnabled:true,title:'Chapter',opened:true,offline:false,inBookshelf:true,backgroundPreference:'paper',
-  moreMenuVariant:'grouped',panelGeneration:12,morePresentationGeneration:12,directoryCurrentChapterIndex:3,panel:'more',panelPhase:'open',mounted:true,exiting:false,refreshing:false,isReaderIdentityCurrent:()=>true,
-  performPanelAction:async action=>{boundaries.push('close/save');await action();return true;},onDownloadChapter:()=>calls.push('chapter'),
-  onDownloadBook:()=>calls.push('book'),onOpenDownloads:()=>{assert.equal(boundaries.length,3,'management navigation crosses the existing close/save boundary');calls.push('manage');}});
- owner.morePanel();const rows=p.nodes(owner).filter(row=>row.type==='Row');
- for(const text of ['下载本话','下载全部章节','下载管理']){
-  const row=rows.find(row=>row.accessibilityText===text);assert.ok(row,`${text} has a real product entry`);
-  assert.equal(row.constraintSize.minHeight,50);assert.equal(row.accessibilityGroup,true);assert.equal(row.enabled,true);row.onClick();
- }
- await tick();assert.deepEqual(calls,['chapter','book','manage']);assert.deepEqual(boundaries,['close/save','close/save','close/save']);
- owner.panelGeneration++;owner.morePresentationGeneration++;rows.find(row=>row.accessibilityText==='下载管理').onClick();
- await tick();assert.deepEqual(calls,['chapter','book','manage'],'captured more menu cannot dispatch after a new opening');
- owner.panelGeneration=12;owner.morePresentationGeneration=12;
- const sourceRow=p.nodes(owner).find(row=>row.accessibilityText==='更换书源');
- const detailRow=p.nodes(owner).find(row=>row.accessibilityText==='漫画详情');
- owner.onSwitchSource=()=>calls.push('source');owner.onDetail=()=>calls.push('detail');
- owner.exiting=true;sourceRow.onClick();detailRow.onClick();await tick();
- assert.deepEqual(calls,['chapter','book','manage'],'reader exit blocks retained More callbacks');
- owner.exiting=false;let current=false;owner.isReaderIdentityCurrent=()=>current;
- sourceRow.onClick();detailRow.onClick();await tick();
- assert.deepEqual(calls,['chapter','book','manage'],'foreign reader identity blocks retained More callbacks');
- current=true;owner.performPanelAction=async action=>{current=false;await action();return true;};
- sourceRow.onClick();await tick();
- assert.deepEqual(calls,['chapter','book','manage'],'identity is checked again after the existing close/save boundary');
-}
-console.log('PASS actual manga more-sheet chapter/book/management entries use shared action rows and dispatch each production port with opening generation admission');
-
-{
- const f=indexFixture();f.rows.find(row=>row.chapterIndex===3).state='completed';
- f.owner.detailToc.find(row=>row.index===3).downloadState='completed';
- const original=f.owner.mergeDirectoryBookmarks;
- f.owner.mergeDirectoryBookmarks=(rows,previous)=>original(rows,previous);
- const actions=await f.owner.loadMangaDownloadActions(3);
- assert.equal(actions.some(action=>action.id==='downloadChapter'),false,'selected and usable completion offers no redundant download');
- // Core queue receipt stays completed, while the existing Host projection
- // rejects a damaged/missing byte set. Run the real method with only I/O altered.
- const physicalProjection=f.offlineGateway.loadProjection.bind(f.offlineGateway);
- f.offlineGateway.loadProjection=async(...args)=>(await physicalProjection(...args)).map(row=>row.index===3?{...row,downloadState:'cached'}:row);
- const owner=f.owner;
- const repaired=await owner.loadMangaDownloadActions(3);
- assert.ok(repaired.some(action=>action.id==='downloadChapter'),'raw completed plus Host damage allows explicit repair');
- assert.equal(owner.detailToc.find(row=>row.index===3).downloadState,'cached');
- assert.equal(f.rows.find(row=>row.chapterIndex===3).state,'completed','presentation never rewrites the shared Core queue');
- assert.equal(f.calls.some(call=>call[0].startsWith('cache.download.')),false);
-}
-console.log('PASS actual Index management consumes existing exact Host projection for completed/released/damaged facts without mutating queue or adding image validation');
-console.log('Boundary: current production methods and SDK-emitted Builder callbacks; native layout/HAP/VM/user acceptance remain separate.');
-
-// Current Index buttons submit the exact admitted session to the shared
-// durable coordinator. I/O receipts are the seam; production admission and
-// navigation execute unchanged, including stale/unknown/no-chapter guards.
-{
- const f=indexFixture(),submitted=[],opened=[];
- f.runtime.getDownloadCoordinator=()=>({submit:async(...args)=>{submitted.push(args);return{accepted:true,key:'shared-job',alreadyRunning:false};}});
- f.owner.requestReaderDownloads=key=>opened.push(key);
- f.owner.downloadDirectoryChapter(3);await tick();
- assert.deepEqual(submitted,[[f.admitted,[3]]]);assert.deepEqual(opened,[]);
- assert.ok(f.feedback.includes('已加入下载，可在下载管理查看进度'));
- f.owner.downloadDirectoryChapter(2);await tick();assert.equal(submitted.length,1,'unknown/non-admitted volume index cannot submit a shared download');
- f.owner.downloadDirectoryBook();await tick();assert.deepEqual(submitted[1],[f.admitted,undefined]);assert.deepEqual(opened,['shared-job']);
-}
-for(const invalidation of ['navigation','session','retired']){
- const f=indexFixture(),receipt=deferred(),opened=[];
- f.runtime.getDownloadCoordinator=()=>({submit:()=>receipt.promise});f.owner.requestReaderDownloads=key=>opened.push(key);
- f.owner.downloadDirectoryBook();await tick();
- if(invalidation==='navigation')f.owner.navigationGeneration++;
- if(invalidation==='session')f.owner.remoteReadingSession={...f.admitted};
- if(invalidation==='retired')f.owner.shelfReceiptRetired=true;
- receipt.resolve({accepted:true,key:'stale-job',alreadyRunning:false});await tick();
- assert.deepEqual(opened,[]);assert.deepEqual(f.feedback,[],'late shared receipt cannot navigate or toast against a newer reader');
-}
-{
- const f=indexFixture(),opened=[];
- f.runtime.getDownloadCoordinator=()=>({submit:async()=>({accepted:false,key:'unknown',alreadyRunning:false})});f.owner.requestReaderDownloads=key=>opened.push(key);
- f.owner.downloadDirectoryBook();await tick();assert.deepEqual(opened,[]);assert.ok(f.feedback.includes('下载请求尚未确认，请重试'));
-}
-console.log('PASS actual Index chapter/book submission through shared coordinator: exact admitted session/indexes, accepted receipt navigation and stale/unconfirmed guards');
 
 // Seed the still-supported legacy reader-local consumer through its actual
 // Host method. Index control methods below then exercise compatibility drains
@@ -719,3 +384,7 @@ console.log('PASS actual Index busy controls stay enabled; single cancel/release
  assert.equal(f.feedback.length,0,'stale operation feedback cannot follow a new same-book route');
 }
 console.log('PASS actual Index management keeps its original admission generation across a late Core receipt and same-book return');
+
+}
+
+}

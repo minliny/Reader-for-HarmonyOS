@@ -34,7 +34,13 @@ export function iconButtonControls({ source = iconButtonSource, specSource = ico
   const walk = owner => [owner, ...[...owner.children.values()].flatMap(child => child.nodes ? walk(child) : [])];
   return { icon, dependencies, hooks, properties, resolveReaderIconButtonSpec, walk,
     nodes: owner => walk(owner).flatMap(child => [...child.nodes.values()]),
-    update(owner, params) { owner.updateStateVars(params); properties.flush(); },
+    update(owner, params) {
+      // Native updateStateVars receives the complete parent Prop projection.
+      // A focused patch must preserve other real Props before Watch runs.
+      const current = Object.fromEntries(Object.keys(owner).filter(key => key.startsWith('__'))
+        .map(key => [key.slice(2), owner[key.slice(2)]]));
+      owner.updateStateVars({ ...current, ...params }); properties.flush();
+    },
     consumer(source, names, extra = {}, initialParams = {}) {
       return createReaderBuilderProbe(source, names, { ...dependencies, ...extra }, { ...hooks, initialParams }).owner;
     } };

@@ -1,8 +1,22 @@
-import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "tile-attempt-ownership": {
+    "description": "Actual Controller and Surface tile join, eviction, preview and retry; fake image IO",
+    "resources": []
+  },
+  "content-revocation": {
+    "description": "Actual Preparation content fence and Controller; progress versus catalog, pending header and reopened owner",
+    "resources": []
+  }
+};
+
+async function case_tile_attempt_ownership() {
+const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache-probe.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
 function load(name, dependencies = {}, file = new URL(`${name}.ts`, root)) {
   const source = readFileSync(file, 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
@@ -11,11 +25,6 @@ function load(name, dependencies = {}, file = new URL(`${name}.ts`, root)) {
 const MangaSessionGateway = load('MangaSessionGateway');
 const MangaResourceGateway = load('MangaResourceGateway');
 const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
-const Projection = load('MangaStripProjection');
-const RULES_MUTATION_METHODS = load('RULES_MUTATION_METHODS', {}, new URL('../settings/RulesMutationContract.ts', root));
-const readerRuleMutationEffects = load('readerRuleMutationEffects', { RULES_MUTATION_METHODS }, new URL('../../app/ReaderRuleMutationEffects.ts', root));
-const ReadingEntryPreparation = load('ReadingEntryPreparation', { readerRuleMutationEffects }, new URL('../reading/ReadingEntryPreparation.ts', root));
-const Surface = productionMotionMethods(new URL('MangaReadingSurface.ets', root), ['updateViewport','requestedLast','onRowAppear','displayChapterTitle']);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
 const pageId = `mp1:${'a'.repeat(64)}`;
@@ -32,6 +41,8 @@ function fixture() {
   }, releaseReadingImage(uri) { released.push(uri); } };
   return { controller: new Controller(runtime), runtime, pending, released, calls };
 }
+const Projection = load('MangaStripProjection');
+const Surface = productionMotionMethods(new URL('MangaReadingSurface.ets', root), ['updateViewport','requestedLast','onRowAppear','displayChapterTitle']);
 // Real Surface generation fence plus real Controller: the latest repeated
 // viewport must wait for the same pending tile, then acknowledge this chapter.
 {
@@ -134,6 +145,41 @@ console.log('PASS preview change retires pending region work and width reentry s
 }
 console.log('PASS shared tile failure and explicit retry preserve one current attempt');
 
+}
+
+async function case_content_revocation() {
+const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache-probe.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { stripTypeScriptTypes } = await import('node:module');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+function load(name, dependencies = {}, file = new URL(`${name}.ts`, root)) {
+  const source = readFileSync(file, 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
+}
+const MangaSessionGateway = load('MangaSessionGateway');
+const MangaResourceGateway = load('MangaResourceGateway');
+const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
+const tick = () => new Promise(resolve => setImmediate(resolve));
+function deferred() { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
+const pageId = `mp1:${'a'.repeat(64)}`;
+const entry = { chapter: { manifest: { chapter: { sourceId: 's', bookId: 'b', chapterId: '/c' }, sourceRuleVersion: 'r', manifestVersion: 'v', decodeRevision: 'identity-v1',
+  pages: [{ ordinal: 0, pageId, resourceRef: `manga:${pageId}` }] }, chapterIndex: 3, chapterTitle: 'chapter', totalPages: 1, pageStart: 0, cached: true, resources: [] },
+  targetOrdinal: 0, recoveryRequired: false, progress: { token: { epoch: 1, revision: 0 }, location: null } };
+function fixture() {
+  const pending = [], released = [], calls = [];
+  const runtime = { supportsCoreCapability: () => true, async loadReadingImage(...args) {
+    const image = { fileUri: `file://attempt-${calls.length}`, width: 600, height: 800, intrinsicWidth: 600, intrinsicHeight: 3200, revision: 'r' };
+    calls.push(args);
+    if (args[9] > 0) { const gate = deferred(); pending.push({ gate, image }); await gate.promise; }
+    return image;
+  }, releaseReadingImage(uri) { released.push(uri); } };
+  return { controller: new Controller(runtime), runtime, pending, released, calls };
+}
+const RULES_MUTATION_METHODS = load('RULES_MUTATION_METHODS', {}, new URL('../settings/RulesMutationContract.ts', root));
+const readerRuleMutationEffects = load('readerRuleMutationEffects', { RULES_MUTATION_METHODS }, new URL('../../app/ReaderRuleMutationEffects.ts', root));
+const ReadingEntryPreparation = load('ReadingEntryPreparation', { readerRuleMutationEffects }, new URL('../reading/ReadingEntryPreparation.ts', root));
 // Drive the actual content fence rather than toggling a fixture boolean. A
 // settled ordinary position write keeps decoded tiles admitted; a catalog
 // mutation permanently retires this chapter's content snapshot.
@@ -251,3 +297,11 @@ console.log('PASS late revoked work cannot fail, revive or remove a reopened sam
   for (const uri of previousUris) assert.equal(f.released.filter(value => value === uri).length, 1, 'bounded-window cancellation and close have one release owner');
 }
 console.log('PASS a revoked bounded metadata window rejects as a content change before facts or image work can enter the chapter');
+
+}
+
+const implementations = {'tile-attempt-ownership':case_tile_attempt_ownership,'content-revocation':case_content_revocation};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

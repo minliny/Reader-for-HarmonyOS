@@ -16,8 +16,10 @@ import { iconButtonControls } from './reader-icon-button-probe.mjs';
 import { mangaDirectoryEntryRowSdk } from './manga-directory-entry-row-probe.mjs';
 import { actualReaderPageShell } from './reader-page-shell-runtime-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
-import { createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { readerContentSafeTop, createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 import { readerPageBuilderSlots } from './reader-page-builder-slots.mjs';
+import { boundedSurfaceSdk } from './bounded-surface-sdk-probe.mjs';
+import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 
 const sdkRoot = resolveEtsLoaderRoot();
 export const readerBuilderSdkAvailable = existsSync(`${sdkRoot}/lib/process_component_class.js`);
@@ -28,6 +30,9 @@ const sdkLoweringCache = new Map();
 let sdkLoweringCompiles = 0, sdkLoweringHits = 0;
 export const readerBuilderCompilationCacheStats = () => ({ compiles: sdkLoweringCompiles, hits: sdkLoweringHits, entries: sdkLoweringCache.size });
 const digest = value => createHash('sha256').update(value).digest('hex');
+const readableAdmissionInitializer = readFileSync(new URL('../../entry/src/main/ets/features/bookshelf/BookshelfReadableAdmissionOwner.ts', import.meta.url), 'utf8')
+  .match(/export const EMPTY_READABLE_ADMISSION:[\s\S]*?= \{[\s\S]*?\n\};/)[0];
+const EMPTY_READABLE_ADMISSION = new Function(stripTypeScriptTypes(readableAdmissionInitializer.replace('export ', '')) + ';return EMPTY_READABLE_ADMISSION;')();
 const childPropertyMetadata = new Map();
 let childPropertyParses = 0, childPropertyHits = 0;
 export const readerBuilderChildPropertyCacheStats = () => ({ parses: childPropertyParses, hits: childPropertyHits, entries: childPropertyMetadata.size });
@@ -148,12 +153,31 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     'indexRecoveryRevision','remoteCacheRefreshConsent','indexRecoveryNoticeContent','showIndexRecoveryNotice','clearIndexRecoveryNotice','runIndexRecoveryAction',
     'sourceImportSearchActionLabel','sourceImportSearchActionRevision','sourceImportSearchAction','runSourceImportSearchAction',
     'statusActionLabel','statusActionGeneration','onStatusAction','rssOperationResultMessage','resultMessage',
-    'readerRecoveryView','readerRecoveryActionLabel','readerRecoveryAction','showReaderRecovery','reconcileReaderRecovery']);
+    'readerRecoveryView','readerRecoveryActionLabel','readerRecoveryAction','showReaderRecovery','reconcileReaderRecovery',
+    'detailPendingNoticeVisible','detailReadableAdmission','readableAdmissions','detailBookKey','hasUnknownShelfWrite','isCurrentRuntime',
+    'pendingFeedback','hasPendingSettings','hasPendingCleanup','recovery',
+    'operationFeedbackIdentity','cacheFeedbackIdentity','showFeedbackToast','lastOperationFeedback','lastOperationToast','lastCacheFeedback',
+    'recoveryIdentityFor','capturedPendingAction','feedbackIdentity','lastFeedbackIdentity','lastToastMessage',
+    'notifyOpenedError','openedErrorNoticeKey','chapterLoadState','openFailureStage',
+    'modeReconcileBusy','modeLoadBusy','recoveryBusy','catalogBusy']);
   let addedChrome;
   do {
     addedChrome = false;
     const selected = names.map(name => struct.members.find(member => member.name?.getText(original) === name)
       ?.getText(original) ?? '').join('\n');
+    // A selected real decorated field requires its declared Watch method in
+    // the SDK frontend. Retain that exact method instead of weakening the
+    // decorator or supplying an empty callback in each legacy fixture.
+    for (const field of struct.members.filter(member => names.includes(member.name?.getText(original)))) {
+      for (const decorator of ts.getAllDecorators(field)) {
+        const call = decorator.expression;
+        if (!ts.isCallExpression(call) || call.expression.getText(original) !== 'Watch' ||
+          call.arguments.length !== 1 || !ts.isStringLiteral(call.arguments[0])) continue;
+        const callback = call.arguments[0].text;
+        if (!names.includes(callback) && struct.members.some(member => ts.isMethodDeclaration(member) &&
+          member.name?.getText(original) === callback)) { names.push(callback); addedChrome = true; }
+      }
+    }
     for (const member of struct.members) {
       const name = member.name?.getText(original);
       if (name && chromeMembers.has(name) && !names.includes(name) && selected.includes(`this.${name}`)) {
@@ -164,7 +188,10 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // New quiet recovery defaults stay real in old focused, stateless Builder
   // probes too. Supply the existing ArkUI property runtime only when the
   // caller has not already selected its own genuine property seam.
-  if (names.some(name => ['readerRecoveryView','indexRecoveryNotice','sourceImportSearchActionLabel','rssOperationResultMessage','resultMessage'].includes(name)) &&
+  const hasMessageProperty = struct.members.some(member => names.includes(member.name?.getText(original)) &&
+    chromeMembers.has(member.name?.getText(original)) && ts.getAllDecorators(member)
+      .some(decorator => ['@State','@Prop'].includes(decorator.getText(original))));
+  if ((hasMessageProperty || names.some(name => ['readerRecoveryView','indexRecoveryNotice','sourceImportSearchActionLabel','rssOperationResultMessage','resultMessage'].includes(name))) &&
     dependencies.ObservedPropertySimplePU === undefined && dependencies.ObservedPropertyObjectPU === undefined) {
     const feedbackProperties = createArkUIPropertyRuntimeProbe();
     const originalHooks = hooks;
@@ -179,6 +206,24 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     }
     return member.getText(original);
   });
+  // Message migration delegates the existing empty/error/recovery slots to
+  // these finite shipping children. Older focused consumers must execute the
+  // same SDK-emitted children; explicit test compositions stay authoritative.
+  const missingMessages = ['ReaderPageState', 'ReaderRecoveryAction', 'ReaderRecoveryNotice'].filter(name =>
+    dependencies[name] === undefined && new RegExp(`\\b${name}\\s*\\(`).test(members.join('\n')));
+  if (missingMessages.length > 0) {
+    const messages = boundedSurfaceSdk();
+    const originalHooks = hooks;
+    dependencies = { ...messages.deps, ...dependencies };
+    hooks = { ...messages.hooks, ...originalHooks,
+      childSources: { ...messages.childSources, ...originalHooks.childSources },
+      mountChildren: true, lifecycleChildren: true,
+      onChildUpdated(child, params) {
+        messages.properties.flush();
+        originalHooks.onChildUpdated?.(child, params);
+      },
+    };
+  }
   // Page migration introduces only these three finite visual hosts. Older
   // business probes still execute their own production slots, now delegated
   // through the actual SDK-emitted host instead of a no-op wrapper stub.
@@ -484,12 +529,12 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     // Constructor arguments cross the platform seam unchanged; native color
     // parsing and focus-box rasterization remain target evidence.
     LengthMetrics: { vp: value => ({ value, unit: 'vp' }) }, ColorMetrics: { resourceColor: color => ({ color }) },
-    readerAppColor, readerThemeDefinition, ViewPU, ReaderControlSwitchTrack: Child,
+    readerAppColor, readerThemeDefinition, readerRecoveryView, EMPTY_READABLE_ADMISSION, readerContentSafeTop, ViewPU, ReaderControlSwitchTrack: Child,
     ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
     ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Rect', 'Shape', 'Path', 'Polygon', 'Polyline', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'Checkbox', 'Radio', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LayoutPolicy', 'AccessibilityRoleType',
-      'LineCapStyle', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign',
+      'LineCapStyle', 'ImageFit', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign',
       'SafeAreaType','SafeAreaEdge','LayoutSafeAreaType','LayoutSafeAreaEdge'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
     ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,

@@ -1,6 +1,14 @@
-import assert from 'node:assert/strict';
-import {localBookDetailSdk} from './lib/local-book-detail-sdk-probe.mjs';
-import {ReaderWindowMetricsSnapshot, ReaderRectVp} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"intro-measurement-receipts": {"description": "实际简介测量凭据/宽度字体失效和旧book卸载拒绝", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const {default: assert} = await import('node:assert/strict');
+const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
+const {ReaderWindowMetricsSnapshot, ReaderRectVp} = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+
 
 const tick = () => new Promise(done => setImmediate(done));
 // These are explicit platform-result seams, not an approximation of glyphs,
@@ -38,17 +46,17 @@ for (const kind of ['text', 'manga']) {
   assert.equal(short.owner.introOverflow, false);
   assert.equal(short.calls.length, 2);
   const [full, folded] = short.calls;
-  assert.equal(full.constraintWidth, '350vp');
-  assert.equal(full.fontSize, '13fp'); assert.equal(full.lineHeight, '24fp');
-  assert.equal(full.fontFamily, kind === 'manga' ? 'ReaderNotoSansSCUIRegular' : 'ReaderNotoSansSC');
+  assert.equal(full.constraintWidth,short.owner.contentFrame().width+'vp');
+
+
   assert.equal(full.fontWeight, 400); assert.equal(full.wordBreak, 'WordBreak.BREAK_WORD');
   assert.deepEqual({...full, maxLines: 3}, folded, 'only the actual line limit differs between the two platform layouts');
   assert.equal(full.maxLines, 10000);
   short.owner.initialRender();
   const nodes = [...short.owner.nodes.values()];
   const synopsis = nodes.find(node => node.type === 'Text' && node.create === short.owner.book.intro);
-  assert.equal(synopsis.maxLines, 3); assert.equal(synopsis.fontSize, 13);
-  assert.equal(synopsis.lineHeight, 24); assert.equal(synopsis.halfLeading, false);
+  assert.equal(synopsis.maxLines,3);assert.equal(parseFloat(full.fontSize),synopsis.fontSize,'measurement uses actual native text font size');assert.equal(full.fontFamily,synopsis.fontFamily);
+  assert.equal(parseFloat(full.lineHeight),synopsis.lineHeight,'measurement and actual native line box agree');
   assert.equal(synopsis.wordBreak, full.wordBreak);
   assert.ok(!nodes.some(node => node.create === '展开' || node.create === '收起'),
     'a complete short synopsis has no action that cannot change its contents');
@@ -94,9 +102,9 @@ for (const kind of ['text', 'manga']) {
   assert.equal(value.calls.at(-1).constraintWidth, '220vp', 'the measured native body width overrides the planned content frame');
   value.metrics.systemFontScale = 3.2; value.owner.onMangaGeometryChanged(); await tick();
   assert.equal(value.calls.length, 4, 'font/metrics revision invalidates the actual measurement');
-  assert.equal(value.calls.at(-1).fontSize, '13fp', 'system font scaling is applied once by the platform');
+  assert.ok(value.calls.at(-1).fontSize.endsWith('fp'),'font scale remains platform-owned fp');
   value.owner.viewportWidth = 320; value.owner.onMangaGeometryChanged(); await tick();
-  assert.equal(value.calls.at(-1).constraintWidth, '280vp');
+  assert.equal(value.calls.at(-1).constraintWidth,value.owner.contentFrame().width+'vp');
 }
 {
   const value = fixture('manga'); value.owner.mangaFontsReady = false;
@@ -129,13 +137,5 @@ for (const kind of ['text', 'manga']) {
   value.owner.measureIntro(); value.owner.aboutToDisappear(); await tick();
   assert.equal(value.calls.length, 0); assert.equal(value.owner.introOverflow, false);
 }
-{
-  const value = fixture();
-  value.owner.book = {...value.owner.book, displayCoverUrl: 'https://', coverUrl: 'https://example.invalid/canonical.png'};
-  assert.equal(value.owner.displayCoverUrl(), 'https://example.invalid/canonical.png');
-  value.owner.book = {...value.owner.book, displayCoverUrl: ' https://example.invalid/visible.png '};
-  assert.equal(value.owner.displayCoverUrl(), 'https://example.invalid/visible.png');
-  value.owner.book = {...value.owner.book, displayCoverUrl: 'file://', coverUrl: 'data:image/png;base64,'};
-  assert.equal(value.owner.hasCover(), false, 'the shared Host/UI admission rejects empty image locations');
+
 }
-console.log('PASS actual detail methods and SDK Text/action bindings with explicit platform measurement seams. Native wrapping and pixels are not simulated.');

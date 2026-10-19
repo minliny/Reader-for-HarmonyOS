@@ -17,9 +17,8 @@ export function compileReaderChoiceLabelModifier(resolve=resolveReaderChoiceSpec
   return new Function('resolveReaderChoiceSpec','TextAlign','TextOverflow',ts.transpileModule(modifierSource,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText+';return ReaderChoiceLabelModifier;')(resolve,{Start:'TextAlign.Start'},{Ellipsis:'TextOverflow.Ellipsis'});
 }
 
-export function choiceRowProbe(resolve=resolveReaderChoiceSpec,source=choiceSource) {
+export function choiceRowProbe(resolve=resolveReaderChoiceSpec,source=choiceSource,properties=createArkUIPropertyRuntimeProbe()) {
   const modifier=compileReaderChoiceLabelModifier(resolve,source);
-  const properties=createArkUIPropertyRuntimeProbe();
   const probe=createReaderBuilderProbe(source,
     ['specId','label','selected','showDivider','scheme','availableWidth','chevronAngle','actionEnabled','onChoose',
       'mounted','aboutToAppear','aboutToDisappear','build','normalRow','positionedRow','spec','textStyle','rowHeight','textColor','rowBackground','hasIcon','icon','accessibilityLabel','choose'],

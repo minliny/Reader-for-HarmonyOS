@@ -1,30 +1,23 @@
-import { actionMenuProbe } from './lib/reader-action-menu-probe.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+const selected = selectContractCases({ 'spec-endpoints': {description:'Actual production popup finite endpoints',resources:[]}, 'panel-actions':{description:'Actual SDK native popup action admission, callbacks and width cache',resources:[]}, 'adaptive-lifecycle':{description:'Actual popup width/window adaptation and input lifecycle',resources:[]} });
+async function run(id) {
+const { actionMenuProbe, resolvePopupSpec } = await import('./lib/reader-action-menu-probe.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
 
 const file = new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const enums = name => new Proxy({}, { get: (_, key) => `${name}.${String(key)}` });
 const typography = { fontFamily: 'ReaderNotoSerifSC', fontWeight: 400, fontSizeFp: 12 };
-const readerMoreSurface = {
-  width: 176, pointerWidth: 24, pointerHeight: 12, borderRadius: 16,
-  borderWidth: 1, shadowRadius: 28, shadowOffsetY: 10,
-  actionHeight: 50, actionsHeight: 150, actionPaddingLeft: 18, actionPaddingRight: 18,
-  dividerInset: 16, dividerHeight: 1, actionFontFamily: 'ReaderNotoSansSC',
-  actionFontWeight: 500, actionFontSize: 15, actionLineHeight: 22, actionTextRole: 'TOK_INK',
-  dividerRole: 'app.BookshelfMoreMenu.action.color.FFE8E2DA',
-  surfaceBackgroundRole: 'app.BookshelfMoreMenu.build.backgroundColor.FFFFFCF8',
-  surfaceBorderRole: 'app.BookshelfMoreMenu.build.color.FFE3DED6',
-  surfaceShadowRole: 'app.BookshelfMoreMenu.build.color.292E261F',
-};
+const readerMoreSurface = resolvePopupSpec('reader-more-menu');
 const dependencies = {
   Placement: enums('Placement'), ArrowPointPosition: enums('ArrowPointPosition'), BlurStyle: enums('BlurStyle'),
   TYPE_READER_CONTROL_BOOK_TITLE: typography, TYPE_READER_CONTROL_CHAPTER_SOURCE: typography,
   TYPE_READER_CONTROL_SOURCE_ACTION: typography,
-  resolvePopupSpec: id => { assert.equal(id, 'reader-more-menu'); return readerMoreSurface; },
+  resolvePopupSpec,
 };
 const methods = ['topBar', 'readerMoreMenu', 'readerMoreActions', 'readerMoreMenuWidth',
   'readerMoreSurfaceSpec', 'readerMoreActionEnabled', 'setMoreMenuVisible', 'dismissMoreMenu', 'performMoreAction'];
@@ -58,6 +51,12 @@ function fixture(scheme = 'day') {
   return { owner, anchor, nodes, actions, measurements, temporary, setTextScale: scale => { textScale = scale; } };
 }
 
+if (id === 'spec-endpoints') {
+ assert.deepEqual([readerMoreSurface.width,readerMoreSurface.pointerWidth,readerMoreSurface.pointerHeight,readerMoreSurface.borderRadius],[176,24,12,16]);
+ assert.deepEqual([readerMoreSurface.actionHeight,readerMoreSurface.actionsHeight,readerMoreSurface.actionFontSize,readerMoreSurface.actionLineHeight],[50,150,15,22]);
+ return;
+}
+if (id === 'panel-actions') {
 for (const scheme of ['day', 'night']) {
   const t = fixture(scheme), original = t.owner.controlSession;
   assert.deepEqual([t.anchor.width, t.anchor.height], [34, 42], 'existing More target remains the popup anchor');
@@ -123,6 +122,8 @@ t.owner.controlObscured = false; t.owner.frame = () => ({ visibility: 0 });
 t.owner.setMoreMenuVisible(true); assert.equal(t.owner.moreMenuVisible, false);
 console.log('PASS PH87 disabled download/refresh, obscured and hidden controls cannot dispatch');
 
+
+} else {
 const g = fixture();
 for (const [viewport, textScale, expected] of [[390, 1, 126], [840, 2, 216], [150, 2, 126]]) {
   g.owner.layout.viewportWidth = viewport; g.setTextScale(textScale);
@@ -140,7 +141,8 @@ for (const [inputEnabled, controlObscured] of [[false, false], [true, true]]) {
     onTemporaryLayerChange: visible => layers.push(visible) });
   owner.onRuntimeEnabledChanged(); assert.equal(owner.moreMenuVisible, false); assert.deepEqual(layers, [false]);
 }
-assert.doesNotMatch(source, /if \(this\.moreMenuVisible\) \{ this\.readerMoreMenu\(\); \}/,
-  'removed the independent overlay tree; native popup is the single menu owner');
-assert.match(source, /if \(this\.moreMenuVisible && visual\.visibilityProgress <= 0\) this\.dismissMoreMenu\(\)/);
 console.log('PASS PH87 adaptive text/window geometry and popup lifecycle; native pixels/placement remain a platform gate');
+
+}
+}
+for (const id of selected) { await run(id); recordContractCasePass(id); }

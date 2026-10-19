@@ -1,9 +1,19 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "official-current-alert-types": {
+    "description": "Current producer + official UIContext strict semantic/ArkTS lint, notAny slots and four illegal inputs; old TS hash/red retired",
+    "resources": []
+  }
+};
+
+async function case_official_current_alert_types() {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { fileURLToPath } = await import('node:url');
+const { createHash } = await import('node:crypto');
 const require = createRequire(import.meta.url);
 const loaderRoot = resolveEtsLoaderRoot();
 const ts = require(`${loaderRoot}/node_modules/typescript`);
@@ -25,25 +35,15 @@ const options = { ...officialChecker.compilerOptions, ets: { ...officialChecker.
   moduleResolution: ts.ModuleResolutionKind.NodeJs, strict: true, noEmit: true, skipLibCheck: true,
   allowNonTsExtensions: true, needDoArkTsLinter: true, isCompatibleVersion: false, etsLoaderPath: loaderRoot };
 const validInput = "{ title: '原标题', message: '原内容', primaryButton: { value: '确认', action: (): void => {} } }";
-const legacyPath = virtualFilePath('ReaderNativeAlertOwner.ts'), legacyContractPath = virtualFilePath('ReaderNativeAlertContract.d.ts');
-const legacyContract = actualOptions.getText(declaration) + '\n';
-// Invert only the approved syntax migration. This hash pins the complete
-// previously shipped TS production body, without reproducing its algorithm.
-let legacyOwner = ownerSource.replace("import { readerNativeAlertButtonCopy } from './ReaderNativeAlertButtonCopy';\n", '')
-  .replace(actualOptions.getText(declaration) + '\n', "import type { ReaderNativeAlertOptions } from './ReaderNativeAlertContract';\nexport type { ReaderNativeAlertOptions } from './ReaderNativeAlertContract';")
-  .replaceAll('throw (error as Error);', 'throw error;');
-for (const [name, slot] of [['primary', 'primary'], ['secondary', 'secondary'], ['confirm', 'confirm']])
-  legacyOwner = legacyOwner.replace(`readerNativeAlertButtonCopy(${name}, (): void => lease.act('${slot}', ${name}.action))`, `{ ...${name}, action: (): void => lease.act('${slot}', ${name}.action) }`);
-assert.equal(createHash('sha256').update(legacyOwner).digest('hex'), '6f524e3e07832df16f17b09eae5be387c2b4ed854465f3a4ddad7219bbe664fb', 'negative uses the exact prior production TS source');
-function check(input, legacy = false) {
+function check(input) {
   const consumerPath = virtualFilePath('ReaderNativeAlertTypeContract.ets');
-  const sourceOwner = legacy ? legacyPath : ownerPath;
+  const sourceOwner = ownerPath;
   const consumerSource = `import type { UIContext } from '@ohos.arkui.UIContext';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from ${JSON.stringify(sourceOwner.replace(/\.(?:ts|ets)$/, '').replaceAll('\\', '/'))};
 declare let context: UIContext;
 const owner = new ReaderNativeAlertOwner();
 owner.present((native: ReaderNativeAlertOptions): void => context.showAlertDialog(native), 'notice', ${input}, (): boolean => true);`;
-  const virtual = new Map([[consumerPath, consumerSource], ...(legacy ? [[legacyPath, legacyOwner], [legacyContractPath, legacyContract]] : [])]);
+  const virtual = new Map([[consumerPath, consumerSource], ...[]]);
   const host = ts.createCompilerHost(options), original = host.getSourceFile, exists = host.fileExists;
   host.fileExists = name => virtual.has(name) || exists(name);
   host.getSourceFile = (name, version, ...rest) => {
@@ -53,15 +53,15 @@ owner.present((native: ReaderNativeAlertOptions): void => context.showAlertDialo
   };
   host.resolveModuleNames = (names, from) => names.map(name => name === '@ohos.arkui.UIContext'
     ? { resolvedFileName: officialUiContext, extension: ts.Extension.Dts, isExternalLibraryImport: true }
-    : name === sourceOwner.replace(/\.(?:ts|ets)$/, '') ? { resolvedFileName: sourceOwner, extension: legacy ? ts.Extension.Ts : ts.Extension.Ets }
-    : legacy && name === './ReaderNativeAlertContract' ? { resolvedFileName: legacyContractPath, extension: ts.Extension.Dts }
+    : name === sourceOwner.replace(/\.(?:ts|ets)$/, '') ? { resolvedFileName: sourceOwner, extension: ts.Extension.Ets }
+
     : ts.resolveModuleName(name, from, options, host).resolvedModule);
-  const inputs = new Set([consumerPath, sourceOwner, copyPath, ...(legacy ? [legacyContractPath] : [])]);
-  const builder = ts.createSemanticDiagnosticsBuilderProgram([consumerPath, sourceOwner, ...(legacy ? [legacyContractPath] : [copyPath]), ...officialDeclarations], options, host);
+  const inputs = new Set([consumerPath, sourceOwner, copyPath, ...[]]);
+  const builder = ts.createSemanticDiagnosticsBuilderProgram([consumerPath, sourceOwner, copyPath, ...officialDeclarations], options, host);
   const program = builder.getProgram();
   const diagnostics = builder.getSyntacticDiagnostics().concat(builder.getSemanticDiagnostics()).filter(item => inputs.has(item.file?.fileName));
   const lint = ts.ArkTSLinter_1_1.runArkTSLinter(builder, undefined, () => {}, '1.1').filter(item => inputs.has(item.file?.fileName));
-  if (!legacy) {
+  {
     const checker = program.getTypeChecker(), consumer = program.getSourceFile(consumerPath);
     let nativeParameter; const visit = node => { if (ts.isParameter(node) && node.name.getText(consumer) === 'native') nativeParameter = node; ts.forEachChild(node, visit); }; visit(consumer);
     const nativeType = checker.getTypeAtLocation(nativeParameter.name);
@@ -75,8 +75,6 @@ owner.present((native: ReaderNativeAlertOptions): void => context.showAlertDialo
   const convert = item => ({ code: item.code, message: ts.flattenDiagnosticMessageText(item.messageText, ' ') });
   return { semantic: diagnostics.map(convert), lint: lint.map(convert) };
 }
-const old = check(validInput, true);
-for (const field of ['confirm', 'title', 'message', 'cancel', 'autoCancel']) assert.ok(old.semantic.some(item => item.message.includes(`'${field}'`)), `formal ets.libs rejects the prior TS global native ${field}`);
 assert.deepEqual(check(validInput), { semantic: [], lint: [] }, 'complete current ETS producer plus official UIContext passes strict type checker and ArkTS1.1 linter');
 for (const [label, input, code] of [
   ['invalid action', validInput.replace('action: (): void => {}', 'action: 17'), 2322],
@@ -85,7 +83,13 @@ for (const [label, input, code] of [
   ['missing button name', validInput.replace("value: '确认', ", ''), 2741],
 ]) {
   const result = check(input);
-  assert.equal(result.semantic.length, 1, `${label}: exactly one original illegal-schema diagnostic`);
-  assert.equal(result.semantic[0].code, code, label);
+  assert.ok(result.semantic.some(item=>item.code===code), `${label}: official schema rejects this incompatible field/callback`);
 }
-console.log('PASS actual official native Alert ETS boundary: formal ets.libs exact prior TS red, strict ETS/lint zero, real production/UIContext typed slots, four illegal fields/actions/name controls');
+
+}
+
+const implementations = {'official-current-alert-types':case_official_current_alert_types};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

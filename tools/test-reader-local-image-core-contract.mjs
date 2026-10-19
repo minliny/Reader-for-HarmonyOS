@@ -1,14 +1,16 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { registerHooks } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { hasImmutableLocalReadingImageSource, hasKnownReadingImageGeometry } from '../entry/src/main/ets/features/reading/ReadingChapterWindow.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const selected=selectContractCases({'captured-dto-compatibility':{description:'Host consumes pinned 2026-09-23 captured DTO; never a current Core producer proof',resources:[]},'locator-guards':{description:'Actual decoded identity/path guards prevent resource I/O on invalid source',resources:[]}});
+async function run(id){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { registerHooks }=await import('node:module');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { hasImmutableLocalReadingImageSource, hasKnownReadingImageGeometry }=await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
 
-registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (error) {
+const hooks=registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (error) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(`${s}.ts`, c); throw error;
 } } });
 const { readPreparedReadingEntrySnapshot } = await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
-const fixture = JSON.parse(readFileSync(new URL('fixtures/reader-local-image-core-first-frame.json', import.meta.url)));
 let ioCalls = 0;
 const util = { TextDecoder: { create: (_encoding, options) => ({
   decodeToString: bytes => new TextDecoder('utf-8', options).decode(bytes),
@@ -25,12 +27,18 @@ const Adapter = productionMotionMethods(new URL('../entry/src/main/ets/app/Local
     ReadingBodyImageHost: { instance: { loadResource: async () => { ioCalls++; return {}; } } },
   });
 const adapter = new Adapter();
+try{
+if(id==='captured-dto-compatibility'){
+const bytes=readFileSync(new URL('fixtures/reader-local-image-core-first-frame.json',import.meta.url));
+const {createHash}=await import('node:crypto');
+assert.equal(createHash('sha256').update(bytes).digest('hex'),'1625aa6acb252523c0841ed499910f300b2fe66eda97ee9b9282affdb1b64df1','fixed captured 2026-09-23 DTO evidence');
+const fixture=JSON.parse(bytes);
 for (const { chapter, variant, dto } of fixture.cases) {
   let reads = 0;
   const runtime = { supportsCoreCapability: () => true, captureReadingContentValidity: () => () => true,
     readPreparedEntry: () => { reads++; return dto; }, request: () => assert.fail('synchronous projection cannot enqueue work') };
   const result = readPreparedReadingEntrySnapshot(runtime, dto.sourceId, dto.bookId, dto.chapterIndex, () => true, 'blankLineSeparated');
-  assert.ok(result, `${chapter}/${variant}: actual Core DTO must reach the page assembler`);
+  assert.ok(result, `${chapter}/${variant}: captured 2026-09-23 DTO must remain consumable by current Host`);
   assert.equal(reads, 1); assert.equal(result.chapter.content, dto.content);
   assert.equal(result.chapter.bodyVersion, dto.positionScope.bodyVersion);
   assert.equal(result.chapter.processingVersion, dto.positionScope.processingVersion);
@@ -49,6 +57,8 @@ for (const { chapter, variant, dto } of fixture.cases) {
 }
 assert.equal(ioCalls, 0, 'materializing every DTO must not acquire images');
 
+
+}else{
 const hash = '0123456789abcdef'.repeat(4), book = `local:${hash}`;
 const encode = (text, padded = true) => {
   const value = Buffer.from(text).toString('base64').replaceAll('+', '-').replaceAll('/', '_');
@@ -76,4 +86,9 @@ for (const path of ['', '/', '/OPS/a.png', 'OPS/../a.png', './a.png', 'OPS//a.pn
   await assert.rejects(adapter.load(source(book, path)), /malformed|unsafe archive path|escapes its archive root/);
 assert.equal(ioCalls, 0, 'invalid decoded book/path must stop before resource acquisition');
 await adapter.load(valid); assert.equal(ioCalls, 1);
-console.log('PASS actual Core firstFrame DTOs (3 fresh, 3 legacy, 3 repaired), padded/unpadded locator segments, unchanged canonical scopes, and production decoded identity/path I/O guards');
+console.log('PASS actual production decoded locator guards; this case does not produce Core first-frame DTOs');
+
+}
+}finally{hooks.deregister();}
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

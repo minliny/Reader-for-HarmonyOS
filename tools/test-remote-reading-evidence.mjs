@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
-import { fileURLToPath } from 'node:url';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import {compileHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
-import {fixture as switchFixture,session as switchSession,settle as settleSwitch} from './lib/source-switch-owner-probe.mjs';
-import {makeIndex as makeSwitchIndex} from './lib/source-switch-sdk-consumer.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { registerHooks }=await import('node:module');
+const { fileURLToPath }=await import('node:url');
 registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return nextResolve(`${specifier}.ts`, context); throw error; }
@@ -15,6 +14,9 @@ const { captureRemotePositionContext } = await import('../entry/src/main/ets/fea
 const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const settle = async () => { for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve)); };
+let productionMotionMethods,compileHost,setRuntime,switchFixture,switchSession,settleSwitch,makeSwitchIndex;const pages=[];
+if(id!=='prepared-handoff'){({productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs'));({compileHost,setRuntime}=await import('./lib/reading-entry-owner-probe.mjs'));}
+if(id==='switch-catalog'){({fixture:switchFixture,session:switchSession,settle:settleSwitch}=await import('./lib/source-switch-owner-probe.mjs'));({makeIndex:makeSwitchIndex}=await import('./lib/source-switch-sdk-consumer.mjs'));}
 let revision = 0; let load = async (session, index) => chapter(session, index);
 const owner = { bookAcquisitions: () => ({ readingProjectionRevision: () => revision,
   acquireBook: async () => selectedSession,setPreparationVisible(){} }) };
@@ -60,9 +62,11 @@ const Index = productionMotionMethods(fileURLToPath(new URL('../entry/src/main/e
   p.refreshCachedSearchDetailInBackground=(seed,name,cached,_navigation,refresh)=>{
     owner.bodyLoader=load;return p.readingEntryHost.refreshInBackground(seed,name,cached,p.readingEntryScopeId,p.readingEntryHost.lease,refresh);
   };
-  return p;
+  pages.push(p);return p;
 }
 
+try{
+if(id==='new-session'){
 for (const oldFailure of [false, true]) {
   const a = session('A'), b = session('B'); const p = page(a); const gate = deferred();
   const old = p.probeRemoteContentVerdict({ loadChapter: () => gate.promise }, a, () => true);
@@ -74,7 +78,8 @@ for (const oldFailure of [false, true]) {
   assert.equal(p.remoteContentVerdict, 'readable');
   assert.equal(p.remoteReadingSession.preparedChapter.chapter.chapterUrl, '/B/0');
 }
-
+}
+if(id==='same-session'){
 {
   const a = session(); const p = page(a); const gate = deferred();
   const old = p.probeRemoteContentVerdict({ loadChapter: () => gate.promise }, a, () => true);
@@ -83,7 +88,8 @@ for (const oldFailure of [false, true]) {
   assert.equal(later, 1); assert.equal(p.remoteContentVerdict, 'readable');
   assert.equal(p.remoteReadingSession.preparedChapter.chapter.chapterIndex, 1);
 }
-
+}
+if(id==='metadata-handoff'){
 {
   const a = session(); const p = page(a); let calls = 0;
   const gateway = { loadChapter: async (value, index) => { calls++; return chapter(value, index); } };
@@ -100,14 +106,16 @@ for (const oldFailure of [false, true]) {
   await p.probeRemoteContentVerdict(gateway, p.remoteReadingSession, () => true, 0);
   assert.equal(calls, 3, 'processing changes invalidate the in-memory handoff');
 }
-
+}
+if(id==='late-refresh'){
 {
   const a = session('A'), b = session('B'), c = session('C'); const p = page(a); const refresh = deferred();
   p.refreshCachedSearchDetailInBackground({}, '书源', a, 7, refresh.promise);
   p.installRemoteReadingSession(c); refresh.resolve(b); await settle();
   assert.equal(p.remoteReadingSession.catalogVersion, c.catalogVersion, 'an old refresh cannot overwrite a newer installed catalog');
 }
-
+}
+if(id==='late-directory'){
 {
   const a = session('A'), b = session('B'); const p = page(a); const body = deferred(), projection = deferred();
   load = async () => body.promise;
@@ -120,19 +128,21 @@ for (const oldFailure of [false, true]) {
   assert.equal(p.detailToc, c.entries, 'late directory projection has the same session guard as the verdict');
   load = async (value, index) => chapter(value, index);
 }
-
+}
+if(id==='switch-catalog'){
 {
   const f=switchFixture({shared:true,open:false,preview:true}),x=makeSwitchIndex(f);
-  x.index.detailReturnRoute='search';x.index.openDetailSourceSwitch();await settleSwitch();
+  try{x.index.detailReturnRoute='search';x.index.openDetailSourceSwitch();await settleSwitch();
   const before=f.calls.filter(c=>c[0]==='chapter.content').length;
   x.mount();const row=x.rows().find(r=>r.candidate.sourceId==='new');assert.ok(row);row.onSelect();await settleSwitch();await settle();
   const opened=x.index.effects.find(e=>typeof e==='object'&&e.validated);assert.ok(opened);
   assert.equal(f.calls.filter(c=>c[0]==='chapter.content').length,before,'source selection transfers its catalog without a preliminary body probe');
   assert.equal(opened.resume,true);assert.equal(opened.parent,'search');
   assert.equal(opened.validated,switchSession,'original acquired full catalog/context is retained exactly');
-  assert.equal(opened.validated.preparedChapter,undefined);
+  assert.equal(opened.validated.preparedChapter,undefined);}finally{f.host.retire();}
 }
-
+}
+if(id==='prepared-handoff'){
 {
   const a = session(); const prepared = withPreparedRemoteChapter(a, chapter(a, 1), revision);
   let reads = 0;
@@ -153,4 +163,8 @@ for (const oldFailure of [false, true]) {
   const forced = new ReadingSessionFlowGateway('source', 'book', { kind: 'remote', session: prepared }, runtime);
   await forced.loadChapter('book', 1, () => true, true); assert.equal(reads, 3);
 }
-console.log('R1/R9 actual session ownership, stale verdict/directory rejection and validated chapter handoff: PASS');
+}
+}finally{for(const page of pages)page.readingEntryHost?.retire();setRuntime?.(undefined);}
+}
+const definitions={"new-session": "new-session actual scoped owner/gateway/storage path; controlled Core/OS ports", "same-session": "same-session actual scoped owner/gateway/storage path; controlled Core/OS ports", "metadata-handoff": "metadata-handoff actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-refresh": "late-refresh actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-directory": "late-directory actual scoped owner/gateway/storage path; controlled Core/OS ports", "switch-catalog": "switch-catalog actual scoped owner/gateway/storage path; controlled Core/OS ports", "prepared-handoff": "prepared-handoff actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

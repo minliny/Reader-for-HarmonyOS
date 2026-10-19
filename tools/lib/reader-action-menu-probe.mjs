@@ -16,7 +16,7 @@ export const ReaderMenuActionView=new Function(stripTypeScriptTypes(menuSource.s
 export function actionMenuProbe(resolve=resolvePopupSpec) {
   const properties=createArkUIPropertyRuntimeProbe();
   const probe=createReaderBuilderProbe(menuSource,
-    ['appThemeScheme','variant','specId','scheme','actions','availableWidth','viewportHeight','onAction','mounted','aboutToAppear','aboutToDisappear','build','menuActions','actionRow','groupedActions','quickActions','actionGroup','sectionHeading','quickAction','row','startsSection','actionIndex','sectionIds','groupActions','actionSheetSpec','spec','action','dividerWidth','effectiveScheme','color','accessibilityLabel','commitAction'],
+    ['appThemeScheme','variant','specId','scheme','actions','availableWidth','viewportHeight','onAction','mounted','aboutToAppear','aboutToDisappear','build','menuActions','actionRow','actionRows','row','actionSheetSpec','spec','action','dividerWidth','effectiveScheme','color','accessibilityLabel','commitAction'],
     {...properties.sdk,ReaderMenuActionView,resolvePopupSpec:resolve,resolveActionSheetSpec},properties.hooks);
   return {...probe,properties,dependencies:{ReaderActionMenuSurface:probe.Component,ReaderMenuActionView,resolvePopupSpec:resolve,resolveActionSheetSpec},
     hooks:{childSources:{ReaderActionMenuSurface:menuSource},mountChildren:true,lifecycleChildren:true},

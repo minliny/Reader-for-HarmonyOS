@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {fixture,defaults,settle} from './lib/general-settings-persistence-probe.mjs';
+import {fixture,defaults,settle,deferred} from './lib/general-settings-persistence-probe.mjs';
 import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 const read=path=>readFileSync(new URL('../entry/src/main/ets/'+path,import.meta.url),'utf8');
 const pageSource=read('features/bookshelf/BookshelfSettingsPage.ets');
 const leafNames=['autoCheckUpdate','onAutoCheckUpdate','operation','navigationGeneration','presentationRevision','mounted','onRetryAccepted','onReconcile',
- 'settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery'];
+ 'settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery','settingsPending','retrySettingsAccepted',
+ 'onOperationChanged','lastSettingsFeedback'];
 function build(f) {
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});sdk.childSources.BookshelfSettingsPage=pageSource;
  const Leaf=sdk.consumer(pageSource,leafNames,{readerRecoveryView}).constructor;
@@ -23,6 +24,19 @@ function build(f) {
  return {...result,get page(){return result.page;},set page(value){result.page=value;},native};
 }
 let cases=0;
+
+{
+ const f=fixture(),x=build(f);x.host.open(x.idx.settingsPresentationIdentity);await settle();f.fail('after');x.page.onAutoCheckUpdate(false);await settle();x.sdk.properties.flush();
+ const idle=x.sdk.walk(x.page).find(c=>c instanceof x.sdk.deps.ReaderRecoveryAction&&c.label==='核对设置');assert.equal(idle.isBusy,false);
+ const gate=deferred();f.hangRead(gate);x.native('核对设置')();x.sdk.properties.flush();
+ assert.equal(x.page.operation.receipt.receipt.confirmation,'unknown');assert.equal(x.page.operation.receipt.receipt.readback,'reading');
+ const actor=x.sdk.walk(x.page).findLast(c=>c instanceof x.sdk.deps.ReaderRecoveryAction&&c.label==='核对设置');assert.ok(actor,'readback reading keeps the action despite canRetry=false');
+ const nodes=x.sdk.nodes(actor),label=nodes.find(n=>n.type==='Text'),loader=nodes.find(n=>n.type==='LoadingProgress'),native=nodes.find(n=>n.type==='Stack'&&n.onClick);
+ assert.equal(label.create,'核对设置');assert.equal(label.opacity,0);assert.deepEqual([loader.width,loader.height],[18,18]);assert.equal(native.constraintSize.minHeight,28);assert.equal(native.enabled,false);
+ const puts=f.events.filter(e=>e[0]==='put').length;native.onClick();gate.resolve();await settle();assert.equal(f.events.filter(e=>e[0]==='put').length,puts,'busy query never retries the write');
+ assert.equal(x.idx.settingsOperation.receipt.receipt.confirmation,'unknown');cases++;
+}
+
 for(const failure of ['before','after']) {
  const f=fixture(),x=build(f);x.host.open(x.idx.settingsPresentationIdentity);await settle();x.sdk.properties.flush();
  f.fail(failure);x.page.onAutoCheckUpdate(false);await settle();x.sdk.properties.flush();

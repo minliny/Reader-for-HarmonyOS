@@ -536,11 +536,15 @@ console.log('PASS cancelled different/same-version refresh restores the still-vi
  assert.deepEqual(f.prefetches.filter(item=>item.chapterId==='/c84').map(item=>item.ordinal),[0,1,2],'real capacity failure stops fill immediately and preserves acquired pages');
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
  const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['publish','displayChapterTitle','displayError']);
+ const messages=[];
  const surface=Object.assign(new Surface(),{controller:c,mounted:true,opened:true,error:'',publishedManifestVersion:a.manifest.manifestVersion,layoutGeneration:0,viewportGeneration:0,
   mountedTurnRowKey:'',horizontal:false,rememberVisible(){},notifyPublishedRows(){},
+  getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})}),
   data:{projection:{publish:()=>false},totalCount:()=>0}});
- surface.publish();assert.equal(surface.error,'MANGA_CHAPTER_CACHE_CAPACITY');
- assert.equal(surface.displayError(surface.error),'整章加载已暂停，缓存空间不足，可清理缓存或下载保留。');
+ surface.publish();assert.equal(surface.error,'','background preparation does not become a global image error');
+ assert.equal(c.preparationError,'MANGA_CHAPTER_CACHE_CAPACITY','the actual failure remains owned by preparation');
+ assert.deepEqual(messages,['整章加载已暂停，缓存空间不足，可清理缓存或下载保留。']);
+ surface.publish();assert.equal(messages.length,1,'unchanged preparation failure has one short feedback');
  assert.equal(surface.opened,true);assert.equal(c.visiblePages()[0].status,'ready','feedback does not replace the readable body');
  const first=events.filter(error=>error==='MANGA_CHAPTER_CACHE_CAPACITY').length;
  const owner=Coordinator.forRuntime(f.rt);owner.startCurrent(a);await tick();assert.equal(events.filter(error=>error==='MANGA_CHAPTER_CACHE_CAPACITY').length,first,'same failure does not repeatedly notify');

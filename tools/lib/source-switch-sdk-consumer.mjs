@@ -32,7 +32,7 @@ const {RemoteReadingFlowGateway}=await import('../../entry/src/main/ets/features
 const {ReaderNativeAlertOwner}=await import('./reader-native-alert-sdk-probe.mjs');
 const {ReadingOfflineHost}=await import('./reader-reading-owner-sdk-probe.mjs');
 const settle=async()=>{await settleOwner();await new Promise(setImmediate);await settleOwner();};
-const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','applySourceSwitchSnapshot','retireRssPresentation','retireRssEditorPresentation','retireSourceSwitchPresentation',
+const methods=['captureReaderReturnContext','restoreReaderReturnContext','captureDownloadReturnContext','restoreDownloadReturnContext','copyDownloadViewState','getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','applySourceSwitchSnapshot','retireRssPresentation','retireRssEditorPresentation','retireSourceSwitchPresentation',
  'bindSourceSwitchReader','applySourceSwitchEffect','openSourceSwitch','openDetailSourceSwitch','retrySourceSwitch','refreshSourceSwitch',
  'sourceSwitchProbeQuery','knownSearchSourceCandidates','onPickSource','retryFailedSourceSwitch','dismissSourceSwitchFailure','onRollbackSourceSwitch',
  'switchMangaSource','getSourceSwitchGateway','performMangaPreviewSourceSwitch','mangaSourceSwitchFailureMessage','presentMangaSourceSwitchAcquisitionFailure',
@@ -40,7 +40,7 @@ const methods=['getSourceSwitchHost','sourceSwitchContext','sourceSwitchLease','
  'retireSettingsPresentation','retireSourceManagementPresentation','nextNavigationGeneration','isCurrentRuntime','openReading','onRemoteSessionReady','installRemoteReadingSession',
  'getReadingEntryHost','readingEntryLease','applyReadingEntrySnapshot','bindReadingEntryReader','retireReadingEntryPresentation',
  'detailReadableAdmission','detailBookKey','chooseCachedChapterRefresh','showReadingFailure','showIndexAlert',
- 'applyReadingCommit','getReadingOfflineHost','cleanupRetiredSourceCache','sourceDisplayName','sourceSwitchOverlayContent',
+ 'invalidateDownloadMembershipForBook','applyReadingCommit','getReadingOfflineHost','cleanupRetiredSourceCache','sourceDisplayName','sourceSwitchOverlayContent',
  ...(read('pages/Index.ets').includes('private retireBookshelfCatalogPresentation(') ? ['retireBookshelfCatalogPresentation'] : [])];
 export const sourceSwitchMethods=methods.filter(n=>n!=='sourceSwitchOverlayContent');
 const states=['sourceSwitchVisible','sourceSwitchState','sourceSwitchFailureMessage','sourceSwitchScopeId','sourceSwitchCompletion','sourceSwitchNamedCandidate','readingContentKind'];
@@ -111,16 +111,10 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  deps.SourceSwitchPanel=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchWindow'),deps,{...p.hooks,componentName:'SourceSwitchWindow'}).Component;
  return deps;
 }
-export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
- setEntryRuntime(f.runtime);
- const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
- const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
- const leafDeps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});
- const index=p.consumer(read('pages/Index.ets'),[...states,...methods],{...leafDeps,...evidence,...authorMetadata,...errors,MangaSessionGateway,
-   MangaSourceSwitchGateway,MangaSwitchChapterSelectionRequired,RemoteReadingFlowGateway,ReaderRuntimeOwner:Runtime,
-   SourceSwitchHost:f.Constructor,ReadingEntryHost,EMPTY_READABLE_ADMISSION:{key:'',generation:0,adding:false,cancelling:false,confirmation:'none'},ReadingOfflineHost,CacheClearOperationIntentStore:cacheAuthority?.types.CacheClearOperationIntentStore,LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{info(){},warn(){}},ReaderNativeAlertOwner},{sourceSwitchScopeId:0});
+export function initializeIndex(index,f,{navigation=1,reading=false,domain='source-switch'}={}){
+ assert.ok(['source-switch','entry','source-switch-only'].includes(domain),'finite Index fixture domain');
  Object.assign(index,{mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:1,navigationGeneration:navigation,
-   settingsSnapshot:{reduceMotion:false},directoryChapterTitle:'Chapter 1',directoryReturnTarget:'detail',
+   settingsSnapshot:{reduceMotion:false},downloadMembershipRevision:0,directoryChapterTitle:'Chapter 1',directoryReturnTarget:'detail',
    route:reading?'reading':'detail',readingOriginRoute:'detail',detailReturnRoute:'bookshelf',readingSessionActive:reading,detailBook:{...origin,sourceName:'Old'},
    shelfBooks:[origin],detailToc:[{index:0,title:'Chapter 1',navigable:true}],detailInBookshelf:f.context.inBookshelf,
    mangaSourceSwitchCommitGeneration:-1,mangaSourceSwitchSelectionVisible:false,sourceSwitchHost:undefined,readingEntryScopeId:-1,readableAdmissions:[],shelfOperation:{generation:0,busy:false,removalKey:''},searchDetailCandidates:[],searchHost:{searchedSourceIds:()=>[],sources:()=>[]},sourceSources:[],sourceToolsSnapshot:{sources:[]},
@@ -134,14 +128,31 @@ export function makeIndex(f,{navigation=1,reading=false,cacheAuthority}={}){
    isKnownDetailChapter:n=>index.detailToc.some(e=>e.index===n)});
  const shelfTypes=actualBookshelfOperationTypes({ReaderRuntimeOwner:Runtime,ReaderCoreGateway:Core});
  index.bookshelfHost=actualBookshelfHostField(index,shelfTypes.Host,{setOrCreate(){}});
+ if(domain==='entry'||domain==='source-switch-only'){
+  index.sourcePresentationIdentity='';index.sourceHost={detachPresentation(identity){assert.equal(identity,'','entry fixture has no source presentation');}};
+  index.settingsPresentationIdentity='';index.settingsHost={detachPresentation(identity){assert.equal(identity,'','entry fixture has no settings presentation');}};
+ }else{
  const sourceTypes=actualSourceManagementTypes({ReaderRuntimeOwner:Runtime});
  index.sourcePresentationIdentity='';
  index.sourceHost=actualSourceManagementHostField(index,sourceTypes.SourceHost);
  const settingsTypes=actualGeneralSettingsTypes({ReaderRuntimeOwner:Runtime});
  index.settingsPresentationIdentity='';
  index.settingsHost=actualGeneralSettingsHostField(index,settingsTypes.SettingsHost);
+ }
+ return index;
+}
+export function makeIndex(f,{navigation=1,reading=false,cacheAuthority,domain='source-switch'}={}){
+ assert.ok(['source-switch','entry','source-switch-only'].includes(domain),'finite Index fixture domain');
+ setEntryRuntime(f.runtime);
+ const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+ const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
+ const leafDeps=domain==='entry'?{}:sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});
+ const index=p.consumer(read('pages/Index.ets'),[...states,...(domain==='entry'?methods.filter(name=>name!=='sourceSwitchOverlayContent'):methods)],{...leafDeps,...gatewayExports,...evidence,...authorMetadata,...errors,SourceSwitchCompletionPresentation,MangaSessionGateway,
+   MangaSourceSwitchGateway,MangaSwitchChapterSelectionRequired,RemoteReadingFlowGateway,ReaderRuntimeOwner:Runtime,
+   SourceSwitchHost:f.Constructor,ReadingEntryHost,EMPTY_READABLE_ADMISSION:{key:'',generation:0,adding:false,cancelling:false,confirmation:'none'},ReadingOfflineHost,CacheClearOperationIntentStore:cacheAuthority?.types.CacheClearOperationIntentStore,LOCAL_SOURCE_ID:'local',DOMAIN:0,hilog:{info(){},warn(){}},ReaderNativeAlertOwner},{sourceSwitchScopeId:0});
+ initializeIndex(index,f,{navigation,reading,domain});
  const acquire=f.runtime.bookAcquisitions;f.runtime.bookAcquisitions=()=>({...acquire(),readingProjectionRevision:()=>0,setPreparationVisible(){}});
- const mount=()=>{index.sourceSwitchOverlayContent();return p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchPanel).at(-1);};
+ const mount=()=>{assert.notEqual(domain,'entry','entry domain has no picker UI graph');index.sourceSwitchOverlayContent();return p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchPanel).at(-1);};
  const rows=()=>p.walk(index).filter(x=>x instanceof leafDeps.SourceSwitchNovelRow);
  return{p,index,mount,rows,leafDeps};
 }
@@ -169,6 +180,10 @@ export function failureChain(x){
   {LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle:()=>({ink:'#111111',paperStart:'#ffffff'})},actualReaderProps);
  Object.assign(o,actualReaderProps,{sourceId:'old',appearanceSnapshot:{activeTheme:'day'},readingLayout:()=>({bodyWidth:()=>390,bodyHeight:()=>800,contentLeft:0,contentTop:0}),
   openReaderControl(){},onSwitchSource(){},retryReading(){assert.fail('source recovery must not restart ordinary body loading');}});
- const render=()=>{o.readingFailureContent();return{retry:x.p.nodes(o).filter(n=>n.createWithLabel==='重试').at(-1).onClick,dismiss:x.p.nodes(o).filter(n=>n.createWithLabel==='继续当前书源').at(-1).onClick};};
+ const render=()=>{o.readingFailureContent();const physical=label=>{
+  const actor=x.p.walk(o).filter(actor=>actor instanceof x.p.deps.ReaderRecoveryAction&&actor.label===label).at(-1);
+  assert.ok(actor,label+' delegates to the actual shared recovery actor');
+  return [...actor.nodes.values()].find(node=>typeof node.onClick==='function').onClick;
+ };return{retry:physical('重试'),dismiss:physical('继续当前书源')};};
  return{o,render};
 }

@@ -31,10 +31,6 @@ function sdkFeedback(f){
  const owners=actors(rendered.shell),nodes=owners.flatMap(owner=>[...(owner.nodes?.values()??[])]);
  assert.ok(owners.some(owner=>owner.variant==='mainTab'&&typeof owner.onHeaderHeightChange==='function'),'readback feedback executes the actual main-tab Scaffold owner');
  assert.ok(nodes.some(node=>node.type==='Stack'&&node.width==='100%'&&node.height==='100%'&&node.backgroundColor),'public frame keeps its opaque full viewport');
- if(rendered.notice){
-  assert.ok(owners.some(owner=>owner.kind==='standard'&&owner.surface==='solid'),'readonly recovery lives inside the actual opaque HeaderHost');
-  assert.ok(nodes.some(node=>node.type==='Column'&&node.backgroundColor&&node.onAreaChange),'fixed recovery surface is painted and measured by the shared owner');
- }
  return{...rendered,pageProps:rendered.shelf?.params};
 }
 
@@ -43,9 +39,9 @@ function sdkFeedback(f){
  f.index.retryBookshelfRead(f.index.bookshelfReadFacts.generation);await until(()=>f.index.bookshelfReadFacts.fact==='current');assert.equal(f.calls.length,3);}
 {const seed=value([book('retained')]),f=fixture({initial:seed,failures:1});f.index.refreshBookshelf();await until(()=>f.index.bookshelfReadFacts.fact==='refreshFailed');
  assert.equal(f.calls.length,1);assert.equal(f.index.bookshelfReadFacts.value,seed);assert.equal(f.index.shelfBooks,f.retainedBooks);assert.equal(f.index.bookshelfViewState.anchorKey,'chosen');
- const actual=sdkFeedback(f);assert.equal(actual.pageProps.books,f.retainedBooks);assert.equal(actual.pageProps.viewState,f.index.bookshelfViewState);assert.ok(actual.notice);assert.equal(actual.notice.view.canRetry,true);assert.ok(actual.action);assert.match(actual.notice.view.message,/保留/);
- actual.action.onClick();actual.action.onClick();await until(()=>f.index.bookshelfReadFacts.fact==='current');assert.equal(f.calls.length,2);assert.equal(f.applied.length,1);assert.equal(sdkFeedback(f).notice,undefined);
- const before=f.calls.length;actual.action.onClick();await tick();assert.equal(f.calls.length,before);}
+ const actual=sdkFeedback(f);assert.equal(actual.pageProps.books,f.retainedBooks);assert.equal(actual.pageProps.viewState,f.index.bookshelfViewState);assert.equal(actual.notice,undefined);assert.equal(actual.action,undefined);assert.equal(actual.props.readRecovery.canRetry,true);assert.equal(actual.toasts.length,1);assert.match(actual.toasts[0],/保留/);
+ actual.retry();actual.retry();await until(()=>f.index.bookshelfReadFacts.fact==='current');assert.equal(f.calls.length,2);assert.equal(f.applied.length,1);assert.equal(sdkFeedback(f).notice,undefined);
+ const before=f.calls.length;actual.retry();await tick();assert.equal(f.calls.length,before);}
 for(const retirement of ['navigation','route','runtime-unset','runtime-replacement','generation','unmount'])for(const rejected of [false,true]){
  const seed=value([book('retained')]),f=fixture({initial:seed,failures:rejected?1:0});const gate=f.pause();f.index.refreshBookshelf();await until(()=>f.calls.length===1);
  const before=f.index.bookshelfReadFacts;
@@ -55,7 +51,7 @@ for(const retirement of ['navigation','route','runtime-unset','runtime-replaceme
 }
 {const f=fixture({failures:1});const gate=f.pause();f.index.refreshBookshelf();await until(()=>f.calls.length===1);f.setOwner(undefined);gate.resolve();await tick();await tick();assert.equal(f.calls.length,1,'first automatic retry may not acquire a replacement/absent Runtime');}
 {const f=fixture({initial:value([book('retained')])});f.malformed(true);f.index.refreshBookshelf();await until(()=>f.index.bookshelfReadFacts.fact==='refreshFailed');assert.equal(f.index.shelfBooks[0].bookId,'retained');}
-{const f=fixture({initial:value([book('retained')])});f.books([]);f.index.refreshBookshelf();await until(()=>f.index.bookshelfReadFacts.fact==='partial');assert.equal(f.index.shelfBooks[0].bookId,'retained');assert.match(sdkFeedback(f).notice.view.message,/读回为空/);}
+{const f=fixture({initial:value([book('retained')])});f.books([]);f.index.refreshBookshelf();await until(()=>f.index.bookshelfReadFacts.fact==='partial');assert.equal(f.index.shelfBooks[0].bookId,'retained');assert.match(sdkFeedback(f).toasts[0],/读回为空/);}
 {const f=fixture({pages:true});f.index.refreshBookshelf();await until(()=>f.index.bookshelfReadFacts.fact==='current');assert.equal(f.calls.length,1);assert.equal(f.calls[0].params.limit,48);assert.equal(typeof f.calls[0].options.shouldCancel,'function');assert.equal(f.calls[0].options.shouldCancel(),false);f.setOwner(undefined);assert.equal(f.calls[0].options.shouldCancel(),true);}
 {const f=fixture({pages:true});f.books([]);f.filtered(true);f.index.shelfReadingFilter='reading';f.index.refreshBookshelf();await until(()=>f.index.bookshelfReadFacts.fact==='current');assert.equal(f.index.bookshelfReadFacts.value.kind,'populated','valid zero filtered matches does not mean globally empty');assert.equal(f.calls.length,2);}
 // Publication faults are distinct from IO faults: a good read has one IO,
@@ -76,4 +72,4 @@ for(const retirement of ['navigation','route','runtime-unset','runtime-replaceme
  assert.equal(f.index.bookshelfLoadFailed,true);assert.match(f.index.bookshelfReadFacts.message,/读取已完成.*显示更新未完成/);
  f.index.applyBookshelfProjection=apply;f.index.retryBookshelfRead(f.index.bookshelfReadFacts.generation);
  await until(()=>f.index.bookshelfReadFacts.fact==='current');assert.equal(f.calls.length,2);assert.equal(f.index.bookshelfLoadFailed,false);}
-console.log('PASS actual CoreGateway -> FlowGateway -> existing BookshelfHost/read owner -> Index -> SDK Shell/Notice/physical readonly recovery: blank retry, retained refresh, malformed/empty/filter, generation/nav/route/Runtime/close deferred success+failure, no writes, anchors retained');
+console.log('PASS actual CoreGateway -> FlowGateway -> existing BookshelfHost/read owner -> Index -> SDK Shell Toast/existing readonly retry delegate: blank retry, retained refresh, malformed/empty/filter, generation/nav/route/Runtime/close deferred success+failure, no writes, anchors retained');

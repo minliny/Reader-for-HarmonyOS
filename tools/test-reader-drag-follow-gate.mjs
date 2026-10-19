@@ -1,91 +1,51 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-
-const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const localReading = readFileSync(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
-const interaction = readFileSync(new URL('ReaderPageInteractionLayer.ets', readingDir), 'utf8');
-
-const failures = [];
-
-function contract(name, check) {
-  try {
-    check();
-  } catch (error) {
-    failures.push(`${name}: ${error instanceof Error ? error.message : String(error)}`);
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const selected=selectContractCases({preparation:{description:'Actual drag/tap missing-preparation queue, dedup and idle drain',resources:[]},readiness:{description:'Actual readiness handoff retains held DOWN displacement without another MOVE',resources:[]}});
+async function run(id){
+ const {default:assert}=await import('node:assert/strict');
+ const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+ const base=new URL('../entry/src/main/ets/features/reading/',import.meta.url);
+ if(id==='preparation'){
+  const names=['onReaderPageGestureStateChanged','updateBookTurnGesturePresentation','queuePageTurnPreparation','drainPageTurnPreparationQueue','drainRapidPageTurn'];
+  const Owner=selectedProductionMethods(new URL('LocalReadingExperience.ets',base),'ReadingExperience',names,{
+   readerPageTransitionUsesPreparedPages:()=>true,readerRapidPageTurnDirection:()=> 'next',hilog:{info(){}}});
+  for(const bookTurn of [false,true]){
+   const begun=[];
+   const owner=Object.assign(new Owner(),{pageTurnGestureState:{phase:'idle'},pageTurnFrozenRevision:1,pageTurnRenderRevision:1,pageTurnSessionCapsuleFrozen:true,
+    pageTurnPreparationQueue:[],readerSettingsSnapshot:{navigationMode:'paged'},pageTurnInputOwned:false,
+    pageTurnSettlementActive:false,pageTurnSettlingPrepared:undefined,pageTurnPreparation:undefined,
+    usesBookTurnSimulation:()=>bookTurn,usesNoAnimationPageTurnRuntime:()=>false,preparedPageTurn:()=>undefined,
+    beginPageTurnPerf(){},clearPageTurnProjection(){},flushDeferredPageChromeState(){},
+    sessionLaunchRenderWorkBlocked:()=>false,canTurnPage:()=>true,adjacentPageTurnTarget:()=>({chapter:0,page:1}),
+    beginPageTurnPreparation(direction,target){begun.push([direction,target]);this.pageTurnPreparation={direction};return 'begun';},cancelPageTurnPreparationRetry(){},
+    bookTurnTextureCaptureGeneration:0,bookTurnTextureCaptureScheduled:false,
+   });
+   const dragging={phase:'dragging',direction:'next',owner:'horizontalPage',currentOffsetX:-80};
+   owner.onReaderPageGestureStateChanged(dragging);owner.onReaderPageGestureStateChanged(dragging);
+   assert.deepEqual(owner.pageTurnPreparationQueue,['next'],'same held drag queues missing direction once');
+   assert.equal(begun.length,0,'actual drain refuses measurement while gesture is active');
+   owner.onReaderPageGestureStateChanged({phase:'idle',owner:'horizontalPage'});
+   assert.equal(begun.length,1,'return to idle drains original request without a new gesture');
+   assert.equal(begun[0][0],'next');assert.deepEqual(owner.pageTurnPreparationQueue,[]);
+   Object.assign(owner,{mounted:true,exitRequested:false,controlVisible:()=>false,controlObscured:false,interactionBlocked:false,
+    activePagePointerId:-1,pendingPointerSegmentReserved:false,rapidPageTurnState:{},pageTurnPreparation:undefined,
+    commitInFlight:false,progressProducers:{continuousInFlight:false}});
+   assert.deepEqual(owner.drainRapidPageTurn(),{kind:'preparing'},'tap path keeps same preparation fallback');
+   assert.equal(begun.length,2);
   }
+ }else{
+  const {startReaderPagePan,updateReaderPagePanInPlace}=await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
+  const Layer=selectedProductionMethods(new URL('ReaderPageInteractionLayer.ets',base),'ReaderPageInteractionLayer',['onReadinessChanged'],{updateReaderPagePanInPlace});
+  const delivered=[];const state=startReaderPagePan(390,300,100,1,844);
+  updateReaderPagePanInPlace(state,-80,0,0,220,100,0,10);
+  const owner=Object.assign(new Layer(),{gestureState:state,activePointerId:1,pointerRejected:true,tapOnlyPointer:false,interactionEnabled:true,
+   canStartTurn:()=>false,lastLocalX:220,lastLocalY:100,lastSampleTimeMs:10,lastInputX:220,lastInputY:100,pointerInputStartX:300,pointerInputStartY:100,
+   velocityX:99,velocityY:99,onGestureStateChange:s=>delivered.push({...s})});
+  owner.onReadinessChanged();assert.equal(delivered.length,0);assert.equal(owner.pointerRejected,true);
+  owner.canStartTurn=()=>true;owner.onReadinessChanged();
+  assert.equal(delivered.length,1);assert.equal(owner.pointerRejected,false);assert.equal(owner.gestureState,state);
+  assert.equal(state.startLocalX,300);assert.equal(state.currentOffsetX,-80);assert.equal(state.currentLocalX,220);
+  assert.equal(state.velocityX,0);assert.equal(owner.velocityX,0);
+  owner.onReadinessChanged();assert.equal(delivered.length,1,'already handed-off sample cannot replay twice');
+ }
 }
-
-function methodSection(source, name) {
-  const plainAnchor = `  private ${name}(`;
-  const asyncAnchor = `  private async ${name}(`;
-  let start = source.indexOf(plainAnchor);
-  if (start < 0) {
-    start = source.indexOf(asyncAnchor);
-  }
-  assert.notEqual(start, -1, `missing ${name} method`);
-  const nextPrivate = source.indexOf('\n  private ', start + 4);
-  return nextPrivate < 0 ? source.slice(start) : source.slice(start, nextPrivate);
-}
-
-contract('both drag-follow gates enqueue the missing preparation instead of dropping it', () => {
-  const slideGate = methodSection(localReading, 'onReaderPageGestureStateChanged');
-  const draggingElse = slideGate.indexOf('} else {', slideGate.indexOf("state.phase === 'dragging'"));
-  const draggingEnd = slideGate.indexOf('return;', draggingElse);
-  const elseBody = slideGate.slice(draggingElse, draggingEnd);
-  assert.match(elseBody, /this\.queuePageTurnPreparation\(state\.direction\);/,
-    'the slide drag gate must queue the preparation when the page is not prepared');
-  assert.match(elseBody, /DRAGFOLLOW gate-miss/,
-    'the slide drag gate must log its gate-miss decision once per gesture');
-
-  const bookTurnGate = methodSection(localReading, 'updateBookTurnGesturePresentation');
-  const gateOpen = bookTurnGate.indexOf('preparedPageTurn(state.direction) === undefined) {');
-  const gateQueue = bookTurnGate.indexOf('this.queuePageTurnPreparation(state.direction);', gateOpen);
-  const gateReturn = bookTurnGate.indexOf('return;', gateQueue);
-  assert.ok(gateOpen >= 0 && gateQueue > gateOpen && gateReturn > gateQueue,
-    'the book-turn drag gate must queue the preparation before its silent return');
-  assert.match(bookTurnGate, /DRAGFOLLOW gate-miss/,
-    'the book-turn drag gate must log its gate-miss decision once per gesture');
-});
-
-contract('the gesture return-to-idle hook re-drains a queued preparation', () => {
-  for (const name of ['onReaderPageGestureStateChanged', 'updateBookTurnGesturePresentation']) {
-    const section = methodSection(localReading, name);
-    assert.match(section,
-      /state\.phase === 'idle' && this\.pageTurnPreparationQueue\.length > 0[\s\S]{0,80}this\.drainPageTurnPreparationQueue\(\);/,
-      `${name} must re-drain the queue when the gesture settles back to idle`);
-  }
-  // The queue hook must stay below the drain's own gesture guard so the
-  // measurement work still never runs inside an active gesture.
-  const drain = methodSection(localReading, 'drainPageTurnPreparationQueue');
-  assert.match(drain, /this\.pageTurnGestureState\.phase !== 'idle'/,
-    'the drain gesture guard must remain intact');
-});
-
-contract('the tap path keeps its preparation queue fallback (asymmetry fixed from both sides)', () => {
-  const drainPending = methodSection(localReading, 'drainRapidPageTurn');
-  assert.match(drainPending, /preparedPageTurn\(direction\) === undefined[\s\S]{0,120}queuePageTurnPreparation\(direction\)/,
-    'the retained dynamic target must keep queueing a missing preparation');
-});
-
-contract('readiness hand-off preserves a held drag displacement', () => {
-  const readinessStart = interaction.indexOf('  private onReadinessChanged(): void {');
-  assert.ok(readinessStart >= 0, 'missing readiness callback');
-  const readinessEnd = interaction.indexOf('\n  private onInteractionModeChanged()', readinessStart);
-  const readiness = interaction.slice(readinessStart, readinessEnd < 0 ? undefined : readinessEnd);
-  assert.match(readiness, /this\.pointerRejected = false;/);
-  assert.match(readiness, /updateReaderPagePanInPlace\(/,
-    'readiness must replay the latest held physical sample into the live gesture state');
-  assert.match(readiness, /this\.lastLocalX - this\.gestureState\.startLocalX/,
-    'the original DOWN origin must be retained so a finger that stopped still shows its displacement');
-  assert.doesNotMatch(readiness, /startReaderPagePan\(this\.viewportWidth, this\.lastLocalX/,
-    'readiness must not rebase to the stopped finger and wait for another MOVE');
-});
-
-if (failures.length > 0) {
-  console.error(`reader drag-follow gate contract: ${failures.length} FAILURE(S)`);
-  for (const line of failures) {
-    console.error(`  - ${line}`);
-  }
-  process.exit(1);
-}
-console.log('reader drag-follow gate contract: PASS');
+for(const id of selected){await run(id);recordContractCasePass(id);}

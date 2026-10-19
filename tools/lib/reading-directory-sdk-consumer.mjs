@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {fixture,deferred,until,book,session,bookmarkInput} from './reading-operation-durable-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
+import {selectedProductionMethods} from './selected-production-methods.mjs';
 const {readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY}=await import('../../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
 const {readingOfflineFailureHint}=await import('../../entry/src/main/ets/features/reading/ReadingOfflineFailurePresentation.ts');
 // Reuse the real SDK-emitted atomic Store + cold Core authority in other Index consumers.
@@ -16,7 +17,24 @@ const methods=['getReaderDirectoryHost','getReadingOfflineHost','directoryOperat
  'downloadDirectoryChapter','downloadDirectoryBook','submitReaderDownload','currentDownloadBook','requestReaderDownloads','currentReaderPresentationIdentity','clearDirectoryBookOffline','offlineDownloadFeedback','showOfflineDownloadFeedback','showChapterDownloadFailure',
  'isCurrentRuntime','externalDirectory','loadDirectoryOperationProjections'];
 const callbacks=['onReconcileBookmarks','onContinueBookmarks','onReconcileOffline','onContinueOffline'];
-export function makeIndex(f,{remote=false,mount=1,index=indexSource}={}){
+export function makeIndex(f,{remote=false,mount=1,index=indexSource,domain='all'}={}){
+ assert.ok(domain==='all'||domain==='bookmark','supported Index consumer domain');
+ if(domain==='bookmark'){
+  assert.equal(index,indexSource,'bookmark case uses actual current Index source');
+  const names=['getReaderDirectoryHost','directoryOperationPresentationId','isCurrentDirectoryOperationPresentation',
+   'directoryOperationBindingId','isCurrentDirectoryOperationBinding','directoryBinding','applyOwnedDirectoryEntries',
+   'deleteDirectoryBookmarks','createDirectoryChapterStartBookmark','toggleReaderPageBookmark',
+   'controlBookmarkProjectionMessage','directoryRecovery','reconcileDirectoryOperation','loadControlBookmarks','isCurrentRuntime'];
+  const Index=selectedProductionMethods(new URL('../../entry/src/main/ets/pages/Index.ets',import.meta.url),'Index',names,{
+   ReaderDirectoryHost:f.Directory,BookmarkOperationIntentStore:f.types.BookmarkOperationIntentStore,
+   ReaderRuntimeOwner:f.Runtime,readingDirectoryRecovery,EMPTY_READING_DIRECTORY_RECOVERY,DOMAIN:0,hilog:{warn(){},error(){}}});
+  const idx=Object.assign(new Index(),{directoryOperation:undefined,offlineOperation:undefined,directoryPresentationGeneration:0,
+   mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,detailShelfAdmissionMount:mount,navigationGeneration:1,
+   remoteSessionGeneration:1,readingEntryScopeId:0,readingSessionActive:true,route:'directory',detailBook:{...book},
+   detailToc:structuredClone(f.entries()),getReadingEntryHost:()=>undefined});
+  return {idx,domain:'bookmark',boundary:'actual ordinary Index bookmark methods; no recovery UI, offline/download/Settings owners'};
+ }
+
  const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
  const src=read('features/reading/ReaderDirectoryRecoverySurface.ets');p.hooks.childSources.ReaderDirectoryRecoverySurface=src;
  const Recovery=createReaderBuilderProbe(src,boundedMembers(src),{...p.deps,EMPTY_READING_DIRECTORY_RECOVERY},p.hooks).Component;
@@ -53,8 +71,10 @@ export function makeIndex(f,{remote=false,mount=1,index=indexSource}={}){
  }
  const nodes=leaf=>p.nodes(leaf), actions=leaf=>p.walk(leaf).filter(c=>c instanceof p.deps.ReaderRecoveryAction);
  const click=(leaf,label)=>{const actor=actions(leaf).find(c=>c.label===label);assert.ok(actor,label+' actual shared native actor');
-  const node=[...actor.nodes.values()].find(n=>n.onClick);assert.equal(node.height,36);assert.equal(node.borderRadius,6);node.onClick();return actor;};
+  const node=[...actor.nodes.values()].find(n=>n.onClick);assert.equal(node.constraintSize.minHeight,actor.variant==='notice'?28:44);assert.equal(node.borderRadius,actor.variant==='notice'?4:12);node.onClick();return actor;};
  return {p,idx,render,actions,nodes,click,leaves,Recovery};
 }
 export async function settled(f){await until(()=>!f.directory.busy()&&!f.offline.busy());await new Promise(r=>setTimeout(r,5));}
 export function pRecovery(p,leaf,type){return p.walk(leaf).find(c=>c instanceof type);}
+
+export async function settledBookmarks(f){await until(()=>!f.directory.busy());await new Promise(resolve=>setImmediate(resolve));}

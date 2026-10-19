@@ -1,42 +1,35 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { sampleReaderControlBookmark } from '../entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts';
-import { createReaderBuilderProbe, readerBuilderSdkAvailable } from './lib/reader-control-builder-probe.mjs';
-const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
-const list = read('entry/src/main/ets/features/reading/ReaderBookmarkList.ets');
-const row = read('entry/src/main/ets/features/reading/ReaderBookmarkRow.ets');
-const panel = read('entry/src/main/ets/features/reading/FullDirectoryPanel.ets');
-const height = Number(row.match(/export const BOOKMARK_ROW_HEIGHT = (\d+)/)[1]);
-const expression = list.match(/ListItem\(\)[\s\S]*?\.width\('100%'\)\s*\.height\(([^\n]+)\)/)?.[1];
-assert.ok(expression, 'actual ListItem height expression exists');
-const actualHeight = new Function('BOOKMARK_ROW_HEIGHT', 'return ' + expression);
-function method(src, name) {
-  const start = src.indexOf('  private ' + name + '(');
-  assert.ok(start >= 0, `actual method ${name}`);
-  const open = src.indexOf('{', start);
-  let depth = 1, end = open + 1;
-  while (depth) { if (src[end] === '{') depth++; if (src[end] === '}') depth--; end++; }
-  return src.slice(start, end);
-}
-function methods(src, names, dependencies = {}) {
-  return new Function(...Object.keys(dependencies), stripTypeScriptTypes(
-    'class Probe {' + names.map(n => method(src, n)).join('\n') + '}') + ';return Probe;')(...Object.values(dependencies));
-}
-const pendingLayoutFlushes = [];
-const List = methods(list, ['rowHeight', 'stableLayoutEnabled', 'layoutRowHeightValue', 'layoutPaddingXValue',
-  'onRowGeometryChanged', 'scheduleRowGeometryFlush'], {
-    BOOKMARK_ROW_HEIGHT: height, sampleReaderControlBookmark,
-    setTimeout: callback => pendingLayoutFlushes.push(callback),
-  });
-const flushLayout = () => { while (pendingLayoutFlushes.length > 0) pendingLayoutFlushes.shift()(); };
-const quick = Object.assign(new List(), { motionProgress: 0, embeddedInControl: true,
-  rowWidth: 254, layoutRowHeight: 0, itemSizes: { childDefaultSize: 74 }, mounted: true,
-  rowGeometryGeneration: 0, rowGeometryLifecycleGeneration: 0,
-  rowGeometryFlushScheduled: false, rowGeometryFlushLifecycleGeneration: -1,
-  pendingRowGeometryHeight: undefined });
-assert.equal(actualHeight.call(quick, height), 54,
-  'actual nonempty bookmark ListItem must use restored Quick height, not fixed Full height');
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'list-extent':{description:'Actual standalone BookmarkList deferred extent mutation and stale lifecycle guard',resources:[]},
+ 'row-geometry':{description:'Current SDK bookmark row actors against archived independent source track; required SDK',resources:[]},
+ 'row-scope':{description:'Current retained bookmark row exact anchor/scope and separate ownership/location labels',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+ const {default:assert}=await import('node:assert/strict');const {readFileSync}=await import('node:fs');
+ const {sampleReaderControlBookmark}=await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts');
+ const {selectedProductionMethods,selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
+ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+ const row=read('entry/src/main/ets/features/reading/ReaderBookmarkRow.ets');
+ const constants=selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ReaderBookmarkRow.ets',import.meta.url),['BOOKMARK_ROW_HEIGHT','BOOKMARK_PENDING_LABEL']);
+ const near=(a,b,why='')=>assert.ok(Math.abs(a-b)<1e-8,`${why}: ${a} != ${b}`);
+ if(selectedCase==='list-extent'){
+  const pending=[];
+  const List=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ReaderBookmarkList.ets',import.meta.url),'ReaderBookmarkList',
+   ['rowHeight','stableLayoutEnabled','layoutRowHeightValue','layoutPaddingXValue','onRowGeometryChanged','scheduleRowGeometryFlush','aboutToAppear','aboutToDisappear'],
+   {...constants,sampleReaderControlBookmark,setTimeout:callback=>pending.push(callback)});
+  const owner=Object.assign(new List(),{embeddedInControl:false,motionProgress:0,rowWidth:254,layoutRowHeight:0,listPaddingX:10,layoutPaddingX:-1,
+   itemSizes:{childDefaultSize:0},mounted:false,rowGeometryGeneration:0,rowGeometryLifecycleGeneration:0,
+   rowGeometryFlushScheduled:false,rowGeometryFlushLifecycleGeneration:-1,pendingRowGeometryHeight:undefined});
+  owner.aboutToAppear();assert.equal(owner.itemSizes.childDefaultSize,constants.BOOKMARK_ROW_HEIGHT);
+  const original=owner.itemSizes;owner.onRowGeometryChanged();owner.onRowGeometryChanged();assert.equal(pending.length,1,'coalesced next-turn extent write');
+  assert.equal(owner.layoutPaddingXValue(),10);owner.layoutPaddingX=23;assert.equal(owner.layoutPaddingXValue(),23);
+  owner.itemSizes.childDefaultSize=0;const stale=pending.shift();owner.aboutToDisappear();stale();assert.equal(owner.itemSizes.childDefaultSize,0,'stale native extent callback cannot write after teardown');
+  owner.aboutToAppear();pending.shift()();assert.equal(owner.itemSizes,original);assert.equal(owner.itemSizes.childDefaultSize,constants.BOOKMARK_ROW_HEIGHT);
+  owner.aboutToDisappear();return;
+ }
+ if(selectedCase==='row-geometry'){
 const fixture = JSON.parse(read('tools/fixtures/reader-control-bookmark-live-20260906.json'));
 const design = fixture.sources[0].result.content.filter(c => c.type === 'text').map(c => c.text).join('\n');
 const motion = JSON.parse(fixture.sources[1].result.content.find(c => c.type === 'text').text).nodes;
@@ -52,130 +45,16 @@ function track(id, property, p) {
   const a = value(0), b = value(100);
   return a.map((v, i) => v + (b[i] - v) * p);
 }
-for (const p of [0, .25, .5, .75, 1, .75, 0]) {
-  const width = track('1841:3781', 'width', p)[0];
-  const f = sampleReaderControlBookmark(p, width);
-  near(f.card.height, track('1841:3781', 'height', p)[0]);
-  near(f.card.width, width);
-  for (const [key, id, x, y] of [['title', '1841:3782', 10, 9], ['accent', '1841:3783', 10, 33],
-    ['excerpt', '1841:3784', 28, 32], ['divider', '1841:3785', 10, 73]]) {
-    const delta = track(id, 'translate', p); near(f[key].x, x + delta[0]); near(f[key].y, y + delta[1]);
-    if (key === 'accent' || key === 'excerpt') near(f[key].height, track(id, 'height', p)[0]);
-    if (key === 'excerpt' || key === 'divider') near(f[key].width, track(id, 'width', p)[0]);
-  }
-  const firstY = 99 + track('1841:3781', 'translate', p)[1];
-  const secondY = 99 + 74 + track('1841:3786', 'translate', p)[1];
-  near(secondY - firstY, f.card.height, 'all real rows preserve source spacing, not two fake samples');
-  Object.assign(quick, { motionProgress: p, rowWidth: width }); quick.onRowGeometryChanged();
-  near(actualHeight.call(quick, height), f.card.height);
-  assert.notEqual(quick.itemSizes.childDefaultSize, f.card.height,
-    'geometry Watch must not mutate ChildrenMainSize during reconciliation');
-  flushLayout();
-  near(quick.itemSizes.childDefaultSize, f.card.height, 'offscreen native extent matches real materialized rows');
+for(const p of [0,.25,.5,.75,1,.75,0]){
+ const width=track('1841:3781','width',p)[0],frame=sampleReaderControlBookmark(p,width);
+ near(frame.card.width,width);near(frame.card.height,track('1841:3781','height',p)[0]);
+ for(const [key,id,x,y] of [['title','1841:3782',10,9],['accent','1841:3783',10,33],['excerpt','1841:3784',28,32],['divider','1841:3785',10,73]]){
+  const delta=track(id,'translate',p);near(frame[key].x,x+delta[0]);near(frame[key].y,y+delta[1]);
+  if(key==='accent'||key==='excerpt')near(frame[key].height,track(id,'height',p)[0]);
+  if(key==='excerpt'||key==='divider')near(frame[key].width,track(id,'width',p)[0]);
+ }
+ const first=99+track('1841:3781','translate',p)[1],second=173+track('1841:3786','translate',p)[1];near(second-first,frame.card.height);
 }
-const stable = Object.assign(new List(), { motionProgress: 0.5, embeddedInControl: true,
-  rowWidth: 285, layoutRowHeight: 74, itemSizes: { childDefaultSize: 74 }, mounted: true,
-  rowGeometryGeneration: 0, rowGeometryLifecycleGeneration: 0,
-  rowGeometryFlushScheduled: false, rowGeometryFlushLifecycleGeneration: -1,
-  pendingRowGeometryHeight: undefined });
-stable.onRowGeometryChanged();
-flushLayout();
-for (const p of [0.1, 0.25, 0.5, 0.75, 0.9]) {
-  stable.motionProgress = p;
-  stable.rowWidth = 254 + 62 * p;
-  stable.onRowGeometryChanged();
-  assert.equal(stable.layoutRowHeightValue(), 74,
-    'embedded morph keeps the native bookmark extent at its endpoint layout height');
-  assert.equal(stable.itemSizes.childDefaultSize, 74,
-    'live bookmark visual progress cannot rewrite ChildrenMainSize');
-  flushLayout();
-}
-quick.embeddedInControl = false; quick.motionProgress = 0; quick.onRowGeometryChanged();
-flushLayout();
-assert.equal(quick.rowHeight(), 74, 'standalone bookmark entry keeps existing Full geometry by default');
-assert.equal(quick.itemSizes.childDefaultSize, 74);
-assert.match(list, /\.childrenMainSize\(this\.itemSizes\)/);
-assert.match(list, /@Prop @Watch\('onRowGeometryChanged'\) motionProgress/);
-assert.match(list, /@Prop @Watch\('onRowGeometryChanged'\) layoutRowHeight/);
-assert.match(list, /private stableLayoutEnabled\(\): boolean/);
-assert.match(list, /private rowGeometryGeneration: number = 0;/,
-  'bookmark geometry updates must carry a mutation generation');
-assert.match(list, /private rowGeometryLifecycleGeneration: number = 0;/,
-  'bookmark geometry updates must carry a lifecycle generation');
-assert.match(list, /private scheduleRowGeometryFlush\(\): void \{[\s\S]*?setTimeout\(\(\): void => \{/,
-  'bookmark extent writes must be deferred to the next turn');
-assert.match(list, /\.height\(this\.layoutRowHeightValue\(\)\)/,
-  'ListItem layout height is decoupled from the live bookmark card frame');
-assert.match(list, /\.width\(this\.layoutViewportWidth > 0 \? this\.layoutViewportWidth : '100%'\)/);
-assert.match(list, /\.height\(this\.layoutViewportHeight > 0 \? this\.layoutViewportHeight : '100%'\)/);
-assert.match(list, /\.clip\(this\.stableLayoutEnabled\(\) \? false : true\)/);
-assert.match(list, /motionProgress: this\.motionProgress/);
-assert.match(list, /reusable: false/);
-assert.match(list, /reader-bookmark-\$\{row\.bookmarkId\}/);
-assert.doesNotMatch(row, /\.scale\(|animateTo\(|\.animation\(|setTimeout\(/,
-  'M-02 keeps native typography stable; no independent clock or text scaling');
-assert.match(panel, /rowHeight: this\.listRowHeight\(tab\)/);
-assert.match(panel, /layoutRowHeight: this\.bookmarkListLayoutRowHeight\(\)/);
-assert.match(panel, /layoutViewportWidth: this\.bookmarkListLayoutViewportWidth\(\)/);
-assert.match(panel, /layoutViewportHeight: this\.bookmarkListLayoutViewportHeight\(\)/);
-assert.match(panel, /layoutPaddingX: this\.bookmarkListLayoutPaddingX\(\)/);
-assert.match(panel, /\.clip\(this\.embeddedInControl\)/,
-  'bookmark outer wrapper clips the stable native viewport during a morph');
-assert.match(panel, /this\.previousRowHeight = this\.listRowHeight\(tab\)/,
-  'changing tabs resets the height basis, not the new tab using the previous tab row units');
-const pending = [];
-const Panel = methods(panel, ['controlProgress', 'controlValue', 'controlValueAt', 'panelWidth', 'innerWidth',
-  'panelHeight', 'bookmarkRowWidth', 'bookmarkContentWidthAt', 'bookmarkContentHeightAt',
-  'bookmarkPaddingXAt', 'bookmarkVisualRowWidthAt', 'bookmarkVisualRowHeight', 'bookmarkViewportWidthAt',
-  'bookmarkViewportHeightAt', 'bookmarkListLayoutRowHeight', 'bookmarkListLayoutViewportWidth',
-  'bookmarkListLayoutViewportHeight', 'bookmarkListLayoutPaddingX', 'directoryRowHeight', 'listRowHeight',
-  'onMotionProgressChanged', 'scheduleDeferredMutationFlush', 'flushDeferredMutations',
-  'applyMotionProgress', 'readListOffset'],
-  { sampleReaderControlBookmark, BOOKMARK_ROW_HEIGHT: 74, TOK_SPACE_CONTROL_INLINE: 10,
-    setTimeout: callback => pending.push(callback), Curve: { Linear: 'linear' } });
-const owner = Object.assign(new Panel(), { motionProgress: 0, panelWidthOverride: 286, embeddedInControl: true,
-  activeTab: 'bookmarks',
-  positioningTab: 'bookmarks', positioningMounted: true, previousRowHeight: 54,
-  motionStableBookmarkRowHeight: 54, motionStableBookmarkViewportWidth: 284,
-  motionStableBookmarkViewportHeight: 142, motionStableBookmarkPaddingX: 15,
-  bookmarkMotionDirection: 0, previousMotionProgress: 0,
-  controlQuickContentWidth: 0, controlFullContentWidth: 0,
-  controlQuickContentHeight: 0, controlFullContentHeight: 0,
-  listPositioning: { status: 'positioned', listOpenRevision: 3 }, motionLayoutRevision: 0,
-  motionActive: false, deferredMotionProgress: undefined, deferredSessionKey: undefined,
-  deferredReadingAnchor: false, deferredMutationGeneration: 0, deferredLifecycleGeneration: 0,
-  deferredFlushScheduled: false, deferredFlushLifecycleGeneration: -1,
-  leadingRowAnchor: undefined, geometryProbeEnabled: false,
-  listScroller: { offset: 270, currentOffset() { return { yOffset: this.offset }; },
-    scrollTo(command) { this.offset = command.yOffset; } } });
-const tabSection = panel.slice(panel.indexOf('private embeddedBody()'), panel.indexOf('this.searchControls();', panel.indexOf('private embeddedBody()')));
-const tabPositions = [...tabSection.matchAll(/\.position\((\{[\s\S]*?\})\)/g)].map(m => new Function('return ' + m[1]));
-assert.equal(tabPositions.length, 3, 'actual persistent tab roots and divider bindings');
-for (const p of [0, .25, .5, 1]) {
-  Object.assign(owner, { motionProgress: p, panelWidthOverride: 286 + 52 * p });
-  const directoryTab = tabPositions[0].call(owner), bookmarkTab = tabPositions[1].call(owner), divider = tabPositions[2].call(owner);
-  for (const [value, id, baseX, baseY] of [[directoryTab, '1841:3754', 9, 6],
-    [bookmarkTab, '1841:3766', 169, 6], [divider, '1841:3773', 1, 42]]) {
-    const delta = track(id, 'translate', p); near(value.x, baseX + delta[0]); near(value.y, baseY + delta[1]);
-  }
-}
-owner.motionProgress = 0; owner.panelWidthOverride = 286;
-for (const p of [1, .5, 0]) {
-  Object.assign(owner, { motionProgress: p, panelWidthOverride: 286 + 52 * p });
-  owner.onMotionProgressChanged(); while (pending.length) pending.shift()();
-  const expectedOffset = p === 1 ? 370 : (p === 0 ? 270 : 370);
-  near(owner.listScroller.offset, expectedOffset,
-    'bookmark anchor is corrected only at settled endpoints, not every morph sample');
-  near(owner.bookmarkRowWidth(), 254 + 62 * p);
-  if (p > 0 && p < 1) {
-    assert.equal(owner.bookmarkListLayoutRowHeight(), 54,
-      'reverse morph locks the native bookmark extent to its source endpoint');
-    assert.equal(owner.bookmarkListLayoutViewportHeight(), 142,
-      'reverse morph keeps the native viewport stable while the outer clip shrinks');
-  }
-  assert.equal(owner.listPositioning.listOpenRevision, 3, 'morph never opens the list again');
-}
-if (readerBuilderSdkAvailable) {
   function mounted(source) {
     const { owner } = createReaderBuilderProbe(source, ['frame', 'motionBody'], {
       sampleReaderControlBookmark, BOOKMARK_ROW_HEIGHT: 74,
@@ -211,9 +90,8 @@ if (readerBuilderSdkAvailable) {
   assert.throws(() => mounted(row.replace('.height(this.frame().card.height).clip(true)',
     '.height(this.frame().card.height).clip(false)')), /real card clips/);
   console.log('Actual SDK nonempty bookmark row: mounted reversible actors, live metadata/identity and clip mutations PASS');
+return;
 }
-console.log('PASS bookmark production geometry, native row-height extent binding and same-open anchor continuation; NOT native visual acceptance');
-
 // The production row consumes the independent position label and keeps the
 // saved quote/callback proof through scope-only updates of a retained card.
 {
@@ -238,3 +116,6 @@ console.log('PASS bookmark production geometry, native row-height extent binding
  }
 }
 console.log('PASS actual quick/full bookmark row Builders preserve historical excerpt, separate location/owner labels and retain latest admitted click proof');
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

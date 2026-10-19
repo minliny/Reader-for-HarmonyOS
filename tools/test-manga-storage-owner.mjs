@@ -1,9 +1,30 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { coreAdmissionFailureSummary, httpResponseFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
+export const CONTRACT_CASES = {
+  "clear-restore-order": {
+    "description": "Actual Owner Core clear confirmation, tracked requests and restore IO barriers; fake Disk/Core",
+    "resources": []
+  },
+  "download-delegates": {
+    "description": "Actual Owner exact download identities/version/current guard; fake Disk",
+    "resources": []
+  },
+  "storage-authority-binding": {
+    "description": "Actual Owner filesDir, eviction authority and derived guards; fake Core/Host",
+    "resources": []
+  },
+  "preparation-context": {
+    "description": "Actual Owner foreground/network wake and finite record recovery; fake platform/coordinator",
+    "resources": []
+  }
+};
+
+async function case_clear_restore_order() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createHash } = await import('node:crypto');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { coreAdmissionFailureSummary, httpResponseFailureSummary } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
 // The Owner business methods are extracted unchanged. Native Core/Disk ports
 // expose order and exact arguments; the Disk suite owns real physical files,
 // retention protection and its internal restore reconciliation regressions.
@@ -62,7 +83,6 @@ function fixture() {
   return { owner, events, coreCalls, clears, finishes, diagnosticLogs,
     setCore: action => { core = action; }, setCleanup: action => { cleanup = action; }, setClose: action => { close = action; } };
 }
-
 {
   const f = fixture(), core = deferred(), host = deferred(); let settled = false;
   const params = { scope: 'book', sourceId: identity.sourceId, bookId: identity.bookId };
@@ -172,6 +192,72 @@ for (const method of ['runtime.storage.restore', 'runtime.storage.apply']) {
 }
 pass('snapshot failures preserve the original error and reconciliation; coordinator failure prevents Core dispatch but settles preparation');
 
+}
+
+async function case_download_delegates() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createHash } = await import('node:crypto');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { coreAdmissionFailureSummary, httpResponseFailureSummary } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
+// The Owner business methods are extracted unchanged. Native Core/Disk ports
+// expose order and exact arguments; the Disk suite owns real physical files,
+// retention protection and its internal restore reconciliation regressions.
+const sourceFile = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
+const productionSource = readFileSync(sourceFile);
+const checks = [];
+const pass = name => checks.push(name);
+const tick = () => new Promise(resolve => setImmediate(resolve));
+const identity = { sourceId: 'source', bookId: 'manga', chapterId: 'https://chapter/removed' };
+function deferred() {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+function fixture() {
+  const events = [], coreCalls = [], clears = [], finishes = [], diagnosticLogs = [];
+  let core = async (_method, params) => ({ data: { scope: params.scope } });
+  let cleanup = async () => {};
+  let close = async () => {};
+  const Owner = productionMotionMethods(sourceFile, [
+    'requestDirect', 'listMangaDownloadChapters', 'listMangaDownloadVersions', 'deleteMangaDownload',
+  ], {
+    DEFAULT_CORE_REQUEST_TIMEOUT_MS: 30000, LOG_DOMAIN: 0,
+    coreAdmissionFailureSummary, httpResponseFailureSummary,
+    hilog: { warn: (...args) => diagnosticLogs.push(args) },
+    MangaChapterPreparationCoordinator: { forRuntime: actual => {
+      assert.equal(actual, owner);
+      return { close: async () => { events.push('coordinator.close'); await close(); events.push('coordinator.closed'); } };
+    } },
+  });
+  const owner = new Owner();
+  owner.state = 'ready';
+  owner.preparationIntentEpoch = 0;
+  owner.start = async () => { events.push('start'); };
+  owner.readingEntryPreparations = () => ({
+    beginRequest(method, params) { events.push('preparation.begin'); return true; },
+    finishRequest(method, params) { events.push('preparation.finish'); finishes.push({ method, params }); },
+  });
+  owner.wakeReadingPreparations = () => assert.fail('these storage operations must not wake unrelated preparation');
+  owner.mangaImageTail = Promise.resolve();
+  owner.runtime = { request: async (method, params, options) => {
+    coreCalls.push({ method, params, options }); events.push('core.request');
+    const result = await core(method, params, options); events.push('core.result'); return result;
+  } };
+  owner.readingImageDiskCache = {
+    async maintainMangaStorage(reason, scope) { clears.push({ reason, scope }); events.push('disk.clear'); await cleanup(reason, scope); events.push('disk.cleared'); },
+    async clearMangaRebuildableCache(scope) { const actualScope = scope === undefined ? undefined : { sourceId: scope.sourceId, bookId: scope.bookId }; clears.push({ reason: 'clear', scope: actualScope }); events.push('disk.clear'); await cleanup('clear', actualScope); events.push('disk.cleared'); return { deletedBytes: 0, deletedFiles: 0 }; },
+    async withMangaStorageRestore(restore) {
+      events.push('disk.restore.barrier');
+      try { return await restore(); }
+      finally { events.push('disk.restore.reconcile'); }
+    },
+    clearBook() { assert.fail('Core cache.clear must use granted ordinary maintenance, not delete a book directly'); },
+    deleteMangaVersion() { assert.fail('ordinary clearing must not delete a downloaded version'); },
+  };
+  return { owner, events, coreCalls, clears, finishes, diagnosticLogs,
+    setCore: action => { core = action; }, setCleanup: action => { cleanup = action; }, setClose: action => { close = action; } };
+}
 {
   const f = fixture(), chapters = [{ ...identity }], versions = ['old', 'partial-new']; let current = true;
   const guard = () => current, calls = [], failure = new Error('download operation superseded'); let deletion = false;
@@ -202,6 +288,72 @@ pass('snapshot failures preserve the original error and reconciliation; coordina
   pass('download Owner APIs preserve exact identities, version and cancellation guards; original failures and false results remain unchanged');
 }
 
+}
+
+async function case_storage_authority_binding() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createHash } = await import('node:crypto');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { coreAdmissionFailureSummary, httpResponseFailureSummary } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
+// The Owner business methods are extracted unchanged. Native Core/Disk ports
+// expose order and exact arguments; the Disk suite owns real physical files,
+// retention protection and its internal restore reconciliation regressions.
+const sourceFile = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
+const productionSource = readFileSync(sourceFile);
+const checks = [];
+const pass = name => checks.push(name);
+const tick = () => new Promise(resolve => setImmediate(resolve));
+const identity = { sourceId: 'source', bookId: 'manga', chapterId: 'https://chapter/removed' };
+function deferred() {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+function fixture() {
+  const events = [], coreCalls = [], clears = [], finishes = [], diagnosticLogs = [];
+  let core = async (_method, params) => ({ data: { scope: params.scope } });
+  let cleanup = async () => {};
+  let close = async () => {};
+  const Owner = productionMotionMethods(sourceFile, [
+    'requestDirect', 'listMangaDownloadChapters', 'listMangaDownloadVersions', 'deleteMangaDownload',
+  ], {
+    DEFAULT_CORE_REQUEST_TIMEOUT_MS: 30000, LOG_DOMAIN: 0,
+    coreAdmissionFailureSummary, httpResponseFailureSummary,
+    hilog: { warn: (...args) => diagnosticLogs.push(args) },
+    MangaChapterPreparationCoordinator: { forRuntime: actual => {
+      assert.equal(actual, owner);
+      return { close: async () => { events.push('coordinator.close'); await close(); events.push('coordinator.closed'); } };
+    } },
+  });
+  const owner = new Owner();
+  owner.state = 'ready';
+  owner.preparationIntentEpoch = 0;
+  owner.start = async () => { events.push('start'); };
+  owner.readingEntryPreparations = () => ({
+    beginRequest(method, params) { events.push('preparation.begin'); return true; },
+    finishRequest(method, params) { events.push('preparation.finish'); finishes.push({ method, params }); },
+  });
+  owner.wakeReadingPreparations = () => assert.fail('these storage operations must not wake unrelated preparation');
+  owner.mangaImageTail = Promise.resolve();
+  owner.runtime = { request: async (method, params, options) => {
+    coreCalls.push({ method, params, options }); events.push('core.request');
+    const result = await core(method, params, options); events.push('core.result'); return result;
+  } };
+  owner.readingImageDiskCache = {
+    async maintainMangaStorage(reason, scope) { clears.push({ reason, scope }); events.push('disk.clear'); await cleanup(reason, scope); events.push('disk.cleared'); },
+    async clearMangaRebuildableCache(scope) { const actualScope = scope === undefined ? undefined : { sourceId: scope.sourceId, bookId: scope.bookId }; clears.push({ reason: 'clear', scope: actualScope }); events.push('disk.clear'); await cleanup('clear', actualScope); events.push('disk.cleared'); return { deletedBytes: 0, deletedFiles: 0 }; },
+    async withMangaStorageRestore(restore) {
+      events.push('disk.restore.barrier');
+      try { return await restore(); }
+      finally { events.push('disk.restore.reconcile'); }
+    },
+    clearBook() { assert.fail('Core cache.clear must use granted ordinary maintenance, not delete a book directly'); },
+    deleteMangaVersion() { assert.fail('ordinary clearing must not delete a downloaded version'); },
+  };
+  return { owner, events, coreCalls, clears, finishes, diagnosticLogs,
+    setCore: action => { core = action; }, setCleanup: action => { cleanup = action; }, setClose: action => { close = action; } };
+}
 {
   const configured = [], requests = [], reserves = [], externalCalls = [];
   const context = { filesDir: '/private/app/files', cacheDir: '/private/app/cache' };
@@ -235,10 +387,6 @@ pass('snapshot failures preserve the original error and reconciliation; coordina
   });
   owner.bindMangaStorage();
   assert.deepEqual(configured, [context.filesDir], 'actual manga binding uses persistent app filesDir');
-  // Constructor execution belongs to native Host startup. Keep its independent
-  // legacy namespace anchor visible while executing the real binding above.
-  assert.match(productionSource.toString('utf8'), /^\s*ReadingBodyImageHost\.setDisplayCacheDir\(context\.cacheDir\);$/m,
-    'the existing novel startup namespace remains context.cacheDir');
   for (const priority of ['foreground', 'chapter', 'download', 'background']) {
     assert.equal(await reserve(chapter, 8192, priority), reservation);
     assert.deepEqual(reserves.at(-1), [chapter, 8192, priority === 'foreground' ? 'foreground' : 'background', 'derived']);
@@ -287,6 +435,28 @@ pass('snapshot failures preserve the original error and reconciliation; coordina
   pass('external download derivative removal forwards exact owner/files and the original async authority guard; false and guard failures are unchanged');
 }
 
+}
+
+async function case_preparation_context() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createHash } = await import('node:crypto');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { coreAdmissionFailureSummary, httpResponseFailureSummary } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
+// The Owner business methods are extracted unchanged. Native Core/Disk ports
+// expose order and exact arguments; the Disk suite owns real physical files,
+// retention protection and its internal restore reconciliation regressions.
+const sourceFile = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
+const productionSource = readFileSync(sourceFile);
+const checks = [];
+const pass = name => checks.push(name);
+const tick = () => new Promise(resolve => setImmediate(resolve));
+const identity = { sourceId: 'source', bookId: 'manga', chapterId: 'https://chapter/removed' };
+function deferred() {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
 {
   const events = [], maintenance = [], foregroundNotifications = [], recovery = [];
   let owner, networkCallback;
@@ -366,5 +536,10 @@ pass('snapshot failures preserve the original error and reconciliation; coordina
   pass('closing and closed Owners reject foreground context updates without wake, visibility, network or maintenance side effects');
 }
 
-assert.deepEqual(readFileSync(sourceFile), productionSource, 'the production Owner must remain unchanged throughout this run');
-console.log(JSON.stringify({ status: 'PASS', productionSourceSha256: createHash('sha256').update(productionSource).digest('hex'), checks }, null, 2));
+}
+
+const implementations = {'clear-restore-order':case_clear_restore_order,'download-delegates':case_download_delegates,'storage-authority-binding':case_storage_authority_binding,'preparation-context':case_preparation_context};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

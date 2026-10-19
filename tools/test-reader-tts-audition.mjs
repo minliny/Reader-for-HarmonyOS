@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
-import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
-import { chapter,canonicalRemoteContent,FakeGateway,FakeHost } from './lib/reader-tts-fixtures.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function formal(){
+const {ReaderTtsSessionCoordinator}=await import('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts');
+const {chapter,canonicalRemoteContent,FakeGateway,FakeHost}=await import('./lib/reader-tts-fixtures.mjs');
 const gateway=new FakeGateway(),host=new FakeHost(),progress=[];
 const coordinator=new ReaderTtsSessionCoordinator(gateway,host,async p=>progress.push(p));
+try{
 await coordinator.start({chapter,content:canonicalRemoteContent,contentVersion:'formal',scalarPosition:0});
 host.emit({type:'start',requestId:host.requests.at(-1).requestId});await coordinator.whenSettled();
 assert.equal(coordinator.getState().status,'playing');
@@ -28,9 +31,11 @@ assert.equal(host.calls.at(-1),'engine:system');assert.equal(coordinator.getStat
 // Native interruption cancels preview, and a later formal resume owns the shared engine.
 const interrupted=coordinator.auditionVoice({language:'zh-CN',person:1});await coordinator.whenSettled();host.emit({type:'deviceChange',action:'stop'});await interrupted;
 await coordinator.resume();assert.ok(!host.requests.at(-1).requestId.includes('audition'));
-await coordinator.dispose();
-console.log('PASS audition/formal mutual exclusion, no Core progress, synthesis-vs-audio completion, stale callbacks, candidate failure restoration, cancel and resume');
-// A missing native speak acceptance must not hold cancellation behind it.
+}finally{await coordinator.dispose();}
+}
+async function missingAck(){
+const {ReaderTtsSessionCoordinator}=await import('../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts');
+const {chapter,canonicalRemoteContent,FakeGateway,FakeHost}=await import('./lib/reader-tts-fixtures.mjs');
 const lostGateway = new FakeGateway(), lostHost = new FakeHost();
 const lost = new ReaderTtsSessionCoordinator(lostGateway, lostHost, async () => assert.fail('audition never persists position'));
 let releaseAcceptance;
@@ -38,10 +43,12 @@ lostHost.speak = async request => { lostHost.requests.push(request); await new P
 const preview = lost.auditionVoice({language:'zh-CN',person:0});
 for(let i=0;i<100&&!releaseAcceptance;i++)await Promise.resolve();
 assert.ok(releaseAcceptance, 'native speak actually started before cancellation');
-let bounded;
-await Promise.race([lost.stopAudition().then(()=>preview),new Promise((_,reject)=>bounded=setTimeout(()=>reject(Error('cancel blocked by missing speak ACK')),250))]).finally(()=>clearTimeout(bounded));
+let cancellationSettled=false,cancellationError;const stopping=lost.stopAudition().then(()=>preview).then(()=>{cancellationSettled=true;},error=>{cancellationSettled=true;cancellationError=error;});
+try {await new Promise(resolve=>setImmediate(resolve));assert.equal(cancellationSettled,true,'controlled Host has no external work: cancellation settles before the next event-loop checkpoint while speak acceptance stays held');if(cancellationError)throw cancellationError;}finally{releaseAcceptance();await stopping;}
 assert.equal(lostHost.calls.at(-1),'engine:system');
-releaseAcceptance(); await lost.whenSettled();
+await lost.whenSettled();
 await assert.rejects(lost.auditionVoice({language:'zh-CN',person:0,pitch:NaN}),/参数无效/);
 await lost.dispose();
-console.log('PASS missing native acceptance cannot block audition cancellation; invalid pitch fails before host mutation');
+}
+const cases={formal,'missing-ack':missingAck};
+for(const id of selectContractCases({formal:'Actual audition/formal exclusion, progress and old callback ownership','missing-ack':'Explicit cancellation settlement while native speak ACK is held; no wall-clock race'})){await cases[id]();recordContractCasePass(id);}

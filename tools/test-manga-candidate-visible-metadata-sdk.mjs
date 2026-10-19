@@ -158,10 +158,11 @@ async function fixture(Type = Controller, {short = false, count = 6, ordinary = 
       list.onScrollIndex(index, last < index ? index : last);
     },
     mountRow(index) {
+      const before=owner.observers.length;
       mountedRows = [index]; owner.imageViewport(); mountedRows = [];
       const row = [...owner.nodes.values()].filter(node => node.type === 'ListItem' && typeof node.onAppear === 'function').at(-1);
       assert.ok(row); row.onAppear(); // Real SDK-emitted known/unknown row callback.
-      return [...owner.nodes.values()].filter(node => node.type === 'Button' && typeof node.onClick === 'function').at(-1);
+      return [...owner.nodes.values()].filter(node=>node.id>=before);
     },
     allowPage(ordinal) {failures.delete(ordinal);},
     get commits() {return commits;}, releaseHeader() {held = false; header.resolve();}, invalidate() {alive = false;},
@@ -353,11 +354,15 @@ for (const Type of [Controller, GlobalFailureController]) {
       assert.equal(f.released.filter(value => value === uri).length, 0);
     }
     assert.ok(f.controller.retainedTiles.length <= f.controller.retainedTiles.limits().chapterMaxCount);
-    const button = f.mountRow(2); assert.ok(button?.onClick, 'the actual failed ListItem keeps its reachable retry');
+    const nodes = f.mountRow(2);
+    assert.ok(nodes.some(node=>node.type==='Image'&&node.create==='app.media.reader_image_unavailable'&&node.width===32&&node.height===32),'actual failed ListItem retains its approved image-off marker');
+    assert.equal(nodes.some(node=>node.type==='Button'||typeof node.onClick==='function'),false,'failed image has no per-image action');
     const stable = [f.images.length, f.tileWindows.length];
     f.moveToRow(2); await settle(); assert.deepEqual([f.images.length, f.tileWindows.length], stable);
-    f.allowPage(1); button.onClick(); await settle(); f.flush(); await settle();
-    assert.equal(f.images.length, attempts + 1, 'only the explicit SDK retry starts one fresh decode');
+    // The retained Controller API remains independently testable; the current
+    // UI deliberately has no per-image retry callback.
+    f.allowPage(1); await f.controller.retry(1); await f.owner.updateViewport(); await settle(); f.flush(); await settle();
+    assert.equal(f.images.length, attempts + 1, 'only an explicit existing Controller retry starts one fresh decode');
     assert.ok(f.controller.tile(1, 0)?.image); assert.equal(f.owner.error, '');
     const before = [...f.owner.nodes.values()].filter(node => node.type === 'Image').length;
     f.mountRow(2); assert.ok([...f.owner.nodes.values()].filter(node => node.type === 'Image').length > before, 'retry replaces the failed branch with an actual SDK Image');
@@ -366,7 +371,7 @@ for (const Type of [Controller, GlobalFailureController]) {
   assert.equal(f.calls.some(call => call.method === 'reading.progress.update'), false, 'a failed viewport/retry is not a position commit');
   await f.close(); for (const uri of oldUris) assert.equal(f.released.filter(value => value === uri).length, 1);
 }
-console.log('PASS ordinary failed viewport transfers completed leases to the bounded chapter cache and keeps a silent SDK retry; close releases once; unconditional-throw counterfactual strands the active viewport');
+console.log('PASS ordinary failed viewport transfers completed leases to the bounded chapter cache and keeps an actual SDK icon without per-image actions; existing Controller retry remains isolated, close releases once, unconditional-throw counterfactual strands the active viewport');
 
 {
   const f = await fixture(Controller, {ordinary: true, short: true, count: 2, viewportHeight: 600, failOrdinals: [0, 1]});
@@ -378,15 +383,17 @@ console.log('PASS ordinary failed viewport transfers completed leases to the bou
   const attempts = f.images.length; f.reportNativeRange(); await settle();
   assert.equal(f.images.length, attempts, 'new ordinary failure also remains an explicit row terminal');
   for (const index of [0, 1]) {
-    const button = f.mountRow(index); assert.ok(button?.onClick);
-    f.allowPage(index); button.onClick(); await settle(); f.flush(); await settle();
+    const nodes=f.mountRow(index);
+    assert.ok(nodes.some(node=>node.type==='Image'&&node.create==='app.media.reader_image_unavailable'&&node.width===32&&node.height===32));
+    assert.equal(nodes.some(node=>node.type==='Button'||typeof node.onClick==='function'),false);
+    f.allowPage(index); await f.controller.retry(index); await f.owner.updateViewport(); await settle(); f.flush(); await settle();
     assert.ok(f.controller.tile(index, 0)?.image);
     assert.equal(f.images.filter(image => image.ordinal === index).length, 2, 'each failed page has one initial attempt and one explicit retry');
     assert.equal(f.owner.error, '');
   }
   assert.equal(f.calls.some(call => call.method === 'reading.progress.update'), false); await f.close();
 }
-console.log('PASS ordinary metadata failure during decode publishes retry rows and completes an empty tile window without global duplication; only real SDK retry callbacks recover each page');
+console.log('PASS ordinary metadata failure during decode publishes each icon cell and completes an empty tile window without global duplication; existing Controller retries are domain-only and the SDK exposes no per-image action');
 
 for (const Type of [Controller, PermissiveCandidateController]) {
   const f = await fixture(Type, {failOrdinals: [1]}); f.releaseHeader(); await settle();

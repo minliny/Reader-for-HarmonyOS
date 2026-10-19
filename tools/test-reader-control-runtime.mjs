@@ -1,13 +1,15 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import * as sessionPolicy from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import { ReaderControlRuntime } from '../entry/src/main/ets/features/reading/ReaderControlRuntime.ts';
-import { ReaderPageInputClock } from '../entry/src/main/ets/features/reading/ReaderPageInputClock.ts';
-import { createReaderControlSessionState, openReaderControlSession, enterReaderControlModule,
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions=Object.fromEntries([['runtime-protocol','Production Runtime ticket/regrab/endpoint/background lifecycle'],['panel-terminal','Actual Panel reset/missing timestamp terminal admission'],['panel-projection','Actual Panel scalar projection and retained route identity'],['source-boundary','Explicit historical implementation-shape diagnostic; not behavioral release prerequisite']].map(([id,description])=>[id,{description,resources:[]}]));
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const sessionPolicy=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const { ReaderControlRuntime }=await import('../entry/src/main/ets/features/reading/ReaderControlRuntime.ts');
+const { ReaderPageInputClock }=await import('../entry/src/main/ets/features/reading/ReaderPageInputClock.ts');
+const { createReaderControlSessionState, openReaderControlSession, enterReaderControlModule,
   expandReaderControlSession, dismissReaderControlSession, sampleReaderControlSession,
-  backReaderControlSession, setReaderControlDirectoryTab }
-  from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
+  backReaderControlSession, setReaderControlDirectoryTab }=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
 
 const config = { axis: { quickGrabberScreenY: 415, fullGrabberScreenY: 9, hiddenGrabberScreenY: 433 },
   settleDurationMs: 100, showDurationMs: 100, dismissDurationMs: 100,
@@ -15,6 +17,7 @@ const config = { axis: { quickGrabberScreenY: 415, fullGrabberScreenY: 9, hidden
 const linear = x => x;
 const home = openReaderControlSession(createReaderControlSessionState(), 0);
 const modules = ['directory', 'search', 'settings', 'appearance', 'tts', 'autoPage', 'replace'];
+if(selectedCase==='runtime-protocol'){
 for (const module of modules) {
   const runtime = new ReaderControlRuntime(config);
   let state = enterReaderControlModule(home, module, 0);
@@ -76,6 +79,8 @@ let book = setReaderControlDirectoryTab(enterReaderControlModule(home, 'director
 runtime.command(book); runtime.down(2, 415, 500);
 assert.equal(runtime.up(2, 415, 1500).session.location.form, 'quick');
 
+}
+if(selectedCase==='source-boundary'){
 // This suite executes the production runtime; these additional checks only
 // enforce integration boundaries and do not pretend to execute native pixels.
 const panel = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url), 'utf8');
@@ -90,6 +95,11 @@ assert.match(panel, /update\.endpoint !== undefined.*commitVisualSession/);
 assert.match(panel, /ReaderControlDirectoryContent\(\{/);
 console.log('Production control runtime: seven modules, frame revocation, regrab, close, lifecycle PASS');
 
+
+}
+if(selectedCase==='panel-terminal'){
+const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+const productionMotionMethods=(file,names,deps)=>selectedProductionMethods(file,'ReaderControlPanel',names,deps);
 // A terminal event with a reset/missing timestamp still owns the physical
 // pointer. Exercise the actual Panel adapter and runtime: it must release the
 // hold and settle from its current progress, never remain frozen at 20%.
@@ -122,6 +132,10 @@ for (const terminalTimestamp of [4990e6, NaN, -1, 0]) {
   assert.equal(final.session.heldPointerId, -1);
 }
 
+}
+if(selectedCase==='panel-projection'){
+const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+const productionMotionMethods=(file,names,deps)=>selectedProductionMethods(file,'ReaderControlPanel',names,deps);
 // Exercise the real Panel projection with the real runtime clock. A module's
 // routing object must stay identical across 100 visual updates, while actor
 // geometry and input admission continue to follow every runtime sample.
@@ -167,3 +181,8 @@ for (const module of modules) {
   assert.strictEqual(owner.contentLocation(),route);assert.equal(owner.contentInputEnabled(),false);
 }
 console.log('Production Panel scalar projection: seven modules x 101 frames retain route identity and current input state PASS');
+
+}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

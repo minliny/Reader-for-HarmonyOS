@@ -1,4 +1,5 @@
 import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
+import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
@@ -26,6 +27,18 @@ const stripped=source=>stripTypeScriptTypes(source).replace(/^export /gm,'');
 const tokenSource=read('ReaderTokens'),tokenNames=[...tokenSource.matchAll(/^export const (\w+)/gm)].map(m=>m[1]);
 const tokens=new Function('readerAppColor','readerThemeDefinition',`${stripped(tokenSource).replace(/^import[^;]+;\s*/gm,'')};return{${tokenNames.join(',')}};`)(readerAppColor,readerThemeDefinition);
 const specs=new Function('TextAlign','SOURCE_SWITCH_VISUAL',`${stripped(read('ReaderSurfaceSpecs')).replace(/^import[^;]+;\s*/gm,'')};return{resolvePopupSpec,resolveSheetSpec,resolveDialogSpec,resolveActionSheetSpec,resolveDrawerSpec};`)({Start:'TextAlign.Start',Center:'TextAlign.Center'},SOURCE_SWITCH_VISUAL);
+// Finite native color port for the actual per-book SVG stroke actor. Channel
+// values come from the registry; this records the native constructor inputs,
+// and does not simulate SVG rasterization or claim device pixel acceptance.
+const colorRegistry=JSON.parse(readFileSync(new URL('../../../Reader-UI/theme/registry.json',import.meta.url),'utf8'));
+const bookIconChannels=new Map(['day','night'].map(scheme=>{
+ const c=colorRegistry.appRoles.TOK_DOWNLOAD_GREEN_INK[scheme];
+ return[readerAppColor('TOK_DOWNLOAD_GREEN_INK',scheme),{red:c.r,green:c.g,blue:c.b,alpha:Math.round(c.a*255)}];
+}));
+const boundedColorMetrics={resourceColor:color=>({color,...bookIconChannels.get(color)})};
+class BoundedColorFilter {
+ constructor(matrix){assert.equal(matrix.length,20);assert.ok(matrix.every(Number.isFinite),'actual SVG color matrix has finite channels');this.matrix=matrix.slice();}
+}
 function classOf(source,name,deps){const start=source.indexOf(`export class ${name}`),end=source.indexOf('@Component',start);
   return new Function(...Object.keys(deps),`${stripped(source.slice(start,end))};return ${name};`)(...Object.values(deps));}
 /** Test-specific composition: actual SDK emitted children, V1 property classes,
@@ -33,12 +46,13 @@ function classOf(source,name,deps){const start=source.indexOf(`export class ${na
  * unchanged. Native scheduling/removal/layout/focus are explicitly outside proof. */
 export function boundedSurfaceSdk(options={}){
   const properties=options.properties??createArkUIPropertyRuntimeProbe();
-  const childSources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice','ReaderBoundedSurface','ReaderBoundedSurfaceHeader','ReaderBoundedSurfaceActions','ReaderActionMenuSurface','ReaderActionSheetContent'].map(n=>[n,options[n]??read(n)]));
+  const childSources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice','ReaderPageState','ReaderBoundedSurface','ReaderBoundedSurfaceHeader','ReaderBoundedSurfaceActions','ReaderActionMenuSurface','ReaderActionSheetContent'].map(n=>[n,options[n]??read(n)]));
   const typography = {...readerTypographyRoles,...options.typographyRoles};
   const ReaderMenuActionView=classOf(childSources.ReaderActionMenuSurface,'ReaderMenuActionView',{});
   const nativePan = options.panGesture ?? new Proxy({}, {get:()=>()=>{}});
   const nativeGesture = new Proxy({}, {get:()=>()=>{}});
   const deps={...properties.sdk,...specs,...tokens,...typography,...readerFonts,readerAppColor,ReaderInsetsVp,ReaderMenuActionView,
+    ColorMetrics:boundedColorMetrics,ColorFilter:BoundedColorFilter,
     PanGesture:nativePan, PanDirection:{Vertical:'vertical'}, GesturePriority:{Low:'low'},
     globalThis:{Gesture:nativeGesture,PanGesture:nativePan},
     ReaderBoundedFrameModifier:classOf(childSources.ReaderBoundedSurface,'ReaderBoundedFrameModifier',{...specs,readerAppColor,ReaderInsetsVp}),

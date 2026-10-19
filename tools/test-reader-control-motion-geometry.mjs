@@ -1,10 +1,18 @@
-import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { readerControlMotionBounds, readerControlMotionAxis, sampleReaderControlMotion,
-  sampleReaderControlMotionComposition, sampleReaderControlWholeVisibility }
-  from '../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts';
-import { readerControlGrabberScreenY } from '../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'spatial':{description:'Pure geometry/composition/axis and zero live budget invariants',resources:[]},
+ 'frame-cache':{description:'Complete production motion cache dependency identity and no mutation',resources:[]},
+ 'historical-mr1':{description:'Explicit archived MR1 source diagnostic, excluded from current release prerequisite',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { existsSync, readFileSync }=await import('node:fs');
+const { readerControlMotionBounds, readerControlMotionAxis, sampleReaderControlMotion,
+  sampleReaderControlMotionComposition, sampleReaderControlWholeVisibility }=await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
+const { readerControlGrabberScreenY }=await import('../entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts');
 
+if(selectedCase==='spatial'){
 const bounds = readerControlMotionBounds(364, 736, 19);
 const sample = (p, v = 1) => sampleReaderControlMotion({ expansionProgress: p, visibilityProgress: v }, bounds);
 // Independently transcribed source endpoints: Directory 1689:1616 / 1689:2121.
@@ -13,24 +21,6 @@ assert.deepEqual(sample(1).shell, { x: 0, y: 0, width: 364, height: 736, opacity
 assert.deepEqual(sample(0).content, { x: 13, y: 435, width: 286, height: 190, opacity: 1 });
 assert.deepEqual(sample(1).content, { x: 13, y: 57, width: 338, height: 666, opacity: 1 });
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} != ${b}`);
-// Independently archived MR1 sources, never generated from the sampler. This
-// optional evidence was intentionally pruned from the working tree; when it
-// is present, keep validating it, but do not make local builds depend on a
-// deleted historical capture.
-const mr1Path = new URL('../evidence/control-bar-development-20260905/SHOW_HIDE_MOTION_RAW.json', import.meta.url);
-if (existsSync(mr1Path)) {
-  const mr1 = JSON.parse(readFileSync(mr1Path, 'utf8'));
-  assert.equal(mr1.showRoot, '1247:28');
-  assert.equal(mr1.hideRoot, '1247:489');
-  assert.match(mr1.show.nodes.find(node => node.nodeId === '1247:37').codeSnippets.css, /translate: 0px -8px/);
-  assert.match(mr1.show.nodes.find(node => node.nodeId === '1247:80').codeSnippets.css, /translate: 0px 18px/);
-  assert.match(mr1.hide.nodes.find(node => node.nodeId === '1247:496').codeSnippets.css, /translate: 0px -8px/);
-  assert.match(mr1.hide.nodes.find(node => node.nodeId === '1247:523').codeSnippets.css, /translate: 0px 18px/);
-  assert.equal(mr1.show.timelineCohorts[0].durationMs, 420);
-  assert.equal(mr1.hide.timelineCohorts[0].durationMs, 360);
-} else {
-  console.log('MR1 archived show/hide capture absent; optional evidence checks skipped');
-}
 for (const v of [0, 0.1, 0.25, 0.5, 0.9, 1]) {
   const whole = sampleReaderControlWholeVisibility(v);
   near(whole.topBar.translateY, -8 * (1 - v));
@@ -114,6 +104,15 @@ for (const dimensions of [[280, 500, 24], [720, 852, 33], [364, 250, 0]]) {
 }
 console.log('PASS reader control motion geometry (production functions; no runtime/visual claim)');
 
+for (const [width, height] of [[0, 0], [320, 0], [320, 28], [320, 65]]) {
+  const b = readerControlMotionBounds(width, height, 20);
+  assert.equal(b.fullHeight, height, 'zero live budget must not resurrect a 736vp sheet');
+  const f = sampleReaderControlMotionComposition({ expansionProgress: 1, visibilityProgress: 1 }, b);
+  assert.equal(f.shell.height, height);
+  assert.ok(f.content.height >= 0);
+}
+
+}else if(selectedCase==='frame-cache'){
 // Production cache: preserve the exact authored geometry, share an object only
 // while all its dependencies remain equal, never accumulate the drag offset.
 const { ReaderControlMotionFrameCache } = await import('../entry/src/main/ets/features/reading/ReaderControlMotionGeometry.ts');
@@ -128,10 +127,26 @@ for (let i = 0; i < inputs.length; i++) {
   assert.deepEqual(restored, cached, 'cache invalidation must not mutate a previous frame');
 }
 
-for (const [width, height] of [[0, 0], [320, 0], [320, 28], [320, 65]]) {
-  const b = readerControlMotionBounds(width, height, 20);
-  assert.equal(b.fullHeight, height, 'zero live budget must not resurrect a 736vp sheet');
-  const f = sampleReaderControlMotionComposition({ expansionProgress: 1, visibilityProgress: 1 }, b);
-  assert.equal(f.shell.height, height);
-  assert.ok(f.content.height >= 0);
+
+}else{
+// Independently archived MR1 sources, never generated from the sampler. This
+// optional evidence was intentionally pruned from the working tree; when it
+// is present, keep validating it, but do not make local builds depend on a
+// deleted historical capture.
+const mr1Path = new URL('../evidence/control-bar-development-20260905/SHOW_HIDE_MOTION_RAW.json', import.meta.url);
+assert.ok(existsSync(mr1Path),'selected historical MR1 case requires archived capture');
+{
+  const mr1 = JSON.parse(readFileSync(mr1Path, 'utf8'));
+  assert.equal(mr1.showRoot, '1247:28');
+  assert.equal(mr1.hideRoot, '1247:489');
+  assert.match(mr1.show.nodes.find(node => node.nodeId === '1247:37').codeSnippets.css, /translate: 0px -8px/);
+  assert.match(mr1.show.nodes.find(node => node.nodeId === '1247:80').codeSnippets.css, /translate: 0px 18px/);
+  assert.match(mr1.hide.nodes.find(node => node.nodeId === '1247:496').codeSnippets.css, /translate: 0px -8px/);
+  assert.match(mr1.hide.nodes.find(node => node.nodeId === '1247:523').codeSnippets.css, /translate: 0px 18px/);
+  assert.equal(mr1.show.timelineCohorts[0].durationMs, 420);
+  assert.equal(mr1.hide.timelineCohorts[0].durationMs, 360);
 }
+
+}
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

@@ -16,7 +16,7 @@ const SourceGateway=load('features/source/SourceGateway.ts','SourceGateway',{Rea
 const {SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}=load('features/source/SourceToolsOrchestrator.ets','{SourceToolsOrchestrator,EMPTY_SOURCE_TOOLS_SNAPSHOT}',{SourceGateway,ReaderRuntimeOwner,ReaderWriteEvidence,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt,...facts});
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot(),syntax=require(sdk+'/lib/validate_ui_syntax.js');
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
-for(const [name,path] of [['SourceToolsPage','features/source/SourceToolsPage.ets'],['ReaderRecoveryAction','features/common/ReaderRecoveryAction.ets']]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));}
+for(const [name,path] of [['SourceToolsPage','features/source/SourceToolsPage.ets'],['ReaderRecoveryAction','features/common/ReaderRecoveryAction.ets'],['ReaderRecoveryNotice','features/common/ReaderRecoveryNotice.ets'],['ReaderPageState','features/common/ReaderPageState.ets']]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));}
 const clone=v=>structuredClone(v),tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{resolve,promise};};
 const document=id=>JSON.stringify({bookSourceUrl:id,bookSourceName:id,bookSourceType:0,enabled:true});
@@ -34,8 +34,8 @@ function makeIndex(r){const index=createReaderBuilderProbe(source('pages/Index.e
 function fixture(){const r=rpc();currentOwner=r;const index=makeIndex(r);const owner=index.getSourceToolsOrchestrator();
  const settle=async()=>{await owner.operationTail;};
  const refresh=()=>{index.sourceToolsContent();return [...index.children.values()].at(-1).params;};
- const page=()=>{const child=refresh();const page=createReaderBuilderProbe(source('features/source/SourceToolsPage.ets'),['statusCard','recovery','recoveryAction','originalRecoveryActions','originalRecoveryIdentity','isCurrentOriginalRecovery','reconcileOriginal','continueOriginal'],{readerRecoveryView,ReaderRecoveryAction:Child}).owner;Object.assign(page,child,{appThemeScheme:'day'});page.statusCard();page.recoveryAction();return page;};
- const retry=p=>{const c=[...p.children.values()][0];c.params.onReconcile(c.params.generation);};
+ const page=()=>{const child=refresh();const page=createReaderBuilderProbe(source('features/source/SourceToolsPage.ets'),['statusCard','recovery','recoveryAction','originalRecoveryActions','originalRecoveryIdentity','isCurrentOriginalRecovery','reconcileOriginal','continueOriginal'],{readerRecoveryView,ReaderRecoveryAction:Child,ReaderRecoveryNotice:Child,ReaderPageState:Child}).owner;Object.assign(page,child,{appThemeScheme:'day'});page.statusCard();page.recoveryAction();return page;};
+ const retry=p=>{const c=[...p.children.values()][0];if(c.params.onAction)c.params.onAction();else c.params.onReconcile(c.params.view?.generation??c.params.generation);};
  return{r,index,owner,settle,refresh,page,retry,open:async()=>{owner.open([]);await settle();},edit:async()=>{owner.openEditor('https://a.test');await settle();owner.updateEditorDraft(document('https://a.test'));},receipt:()=>index.sourceToolsSnapshot.receipt};}
 for(const action of ['toggle','delete','editor']){
  const write=f=>action==='toggle'?f.owner.setSelectedEnabled(['https://a.test'],false):action==='delete'?f.owner.deleteSelected(['https://a.test']):f.owner.saveEditor();const command=action==='toggle'?'source.update':action==='delete'?'source.delete':'source.import';

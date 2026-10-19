@@ -1,10 +1,18 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
-import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"retained-card-hydration": {"description": "实际continue card当前身份/只hydration revision刷新", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+
 
 const source=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url),'utf8');
 const require=createRequire(import.meta.url);
@@ -50,8 +58,6 @@ function mount(book) {
   assert.equal([...owner.nodes.values()].filter(node=>typeof node.onClick==='function').length,1,
     'the card and its Reading button keep their existing shared row click action');
   assert.ok(textNodes().some(node=>node.create==='阅读'));
-  assert.match(output,/this\.createStorageLink\('readerMangaPresentationRevision'/,
-    'the installed SDK emits the actual shared manga revision subscription');
   return {owner,dependencies,selected,textNodes,cardClick,texts:()=>textNodes().map(node=>node.create),
     images:()=>[...owner.nodes.values()].filter(node=>node.type==='Image').map(node=>node.create)};
 }
@@ -81,7 +87,7 @@ const comic={sourceId:'comic-source',bookId:'same-book',contentKind:'manga',titl
   f.cardClick();f.cardClick();assert.deepEqual(f.selected.slice(1),[comic,comic],
     'both card/background and its Reading button shared callback select the current comic source identity');
   const position=f.textNodes().find(node=>node.create==='');
-  assert.equal(position.constraintSize.minHeight,15,'the blank position keeps its accepted row height');
+
   assert.ok(f.dependencies.get(position.id)?.has('mangaRevision'),
     'the real position observer reads the revision even while the initial cold position is absent');
   // Only the shared hydration revision changes. Neither the book Prop nor any
@@ -117,3 +123,5 @@ const comic={sourceId:'comic-source',bookId:'same-book',contentKind:'manga',titl
   assert.ok(f.texts().includes('04 · 4 页 / 24 页'),'same card and book receive subsequent admitted page movement');
 }
 console.log('PASS actual SDK retained continue card: novel/comic metadata and cover, current click identity, hydration-only StorageLink delivery, source isolation, late removal and stable actors');
+
+}

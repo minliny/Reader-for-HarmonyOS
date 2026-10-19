@@ -50,7 +50,7 @@ export function auditTypographyConsumers(source, file = virtualFilePath('Typogra
  * actual-source/SDK contracts; this closes local helper-name laundering. */
 const getterPolicies = {
   'ReaderActionMenuSurface.ets': { owner: 'ReaderActionMenuSurface', getter: 'spec', resolver: 'resolvePopupSpec', module: 'ReaderSurfaceSpecs', argument: 'this.specId', fields: ['actionFontFamily','actionFontWeight','actionFontSize','actionLineHeight'],
-    additionalGetters: [{ getter: 'actionSheetSpec', resolver: 'resolveActionSheetSpec', module: 'ReaderSurfaceSpecs', argument: "this.variant === 'quick' ? 'quick' : 'grouped'", fields: [
+    additionalGetters: [{ getter: 'actionSheetSpec', resolver: 'resolveActionSheetSpec', module: 'ReaderSurfaceSpecs', argument: "this.variant === 'bookshelf' ? 'bookshelf' : this.variant === 'quick' ? 'quick' : 'grouped'", fields: [
       'sectionHeadingFontSize', 'sectionHeadingLineHeight', 'quickLabelFontSize', 'quickLabelLineHeight',
       'quickSecondaryFontSize', 'quickSecondaryLineHeight', 'labelFontSize', 'labelLineHeight',
       'secondaryFontSize', 'secondaryLineHeight', 'trailingFontSize', 'trailingLineHeight',
@@ -154,7 +154,7 @@ export function isSharedTypographyExpression(expression, context, owner) {
         return ts.isCallExpression(node.arguments[0]) && visit(node.arguments[0]);
     }
     if (ts.isPropertyAccessExpression(node)) {
-      if (ts.isIdentifier(node.expression) && /^TYPE_\w+$/.test(node.expression.text)) return true;
+      if (ts.isIdentifier(node.expression) && /^(TYPE_|MESSAGE_)\w+$/.test(node.expression.text)) return true;
       const callee = node.expression;
       if (ts.isCallExpression(callee) && ts.isPropertyAccessExpression(callee.expression) &&
           callee.expression.expression.kind === ts.SyntaxKind.ThisKeyword &&
@@ -178,10 +178,10 @@ export function typographyRoleImports(source, file = virtualFilePath('Typography
   assert.equal(parsed.parseDiagnostics.length, 0, `${file}: real ETS imports parse`);
   const roles = new Set();
   for (const statement of parsed.statements) {
-    if (!ts.isImportDeclaration(statement) || !/\/(?:ReaderTypography)(?:\.ets)?$/.test(statement.moduleSpecifier.text)) continue;
+    if (!ts.isImportDeclaration(statement) || !/\/(?:ReaderTypography|ReaderMessageStyle)(?:\.ets)?$/.test(statement.moduleSpecifier.text)) continue;
     const bindings = statement.importClause?.namedBindings;
     if (!bindings || !ts.isNamedImports(bindings)) continue;
-    for (const element of bindings.elements) if (/^TYPE_\w+$/.test(element.name.text)) roles.add(element.name.text);
+    for (const element of bindings.elements) if (/^(TYPE_|MESSAGE_)\w+$/.test(element.name.text)) roles.add(element.name.text);
   }
   return roles;
 }

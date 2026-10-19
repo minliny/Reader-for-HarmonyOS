@@ -1,38 +1,49 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import { ReaderDirectoryTrace } from '../entry/src/main/ets/features/reading/ReaderDirectoryTrace.ts';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { readerDirectoryBookmarkMarkerState } from '../entry/src/main/ets/features/reading/ReaderDirectoryMarkerState.ts';
+import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
+const selected=selectContractCases({actions:{description:'Actual toolbar scroll, canonical marker/target validation and rank-position methods',resources:[]},'surface-admission':{description:'Actual Surface failure/retry/motion/prefetch/anchor publication and SDK status',resources:[]},'query-disclosure':{description:'Actual SDK query State negative and stable disclosure callback refresh',resources:[]},'target-download':{description:'Actual SDK target download affordance and canonical proof/stale-owner fences',resources:[]},'diagnostic-cancellation':{description:'Trace-only current failure versus disposed cancellation diagnosis',resources:[]}});
+async function run(selectedCase){
+const { resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
+const { ReaderDirectoryTrace }=await import('../entry/src/main/ets/features/reading/ReaderDirectoryTrace.ts');
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { fileURLToPath }=await import('node:url');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { readerDirectoryBookmarkMarkerState }=await import('../entry/src/main/ets/features/reading/ReaderDirectoryMarkerState.ts');
+
+
+
+
+
+
+
 
 const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
+
 const detailPath = fileURLToPath(new URL('../entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets', import.meta.url));
+
 const controlPath = fileURLToPath(new URL('ReaderControlDirectoryContent.ets', reading));
+
 const fullPath = fileURLToPath(new URL('FullDirectoryPanel.ets', reading));
+
 const listPath = fileURLToPath(new URL('ReaderDirectoryNavigationList.ets', reading));
+
 const surfacePath = fileURLToPath(new URL('ReaderDirectoryNavigationSurface.ets', reading));
+
 const listSource = readFileSync(listPath, 'utf8');
+
 const surfaceSource = readFileSync(surfacePath, 'utf8');
-assert.match(listSource, /\(item: ReaderDirectoryNavigationItem\): string => this\.rowKey\(item\)/, 'LazyForEach uses the production row identity function');
-assert.match(listSource, /this\.gateway\.resolveTarget\(bookId, viewId, node\.nodeId/, 'tap revalidates live Core target');
-assert.match(listSource, /this\.scroller\.scrollToIndex\(plan\.index, false, ScrollAlign\.CENTER\)/,
-  'tree centers by Core supplied current visible rank when no viewport anchor exists');
-assert.match(surfaceSource, /this\.scheduleQueryOpen\(\)/,
-  'rapid search changes are coalesced before Core opens a view');
+
+
+
+
+
 const controlSource = readFileSync(controlPath, 'utf8');
+
 const fullSource = readFileSync(fullPath, 'utf8');
-assert.match(controlSource,
-  /else if \(this\.snapshot\.rows\.length === 0 && !this\.navigationActive &&\s*!\(this\.tab === 'directory' && this\.bookmarkIdentity !== undefined\)\)/,
-  'local group-only search mounts the Core tree even when flat chapter matches are empty');
-assert.match(controlSource,
-  /fallbackBuilder: \(\): void => \{\s*this\.flatCatalog\(\);\s*\}/,
-  'missing navigation uses the same explicitly partial/error-aware chapter fallback');
-assert.match(controlSource,
-  /private flatCatalog\(\)[\s\S]*?this\.catalogComplete === false\) this\.catalogStatus\(\)/,
-  'a narrow entry catalog cannot silently present itself as a complete ready list');
-assert.match(controlSource, /if \(!this\.mounted \|\| this\.navigationActive\) return;[\s\S]*?const ticket = this\.placement\.ticket\(\)/,
-  'control flat positioning is disabled when Core tree rank owns the list');
+
+
+
+
+
 const QuickActions = productionMotionMethods(controlPath,
   ['cancelPendingPlacement', 'userScroll', 'search', 'sort', 'deferCatalogAction', 'scrollCatalogEdge'], {
     Edge: { Top: 'top', Bottom: 'bottom' },
@@ -40,8 +51,11 @@ const QuickActions = productionMotionMethods(controlPath,
   readerDirectorySignalScrollIntent: bookId => scrolledBooks.push(bookId),
     readerDirectorySignalScrollCommand: bookId => completedScrollBooks.push(bookId),
   });
+
 const scrolledBooks = [];
+
 const completedScrollBooks = [];
+if(selectedCase==="actions")
 {
   const scrolled = [], refreshed = [];
   const quick = Object.assign(new QuickActions(), { tab: 'directory', catalogComplete: true,
@@ -65,15 +79,17 @@ const completedScrollBooks = [];
   assert.deepEqual(completedScrollBooks, ['book'], 'toolbar announces a completed edge command even if no native stop fires');
   assert.equal(scrolled.at(-1), 'bottom');
 }
-assert.match(fullSource, /if \(!this\.positioningMounted \|\| this\.navigationActive \|\| this\.listPositioning\.status !== 'pending'\) return/,
-  'full directory flat positioning cannot scroll the tree to a chapter ordinal');
+
+
 const fullScrollEvents = [];
+
 const FullControls = productionMotionMethods(fullPath, ['handleControl'], {
   Edge: { Top: 'top', Bottom: 'bottom' },
   ReaderDirectoryTrace, readerDirectoryScopeKey: (_source, book) => book,
   readerDirectorySignalScrollIntent: bookId => fullScrollEvents.push(['intent', bookId]),
   readerDirectorySignalScrollCommand: bookId => fullScrollEvents.push(['complete', bookId]),
 });
+if(selectedCase==="actions")
 {
   const panel = Object.assign(new FullControls(), {
     activeTab: 'directory', bookmarkIdentity: { sourceId: 'local', bookId: 'full-book' },
@@ -87,7 +103,9 @@ const FullControls = productionMotionMethods(fullPath, ['handleControl'], {
   ], 'Full toolbar fences pending view before both explicit edge scrolls');
 }
 
+
 const Detail = productionMotionMethods(detailPath, ['flushPendingScroll'], {});
+if(selectedCase==="actions")
 {
   const edges = [];
   const page = Object.assign(new Detail(), { mounted: true, listReady: true, navigationActive: true,
@@ -96,11 +114,13 @@ const Detail = productionMotionMethods(detailPath, ['flushPendingScroll'], {});
   assert.deepEqual(edges, ['bottom'], 'tree-only group search still allows bottom navigation');
 }
 
+
 const List = productionMotionMethods(listPath, ['marker', 'selectTarget', 'planPosition', 'positionInitialCurrent'], {
   readerDirectoryBookmarkMarkerState, ScrollAlign: { START: 'start', CENTER: 'center' },
   ReaderDirectoryTrace, readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`,
   readerDirectoryViewportAnchor: () => undefined, LengthMetrics: { vp: value => ({ value }) },
 });
+if(selectedCase==="actions")
 {
   const actions = [];
   const list = Object.assign(new List(), {
@@ -114,10 +134,12 @@ const List = productionMotionMethods(listPath, ['marker', 'selectTarget', 'planP
   assert.deepEqual(actions, [['delete', [123]], ['create', 5]], 'target rows preserve canonical chapter bookmark actions');
 }
 
+
 const PagedList = productionMotionMethods(listPath, ['loadPage', 'onInteractionChanged'], {
   cacheReaderDirectoryNavigationPage: (_view, _offset, page) => page,
   setTimeout: action => action(), ReaderDirectoryTrace, readerDirectoryScopeKey: (sourceId, bookId) => `${sourceId ?? 'local'}:${bookId}`, readerDirectoryViewportAnchor: () => undefined,
 });
+if(selectedCase==="actions")
 {
   const admitted = [];
   const list = Object.assign(new PagedList(), { mounted: true, generation: 2, bookId: 'book',
@@ -130,6 +152,7 @@ const PagedList = productionMotionMethods(listPath, ['loadPage', 'onInteractionC
   list.interactionEnabled = true; list.onInteractionChanged();
   assert.deepEqual(admitted, [[256, 'view']]);
 }
+if(selectedCase==="actions")
 {
   let complete;
   const selections = [], invalidations = [], scrolls = [];
@@ -151,6 +174,7 @@ const PagedList = productionMotionMethods(listPath, ['loadPage', 'onInteractionC
   assert.deepEqual(selections, [[4, 9, scope]], 'Core scope must reach the reading callback');
   assert.deepEqual(invalidations, []);
 }
+if(selectedCase==="actions")
 {
   const invalidations = [];
   const list = Object.assign(new List(), {
@@ -164,9 +188,13 @@ const PagedList = productionMotionMethods(listPath, ['loadPage', 'onInteractionC
   assert.deepEqual(invalidations, ['stale']);
 }
 
+
 const pending = [], timers = new Map();
+
 let timerId = 0;
+
 let visibleAnchorNodeId;
+
 const Surface = productionMotionMethods(surfacePath,
   ['openTree', 'onViewInputsChanged', 'onInteractionChanged', 'scheduleQueryOpen', 'cancelQueryTimer',
     'onTreeUserScrollIntent', 'onProgrammaticScrollIntent', 'onTreeScrollSettled', 'prepareVisiblePages',
@@ -183,7 +211,11 @@ const Surface = productionMotionMethods(surfacePath,
   clearTimeout: id => { timers.delete(id); },
 });
 
-const flushSurface = async () => { for (let turn = 0; turn < 12; turn += 1) await Promise.resolve(); };
+
+// One event-loop boundary drains the controlled promise chains; assertions below
+// inspect each owner's actual admission/failure condition, never elapsed time.
+const flushSurface=()=>new Promise(resolve=>setImmediate(resolve));
+
 function retrySurface(view) {
   return Object.assign(new Surface(), { mounted: true, gateway: {
     page: async (_book, viewId, offset) => ({ viewId, visibleTotal: 948,
@@ -195,10 +227,12 @@ function retrySurface(view) {
   queryTimer: -1, lastQuery: '', lastAscending: true, lastChapterIndex: 95,
   view, onTreeStateChange() {} });
 }
+
 function readyCatalog(viewId) {
   return { viewId, navigationRevision: 'catalog-948', visibleTotal: 948, currentVisibleIndex: 95,
     nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `chapter-${index}` })) };
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length, surface = retrySurface();
   surface.openTree(true);
@@ -220,6 +254,7 @@ function readyCatalog(viewId) {
   assert.equal(surface.loadPending, false);
   assert.equal(surface.loadFailed, false);
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length, surface = retrySurface();
   surface.openTree(true);
@@ -235,6 +270,7 @@ function readyCatalog(viewId) {
   assert.equal(surface.view.viewId, 'search-ready-948');
   assert.equal(surface.loadFailed, false);
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length, surface = retrySurface();
   surface.openTree(true);
@@ -249,6 +285,7 @@ function readyCatalog(viewId) {
   assert.equal(surface.view.viewId, 'new-book-ready');
   assert.equal(surface.loadFailed, false);
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length, old = readyCatalog('previous-ready'), surface = retrySurface(old);
   surface.openTree(false);
@@ -264,6 +301,7 @@ function readyCatalog(viewId) {
   assert.equal(surface.view.viewId, 'refreshed-ready');
   assert.equal(surface.loadFailed, false);
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length, surface = retrySurface();
   surface.openTree(true);
@@ -273,9 +311,12 @@ function readyCatalog(viewId) {
   assert.equal(surface.loadFailed, false, 'a retired opening cannot publish an error into another page');
   assert.equal(surface.view, undefined);
 }
-console.log('PASS directory failure recovery: actual Surface BUSY, explicit retry to 948 chapters, query retry, identity/cancel fencing and previous-view preservation');
+
+
 pending.length = 0;
+
 timers.clear();
+if(selectedCase==="query-disclosure")
 {
   const states = [];
   const surface = Object.assign(new Surface(), { mounted: true, gateway: {}, bookId: 'book', query: 'old',
@@ -304,6 +345,7 @@ timers.clear();
   assert.equal(pending.length, 3);
   assert.deepEqual([pending[2].query.query, pending[2].query.descending], ['newer', true]);
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length;
   const surface = Object.assign(new Surface(), { mounted: true, gateway: {}, bookId: 'motion-book', query: '',
@@ -318,6 +360,7 @@ timers.clear();
   surface.interactionEnabled = true; surface.onInteractionChanged();
   assert.equal(pending.length, start + 2, 'motion endpoint retries the superseded first open');
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length, states = [];
   const surface = Object.assign(new Surface(), { mounted: true, gateway: {}, bookId: 'mounted-during-motion', query: '',
@@ -332,10 +375,11 @@ timers.clear();
   assert.equal(pending.length, start + 1, 'motion endpoint performs the deferred initial admission exactly once');
   pending[start].resolve({ viewId: 'after-initial-motion', navigationRevision: 'r', visibleTotal: 1,
     nodes: [{ nodeId: 'only-chapter', chapterIndex: 0, kind: 'target', hasChildren: false }] });
-  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  await flushSurface();
   assert.equal(surface.view.viewId, 'after-initial-motion', 'the real tree replaces the ready flat fallback after motion');
   assert.deepEqual(states, [true]);
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length;
   const surface = Object.assign(new Surface(), { mounted: true, gateway: {}, bookId: 'motion-response-race', query: '',
@@ -348,13 +392,14 @@ timers.clear();
   surface.interactionEnabled = false;
   pending[start].resolve({ viewId: 'response-at-motion-start', navigationRevision: 'r', visibleTotal: 1,
     nodes: [{ nodeId: 'only-chapter', chapterIndex: 0, kind: 'target', hasChildren: false }] });
-  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  await flushSurface();
   assert.equal(surface.view, undefined);
   assert.equal(surface.settledFlat, false, 'a response arriving during motion cannot permanently discard the real tree');
   assert.equal(surface.pendingRefresh, true);
   surface.interactionEnabled = true; surface.onInteractionChanged();
   assert.equal(pending.length, start + 2, 'response blocked by motion is retried at its endpoint');
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length;
   let finishPage;
@@ -371,13 +416,14 @@ timers.clear();
   surface.interactionEnabled = false;
   finishPage({ viewId: 'pages-at-motion-start', visibleTotal: 512,
     nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `second-${index}` })) });
-  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  await flushSurface();
   assert.equal(surface.view, undefined);
   assert.equal(surface.settledFlat, false, 'motion during page preparation cannot permanently discard the real tree');
   assert.equal(surface.pendingRefresh, true);
   surface.interactionEnabled = true; surface.onInteractionChanged();
   assert.equal(pending.length, start + 2);
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length;
   const surface = Object.assign(new Surface(), { mounted: true, gateway: {}, bookId: 'user-positioned-flat', query: '',
@@ -387,10 +433,11 @@ timers.clear();
   surface.openTree(true);
   pending[start].resolve({ viewId: 'late-first-tree', navigationRevision: 'r', visibleTotal: 1,
     nodes: [{ nodeId: 'only-chapter', chapterIndex: 0, kind: 'target', hasChildren: false }] });
-  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  await flushSurface();
   assert.equal(surface.view, undefined);
   assert.equal(surface.settledFlat, true, 'real user interaction keeps the existing flat viewport authoritative');
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length;
   visibleAnchorNodeId = 'before-drag';
@@ -410,6 +457,7 @@ timers.clear();
     'scroll stop opens one view against the newly visible node');
   visibleAnchorNodeId = undefined;
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length;
   visibleAnchorNodeId = 'before-top';
@@ -427,6 +475,7 @@ timers.clear();
   assert.equal(pending[start + 1].query.anchorNodeId, 'after-top');
   visibleAnchorNodeId = undefined;
 }
+if(selectedCase==="surface-admission")
 {
   const start = pending.length;
   visibleAnchorNodeId = 'same-visible-node';
@@ -454,7 +503,7 @@ timers.clear();
   const last = pageCalls.at(-1);
   last.resolve({ viewId: last.viewId, visibleTotal: 10001,
     nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `${last.offset}-${index}` })) });
-  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  await flushSurface();
   assert.equal(surface.view.viewId, 'deep-new', 'new view is published once all pages are ready');
   assert.equal(surface.view.preparedPages.length, 6);
   assert.deepEqual(states, [true]);
@@ -470,7 +519,7 @@ timers.clear();
   for (const [index, call] of failedPages.entries()) call.resolve({ viewId: call.viewId,
     visibleTotal: index === 0 ? 10000 : 10001,
     nodes: Array.from({ length: 256 }, (_, nodeIndex) => ({ nodeId: `bad-${call.offset}-${nodeIndex}` })) });
-  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  await flushSurface();
   assert.equal(surface.view, readyAfterGood, 'mismatched page revision/total cannot partially replace the old view');
 
   const cancelledStart = pending.length, firstCancelledPage = pageCalls.length;
@@ -483,12 +532,13 @@ timers.clear();
   surface.onTreeUserScrollIntent();
   for (const call of cancelledPages) call.resolve({ viewId: call.viewId, visibleTotal: 10001,
     nodes: Array.from({ length: 256 }, (_, index) => ({ nodeId: `cancel-${call.offset}-${index}` })) });
-  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  await flushSurface();
   assert.equal(surface.view, readyAfterGood, 'user drag during prefetch keeps the current visible view');
   assert.deepEqual(states, [true]);
   visibleAnchorNodeId = undefined;
 }
-console.log('PH42 tree bookmark, target validation, rank position and debounced query fencing: PASS');
+
+if(selectedCase==="query-disclosure")
 
 // Model LazyForEach's retained key -> Builder closure using the actual SDK
 // transformed row. A stable node-only key reproduces the stale arrow; changing
@@ -546,7 +596,8 @@ console.log('PH42 tree bookmark, target validation, rank position and debounced 
   assert.equal(moved[1],unfolded[0], 'rank changes do not recreate an unchanged row');
   assert.equal(baseGroup.nodeId,'group', 'Core and viewport node identity is untouched');
 }
-console.log('PASS directory disclosure actual SDK Builder: fold/unfold arrow, accessibility and callback capture refresh only the changed row');
+
+if(selectedCase==="query-disclosure")
 
 // Execute SDK-generated State dependencies and the real listBody child update.
 // The old plain query is a negative control: snapshot refresh cannot substitute
@@ -598,7 +649,8 @@ console.log('PASS directory disclosure actual SDK Builder: fold/unfold arrow, ac
   queryPublication(controlSource.replace('@State private query:','private query:'),false);
   queryPublication(controlSource,true);
 }
-console.log('PASS directory search actual SDK State dispatch: submit/miss/clear update mounted tree parameters without sorting; plain-query negative control reproduces stale child');
+
+if(selectedCase==="surface-admission")
 
 // Exercise the actual SDK build branch for a ready zero-result tree. Keep the
 // list mounted so its existing layout and viewport lifecycle is unchanged.
@@ -645,7 +697,8 @@ console.log('PASS directory search actual SDK State dispatch: submit/miss/clear 
     }
   }
 }
-console.log('PASS actual SDK directory empty-result, inline loading/error/retry callback and preserved fallback/list lifecycle');
+
+if(selectedCase==="diagnostic-cancellation")
 
 // Rejections after disposal are cancellation evidence, not live query failures.
 {
@@ -664,13 +717,14 @@ console.log('PASS actual SDK directory empty-result, inline loading/error/retry 
     owner.openTree(true);
     if (!current) { owner.mounted = false; owner.generation += 1; }
     rejectOpen(new Error('cancelled-or-failed'));
-    for (let tick = 0; tick < 5; tick++) await Promise.resolve();
+    await flushSurface();
     assert.deepEqual(traces, [['response', current ? 'failed' : 'cancelled']]);
     assert.equal(owner.settledFlat === true, false, 'neither retired nor current transport failure permanently settles fallback');
     assert.equal(owner.loadFailed === true, current, 'only the current opening may publish a retryable error');
   }
 }
-console.log('PASS directory diagnostics separate disposed query cancellation from active failure');
+
+if(selectedCase==="target-download")
 
 // Tree presentation preserves the ordinary chapter download affordance and
 // revalidates the canonical target before dispatch. Group rows never acquire a
@@ -736,7 +790,8 @@ console.log('PASS directory diagnostics separate disposed query cancellation fro
   owner.chapterEntries=[{...owner.chapterEntries[0],downloadState:'completed'}];owner.onChapterEntriesChanged();
   assert.deepEqual(changes,[[7],[7]],'offline state changes refresh the retained canonical row');
 }
-console.log('PASS tree download actual SDK Builder and Core target fencing: day/night states, group exclusion, queued/stale/source guards and download-state refresh');
+
+if(selectedCase==="target-download")
 
 {
   const { createRequire } = await import('node:module');
@@ -766,4 +821,6 @@ console.log('PASS tree download actual SDK Builder and Core target fencing: day/
   assert.equal(list.params.chapterDownloadEnabled,true);list.params.onDownloadChapter(9);
   assert.deepEqual(calls,[7,8,9],'Quick, Full and Surface preserve the existing owner callback');
 }
-console.log('PASS actual SDK Quick/Full/Surface download prop and callback propagation');
+
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

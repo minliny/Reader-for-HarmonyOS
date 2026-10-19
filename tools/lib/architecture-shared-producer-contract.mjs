@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { isSharedTypographyExpression, typographyExpressionContext } from './reader-typography-consumer-audit.mjs';
 import { novelSourceSwitchSuccessorPath, sharedSourceSwitchTypographySuccessorPath,
  validateSharedSourceSwitchTypographySuccessor, unifiedActionSheetTypographySuccessorPath,
  validateUnifiedActionSheetTypographySuccessor, mangaDirectoryWorktreeSuccessorPath,
@@ -14,7 +15,7 @@ import {fullDirectoryLayoutSuccessorPath,verifyFullDirectoryLayoutSuccession} fr
 import {indexSyncColdLayoutSuccessorPath,verifyIndexSyncColdLayoutSuccession} from './index-sync-cold-layout-successor.mjs';
 const sdk=resolveEtsLoaderRoot();
 const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript'),options=createRequire(import.meta.url)(sdk+'/lib/ets_checker.js').compilerOptions;
-const physical=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin','width','height','constraintSize','opacity','clip','responseRegion']);
+const physical=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','colorFilter','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin','width','height','constraintSize','opacity','clip','responseRegion']);
 const callerPhysical=new Set([...physical,'minFontScale','maxFontScale']);
 const appearance=new Set(['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','backgroundColor','borderRadius','border','shadow','linearGradient','padding','margin','minFontScale','maxFontScale']);
 const print=(node,file)=>ts.createPrinter().printNode(ts.EmitHint.Unspecified,node,file);
@@ -78,12 +79,120 @@ export function registeredProducerTypographySlots(source,file,contract){
  const producer=contract.producers.find(p=>p.file===file);
  if(!producer)return{has:()=>false,size:0};
  const shape=sharedProducerShape(source,file);
- assert.deepEqual(shape,producer.shape,'finite shared physical inputs/role bindings changed: '+file);
+ const expected=reviewedBookshelfActionShape(file,producer.shape);
+ const finite=({implementation,...contract})=>contract;
+ assert.deepEqual(finite(shape),finite(expected),'finite shared physical inputs/role bindings changed: '+file);
+ const context=typographyExpressionContext(source,file);
+ const tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
+ // The Choice modifier's local text alias must come from its actual imported
+ // finite resolver. A matching `text.fontSizeFp` spelling alone is not proof.
+ let choiceAlias=false;
+ if(file.endsWith('/ReaderChoiceRow.ets')){
+  const imports=tree.statements.filter(ts.isImportDeclaration);
+  const imported=imports.some(node=>node.moduleSpecifier.text==='./ReaderChoiceSpecs'&&
+   node.importClause?.namedBindings?.elements?.some(element=>element.name.text==='resolveReaderChoiceSpec'&&(element.propertyName?.text??element.name.text)==='resolveReaderChoiceSpec'));
+  const modifier=tree.statements.find(node=>node.name?.text==='ReaderChoiceLabelModifier');
+  const method=modifier?.members.find(node=>node.name?.text==='applyNormalAttribute');
+  const values=new Map(method?.body?.statements.filter(ts.isVariableStatement).flatMap(statement=>[...statement.declarationList.declarations]).map(node=>[node.name.getText(tree),node.initializer])??[]);
+  const spec=values.get('spec'),text=values.get('text');
+  choiceAlias=imported&&context.bindings.has('ReaderChoiceRow#spec')&&
+   ts.isCallExpression(spec)&&spec.expression.getText(tree)==='resolveReaderChoiceSpec'&&spec.arguments.length===1&&spec.arguments[0].getText(tree)==='this.id'&&
+   ts.isConditionalExpression(text)&&text.condition.getText(tree)==='this.selected'&&text.whenTrue.getText(tree)==='spec.selectedText'&&text.whenFalse.getText(tree)==='spec.text';
+ }
  const slots=new Set(shape.styles.filter(s=>fontProperties.has(s.property)&&s.args.length)
+   .filter(s=>s.args[0].startsWith('this.')?isSharedTypographyExpression(s.args[0],context,s.owner):
+    s.owner==='ReaderChoiceLabelModifier'?choiceAlias:true)
    .map(s=>argumentKey(s.method,s.property,s.args[0])));
  return{size:slots.size,has:(method,property,expression)=>slots.has(argumentKey(method,property,canonicalArgument(expression,file)))};
 }
 const relative=file=>file.replace(/^entry\/src\/main\/ets\//,'');
+export const architectureMessageSuccessorPath='tools/fixtures/architecture-message-producers-successor-20261019.json';
+export const architectureBookshelfActionSuccessorPath='tools/fixtures/architecture-bookshelf-action-successor-20261019.json';
+const bookshelfFiles=['ReaderSurfaceSpecs','ReaderBoundedSurface','ReaderBoundedSurfaceHeader','ReaderSheetActionList','ReaderActionMenuSurface']
+ .map(name=>'entry/src/main/ets/features/common/'+name+'.ets');
+const architectureDigest=value=>createHash('sha256').update(typeof value==='string'?value:JSON.stringify(value)).digest('hex');
+const readArchitectureSource=file=>readFileSync(new URL('../../'+file,import.meta.url),'utf8');
+function bookshelfActionSuccessor(readSource){
+ const bytes=readSource(architectureBookshelfActionSuccessorPath),successor=JSON.parse(bytes);
+ assert.equal(architectureDigest(bytes),'df6480f457ead8d7c46248ffb021757227d5b2be761f173e2575223f432ffbe7','exact reviewed bookshelf action architecture successor');
+ assert.deepEqual([successor.schema,successor.authority],[1,'docs/message-ui/bookshelf-action-style-scope-20261019.json']);
+ assert.equal(architectureDigest(readSource(successor.authority)),successor.authoritySha256,'exact current user-requested bookshelf action scope');
+ assert.deepEqual(successor.previousSuccessor,{file:architectureMessageSuccessorPath,sha256:'6847a4a3e94cd95bde59da3fffe745f06a79c689f27eb6d2f5ad3b0a39f0cc61'});
+ assert.equal(architectureDigest(readSource(successor.previousSuccessor.file)),successor.previousSuccessor.sha256,'previous message successor remains immutable');
+ assert.deepEqual(successor.shapes.map(row=>row.file),bookshelfFiles,'only five finite bookshelf shared actors change');
+ assert.deepEqual(successor.consumerUpdates.map(row=>row.component),['ReaderActionSheetContent']);
+ assert.deepEqual(successor.budgetUpdates,[{file:'entry/src/main/ets/features/common/ReaderActionMenuSurface.ets',kind:'backgroundColor',previous:6,current:7}]);
+ return successor;
+}
+/** A current request may replace only its recorded finite predecessor. This
+ * resolver is also used by typography/native-default audits of the raw fixture. */
+export function reviewedBookshelfActionShape(file,previousShape,readSource=readArchitectureSource){
+ if(!bookshelfFiles.includes(file))return previousShape;
+ const update=bookshelfActionSuccessor(readSource).shapes.find(row=>row.file===file);
+ const hash=architectureDigest(previousShape);
+ assert.ok(hash===update.previousShapeSha256||hash===architectureDigest(update.shape),'exact bookshelf shared shape predecessor: '+file);
+ return update.shape;
+}
+function bookshelfActionArchitectureSuccession(contract,readSource){
+ const successor=bookshelfActionSuccessor(readSource),effective=structuredClone(contract);
+ for(const producer of effective.producers){
+  producer.shape=reviewedBookshelfActionShape(producer.file,producer.shape,readSource);
+  for(const child of [...(producer.specSources??[]),...(producer.delegates??[])])child.shape=reviewedBookshelfActionShape(child.file,child.shape,readSource);
+ }
+ for(const slot of effective.retainedConsumerSlots??[])for(const child of slot.components)child.shape=reviewedBookshelfActionShape(child.file,child.shape,readSource);
+ for(const update of successor.consumerUpdates){
+  const producer=effective.producers.find(row=>row.component===update.component);assert.ok(producer);
+  assert.deepEqual(producer.consumers,update.previousConsumers,'exact bookshelf action consumer predecessor');
+  const expected=structuredClone(update.previousConsumers);
+  assert.equal(expected[0].file,'features/common/ReaderSheetActionList.ets');assert.equal(expected[0].specId,"'quick'");
+  expected[0].specId="'bookshelf'";
+  assert.deepEqual(update.consumers,expected,'only the existing bookshelf action consumer changes variant');
+  producer.consumers=update.consumers;
+  for(const owner of effective.producers)for(const delegate of owner.delegates??[]){
+   if(delegate.component!==update.component)continue;
+   const previous=update.previousConsumers.filter(row=>row.file===relative(owner.file));
+   if(!previous.length)continue;
+   assert.deepEqual(delegate.consumers,previous,'exact bookshelf action delegate predecessor');
+   delegate.consumers=update.consumers.filter(row=>row.file===relative(owner.file));
+  }
+ }
+ return{contract:effective,budgetUpdates:successor.budgetUpdates};
+}
+/** Explicit approved message succession. Original producer, legacy-budget and
+ * historical visual fixtures remain unchanged; only these finite current
+ * edges/spec/renderer witnesses are layered on top for verification. */
+function messageArchitectureSuccession(contract,readSource){
+ const bytes=readSource(architectureMessageSuccessorPath),successor=JSON.parse(bytes);
+ const digest=value=>createHash('sha256').update(value).digest('hex');
+ assert.equal(digest(bytes),'6847a4a3e94cd95bde59da3fffe745f06a79c689f27eb6d2f5ad3b0a39f0cc61','exact reviewed message architecture successor');
+ assert.deepEqual([successor.schema,successor.authority,successor.previousContract.file],
+  [1,'docs/message-ui/approved-scope-20261019.json','tools/fixtures/architecture-shared-producers.json']);
+ assert.equal(digest(readSource(successor.authority)),successor.authoritySha256,'message architecture binds the exact user-approved scope');
+ assert.equal(digest(readSource(successor.previousContract.file)),successor.previousContract.sha256,'immutable original producer fixture retained');
+ assert.deepEqual(successor.producerConsumerUpdates.map(row=>row.component),
+  ['ReaderBoundedSurface','ReaderBoundedSurfaceHeader','ReaderBoundedSurfaceActions','ReaderFixedHeaderHost','ReaderStandardPage']);
+ assert.deepEqual(successor.specSources.map(row=>row.file),['entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets']);
+ assert.deepEqual(successor.sharedRenderers.map(row=>row.component),['ReaderRecoveryAction','ReaderRecoveryNotice']);
+ assert.deepEqual(successor.newProducers.map(row=>row.component),['ReaderPageState'],'only one approved new content-state producer');
+ const effective=structuredClone(contract);
+ for(const update of successor.producerConsumerUpdates){
+  const producer=effective.producers.find(row=>row.component===update.component);assert.ok(producer);
+  assert.deepEqual(producer.consumers,update.previousConsumers,'message predecessor producer/consumer/spec edges changed');
+  producer.consumers=update.consumers;
+ }
+ const renderer=file=>successor.sharedRenderers.find(row=>row.file===file);
+ for(const producer of effective.producers){
+  for(const spec of producer.specSources??[]){const current=successor.specSources.find(row=>row.file===spec.file);if(current)spec.shape=current.shape;}
+  for(const delegate of producer.delegates??[]){const current=renderer(delegate.file);if(current)delegate.shape=current.shape;}
+ }
+ for(const slot of effective.retainedConsumerSlots??[])for(const child of slot.components){const current=renderer(child.file);if(current)child.shape=current.shape;}
+ effective.producers.push(...successor.newProducers);
+ assert.deepEqual(successor.budgetUpdates,[
+  {file:'entry/src/main/ets/features/common/ReaderRecoveryNotice.ets',kind:'backgroundColor',previous:0,current:1},
+  {file:'entry/src/main/ets/features/settings/SettingsPage.ets',kind:'showAlertDialog',previous:1,current:2},
+ ],'only the approved notice background and cache native confirmation have finite count successions');
+ return{contract:effective,owners:successor.newSharedOwners,completion:successor.completion,budgetUpdates:successor.budgetUpdates};
+}
 function edge(element,row){
  const source='const props = '+(element.args[0]??'{}')+';',parsePath=virtualFilePath('SharedConsumer.ts');
  return cachedArtifact('edge',source,row.file,[parsePath,ts.ScriptTarget.Latest,ts.ScriptKind.TS,element.method,element.kind,element.line],()=>{
@@ -142,6 +251,14 @@ function legacyBudgetOriginFacts(baseline,contract,readSource){
  return{historicalBudgetRows:historical.length,transferredBudgetRows:migrated.size};
 }
 export function verifyArchitectureRegistration(inventory,baseline,contract,root,readSource=file=>readFileSync(path.join(root,file),'utf8')){
+ const messages=messageArchitectureSuccession(contract,readSource);
+ const bookshelf=bookshelfActionArchitectureSuccession(messages.contract,readSource);contract=bookshelf.contract;
+ const settingsNative=inventory.rows.find(row=>row.file==='features/settings/SettingsPage.ets')?.overlays
+  .filter(row=>row.kind==='showAlertDialog').map(({kind,method,args})=>({kind,method,args}));
+ assert.deepEqual(settingsNative,[
+  {kind:'showAlertDialog',method:'features/settings/SettingsPage.ets#SettingsPage#requestClearTextCache',args:['native']},
+  {kind:'showAlertDialog',method:'features/settings/SettingsPage.ets#SettingsPage#requestRestoreDefaults',args:['native']},
+ ],'approved cache confirmation preserves exactly two owned native confirmation entries');
  // One verification inspects the same current Index through both layout
  // witnesses and the native/font audit. Share only that call's parsed AST;
  // every later negative control starts a new map and really parses its bytes.
@@ -175,7 +292,7 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
  assert.ok(producerFiles.has(menuOrigin.row.file),'existing action-menu renderer must have a finite producer contract');
  legacyOwners.unshift(menuOrigin.row);
  assert.equal(createHash('sha256').update(JSON.stringify(legacyOwners)).digest('hex'),contract.legacySharedOwnersSha256,'shared owner must be an exact legacy owner or a finite producer contract');
- const registry=[...baseline.rows,...(baseline.sharedOwners??[]),...(baseline.uiPolicies??[])];
+ const registry=[...baseline.rows,...(baseline.sharedOwners??[]),...messages.owners,...(baseline.uiPolicies??[])];
  assert.equal(new Set(registry.map(r=>r.file)).size,registry.length,'one bounded policy per file');
  for(const row of registry)assert.ok(!row.file.includes('*')&&row.file.startsWith('entry/src/main/ets/'),'no wildcard/source-external exemption');
  const registered=new Set(registry.map(r=>relative(r.file)));
@@ -200,7 +317,9 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
  const shared=validateSharedSourceSwitchTypographySuccessor(JSON.parse(readSource(sharedSourceSwitchTypographySuccessorPath)),readSource);
  const sourceFrame=validateSourceSwitchFrameSuccessor(JSON.parse(readSource(sourceSwitchFrameSuccessorPath)),readSource);
  const sourceActors=shared.files.map((entry,index)=>({entry:index===0?sourceFrame.files[0]:entry,origin:novel.files[index],successorPath:index===0?sourceSwitchFrameSuccessorPath:sharedSourceSwitchTypographySuccessorPath}));
- sourceActors.push({entry:novel.completion,origin:novel.completion,successorPath:novelSourceSwitchSuccessorPath});
+ const completion={...novel.completion,shape:messages.completion.shape,backgrounds:messages.completion.backgrounds};
+ assert.equal(messages.completion.file,novel.completion.path,'only the existing C01 completion actor has a message-color successor');
+ sourceActors.push({entry:completion,origin:novel.completion,successorPath:novelSourceSwitchSuccessorPath});
  for(const {entry,origin,successorPath} of sourceActors){
   const policy=baseline.uiPolicies.find(row=>row.file===entry.path);assert.ok(policy,'actual selected novel source UI policy');
   assert.equal(policy.visualSuccessorContract,successorPath,'selected shared source policy binds exact witness');
@@ -214,7 +333,7 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
   const backgrounds=sharedProducerShape(readSource(entry.path),entry.path).styles.filter(style=>style.property==='backgroundColor');
   assert.deepEqual(backgrounds,entry.backgrounds,'exact selected novel source background carriers changed: '+entry.path);
   assert.equal(entry.architectureCounts.backgroundColor,backgrounds.length,'selected novel source count is fully witnessed');
-  if(entry===novel.completion){
+  if(entry===completion){
    assert.equal(policy.visualSuccessorActor,'completion','completion policy cannot claim a historical actor');
    assert.deepEqual(policy.counts,{fontSize:0,backgroundColor:1},'completion cannot raise the historical reading-page budget');
    assert.deepEqual(sharedProducerShape(readSource(entry.path),entry.path),entry.shape,'exact completion view class/props/native styles changed');
@@ -248,7 +367,7 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
     assert.equal(baseline.sharedOwners.some(r=>r.file===producer.file), false, 'finite control keeps one policy; no duplicate shared exemption');
   }else{
     assert.equal(producer.registrationKind??'shared-owner','shared-owner','unknown producer registration mode');
-    const registration=baseline.sharedOwners.find(r=>r.file===producer.file);assert.equal(registration?.contractId,producer.id,'shared owner must bind exact approved contract');
+    const registration=[...baseline.sharedOwners,...messages.owners].find(r=>r.file===producer.file);assert.equal(registration?.contractId,producer.id,'shared owner must bind exact approved contract');
     if(producer.architectureCounts)assert.deepEqual(registration.counts,producer.architectureCounts,'finite shared producer keeps its exact architecture counts');
   }
   assert.ok(producer.specPolicy&&producer.removalProofs.length&&producer.sdkProofs.length,'spec→delete→SDK chain required');
@@ -260,7 +379,14 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
   const edges=producerConsumerEdges(inventory,producer.component);assert.ok(edges.length>0,'shared producer must be consumed');
   assert.deepEqual(edges.map(({keys,...e})=>e),producer.consumers.map(({keys,...e})=>e),'actual producer/consumer/spec edges changed: '+producer.id);
   for(const e of edges)for(const key of e.keys)assert.ok(publicFields.has(key),'illegal shared input '+producer.id+':'+key);
-  for(const row of inventory.rows)for(const e of row.elements.filter(e=>e.kind===producer.component))assert.equal(e.modifiers.some(m=>(['ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup','ReaderPageScaffold','ReaderFixedHeaderHost','ReaderStandardPage','ReaderActionSheetContent','ReaderActionMenuSurface'].includes(producer.component)?callerPhysical:appearance).has(m.property)),false,'caller privately overrides shared appearance '+row.file+':'+e.line);
+  if(producer.component==='ReaderPageState'){
+    const bindings=[];
+    for(const row of inventory.rows){const calls=row.elements.filter(e=>e.kind===producer.component),inputs=retainedSharedConsumerInputs(inventory,producer.component,'entry/src/main/ets/'+row.file);
+      for(const[index,e]of calls.entries())bindings.push({file:row.file,method:e.method,input:inputs[index].input,modifiers:e.modifiers});}
+    assert.deepEqual(bindings,producer.consumerBindings,'actual page-state input/callback/placement bindings changed');
+  }else{
+    for(const row of inventory.rows)for(const e of row.elements.filter(e=>e.kind===producer.component))assert.equal(e.modifiers.some(m=>(['ReaderCard','ReaderToggle','ReaderSegmentedControl','ReaderIconButton','ReaderMangaDownloadPopup','ReaderPageScaffold','ReaderFixedHeaderHost','ReaderStandardPage','ReaderActionSheetContent','ReaderActionMenuSurface'].includes(producer.component)?callerPhysical:appearance).has(m.property)),false,'caller privately overrides shared appearance '+row.file+':'+e.line);
+  }
   // A finite domain wrapper must also prove its actual child delegation;
   // registering five incoming callers alone cannot prove shared rendering.
   for(const delegate of producer.delegates??[]){
@@ -299,5 +425,5 @@ export function verifyArchitectureRegistration(inventory,baseline,contract,root,
     for(const element of row.elements.filter(e=>e.kind===child.component))assert.equal(element.modifiers.some(m=>appearance.has(m.property)),false,'recovery caller cannot override common appearance');
   }
  }
- return{...origins,budgetRows:baseline.rows.length,sharedOwners:baseline.sharedOwners.length,outsideBudgetPolicies:baseline.uiPolicies.length,uiFiles:inventory.rows.filter(r=>r.elements.length).length,producers:contract.producers.length};
+ return{...origins,budgetRows:baseline.rows.length,sharedOwners:baseline.sharedOwners.length,outsideBudgetPolicies:baseline.uiPolicies.length,uiFiles:inventory.rows.filter(r=>r.elements.length).length,producers:contract.producers.length,messageBudgetUpdates:[...messages.budgetUpdates,...bookshelf.budgetUpdates]};
 }

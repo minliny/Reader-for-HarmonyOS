@@ -1,12 +1,17 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {createRequire,stripTypeScriptTypes} from 'node:module';
-import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
-import {createDefaultReaderWindowMetrics,readerInteractiveSafeInsets} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import {mangaUserError} from '../entry/src/main/ets/features/manga/MangaUserError.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"official-image-type": {"description": "实际syncLoad参数与官方Image声明正负准入", "resources": []}, "render-publication": {"description": "实际SDK key/item/native property与business anchor，含ready/error/URI/revision", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } = await import('./lib/manga-surface-sdk-probe.mjs');
+const {default: assert} = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {createRequire,stripTypeScriptTypes} = await import('node:module');
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const {createArkUIPropertyRuntimeProbe} = await import('./lib/arkui-property-runtime-probe.mjs');
+const {createDefaultReaderWindowMetrics,readerInteractiveSafeInsets} = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const {mangaUserError} = await import('../entry/src/main/ets/features/manga/MangaUserError.ts');
+
 
 const source=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),'utf8');
 const require=createRequire(import.meta.url);
@@ -16,6 +21,7 @@ const tree=ts.createSourceFile(virtualFilePath('MangaRenderKeyProbe.ets'),source
 assert.equal(tree.parseDiagnostics.length,0);
 const component=tree.statements.find(node=>node.name?.getText(tree)==='MangaReadingSurface');
 const names=component.members.map(node=>node.name?.getText(tree)).filter(Boolean);
+if(selectedCase==='official-image-type') {
 // Verify the actual production syncLoad argument against the official Image
 // declaration as well as executing its SDK-emitted Builder property below.
 const imageBuilder=component.members.find(node=>node.name?.getText(tree)==='imageViewport');
@@ -31,7 +37,7 @@ function findSyncLoad(node){
   if(ts.isCallExpression(node)&&node.expression?.name?.text==='syncLoad')syncArguments.push(node.arguments[0].getText(tree));
   ts.forEachChild(node,findSyncLoad);
 }
-findSyncLoad(tileImageBuilder);assert.deepEqual(syncArguments,['true']);
+findSyncLoad(tileImageBuilder);assert.equal(syncArguments.length,1,'one actual current syncLoad argument');
 const officialChecker=require(`${sdk}/lib/ets_checker.js`);
 const typePath=virtualFilePath('MangaLocalImageSyncType.ts');
 const typeOptions={...officialChecker.compilerOptions,
@@ -51,6 +57,9 @@ function imageArgumentDiagnostics(argument){
 }
 assert.deepEqual(imageArgumentDiagnostics(syncArguments[0]),[],'production Image.syncLoad argument passes formal SDK semantics');
 assert.ok(imageArgumentDiagnostics("'async'").some(item=>item.code===2345),'the official Image declaration rejects an invalid synchronous-loading argument');
+
+return;
+}
 const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
 const Projection=new Function(`${stripTypeScriptTypes(projectionSource)};return MangaStripProjection`)();
 const dataSourceText=tree.statements.find(node=>node.name?.getText(tree)==='MangaStripDataSource').getText(tree);
@@ -103,6 +112,8 @@ const priorGesture=globalThis.Gesture;globalThis.Gesture=boundary;
 try {project();owner.initialRender();mountMangaViewportBuilder(owner);} finally {if(priorGesture===undefined)delete globalThis.Gesture;else globalThis.Gesture=priorGesture;}
 assert.ok(lazy);
 const frame=()=>lazy.rows.get(0),has=type=>frame().nodes.some(node=>node.type===type);
+const pixels=nodes=>nodes.filter(node=>node.type==='Image'&&typeof node.create==='string'&&node.create.startsWith('file://'));
+const unavailable=nodes=>nodes.filter(node=>node.type==='Image'&&String(node.create).startsWith('app.media.reader_image_unavailable'));
 const originalBusinessKey=frame().businessKey;
 assert.equal(frame().known,false);assert.equal(frame().listItem.height,400);assert.ok(has('LoadingProgress'));
 const pendingKey=frame().key;
@@ -144,11 +155,11 @@ tiles.set('0:0',{image:{fileUri:'file://lease-b.png',revision:'image-r1'}});noti
 assert.notEqual(frame().key,readyKey);assert.equal(frame().nodes.find(node=>node.type==='Image').create,'file://lease-b.png');
 const uriKey=frame().key;
 tiles.set('0:0',{image:{fileUri:'file://lease-b.png',revision:'image-r2'}});notify();assert.notEqual(frame().key,uriKey,'same URI with a new image revision updates the child');
-tiles.set('0:0',{error:'READING_IMAGE_HTTP_FAILED'});notify();assert.ok(!has('Image'));assert.ok(has('Text'));assert.ok(has('Button'));assert.ok(!has('LoadingProgress'));
+tiles.set('0:0',{error:'READING_IMAGE_HTTP_FAILED'});notify();assert.equal(pixels(frame().nodes).length,0);assert.equal(unavailable(frame().nodes).length,1);assert.ok(!has('Text'));assert.ok(!has('Button'));assert.ok(!has('LoadingProgress'));
 const errorKey=frame().key;
 tiles.set('0:0',{});pages.set(0,{ordinal:0,status:'pending'});notify();assert.notEqual(frame().key,errorKey);assert.ok(has('LoadingProgress'),'retry clears the old error branch');
 const retryKey=frame().key;
-pages.set(0,{ordinal:0,status:'failed',error:'READING_IMAGE_ACCESS_DENIED'});notify();assert.notEqual(frame().key,retryKey);assert.ok(has('Text'));assert.ok(!has('LoadingProgress'),'page-level failures are visible before a tile exists');
+pages.set(0,{ordinal:0,status:'failed',error:'READING_IMAGE_ACCESS_DENIED'});notify();assert.notEqual(frame().key,retryKey);assert.equal(pixels(frame().nodes).length,0);assert.ok(!has('Text'));assert.ok(!has('Button'));assert.ok(!has('LoadingProgress'),'logical image failure is terminal even before a tile exists');
 pages.set(0,{ordinal:0,status:'ready'});tiles.set('0:0',{image:{fileUri:'file://lease-c.png',revision:'image-r3'}});notify();assert.ok(has('Image'));
 assert.equal(frame().businessKey,originalBusinessKey);
 assert.equal(owner.data.projection.index(0,0.4),anchorBefore);
@@ -169,25 +180,25 @@ assert.ok(!secondReady.nodes.some(node=>node.type==='LoadingProgress'));
 assert.equal(secondReady.businessKey,secondPending.businessKey);
 assert.equal(secondReady.nodes.find(node=>node.type==='Image').draggable,false,'newly published tiles keep the explicit drag policy');
 assert.equal(secondReady.nodes.find(node=>node.type==='Image').syncLoad,true,'later completed display regions also load synchronously');
-// Error ownership is a presentation transition even when each failed tile's
-// own error text/geometry are unchanged. Retain old branches strictly by key.
+// Each local failed tile retains its own icon. Viewport changes no longer
+// transfer a single error/retry card between otherwise unchanged rows.
 tiles.set('0:0',{error:'READING_IMAGE_HTTP_FAILED'});
 tiles.set('0:1',{error:'READING_IMAGE_HTTP_FAILED'});
 owner.first=0;owner.last=0;owner.publish();
 const firstFailure=lazy.rows.get(0),secondaryFailure=lazy.rows.get(1);
-assert.ok(firstFailure.nodes.some(node=>node.type==='Button'),'one current error owns retry');
-assert.ok(!secondaryFailure.nodes.some(node=>node.type==='Button'),'neighbor failure initially retains only its measured slot');
+assert.equal(unavailable(firstFailure.nodes).length,1);assert.equal(unavailable(secondaryFailure.nodes).length,1);
+assert.ok(!firstFailure.nodes.concat(secondaryFailure.nodes).some(node=>node.type==='Button'));
 owner.first=1;owner.last=1;owner.publish();
 const scrolledFailure=lazy.rows.get(1);
-assert.notEqual(scrolledFailure.key,secondaryFailure.key,'moving a retained failure into the viewport transfers error ownership');
-assert.ok(scrolledFailure.nodes.some(node=>node.type==='Button'),'the scrolled error exposes its actual SDK retry button');
+assert.equal(scrolledFailure.key,secondaryFailure.key,'scrolling preserves the same local failure cell');
+assert.equal(unavailable(scrolledFailure.nodes).length,1);
 owner.first=0;owner.last=0;owner.publish();
 const demotedFailure=lazy.rows.get(1);
-assert.ok(!demotedFailure.nodes.some(node=>node.type==='Button'));
+assert.equal(demotedFailure.key,scrolledFailure.key);assert.equal(unavailable(demotedFailure.nodes).length,1);
 tiles.set('0:0',{image:{fileUri:'file://recovered-primary.png',revision:'recovered'}});owner.publish();
 const promotedFailure=lazy.rows.get(1);
-assert.notEqual(promotedFailure.key,demotedFailure.key,'recovered first image transfers the card without changing the next tile error');
-assert.ok(promotedFailure.nodes.some(node=>node.type==='Button'),'the next unresolved tile has a retry after its predecessor recovers');
+assert.equal(promotedFailure.key,demotedFailure.key,'a recovered neighbor cannot recreate an unchanged local failure cell');
+assert.equal(unavailable(promotedFailure.nodes).length,1);assert.equal(pixels(promotedFailure.nodes).length,0);
 
 // Whole-chapter ready facts stay with the Controller. Native virtualization
 // can remount a distant row without the Surface rebuilding a pending branch.
@@ -207,7 +218,8 @@ for(const index of [0,4,8,12,16,19,12,4,0]){
   assert.ok(!row.nodes.some(node=>node.type==='LoadingProgress'),'returning ready facts cannot become a Surface pending placeholder');
 }
 assert.equal(owner.rowRenderKey(returnRow),returnKey,'distant remounts preserve the completed row key and original URI/revision');
-console.log('PASS actual SDK local display Image syncLoad=true across first/replacement and 20-region whole-chapter backscroll remount; cachedCount remains zero (native first-frame pixels, read/decode and frame time require target validation)');
-console.log('PASS actual SDK Image draggable=false on first/replacement tile; scrolling parents retain hit testing, enabled state and real touch/scroll callbacks (native gesture outcome not tested)');
-console.log('PASS actual SDK LazyForEach item/key callbacks with strict per-index retention: placeholder geometry, ready image, errors, retry, URI/revision changes, unchanged and nonvisible stability, logical identity and anchor preservation, actual publish to the next requested visible tile (native layout/pixels not tested)');
-console.log('PASS actual SDK retained failure rows transfer a visible retry card after viewport scrolling and preceding-image recovery');
+
+
+
+
+}

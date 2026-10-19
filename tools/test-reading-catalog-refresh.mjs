@@ -1,8 +1,11 @@
-import { ProductionHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
-import { readingPrefetchOwnerProbe } from './lib/reading-prefetch-owner-probe.mjs';
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { ProductionHost, setRuntime }=await import('./lib/reading-entry-owner-probe.mjs');
+const { readingPrefetchOwnerProbe }=await import('./lib/reading-prefetch-owner-probe.mjs');
+
+const { registerHooks }=await import('node:module');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
 const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
@@ -13,8 +16,8 @@ const { readingSessionDocuments } = await import('../entry/src/main/ets/features
 const { readReadingCatalog } = await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
 const file = name => new URL(`../entry/src/main/ets/${name}`,import.meta.url);
 const deferred=()=>{let resolve,reject;const promise=new Promise((r,j)=>{resolve=r;reject=j;});return{promise,resolve,reject};};
-const pause=()=>new Promise(r=>setTimeout(r,1));
-async function until(predicate){const end=performance.now()+10000;while(!predicate()&&performance.now()<end)await pause();assert.ok(predicate(),'operation settled');}
+const pause=()=>new Promise(setImmediate);
+async function until(predicate){for(let turn=0;turn<1000;turn++){if(predicate())return;await pause();}assert.fail('controlled operation boundary not reached');}
 const sourceId='source',bookId='book',sourceVersion='rule-v8';
 const seed={sourceId,bookId,sourceVersion,detailUrl:'https://source.invalid/book',title:'终宋',author:'作者'};
 // Synthetic data with the real incident's indices: seven preceding non-body
@@ -70,6 +73,9 @@ function reader(gateway,entries=allEntries.slice(0,956),index=955){
 }
 const checks=[];
 async function check(name,run){await run();checks.push(name);console.log(`PASS ${name}`);}
+
+try{
+if(id==='near-end'){
 await check('near-end force refresh bypasses prepared/durable catalogs, singleflights and appends chapter 950 in same mounted reader',async()=>{
  const f=fixture();try{
   const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;
@@ -85,6 +91,8 @@ await check('near-end force refresh bypasses prepared/durable catalogs, singlefl
   assert.equal(f.page.remoteCatalogRefreshAt.size,1);
  }finally{f.runtime.close();}
 });
+}
+if(id==='old-rule-catalog'){
 await check('actual coordinator re-admits v6 durable catalog under current v8 before safe refresh',async()=>{
  const f=fixture('rule-v6');try{
   const old=await f.runtime.acquireBook({...seed,sourceVersion:'rule-v6'});
@@ -94,6 +102,8 @@ await check('actual coordinator re-admits v6 durable catalog under current v8 be
   assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);
  }finally{f.runtime.close();}
 });
+}
+if(id==='refresh-backoff'){
 await check('failed refresh preserves old catalog/page, uses short retry backoff and never marks freshness',async()=>{
  const f=fixture(),realNow=Date.now;let now=1000000;Date.now=()=>now;
  try{const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;f.fail(true);f.calls.length=0;
@@ -104,6 +114,8 @@ await check('failed refresh preserves old catalog/page, uses short retry backoff
   assert.equal(f.page.remoteReadingSession.entries.length,1370);assert.equal(f.calls.filter(c=>c.method==='book.toc').length,2);
  }finally{Date.now=realNow;f.runtime.close();}
 });
+}
+if(id==='late-refresh'){
 await check('late refresh cannot overwrite a same-book reentry or newer catalog evidence',async()=>{
  for(const mutate of ['reentry','catalog']){const f=fixture();try{
   const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;const gate=deferred();f.gate(gate);
@@ -113,6 +125,8 @@ await check('late refresh cannot overwrite a same-book reentry or newer catalog 
   assert.equal(f.page.remoteReadingSession,kept);assert.equal(f.page.remoteCatalogRefreshAt.size,0);
  }finally{f.runtime.close();}}
 });
+}
+if(id==='cold-near-end'){
 await check('cold cached entry acquires only after full catalog near end, and later cached pages trigger the same path',async()=>{
  for(const index of [955,946]){const f=fixture();try{
   const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',seed,onSessionReady:s=>f.page.onRemoteSessionReady(s)},f.owner);
@@ -129,6 +143,8 @@ await check('cold cached entry acquires only after full catalog near end, and la
   assert.equal(r.v.adjacentChapterIndex(955,1),956);assert.equal(r.v.lastCommittedProgress,r.progress);
  }finally{f.runtime.close();}}
 });
+}
+if(id==='coordinator-join'){
 await check('cold first acquisition joins real coordinator refresh1370; same gateway evidence still extends old mounted navigation',async()=>{
  const f=fixture();try{
   const gate=deferred();f.gate(gate);
@@ -148,6 +164,8 @@ await check('cold first acquisition joins real coordinator refresh1370; same gat
   assert.equal(r.v.turnNextPage().kind,'started');assert.equal(r.opened.at(-1)[0],956);
  }finally{f.runtime.close();}
 });
+}
+if(id==='dragging-body-retention'){
 await check('first-session navigation only evicts its own process bodies and preserves an admitted dragging page',async()=>{
  const fresh=session(allEntries,'new'),runtime={request:async()=>{},captureReadingContentValidity:()=>()=>true};
  const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',session:fresh},runtime),r=reader(gateway);
@@ -162,6 +180,8 @@ await check('first-session navigation only evicts its own process bodies and pre
  assert.equal(r.v.preparedPageTurn('previous'),prepared);assert.equal(r.v.pageTurnGeneration,7);assert.equal(r.v.visiblePage,r.page);
  assert.equal(r.v.tocEntries.length,1370);assert.equal(docs.read(sourceId,other.bookId,955)?.contentVersion,other.contentVersion,'another book window is not cleared/reconfigured');
 });
+}
+if(id==='cold-failure'){
 await check('cold near-end acquisition failures retain the visible page, singleflight and retry only after backoff',async()=>{
  const gate=deferred();let calls=0,fail=true;const realNow=Date.now;let now=1000000;Date.now=()=>now;
  const runtime={request:async()=>{},bookAcquisitions:()=>({acquireBookWithBackgroundRefresh:async()=>{calls++;if(calls===1)await gate.promise;if(fail)throw Error('unavailable');return{session:session(allEntries.slice(0,956))};}})};
@@ -171,6 +191,8 @@ await check('cold near-end acquisition failures retain the visible page, singlef
   r.v.prepareRemoteCatalogNearEnd();assert.equal(calls,1);now+=30001;fail=false;r.v.prepareRemoteCatalogNearEnd();await until(()=>gateway.remoteSession()!==undefined);assert.equal(calls,2);
  }finally{Date.now=realNow;}
 });
+}
+if(id==='accepted-retirement'){
 await check('retired presentation cannot replace unsettled native refresh; a later explicit retry uses the current lease',async()=>{
  const f=fixture(),realNow=Date.now;let now=1000000;Date.now=()=>now;
  try{const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;const jobs=[];
@@ -183,6 +205,8 @@ await check('retired presentation cannot replace unsettled native refresh; a lat
   jobs[1].resolve(session(allEntries,'new'));await until(()=>f.page.remoteCatalogRefreshInFlight.size===0);assert.equal(f.page.remoteReadingSession.catalogVersion,'new');
  }finally{Date.now=realNow;f.runtime.close();}
 });
+}
+if(id==='identity-rejection'){
 await check('parent and mounted gateway both reject incompatible refreshed catalog identities',async()=>{
  for(const mutate of [s=>s.sourceVersion='edited',s=>s.continuationVariables=[{name:'volume',value:'changed'}],s=>s.entries[955]={...s.entries[955],title:'other body'}]){
   const f=fixture();try{const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;const next=session(allEntries.slice(),'new');mutate(next);
@@ -191,6 +215,8 @@ await check('parent and mounted gateway both reject incompatible refreshed catal
   }finally{f.runtime.close();}
  }
 });
+}
+if(id==='old-hydration'){
 await check('old catalog hydration cannot shrink a just-admitted append',async()=>{
  const old=session(allEntries.slice(0,956)),runtime={request:async()=>{throw Error('unexpected');},captureReadingContentValidity:()=>()=>true};
  const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',session:old},runtime),r=reader(gateway),gate=deferred();
@@ -198,6 +224,8 @@ await check('old catalog hydration cannot shrink a just-admitted append',async()
  r.v.remoteSession=session(allEntries,'new');r.v.onRemoteCatalogChanged();gate.resolve({bookId,entries:projection(old.entries)});await work;
  assert.equal(r.v.tocEntries.length,1370);assert.equal(r.v.entryCatalogPending,false);assert.equal(r.v.adjacentChapterIndex(955,1),956);
 });
+}
+if(id==='measurement-generation'){
 await check('append and full hydration preserve in-flight page measurement generation; production completion still releases its lane',async()=>{
  for(const mode of ['append','hydrate']){
  const old=session(allEntries.slice(0,956)),runtime={request:async()=>{throw Error('unexpected');}};
@@ -212,12 +240,31 @@ await check('append and full hydration preserve in-flight page measurement gener
  assert.equal(r.v.pageTurnPreparation,undefined);assert.equal(r.v.measurementCompleting,false);assert.equal(r.v.adjacentMeasurementContext,undefined);assert.ok(r.v.preparedPreviousPage);
  }
 });
+}
+if(id==='mounted-compatibility'){
 await check('source/book/rule/reordered/retargeted or variable-mutated catalogs cannot reuse the mounted bodies',async()=>{
  for(const mutate of [s=>s.identity={...identity,bookId:'other'},s=>s.sourceVersion='edited',s=>s.entries=s.entries.slice(0,950),s=>s.entries[0]={...s.entries[0],index:1},s=>s.entries[955]={...s.entries[955],url:'/other'},s=>s.entries[954]={...s.entries[954],variables:[{name:'token',value:'new'}]}]){
   const old=session(allEntries.slice(0,956)),gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',session:old},{request:async()=>{}}),r=reader(gateway),next=session(allEntries.slice(),'new');mutate(next);
   r.v.remoteSession=next;r.v.onRemoteCatalogChanged();assert.equal(gateway.remoteSession(),old);assert.equal(r.v.tocEntries.length,956);assert.equal(r.v.chapter,r.body);
  }
 });
+}
+}finally{}
+}
+async function runPure(id){
+const {registerHooks}=await import('node:module');registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(s+'.ts',c);throw e;}}});const {canAppendRemoteReadingCatalog}=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');const {readReadingCatalog}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
+const sourceId='source',bookId='book',sourceVersion='rule-v8';
+const seed={sourceId,bookId,sourceVersion,detailUrl:'https://source.invalid/book',title:'终宋',author:'作者'};
+// Synthetic data with the real incident's indices: seven preceding non-body
+// rows place chapter 949 at index 955, chapter 950 at 956; total catalog 1370.
+const allEntries=Array.from({length:1370},(_,index)=>({index,title:index<7?`卷 ${index}`:`第${index-6}章`,url:index<7?'':`https://source.invalid/${index}`,variables:[]}));
+const projection=entries=>entries.map((e,position)=>({index:e.index,position,readablePosition:e.url?position-7:undefined,title:e.title,navigable:!!e.url,downloadState:'unknown'}));
+const identity={sourceId,bookId};
+function session(entries,catalogVersion='old'){return{identity,book:{title:seed.title,author:seed.author},sourceVersion,catalogVersion,contextVersion:'context',acquisitionMode:'online',detailUrl:seed.detailUrl,tocUrl:'https://source.invalid/toc',entries,continuationVariables:[],hostRequirements:['httpExecute']};}
+function chapter(index=955){return{sourceId,bookId,chapterIndex:index,chapterTitle:allEntries[index].title,chapterUrl:allEntries[index].url,content:'body',images:[],contentVersion:`body-${index}`,bodyVersion:'body',processingVersion:'process',extractionVia:'rule'};}
+
+const checks=[];const check=async(_name,run)=>run();
+if(id==='merged-variables'){
 await check('catalog compatibility uses effective merged variables, protects shared context/title and accepts shadowed/reordered variables',async()=>{
  const old=session(allEntries.slice(0,956));old.continuationVariables=[{name:'token',value:'a'}];
  const next=session(allEntries.slice(),'new');next.continuationVariables=[{name:'token',value:'b'}];
@@ -227,6 +274,8 @@ await check('catalog compatibility uses effective merged variables, protects sha
  assert.equal(canAppendRemoteReadingCatalog(old,next),true,'entry variables override shared context and ordering is immaterial');
  next.entries[955]={...next.entries[955],title:'another chapter'};assert.equal(canAppendRemoteReadingCatalog(old,next),false);
 });
+}
+if(id==='newer-acquisition'){
 await check('an older concurrent acquisition cannot downgrade an adopted session',async()=>{
  const a=deferred(),b=deferred();let calls=0;
  const runtime={request:async()=>{},bookAcquisitions:()=>({acquireBookWithBackgroundRefresh:()=>++calls===1?a.promise:b.promise})};
@@ -234,9 +283,14 @@ await check('an older concurrent acquisition cannot downgrade an adopted session
  const first=gateway.ensureRemoteSession(),second=gateway.ensureRemoteSession();const newer=session(allEntries,'new');
  b.resolve({session:newer});assert.equal(await second,newer);a.resolve({session:session(allEntries.slice(0,956))});assert.equal(await first,newer);assert.equal(gateway.remoteSession(),newer);
 });
+}
+if(id==='catalog-pagination'){
 await check('full catalog pagination crosses 949/950/1000 to 1370 and respects revision changes',async()=>{
  for(const count of [950,1000,1370]){const offsets=[];const runtime={supportsCoreCapability:()=>true,request:async(_m,p)=>{offsets.push(p.offset);return{data:{kind:'ready',sourceId,bookId,revision:'same',chapterCount:count,readableChapterCount:count-7,offset:p.offset,entries:projection(allEntries.slice(0,count)).slice(p.offset,p.offset+p.limit)}};}};
   const result=await readReadingCatalog(runtime,sourceId,bookId,()=>true);assert.equal(result.entries.length,count);assert.equal(offsets.length,Math.ceil(count/256));
  }
 });
-console.log(JSON.stringify({checks:checks.length,status:'PASS'}));
+}
+}
+const definitions={"near-end": "near-end actual scoped catalog/prefetch ownership; controlled Core/manifest port", "old-rule-catalog": "old-rule-catalog actual scoped catalog/prefetch ownership; controlled Core/manifest port", "refresh-backoff": "refresh-backoff actual scoped catalog/prefetch ownership; controlled Core/manifest port", "late-refresh": "late-refresh actual scoped catalog/prefetch ownership; controlled Core/manifest port", "cold-near-end": "cold-near-end actual scoped catalog/prefetch ownership; controlled Core/manifest port", "coordinator-join": "coordinator-join actual scoped catalog/prefetch ownership; controlled Core/manifest port", "dragging-body-retention": "dragging-body-retention actual scoped catalog/prefetch ownership; controlled Core/manifest port", "cold-failure": "cold-failure actual scoped catalog/prefetch ownership; controlled Core/manifest port", "accepted-retirement": "accepted-retirement actual scoped catalog/prefetch ownership; controlled Core/manifest port", "identity-rejection": "identity-rejection actual scoped catalog/prefetch ownership; controlled Core/manifest port", "old-hydration": "old-hydration actual scoped catalog/prefetch ownership; controlled Core/manifest port", "measurement-generation": "measurement-generation actual scoped catalog/prefetch ownership; controlled Core/manifest port", "mounted-compatibility": "mounted-compatibility actual scoped catalog/prefetch ownership; controlled Core/manifest port", "merged-variables": "merged-variables actual scoped catalog/prefetch ownership; controlled Core/manifest port", "newer-acquisition": "newer-acquisition actual scoped catalog/prefetch ownership; controlled Core/manifest port", "catalog-pagination": "catalog-pagination actual scoped catalog/prefetch ownership; controlled Core/manifest port"};
+for(const id of selectContractCases(definitions)){if(['merged-variables','newer-acquisition','catalog-pagination'].includes(id))await runPure(id);else await run(id);recordContractCasePass(id);}

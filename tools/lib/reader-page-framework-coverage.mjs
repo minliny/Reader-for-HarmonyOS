@@ -261,7 +261,7 @@ export function verifyReaderPageFrameworkCoverage(root, contract,
     assert.equal(body.statements.length, 1, 'quiet feedback has no unclassified sibling');
     const condition = body.statements[0];
     assert.ok(ts.isIfStatement(condition), 'quiet feedback is conditional, never a new permanent page');
-    assert.equal(normalized(condition.expression.getText(index)), normalized('this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true'),
+    assert.equal(normalized(condition.expression.getText(index)), normalized('(this.indexRecoveryNotice.visible && this.indexRecoveryCurrent?.() === true) || this.detailPendingNoticeVisible()'),
       'quiet feedback keeps the actual visibility and route/runtime admission');
     const actors = [], modifierCalls = new Map();
     walk(condition.thenStatement, node => {

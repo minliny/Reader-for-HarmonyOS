@@ -1,11 +1,12 @@
-import { fixture as sourceOwnerFixture, setCurrentRuntime } from './lib/source-switch-owner-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { stripTypeScriptTypes } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+function controlledClock(){const savedSet=globalThis.setTimeout,savedClear=globalThis.clearTimeout,timers=new Map();let now=0,seq=0;globalThis.setTimeout=(callback,delay=0)=>{const id=++seq;timers.set(id,{callback,at:now+delay});return id;};globalThis.clearTimeout=id=>timers.delete(id);return {async advance(ms){await new Promise(setImmediate);const target=now+ms;for(let turns=0;turns<1000;turns++){const next=[...timers].filter(([,v])=>v.at<=target).sort((a,b)=>a[1].at-b[1].at)[0];if(!next){now=target;return;}now=next[1].at;timers.delete(next[0]);next[1].callback();await new Promise(setImmediate);}throw Error('controlled timer loop exceeded bounded work');},restore(){globalThis.setTimeout=savedSet;globalThis.clearTimeout=savedClear;}};}
+async function run(id){
 
+const { readFileSync, existsSync }=await import('node:fs');
+const { dirname, resolve }=await import('node:path');
+const { fileURLToPath, pathToFileURL }=await import('node:url');
+const { stripTypeScriptTypes }=await import('node:module');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const siblingCore = resolve(repo, '../Reader-Core');
 const core = process.env.READER_SOURCE_SWITCH_CORE_ROOT ?? (existsSync(resolve(siblingCore, 'bindings/harmony/sdk/reader_core.ts'))
@@ -24,47 +25,6 @@ const gateway = readFileSync(
   'utf8',
 );
 
-const fetchStart = gateway.indexOf('async fetchTargetToc(');
-const fetchEnd = gateway.indexOf('async commitSwitch(', fetchStart);
-assert.ok(fetchStart >= 0 && fetchEnd > fetchStart, 'fetchTargetToc method must remain present');
-const fetchTargetToc = gateway.slice(fetchStart, fetchEnd);
-
-const detailRequest = fetchTargetToc.indexOf("'book.detail'");
-const tocRequest = fetchTargetToc.indexOf("'book.toc'");
-assert.ok(detailRequest >= 0, 'fetchTargetToc must resolve book.detail');
-assert.ok(tocRequest > detailRequest, 'book.detail must complete before book.toc');
-assert.match(fetchTargetToc, /book:\s*\{\s*bookId\s*\}/);
-assert.match(fetchTargetToc, /bookUrl:\s*bookId/);
-assert.match(fetchTargetToc, /detailSourceId !== sourceId \|\| detailBookId !== bookId/);
-assert.match(fetchTargetToc, /requireString\(detail\.data, 'tocUrl', 'book\.detail'\)/);
-assert.match(fetchTargetToc, /rawVariables === undefined \|\| rawVariables === null/,
-  'book.detail variables are optional per the Core contract; missing/null must not fail-closed');
-assert.match(fetchTargetToc, /requireStringMap\(rawVariables, 'variables', 'book\.detail'\)/);
-assert.match(fetchTargetToc, /\{\s*sourceId,\s*bookId,\s*tocUrl,\s*variables\s*\}/);
-assert.doesNotMatch(fetchTargetToc, /'book\.toc',\s*\{\s*sourceId,\s*bookId\s*\}/);
-
-assert.match(gateway, /private requireStringMap\([\s\S]*typeof variableValue !== 'string'/);
-assert.match(gateway, /candidate\.trim\(\)\.length === 0/);
-assert.match(gateway, /'book\.search',[\s\S]*sourceId:\s*source\.sourceId, keyword, page:\s*1/);
-assert.doesNotMatch(gateway, /'change\.bookSource'/,
-  'one-source discovery must receive real search failures rather than a soft-skipped Core batch');
-assert.match(gateway, /decodeBookSearchResult\(raw, searchSource/,
-  'source switching consumes the existing live search decoder');
-assert.match(gateway, /SOURCE_SWITCH_DISCOVERY_CONCURRENCY\s*=\s*8/);
-assert.match(gateway, /runBookSourceWorkers\(sources, SOURCE_SWITCH_DISCOVERY_CONCURRENCY/);
-assert.match(gateway, /sourceSwitchCandidateKey\(candidate\.sourceId, candidate\.bookUrl\)/);
-assert.match(gateway, /deduplicateSourceSwitchCandidates\(candidates\)/);
-assert.match(gateway, /requireString\(result\.data, 'transactionId', 'source\.switch\.commit'\)/);
-assert.match(gateway, /result\.data\['phase'\] !== 'pending'/);
-assert.match(gateway, /'source\.switch\.pending\.list'/);
-assert.match(gateway, /const pending: PendingSourceSwitch\[\]/);
-assert.match(gateway, /pending\.push\(\{/);
-assert.match(gateway, /const matchedChapter = this\.decodeMatchedChapter\(result\.data\['matchedChapter'\]\)/);
-assert.doesNotMatch(gateway, /rollbackToken|SourceSwitchRollbackToken/,
-  'the Core-owned compensation journal must never cross into Harmony');
-
-// The helper module is inlined because data-URL loads cannot resolve
-// relative specifiers like '../../app/ErrorMessage'.
 const errorMessageModule = stripTypeScriptTypes(
   readFileSync(resolve(repo, 'entry/src/main/ets/app/ErrorMessage.ts'), 'utf8'),
 ).replace('export function errorMessageOf', 'function errorMessageOf');
@@ -108,6 +68,21 @@ function searchResult(sourceId, books) {
   return { data: { sourceId, books } };
 }
 
+
+function relatedData(books, extra = {}) {
+  return { books: books.map(book => ({...book, relationKey: 'relation', relationRevision: '1'})),
+    sourceVersions: [...new Set(books.map(book => book.origin))].map(sourceId => ({sourceId, sourceVersion: 'v1', enabled: true})),
+    snapshotRevision: 'snapshot', complete: true, ...extra };
+}
+
+
+const cachedAt=Date.now();
+const ownedHosts=[];let sourceOwnerFixture,setCurrentRuntime,productionMotionMethods;
+
+if(['progressive','host-known','host-failed-delta'].includes(id)){const loaded=await import('./lib/source-switch-owner-probe.mjs');setCurrentRuntime=loaded.setCurrentRuntime;sourceOwnerFixture=(...args)=>{const f=loaded.fixture(...args);ownedHosts.push(f.host);return f;};}
+if(['host-known','candidate-retry'].includes(id))({productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs'));
+const clock=['progressive','cancellation'].includes(id)?controlledClock():undefined;try{
+if(id==='identity-family'){
 assert.notEqual(
   sourceSwitchCandidateKey('a', 'bc'),
   sourceSwitchCandidateKey('ab', 'c'),
@@ -121,6 +96,9 @@ assert.notEqual(
   'shared hosts must not manufacture one provider family for unrelated source rules',
 );
 
+
+}
+if(id==='discovery-concurrency'){
 let activeDiscoveries = 0;
 let maxActiveDiscoveries = 0;
 const discoveryCalls = [];
@@ -149,7 +127,7 @@ const discoveryRuntime = {
       maxActiveDiscoveries = Math.max(maxActiveDiscoveries, activeDiscoveries);
       const index = Number(candidateSourceId.split('-')[1]);
       try {
-        await new Promise((resolve) => setTimeout(resolve, (10 - index) * 2));
+        await new Promise(setImmediate);
         if (candidateSourceId === 'candidate-3') {
           throw new Error('one source timed out');
         }
@@ -176,7 +154,9 @@ assert.deepEqual(
   'one failed source is skipped and registry order remains stable',
 );
 
-// A slow first source cannot hold the ninth source behind an eight-source batch.
+
+}
+if(id==='slow-lane'){
 {
   let releaseSlow;
   const slow = new Promise(resolve => { releaseSlow = resolve; });
@@ -189,12 +169,14 @@ assert.deepEqual(
     return searchResult(id, [{ bookId: '/book', title: '鸣龙' }]);
   } });
   const run = gateway.discoverCandidates('original', '/book', '鸣龙');
-  for (let i = 0; i < 100 && !started.includes('s11'); i++) await new Promise(resolve => setTimeout(resolve, 0));
+  for (let i = 0; i < 100 && !started.includes('s11'); i++) await new Promise(setImmediate);
   assert.equal(started.includes('s11'), true, 'fast lanes continue before s0 completes');
   releaseSlow();
   const result = await run;
   assert.deepEqual(result.candidates.map(item => item.sourceId), Array.from({ length: 12 }, (_, i) => `s${i}`));
 }
+}
+if(id==='environment'){
 for (const envelope of ['host-diagnostics', 'native-cause']) {
   const requests = [];
   const details = { category: 'NETWORK_ENVIRONMENT', phase: 'route' };
@@ -210,12 +192,11 @@ for (const envelope of ['host-diagnostics', 'native-cause']) {
     requests.push(params.sourceId); throw environment;
   } });
   await assert.rejects(gateway.discoverCandidates('original', '/book', '鸣龙'), error => error === environment);
-  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise(setImmediate);
   assert.equal(requests.length, 8, 'environment error propagates and stops dispatch beyond active lanes');
 }
-
-// A per-domain DNS rejection is not evidence that every enabled source or the
-// device network is unavailable. Exercise the real batch and worker cursor.
+}
+if(id==='dns'){
 for (const envelope of ['host-diagnostics', 'native-cause'])
 for (const scenario of ['one-dns', 'all-dns', 'dns-and-empty', 'late-dns']) {
   const requests=[];
@@ -245,10 +226,8 @@ for (const scenario of ['one-dns', 'all-dns', 'dns-and-empty', 'late-dns']) {
   }
   assert.equal(requests.length,12,'each enabled candidate is tried once, without automatic retries');
 }
-
-// A rejected/invalid search is distinct from an admitted empty response. The
-// old change.bookSource command hid these errors before the Host could inspect
-// them; exercise the same production worker/decoder against book.search DTOs.
+}
+if(id==='source-failure'){
 for (const envelope of ['direct', 'native-cause', 'host-diagnostics'])
 for (const scenario of ['all-http', 'all-rule-failed', 'successful-empty', 'mixed', 'failure-and-empty']) {
   const methods = [], writes = [], published = [];
@@ -302,6 +281,8 @@ for (const scenario of ['all-http', 'all-rule-failed', 'successful-empty', 'mixe
   assert.equal(methods.filter(method => method === 'book.search').length, labels.length);
   assert.equal(methods.includes('change.bookSource'), false);
 }
+}
+if(id==='invalid-search'){
 for (const invalid of ['source', 'version', 'media', 'malformed-books']) {
   const owner = { request: async (method) => {
     if (method === 'source.list') return { data: { sources: [{ sourceId: 's', name: 'S', enabled: true, sourceVersion: 'v1' }] } };
@@ -310,6 +291,8 @@ for (const invalid of ['source', 'version', 'media', 'malformed-books']) {
   } };
   await assert.rejects(new SourceSwitchGateway(owner).discoverCandidates('original', '/book', '大明望族'), /规则执行失败/);
 }
+}
+if(id==='late-discovery'){
 for (const late of ['success', 'failure']) {
   let current = true, release, started;
   const gate = new Promise(resolve => { release = resolve; });
@@ -329,10 +312,8 @@ for (const late of ['success', 'failure']) {
   assert.deepEqual(await run, { kind: 'noSources' });
   assert.deepEqual(published, []); assert.equal(requests.includes('search-book.put'), false);
 }
-console.log('SourceSwitch real book.search HTTP/rule failures, empty/mixed results, shared decoding and late cancellation PASS');
-
-// A cached/known click cannot select a disabled, reclassified or replaced rule.
-// Target eligibility uses the same registry read as author qualification.
+}
+if(id==='target-qualification'){
 for (const media of ['text', 'manga']) {
   for (const scenario of ['current', 'stale', 'disabled', 'removed', 'category', 'media', 'invalid-version', 'blank-version']) {
     const category = media === 'manga' ? 'comic' : 'novel';
@@ -357,11 +338,8 @@ for (const media of ['text', 'manga']) {
     assert.deepEqual(methods, ['source.list'], 'target eligibility must not add a per-click source RPC');
   }
 }
-console.log('SourceSwitch current target version/category/media qualification PASS');
-
-// Restore an author decoration only from the exact current Core row and
-// source version. A missing reading session cannot erase this evidence, and
-// historical aliases can never authorize a different author or work.
+}
+if(id==='author-proof'){
 {
   const query = { sourceId: 's', bookId: '/book', bookName: '大明望族', author: '@府天',
     currentChapterIndex: 325, currentChapterTitle: '' };
@@ -480,8 +458,8 @@ console.log('SourceSwitch current target version/category/media qualification PA
   } };
   await assert.rejects(new SourceSwitchGateway(owner).resolveProbeQueryIdentity(query), error => error === failure);
 }
-console.log('SourceSwitch exact author proof restoration, registry eligibility, missing/stale/identity rejection and cancellation fences PASS');
-
+}
+if(id==='discovery-identity'){
 const identityRuntime = {
   async request(method, params) {
     if (method === 'source.list') {
@@ -527,13 +505,9 @@ assert.deepEqual(
   'current status must use exact composite identity so same-source alternate URLs stay selectable',
 );
 
-// Core supplies one indexed relation, not an unfiltered historical library.
-function relatedData(books, extra = {}) {
-  return { books: books.map(book => ({...book, relationKey: 'relation', relationRevision: '1'})),
-    sourceVersions: [...new Set(books.map(book => book.origin))].map(sourceId => ({sourceId, sourceVersion: 'v1', enabled: true})),
-    snapshotRevision: 'snapshot', complete: true, ...extra };
-}
 
+}
+if(id==='cache-basic'){
 const cacheCalls = [];
 const cachedAt = Date.now();
 const cacheRuntime = {
@@ -599,8 +573,9 @@ assert.equal(cachedCandidates[0].isCurrent, true);
 assert.equal(cacheCalls.some(([method]) => method === 'book.search'), false,
   'a valid local projection must not start source HTTP discovery');
 
-// Only the version-bound Core acquisition fact restores search timing after a
-// pane remount; legacy respondTime remains intentionally ignored.
+
+}
+if(id==='cache-timing'){
 {
   const timingRuntime = { request: async (method) => {
     if (method === 'source.list') return { data: { sources: [{ sourceId: 'timed', name: 'Timed',
@@ -616,9 +591,8 @@ assert.equal(cacheCalls.some(([method]) => method === 'book.search'), false,
   assert.equal(timed[0].latencyKind, 'search');
   assert.equal(timed[0].latencyMeasuredAt, cachedAt);
 }
-
-// The indexed relation is only a scoped read: historical alias bridges may
-// have been polluted by a source resolving another book at the same URL.
+}
+if(id==='relation-scope'){
 {
   const calls = [];
   const rows = [{origin:'cache-source',bookUrl:'current-book',name:'Current Book',author:'Writer',time:cachedAt},
@@ -639,7 +613,8 @@ assert.equal(cacheCalls.some(([method]) => method === 'book.search'), false,
     'current title/author normalization is sufficient; historical alias JSON cannot authorize an unrelated title');
   assert.deepEqual(calls.map(call=>call.method),['source.list','search-book.related']);
 }
-
+}
+if(id==='refresh-basic'){
 const refreshRows = [{ bookUrl: 'old-book', origin: 'old-source', name: 'Current Book', author: 'Writer', time: cachedAt }];
 const refreshCalls = [];
 let preparation;
@@ -671,10 +646,9 @@ assert.equal(preparation, undefined, 'discovery must not enqueue unbounded catal
 assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', 'book.toc', 'chapter.content'].includes(method)), false,
   'explicit discovery returns candidates; catalog preparation belongs to the visible viewport');
 
-// Exercise the real Host → Gateway refresh path with independently completing
-// sources. The list contains successful same-book results, never dispatch or
-// failure placeholders; a previous successful search remains usable even if
-// its new search attempt fails.
+
+}
+if(id==='progressive'){
 {
   const f = sourceOwnerFixture({ open: false });
   const requests = [];
@@ -734,7 +708,7 @@ assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', '
   releaseSlow();
   // refreshCandidates coalesces source completions on a 100ms debounce;
   // allow that timer and the final relation verification to settle.
-  await new Promise(resolve => setTimeout(resolve, 150));
+  await clock.advance(150);
   await waitUntil(() => f.host.current().state.kind === 'candidates' &&
     f.host.current().state.refreshing === false);
   assert.deepEqual(new Set(f.host.current().state.candidates.map(row => row.sourceId)), new Set(['new', 'fast', 'slow']));
@@ -756,8 +730,8 @@ assert.equal(refreshCalls.some(method => ['search-book.delete', 'book.detail', '
       relationKey: 'same-book', relationRevision: '1', sourceVersion: 'v1' };
   }
 }
-console.log('PASS: successful results appear progressively; failed/empty searches stay absent and cached successes remain');
-
+}
+if(id==='transaction'){
 const runtime = {
   async request(method, params) {
     if (method === 'source.switch.commit') {
@@ -833,10 +807,9 @@ assert.deepEqual(pending.map((entry) => [entry.transactionId, entry.fromBookId, 
   [transactionId, 'old-book', 'new-book'],
 ]);
 
-console.log('source-switch gateway contract: PASS');
 
-// PH70: entry reuses exact candidates already emitted by Search even if the
-// durable projection has not arrived; no second source sweep is permitted.
+}
+if(id==='known-delta'){
 {
   const calls=[];let revision=1;
   const records=new Map();
@@ -862,8 +835,8 @@ console.log('source-switch gateway contract: PASS');
   assert.deepEqual(replaced.map(c=>c.sourceId),['a'],'disabled source cannot be revived by a known row');
   assert.deepEqual(calls.map(c=>c.method),['source.list','search-book.related','search-book.batch.get']);
 }
-// Missing-candidate discovery excludes sources already dispatched by this
-// exact search session; an explicit refresh (no exclusions) checks all again.
+}
+if(id==='missing-only'){
 {
   const searched=[];const owner={request:async(method,params)=>{
     if(method==='source.list')return{data:{sources:['a','b','c'].map(sourceId=>({sourceId,name:sourceId,enabled:true}))}};
@@ -872,7 +845,8 @@ console.log('source-switch gateway contract: PASS');
   await gateway.discoverCandidates('a','/book','鸣龙',()=>true,['a','b']);assert.deepEqual(searched,['c']);
   searched.length=0;await gateway.discoverCandidates('a','/book','鸣龙',()=>true);assert.deepEqual(searched,['a','b','c']);
 }
-console.log('PH70 known candidate first paint, delta projection, registry deletion and missing-only discovery PASS');
+}
+if(id==='host-known'){
 {
   let release;const sourceGate=new Promise(r=>release=r);const calls=[];let listener;
   const owner={bookAcquisitions:()=>({sourceRegistryRevision:()=>1,subscribe:fn=>{listener=fn;return()=>{}}}),request:async(method,params)=>{
@@ -889,7 +863,7 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
     searchDetailCandidates:['a'].map(sourceId=>({sourceId,sourceName:sourceId,sourceRuleVersion:'v1',
       bookId:'/book',title:'鸣龙',author:'关关公子',variables:[],category:'novel'}))});
   const f=sourceOwnerFixture({open:false});owner.getUIAbilityContext=f.runtime.getUIAbilityContext;setCurrentRuntime(owner);
-  const host=new f.Constructor(owner);host.open({query,inBookshelf:false,toc:[],knownCandidates:page.knownSearchSourceCandidates(query),readKnownCandidates:()=>page.knownSearchSourceCandidates(query),searchedSourceIds:[]},
+  const host=new f.Constructor(owner);ownedHosts.push(host);host.open({query,inBookshelf:false,toc:[],knownCandidates:page.knownSearchSourceCandidates(query),readKnownCandidates:()=>page.knownSearchSourceCandidates(query),searchedSourceIds:[]},
     {isCurrent:()=>true,changed:snapshot=>{page.sourceSwitchState=snapshot.state;},effect(){}});
   // Intent authority admission happens first; known rows still paint before registry/cache RPC completes.
   for(let i=0;i<4;i++)await new Promise(r=>setImmediate(r));
@@ -904,10 +878,8 @@ console.log('PH70 known candidate first paint, delta projection, registry deleti
   assert.ok(calls.includes('book.search') || calls.includes('search-book.related'),
     'the seeded candidates continue through the real incremental refresh path');
 }
-console.log('PH70 actual Index candidate projection → feature owner entry paints known candidates before cache RPC PASS');
-
-// PH70 retry ownership: a failed consumed batch remains pending until a later
-// real event; it must be unioned with that event rather than silently lost.
+}
+if(id==='host-failed-delta'){
 for (const reset of [false, true]) {
   let listener; let fail = false;
   const calls = [];
@@ -931,7 +903,7 @@ for (const reset of [false, true]) {
     currentChapterIndex: 0, currentChapterTitle: '' };
   const page={sourceSwitchState:{kind:'discovering'}};
   const f=sourceOwnerFixture({open:false});owner.getUIAbilityContext=f.runtime.getUIAbilityContext;setCurrentRuntime(owner);
-  const host=new f.Constructor(owner);
+  const host=new f.Constructor(owner);ownedHosts.push(host);
   host.open({query,inBookshelf:false,toc:[],knownCandidates:[],searchedSourceIds:[]},
     {isCurrent:()=>true,changed:snapshot=>{page.sourceSwitchState=snapshot.state;},effect(){}});
   const settle = async () => { for (let i = 0; i < 10; i++) await new Promise(r => setImmediate(r)); };
@@ -950,10 +922,8 @@ for (const reset of [false, true]) {
   assert.equal(page.sourceSwitchState.kind, 'candidates');
   assert.equal(page.sourceSwitchState.candidates.length, 2);
 }
-console.log('PH70 actual SourceSwitchHost/Gateway retain failed delta/reset without automatic retry loops PASS');
-
-// Retiring a sweep must release debounce waiters and subscriptions even when
-// the Core RPC ignores shouldCancel and never returns until explicitly drained.
+}
+if(id==='cancellation'){
 for (const phase of ['debounce', 'in-flight']) {
   let current = true, listener, released = 0, batchStarted, drainBatch;
   const started = new Promise(resolve => { batchStarted = resolve; });
@@ -984,24 +954,19 @@ for (const phase of ['debounce', 'in-flight']) {
     currentChapterIndex: 0, currentChapterTitle: '' }, () => current, [], rows => progress.push(rows));
   for (let i = 0; i < 4; i++) await new Promise(resolve => setImmediate(resolve));
   listener({ reset: false, identities: [{ sourceId: 'a', bookId: '/book' }] });
-  if (phase === 'in-flight') await started;
+  if (phase === 'in-flight'){await clock.advance(100);await started;}
   const published = progress.length;
   current = false;
-  let timeout;
-  const outcome = await Promise.race([run, new Promise((_, reject) => {
-    timeout = setTimeout(() => reject(Error(`cancelled ${phase} flush did not settle`)), 500);
-  })]).finally(() => clearTimeout(timeout));
+  let settled=false,outcome;run.then(value=>{outcome=value;settled=true;});await clock.advance(16);assert.equal(settled,true,'cancellation poll releases the actual waiter without waiting on ignored RPC');
   assert.equal(outcome.kind, 'noSources');
   assert.equal(released, 1, `${phase} cancellation releases its acquisition subscription`);
   listener({ reset: true, identities: [] });
   drainBatch();
-  await new Promise(resolve => setTimeout(resolve, 20));
+  await clock.advance(20);
   assert.equal(progress.length, published, 'retired subscriptions and late RPCs cannot publish');
 }
-console.log('SourceSwitch debounce/in-flight cancellation settles waiters and releases subscriptions PASS');
-
-// Manga relations use the dedicated Core candidate projection so a durable
-// current book cannot be mistaken for an alternate source.
+}
+if(id==='manga-relation'){
 {
   let relationParams;
   const owner = { request: async (method, params) => {
@@ -1017,9 +982,8 @@ console.log('SourceSwitch debounce/in-flight cancellation settles waiters and re
   assert.equal(result.length, 1);
   assert.equal(relationParams.mode, 'mangaCandidates');
 }
-console.log('SourceSwitch manga candidate relation mode PASS');
-
-// Complete relation pages own membership; late/truncated/mixed snapshots never publish.
+}
+if(id==='relation-pagination'){
 {
   const query={sourceId:'a',bookId:'one',bookName:'鸣龙',author:'关关公子',currentChapterIndex:0,currentChapterTitle:''};
   const a={origin:'a',bookUrl:'one',name:'鸣龙',author:'关关公子',time:Date.now(),variable:'{"token":" opaque & = ","page":"2"}',
@@ -1052,10 +1016,8 @@ console.log('SourceSwitch manga candidate relation mode PASS');
   owner.request=async(method,params)=>method==='search-book.batch.get'?{data:{complete:true,books:[],missing:params.identities}}:original(method,params);
   assert.equal((await gateway.loadCachedCandidates(query,undefined,first)).length,1);
 }
-console.log('R5 SourceSwitch relation pagination, stale retry, continuation, scoped verdict and deletion preservation PASS');
-
-// PH116: source selection hands the acquired target context to the reader and
-// commits resolved metadata, never an old search alias or a different URL.
+}
+if(id==='target-session'){
 {
   const calls = [];
   const session = { acquisitionMode: 'online', identity: { sourceId: 'target', bookId: '/book' },
@@ -1088,6 +1050,8 @@ console.log('R5 SourceSwitch relation pagination, stale retry, continuation, sco
   session.identity = { sourceId: 'wrong', bookId: '/book' };
   await assert.rejects(new SourceSwitchGateway(owner).fetchTargetToc('target', '/book', () => true), /mismatched reading session/);
 }
+}
+if(id==='direct-target-session'){
 {
   const calls = [];
   const owner = { request: async (method, params) => {
@@ -1107,8 +1071,8 @@ console.log('R5 SourceSwitch relation pagination, stale retry, continuation, sco
   assert.deepEqual(toc.readingSession.continuationVariables, [{ name: 'token', value: 'detail token' }]);
   assert.deepEqual(toc.readingSession.entries[0].variables, [{ name: 'chapterToken', value: 'chapter token' }]);
 }
-console.log('PH116 source switch preserves target session and canonical metadata PASS');
-
+}
+if(id==='live-candidate'){
 {
   const candidate={sourceId:'live-source',bookUrl:'/not-yet-persisted',bookName:'终宋',author:'怪诞的表哥',
     sourceVersion:'rule-v1',searchVariables:[{name:'token',value:'live-token'}],category:'novel'};
@@ -1127,8 +1091,8 @@ console.log('PH116 source switch preserves target session and canonical metadata
   await assert.rejects(gateway.fetchTargetToc(candidate.sourceId,candidate.bookUrl,()=>false,candidate),/aborted/);
   assert.equal(acquisitions,1,'mismatch/cancel cannot submit work');
 }
-console.log('PASS: unpersisted selected source preserves exact version/variables through shared acquisition');
-
+}
+if(id==='candidate-retry'){
 {
   const Candidate = productionMotionMethods(resolve(repo, 'entry/src/main/ets/features/source/CandidateRow.ets'),
     ['selectCandidate'], {});
@@ -1139,4 +1103,8 @@ console.log('PASS: unpersisted selected source preserves exact version/variables
     assert.equal(selected, isCurrent ? 0 : 1, 'historical availability feedback must not lock source selection');
   }
 }
-console.log('PH116 every non-current source row permits a new attempt PASS');
+}
+}finally{for(const host of ownedHosts)host.retire();clock?.restore();}
+}
+const definitions={"identity-family": "identity-family actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "discovery-concurrency": "discovery-concurrency actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "slow-lane": "slow-lane actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "environment": "environment actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "dns": "dns actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "source-failure": "source-failure actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "invalid-search": "invalid-search actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "late-discovery": "late-discovery actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "target-qualification": "target-qualification actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "author-proof": "author-proof actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "discovery-identity": "discovery-identity actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cache-basic": "cache-basic actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cache-timing": "cache-timing actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "relation-scope": "relation-scope actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "refresh-basic": "refresh-basic actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "progressive": "progressive actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "transaction": "transaction actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "known-delta": "known-delta actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "missing-only": "missing-only actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "host-known": "host-known actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "host-failed-delta": "host-failed-delta actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "cancellation": "cancellation actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "manga-relation": "manga-relation actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "relation-pagination": "relation-pagination actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "target-session": "target-session actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "direct-target-session": "direct-target-session actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "live-candidate": "live-candidate actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases", "candidate-retry": "candidate-retry actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

@@ -1,20 +1,31 @@
-import { localFilePath, resolveArkFrontend, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
-import * as nodeFs from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
-import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
-import { MangaOfflineNetworkProbe, MANGA_PROBE_REQUEST_LIMIT } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
-import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
-import { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode, readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
-import { MangaImageDecodeHost } from '../entry/src/main/ets/app/MangaImageDecodeHost.ts';
-import { createMangaAtomicPayloadReaderFixture, createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"probe-policy": {"description": "纯Probe/Launch严格flag/identity/tombstone容量与隐私", "resources": []}, "observer-behavior": {"description": "实际Registry/Body/Runtime observer计数和离线catalog/路由", "resources": []}, "prepare-reuse": {"description": "实际Body/Runtime/Resource prepared复用/字节fake codec临时IO", "resources": []}, "cold-ability": {"description": "实际EntryAbility cold/warm Want入口与atomic reader安装", "resources": []}, "sdk-seams": {"description": "显式SDK语义及es2abc parse-only/invalid反例", "resources": ["native-build"]}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+
+
+const { localFilePath, resolveArkFrontend, resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync, readdirSync } = await import('node:fs');
+const nodeFs = await import('node:fs');
+const { mkdtemp, rm } = await import('node:fs/promises');
+const { tmpdir } = await import('node:os');
+const { join } = await import('node:path');
+const { createHash } = await import('node:crypto');
+const { spawnSync } = await import('node:child_process');
+const { createRequire, registerHooks, stripTypeScriptTypes } = await import('node:module');
+const { MangaOfflineNetworkProbe, MANGA_PROBE_REQUEST_LIMIT } = await import('../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts');
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerMangaProbeSelectionMode, readerControlVerificationColdStartPage, readerDisableOptionalEntryMemory } = await import('../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts');
+const { MangaImageDecodeHost } = await import('../entry/src/main/ets/app/MangaImageDecodeHost.ts');
+const { createMangaAtomicPayloadReaderFixture, createMangaAtomicPayloadInstallerFixture } = await import('./lib/manga-atomic-payload-probe.mjs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { errorMessageOf, localReadFailureSummary } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
+
+
 
 const url = name => new URL('../entry/src/main/ets/' + name, import.meta.url);
 const scope = { sourceId:'source-A', bookId:'book-A' };
@@ -22,6 +33,7 @@ const snap = probe => JSON.parse(probe.snapshot());
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve=r; });return {promise,resolve}; };
 
+if(selectedCase==='probe-policy') {
 for (const debug of [true,false,1,'true']) for (const mode of ['debug','release','debug '])
   for (const enabled of [true,false,undefined,'true',1]) {
     assert.equal(readerMangaOfflineProbeScope(debug,mode,enabled,scope.sourceId,scope.bookId) !== undefined,
@@ -114,15 +126,18 @@ for(const mode of ['offline','reading']) {
 }
 console.log('PASS strict selection-only admission, explicit pre-selection coverage boundary, exact one-time Native identity binding and terminal no-rebind fences');
 
+}
 let byteFetches=0,coreFetches=0,dataDecodes=0;
 const HttpExecuteHost={instance:{async execute(){coreFetches++;return {};},async executeForCore(){coreFetches++;return {};},cancel(){},
   async executeBytes(){byteFetches++;return {status:200,headers:{},bytes:new Uint8Array([1,2,3])};}}};
+class Router {handlers=new Map();register(name,handler){this.handlers.set(name,handler);}route(event){return this.handlers.get(event.capability)(event);}}
+if(selectedCase==='observer-behavior') {
 const Body=productionMotionMethods(url('app/ReadingBodyImageHost.ts'),['fetchRequestBytes','readDataUriBytes','assertCurrent'],{
   MAX_READING_IMAGE_BYTES:16777216,MAX_READING_IMAGE_DATA_URI_CHARS:22373720,HttpExecuteHost,readingImageHttpError:()=>Error('status'),
   util:{Type:{MIME:1},Base64Helper:class{decodeSync(text){dataDecodes++;return new Uint8Array(Buffer.from(text,'base64'));}}},
 });
 const body=new Body();body.validateBytes=async()=>{};
-class Router {handlers=new Map();register(name,handler){this.handlers.set(name,handler);}route(event){return this.handlers.get(event.capability)(event);}}
+
 let decodeTransport;
 const Registry=productionMotionMethods(url('app/ReaderHostRegistry.ts'),['createCapabilityRouter'],{
   CapabilityRouter:Router,HttpExecuteHost,ReadingBodyImageHost:{instance:body},MangaImageGraphicsHost:{instance:{}},
@@ -338,91 +353,6 @@ for(const mode of ['offline','reading']) {
 console.log('PASS actual normal Index shelf selection binds Native identity once; ordinary reading keeps preparation and offline blocks only selected target');
 
 
-// Installed official SDK and actual vendored Core SDK types validate the new
-// Want/parser + send/wait seam. This is not a substitute for an ArkTS/HAP gate.
-if (process.env.READER_SKIP_PROBE_SDK_CHECK !== '1') {
-  const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
-  const ts=require(`${sdk}/node_modules/typescript`),sdkRoot=`${sdk}/../..`;
-  const ownerSource=readFileSync(url('app/ReaderRuntimeOwner.ts'),'utf8');
-  const tree=ts.createSourceFile('Owner.ts',ownerSource,ts.ScriptTarget.Latest,true);
-  const ownerClass=tree.statements.find(n=>n.name?.getText(tree)==='ReaderRuntimeOwner');
-  const requestMethod=ownerClass.members.find(n=>n.name?.getText(tree)==='requestDirect').getText(tree);
-  const virtualPath=localFilePath(url('app/MangaOfflineProbeSdkCheck.ts'));
-  // The source gate runs before the HAP pipeline installs generated oh_modules.
-  // Use the tracked, Native-sync vendored SDK for this type seam so a fresh
-  // isolated worktree remains reproducible; oh_modules is only a build output.
-  const coreSdk=localFilePath(new URL('../entry/vendor/core-harmony/sdk/reader_core',import.meta.url));
-  const text=`import type {JsonObject, ReaderCoreRuntime, ReaderCoreResultEvent, RequestOptions} from ${JSON.stringify(coreSdk.replaceAll('\\', '/'))};
-import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError, type BookRequestOptions } from ${JSON.stringify(localFilePath(url('app/BookRequestScheduler')).replaceAll('\\', '/'))};
-import { readerRuleMutationEffects } from ${JSON.stringify(localFilePath(url('app/ReaderRuleMutationEffects')).replaceAll('\\', '/'))};
-import type {MangaPlatformObservation, MangaBodyDiagnosticState} from ${JSON.stringify(localFilePath(new URL('../entry/src/main/ets/app/MangaPlatformObservation',import.meta.url)).replaceAll('\\', '/'))};
-import Want from '@ohos.app.ability.Want';
-import {hilog} from '@kit.PerformanceAnalysisKit';
-${readFileSync(url('app/MangaOfflineNetworkProbe.ts'),'utf8').replace(/^import .*?;\n/gm,'')}
-${readFileSync(url('app/ReaderControlVerificationLaunch.ts'),'utf8').replace(/^import .*?;\n/gm,'')}
-declare const LOG_DOMAIN:number,DEFAULT_CORE_REQUEST_TIMEOUT_MS:number;
-declare function coreAdmissionFailureSummary(error:unknown,method:string):string|undefined;
-declare function httpResponseFailureSummary(error:unknown):string|undefined;
-function coldWant(want:Want):MangaOfflineProbeScope|undefined{return readerMangaOfflineProbeScope(true,'debug',
-want.parameters?.readerMangaOfflineProbe,want.parameters?.readerMangaOfflineSourceId,want.parameters?.readerMangaOfflineBookId);}
-function selectedColdWant(want:Want):MangaProbeSelectionMode|undefined{return readerMangaProbeSelectionMode(true,'debug',
-want.parameters?.readerMangaOfflineProbeSelectManga,want.parameters?.readerMangaReadingProbeSelectManga,
-[want.parameters?.readerMangaOfflineProbe,want.parameters?.readerMangaReadingProbe,want.parameters?.readerControlMotionVerification,
-want.parameters?.readerOpenSourcePilot,want.parameters?.readerEventLoopProbe,want.parameters?.readerDisableOptionalEntryMemory]);}
-declare const MangaChapterPreparationCoordinator: {forRuntime(owner:object):{close():Promise<void>}};
-class RuntimeSeam {
-private state:'new'|'starting'|'ready'|'closing'|'closed'='ready';
-private reservationQuarantineDiagnosticLogged:boolean=false;
-private mangaImageTail:Promise<void>=Promise.resolve();
-private downloadStorageGateway:{waitForActiveMutation():Promise<void>}|undefined;
-private mangaDisplaySessions:Map<number,{current:()=>boolean}>=new Map();
-endMangaDisplaySession(sessionId:number):void{}
-private readingImageDiskCache:{withMangaStorageRestore<T>(restore:()=>Promise<T>):Promise<T>;
-maintainMangaStorage(reason:'clear',scope?:{sourceId:string;bookId:string}):Promise<void>;
-clearMangaRebuildableCache(scope?:{sourceId:string;bookId:string}):Promise<{deletedBytes:number;deletedFiles:number}>};
-private preparationIntentEpoch=0;private runtime:ReaderCoreRuntime|undefined;private mangaOfflineProbe:MangaOfflineNetworkProbe|undefined;
-private async start():Promise<void>{}private wakeReadingPreparations():void{}
-private readingEntryPreparations():{beginRequest(method:string,params:JsonObject):boolean;finishRequest(method:string,params:JsonObject):void;invalidateCachedChapters(chapters:{sourceId:string;bookId:string;chapterIndex:number}[]):void}{throw Error();}
-${requestMethod}
-}`;
-  const options={noEmit:true,skipLibCheck:true,moduleResolution:ts.ModuleResolutionKind.NodeJs,target:ts.ScriptTarget.ES2022,
-    module:ts.ModuleKind.ESNext,types:[],baseUrl:'/',paths:{'@reader/core-harmony':[`${coreSdk}.ts`],
-      '@ohos.*':[`${sdkRoot}/api/@ohos.*.d.ts`],'@kit.*':[`${sdkRoot}/kits/@kit.*.d.ts`]}};
-  const roots=readdirSync(`${sdk}/declarations`).filter(n=>n.endsWith('.d.ts')).map(n=>`${sdk}/declarations/${n}`);
-  function errors(source){const host=ts.createCompilerHost(options),get=host.getSourceFile.bind(host);
-    host.getSourceFile=(path,...args)=>path===virtualPath?ts.createSourceFile(path,source,ts.ScriptTarget.Latest,true):get(path,...args);
-    return ts.getPreEmitDiagnostics(ts.createProgram([virtualPath,...roots],options,host))
-      .filter(d=>d.category===ts.DiagnosticCategory.Error).map(d=>ts.flattenDiagnosticMessageText(d.messageText,'\n'));}
-  assert.deepEqual(errors(text),[],'actual cold Want and production request method match installed official and Core SDK types');
-  assert.ok(errors(text.replace('runtime.waitForResult(requestId,','runtime.waitForResult("wrong-id",')).length>0,
-    'SDK counterfactual rejects an invalid Host ownership id');
-console.log('PASS installed SDK Want and actual Core SDK send/wait types, with invalid request-id counterfactual; no device/Native result claimed');
-  // The TS typechecker accepts a nested conditional object which the installed
-  // bytecode frontend rejects. Exercise that official frontend on the actual
-  // complete production module as well; parse-only neither links nor runs it.
-  const frontend=resolveArkFrontend();
-  const parse=path=>spawnSync(frontend,['--target-api-version','23','--module','--parse-only',path],{encoding:'utf8'});
-  for(const path of ['app/ReaderRuntimeOwner.ts','app/MangaOfflineNetworkProbe.ts','app/ReaderControlVerificationLaunch.ts']) {
-    const actualParse=parse(localFilePath(url(path)));
-    assert.equal(actualParse.status,0,actualParse.stderr||actualParse.stdout||String(actualParse.error));
-  }
-  const invalidDir=nodeFs.mkdtempSync(join(tmpdir(),'reader-manga-owner-frontend-'));
-  try {
-    const entryPath=localFilePath(url('entryability/EntryAbility.ets'));
-    const etsOptions=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-    const ui=require(`${sdk}/lib/process_ui_syntax.js`);
-    const entryTree=ts.createSourceFile(entryPath,readFileSync(entryPath,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,etsOptions);
-    assert.deepEqual(entryTree.parseDiagnostics,[],'actual Ability ETS parses with official SDK');
-    const transformed=ts.transform(entryTree,[ui.processUISyntax(null,true)],etsOptions);
-    const emitted=join(invalidDir,'ActualEntry.ts');nodeFs.writeFileSync(emitted,ts.createPrinter().printFile(transformed.transformed[0]));transformed.dispose();
-    assert.deepEqual(ui.transformLog.errors,[],'actual Ability ETS transform must have no diagnostics');
-    const abilityParse=parse(emitted);assert.equal(abilityParse.status,0,abilityParse.stderr||abilityParse.stdout||String(abilityParse.error));
-    const invalid=join(invalidDir,'invalid.ts');nodeFs.writeFileSync(invalid,'export const invalid = (;\n');
-    assert.notEqual(parse(invalid).status,0,'official frontend must reject invalid syntax');
-  } finally {nodeFs.rmSync(invalidDir,{recursive:true,force:true});}
-  console.log('PASS actual Owner/Probe/Launch and official transformed Entry es2abc parse-only frontend and invalid-syntax control; no HAP/runtime result claimed');
-}
-
 {
  const q=new MangaOfflineNetworkProbe(scope,()=>{},'reading');q.track(400);
  assert.doesNotThrow(()=>q.beforeCoreHttp(400),'online observer must allow real Core HTTP');
@@ -523,6 +453,10 @@ console.log('PASS controlled 24-page A/B/A RPC windows beyond 256, exact bounded
 }
 console.log('PASS reading cold/debug/conflict admission, unchanged SDK cancel/options, exact book/text exclusion, capacity coverage without rejection, actual Core/image HTTP and late release continuity');
 
+}
+if(selectedCase==='prepare-reuse') {
+registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw error;}}});
+const {ReadingEntryPreparation}=await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
 // Run the actual Body decode/retention and Runtime image lane together. Only
 // Harmony native codec and filesystem ports are replaced; no cached-hit,
 // source/pixel/packer ownership, diagnostic callback or observer algorithm is
@@ -739,6 +673,8 @@ try {
  console.log('PASS actual Runtime/Body/persisted display proofs: online A/B/A and cold cache 0HTTP/0 repeated source-pixel-packer processing, balanced ownership, first-frame/drain scope ordering, wrong-book exclusion and observer detach/overlap/capacity without business changes');
 } finally {await rm(readingDirectory,{recursive:true,force:true});}
 
+}
+if(selectedCase==='cold-ability') {
 // Execute actual cold Ability entry; warm Wants cannot rearm either probe.
 for(const [debug,buildMode,parameters,expectedOffline,expectedReading,expectedSelection]of [
  [true,'debug',{readerMangaReadingProbe:true},false,true],
@@ -783,3 +719,93 @@ for(const [debug,buildMode,parameters,expectedOffline,expectedReading,expectedSe
  if(parameters.readerMangaOfflineProbe===true&&parameters.readerMangaReadingProbe===true)assert.equal(ability.coldStartPage,'pages/Index','conflicting true probes keep ordinary Index/online routing');
 }
 console.log('PASS actual EntryAbility cold debug/strict primitive/conflict admission and unchanged warm Want routing; diagnostic flags never persist or replace normal reader flow');
+
+}
+if(selectedCase==='sdk-seams') {
+// Installed official SDK and actual vendored Core SDK types validate the new
+// Want/parser + send/wait seam. This is not a substitute for an ArkTS/HAP gate.
+{
+  const require=createRequire(import.meta.url), sdk=resolveEtsLoaderRoot();
+  const ts=require(`${sdk}/node_modules/typescript`),sdkRoot=`${sdk}/../..`;
+  const ownerSource=readFileSync(url('app/ReaderRuntimeOwner.ts'),'utf8');
+  const tree=ts.createSourceFile('Owner.ts',ownerSource,ts.ScriptTarget.Latest,true);
+  const ownerClass=tree.statements.find(n=>n.name?.getText(tree)==='ReaderRuntimeOwner');
+  const requestMethod=ownerClass.members.find(n=>n.name?.getText(tree)==='requestDirect').getText(tree);
+  const virtualPath=localFilePath(url('app/MangaOfflineProbeSdkCheck.ts'));
+  // The source gate runs before the HAP pipeline installs generated oh_modules.
+  // Use the tracked, Native-sync vendored SDK for this type seam so a fresh
+  // isolated worktree remains reproducible; oh_modules is only a build output.
+  const coreSdk=localFilePath(new URL('../entry/vendor/core-harmony/sdk/reader_core',import.meta.url));
+  const text=`import type {JsonObject, ReaderCoreRuntime, ReaderCoreResultEvent, RequestOptions} from ${JSON.stringify(coreSdk.replaceAll('\\', '/'))};
+import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError, type BookRequestOptions } from ${JSON.stringify(localFilePath(url('app/BookRequestScheduler')).replaceAll('\\', '/'))};
+import { readerRuleMutationEffects } from ${JSON.stringify(localFilePath(url('app/ReaderRuleMutationEffects')).replaceAll('\\', '/'))};
+import type {MangaPlatformObservation, MangaBodyDiagnosticState} from ${JSON.stringify(localFilePath(new URL('../entry/src/main/ets/app/MangaPlatformObservation',import.meta.url)).replaceAll('\\', '/'))};
+${readFileSync(url('app/MangaOfflineNetworkProbe.ts'),'utf8').replace(/^import .*?;\n/gm,'')}
+${readFileSync(url('app/ReaderControlVerificationLaunch.ts'),'utf8').replace(/^import .*?;\n/gm,'')}
+declare const LOG_DOMAIN:number,DEFAULT_CORE_REQUEST_TIMEOUT_MS:number;
+declare function coreAdmissionFailureSummary(error:unknown,method:string):string|undefined;
+declare function httpResponseFailureSummary(error:unknown):string|undefined;
+function coldWant(want:Want):MangaOfflineProbeScope|undefined{return readerMangaOfflineProbeScope(true,'debug',
+want.parameters?.readerMangaOfflineProbe,want.parameters?.readerMangaOfflineSourceId,want.parameters?.readerMangaOfflineBookId);}
+function selectedColdWant(want:Want):MangaProbeSelectionMode|undefined{return readerMangaProbeSelectionMode(true,'debug',
+want.parameters?.readerMangaOfflineProbeSelectManga,want.parameters?.readerMangaReadingProbeSelectManga,
+[want.parameters?.readerMangaOfflineProbe,want.parameters?.readerMangaReadingProbe,want.parameters?.readerControlMotionVerification,
+want.parameters?.readerOpenSourcePilot,want.parameters?.readerEventLoopProbe,want.parameters?.readerDisableOptionalEntryMemory]);}
+declare const MangaChapterPreparationCoordinator: {forRuntime(owner:object):{close():Promise<void>}};
+class RuntimeSeam {
+private state:'new'|'starting'|'ready'|'closing'|'closed'='ready';
+private reservationQuarantineDiagnosticLogged:boolean=false;
+private mangaImageTail:Promise<void>=Promise.resolve();
+private downloadStorageGateway:{waitForActiveMutation():Promise<void>}|undefined;
+private mangaDisplaySessions:Map<number,{current:()=>boolean}>=new Map();
+endMangaDisplaySession(sessionId:number):void{}
+private readingImageDiskCache:{withMangaStorageRestore<T>(restore:()=>Promise<T>):Promise<T>;
+maintainMangaStorage(reason:'clear',scope?:{sourceId:string;bookId:string}):Promise<void>;
+clearMangaRebuildableCache(scope?:{sourceId:string;bookId:string}):Promise<{deletedBytes:number;deletedFiles:number}>};
+private preparationIntentEpoch=0;private runtime:ReaderCoreRuntime|undefined;private mangaOfflineProbe:MangaOfflineNetworkProbe|undefined;
+private async start():Promise<void>{}private wakeReadingPreparations():void{}
+private readingEntryPreparations():{beginRequest(method:string,params:JsonObject):boolean;finishRequest(method:string,params:JsonObject):void;invalidateCachedChapters(chapters:{sourceId:string;bookId:string;chapterIndex:number}[]):void}{throw Error();}
+${requestMethod}
+}`;
+  const options={noEmit:true,skipLibCheck:true,moduleResolution:ts.ModuleResolutionKind.NodeJs,target:ts.ScriptTarget.ES2022,
+    module:ts.ModuleKind.ESNext,types:[],baseUrl:'/',paths:{'@reader/core-harmony':[`${coreSdk}.ts`],
+      '@ohos.*':[`${sdkRoot}/api/@ohos.*.d.ts`],'@kit.*':[`${sdkRoot}/kits/@kit.*.d.ts`]}};
+  const roots=readdirSync(`${sdk}/declarations`).filter(n=>n.endsWith('.d.ts')).map(n=>`${sdk}/declarations/${n}`);
+  function errors(source){const host=ts.createCompilerHost(options),get=host.getSourceFile.bind(host);
+    host.getSourceFile=(path,...args)=>path===virtualPath?ts.createSourceFile(path,source,ts.ScriptTarget.Latest,true):get(path,...args);
+    return ts.getPreEmitDiagnostics(ts.createProgram([virtualPath,...roots],options,host))
+      .filter(d=>d.category===ts.DiagnosticCategory.Error).map(d=>ts.flattenDiagnosticMessageText(d.messageText,'\n'));}
+  assert.deepEqual(errors(text),[],'actual cold Want and production request method match installed official and Core SDK types');
+  assert.ok(errors(text.replace('runtime.waitForResult(requestId,','runtime.waitForResult("wrong-id",')).length>0,
+    'SDK counterfactual rejects an invalid Host ownership id');
+console.log('PASS installed SDK Want and actual Core SDK send/wait types, with invalid request-id counterfactual; no device/Native result claimed');
+  // The TS typechecker accepts a nested conditional object which the installed
+  // bytecode frontend rejects. Exercise that official frontend on the actual
+  // complete production module as well; parse-only neither links nor runs it.
+  const frontend=resolveArkFrontend();
+  const parse=path=>spawnSync(frontend,['--target-api-version','23','--module','--parse-only',path],{encoding:'utf8'});
+  for(const path of ['app/ReaderRuntimeOwner.ts','app/MangaOfflineNetworkProbe.ts','app/ReaderControlVerificationLaunch.ts']) {
+    const actualParse=parse(localFilePath(url(path)));
+    assert.equal(actualParse.status,0,actualParse.stderr||actualParse.stdout||String(actualParse.error));
+  }
+  const invalidDir=nodeFs.mkdtempSync(join(tmpdir(),'reader-manga-owner-frontend-'));
+  try {
+    const entryPath=localFilePath(url('entryability/EntryAbility.ets'));
+    const etsOptions=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+    const ui=require(`${sdk}/lib/process_ui_syntax.js`);
+    const entryTree=ts.createSourceFile(entryPath,readFileSync(entryPath,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,etsOptions);
+    assert.deepEqual(entryTree.parseDiagnostics,[],'actual Ability ETS parses with official SDK');
+    const transformed=ts.transform(entryTree,[ui.processUISyntax(null,true)],etsOptions);
+    const emitted=join(invalidDir,'ActualEntry.ts');nodeFs.writeFileSync(emitted,ts.createPrinter().printFile(transformed.transformed[0]));transformed.dispose();
+    assert.deepEqual(ui.transformLog.errors,[],'actual Ability ETS transform must have no diagnostics');
+    const abilityParse=parse(emitted);assert.equal(abilityParse.status,0,abilityParse.stderr||abilityParse.stdout||String(abilityParse.error));
+    const invalid=join(invalidDir,'invalid.ts');nodeFs.writeFileSync(invalid,'export const invalid = (;\n');
+    assert.notEqual(parse(invalid).status,0,'official frontend must reject invalid syntax');
+  } finally {nodeFs.rmSync(invalidDir,{recursive:true,force:true});}
+  console.log('PASS actual Owner/Probe/Launch and official transformed Entry es2abc parse-only frontend and invalid-syntax control; no HAP/runtime result claimed');
+}
+
+
+}
+
+}

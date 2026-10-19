@@ -1,14 +1,11 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { loadReaderTypographyRoles } from './lib/reader-typography-probe.mjs';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import {auditTypographyConsumers} from './lib/reader-typography-consumer-audit.mjs';
-
-const read = relative => readFileSync(new URL(`../entry/src/main/ets/${relative}`, import.meta.url), 'utf8');
-const typographySource = read('features/common/ReaderTypography.ets');
-// Expected tuples come from the selected design source, never extracted from
-// the native roles being assessed. The generator separately binds its bytes.
-const design = JSON.parse(readFileSync(new URL('../../Reader-UI/design/source-switch/source-switch.visual.json', import.meta.url)));
+import {readFileSync} from 'node:fs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function designRoles(){
+ const {loadReaderTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
+ const fontFamilies=await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+ const typographySource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets',import.meta.url),'utf8');
+ const design=JSON.parse(readFileSync(new URL('../../Reader-UI/design/source-switch/source-switch.visual.json',import.meta.url))); 
 const roleKeys = {
   HEADING: 'title', BOOK_TITLE: 'bookTitle', METADATA: 'author', CAPTION: 'metadata',
   COLUMN: 'column', ACTION: 'discoveryAction', ACTION_COMPACT: 'discoveryAction',
@@ -28,76 +25,25 @@ const novelTuples = Object.entries(roleKeys).map(([name, key]) => {
   return [name, fontFamilies[asset.nativeFamilyConstant], weight,
     name==='ACTION_COMPACT'?design.numbers.compactDiscoveryActionFontSize:design.numbers[key + 'FontSize'], design.numbers[key + 'LineHeight']];
 });
-const novelRoles = novelTuples.map(([name]) => 'TYPE_SOURCE_SWITCH_NOVEL_' + name);
-const roles = loadReaderTypographyRoles(typographySource);
-const { TYPE_SOURCE_SWITCH_NAME, TYPE_SOURCE_SWITCH_LATENCY, TYPE_SOURCE_SWITCH_CHAPTER } = roles;
-const row = read('features/source/CandidateRow.ets');
 
-assert.deepEqual(
-  [TYPE_SOURCE_SWITCH_NAME, TYPE_SOURCE_SWITCH_LATENCY, TYPE_SOURCE_SWITCH_CHAPTER].map(style => ({
-    fontFamily: style.fontFamily,
-    fontWeight: style.fontWeight,
-    fontSizeFp: style.fontSizeFp,
-    lineHeightFp: style.lineHeightFp,
-  })),
-  [
-    { fontFamily: 'ReaderInter', fontWeight: 500, fontSizeFp: 10, lineHeightFp: 12 },
-    { fontFamily: 'ReaderInter', fontWeight: 400, fontSizeFp: 9, lineHeightFp: 10 },
-    { fontFamily: 'ReaderInter', fontWeight: 500, fontSizeFp: 9, lineHeightFp: 10 },
-  ],
-  'source-switch roles preserve the existing compact text tuples',
-);
-
-for (const role of ['TYPE_SOURCE_SWITCH_NAME', 'TYPE_SOURCE_SWITCH_LATENCY', 'TYPE_SOURCE_SWITCH_CHAPTER']) {
-  assert.match(row, new RegExp(`${role}\\.fontFamily`));
-  assert.match(row, new RegExp(`${role}\\.fontWeight`));
-  assert.match(row, new RegExp(`${role}\\.fontSizeFp`));
-  assert.match(row, new RegExp(`${role}\\.lineHeightFp`));
+ const roles=loadReaderTypographyRoles(typographySource);
+ for(const [name,fontFamily,fontWeight,fontSizeFp,lineHeightFp] of novelTuples)assert.deepEqual({...roles['TYPE_SOURCE_SWITCH_NOVEL_'+name]},{fontFamily,fontWeight,fontSizeFp,lineHeightFp,letterSpacingFp:undefined,scalePolicy:'system',source:'appBaseline'},name+' selected design record');
 }
-assert.doesNotMatch(row, /fontFamily\('ReaderInter'\)/,
-  'CandidateRow no longer owns a physical font family literal');
-assert.doesNotMatch(row, /fontSize\((?:9|10)\)\.lineHeight\((?:10|12)\)/,
-  'CandidateRow no longer owns the compact text tuple inline');
-
-for (const [name, fontFamily, fontWeight, fontSizeFp, lineHeightFp] of novelTuples) {
-  assert.deepEqual({ ...roles['TYPE_SOURCE_SWITCH_NOVEL_' + name] }, {
-    fontFamily, fontWeight, fontSizeFp, lineHeightFp, letterSpacingFp: undefined,
-    scalePolicy: 'system', source: 'appBaseline',
-  }, 'selected novel ' + name + ' retains the demo tuple with an explicit physical weight');
+async function candidateRoles(){
+ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+ const {boundedMembers,boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
+ const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
+ const {readerFoundationTokens}=await import('./lib/reader-foundation-control-probe.mjs');
+ const {readerAppColor}=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/source/CandidateRow.ets',import.meta.url),'utf8');
+ for(const mutate of [false,true]){
+  const roles={...readerTypographyRoles};for(const key of ['TYPE_SOURCE_SWITCH_NAME','TYPE_SOURCE_SWITCH_LATENCY','TYPE_SOURCE_SWITCH_CHAPTER'])if(mutate)roles[key]={...roles[key],fontFamily:'Probe-'+key,fontSizeFp:17,fontWeight:600,lineHeightFp:26};
+  const latency=readFileSync(new URL('../entry/src/main/ets/features/source/LatencyBar.ets',import.meta.url),'utf8');
+  const p=boundedSurfaceSdk();const latencyDeps={...p.deps,...readerFoundationTokens,readerAppColor,Alignment:{TopStart:'start'}};
+  const LatencyBar=createReaderBuilderProbe(latency,boundedMembers(latency),latencyDeps,p.hooks).Component;
+  const {owner}=createReaderBuilderProbe(source,boundedMembers(source),{...p.deps,...readerFoundationTokens,...roles,readerAppColor,LatencyBar,LATENCY_TEXT_W:28,CHAPTER_TEXT_W:100,VerticalAlign:{Center:'center'},TextAlign:{End:'end'},TextOverflow:{Ellipsis:'ellipsis'}},{...p.hooks,mountChildren:true,childSources:{...p.hooks.childSources,LatencyBar:latency}});
+  Object.assign(owner,{appThemeScheme:'day',sourceName:'source',bookName:'book',currentChapterTitle:'chapter',latencyMs:38,isCurrent:false,offline:false,timeout:false});owner.initialRender();
+  for(const [text,key] of [['source','NAME'],['38ms','LATENCY'],['chapter','CHAPTER']]){const node=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create===text);assert.ok(node,text);const r=roles['TYPE_SOURCE_SWITCH_'+key];assert.deepEqual([node.fontFamily,node.fontWeight,node.fontSize,node.lineHeight],[r.fontFamily,r.fontWeight,r.fontSizeFp,r.lineHeightFp]);}
+ }
 }
-assert.equal(fontFamilies.READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 'ReaderNotoSansSCUIMedium');
-const fonts = read('features/common/ReaderFonts.ets');
-for (const [family, asset] of [
-  ['READER_FONT_NOTO_SANS_SC_UI_REGULAR', 'NotoSansSC-UIRegular.otf'],
-  ['READER_FONT_NOTO_SANS_SC_UI_MEDIUM', 'NotoSansSC-UIMedium.otf'],
-]) {
-  assert.ok(fonts.includes(`if (family === ${family}) return $rawfile('${asset}');`), 'the existing static UI asset is the actual registered family');
-}
-for (const [path, names] of [
-  ['features/source/SourceSwitchWindow.ets', novelRoles.filter(role => !role.includes('_NOVEL_SWITCH_') && !role.endsWith('_TOAST'))],
-  ['features/source/SourceSwitchProgress.ets', ['SWITCH_TITLE', 'SWITCH_SOURCE', 'SWITCH_STATUS', 'SWITCH_CAPTION'].map(name => 'TYPE_SOURCE_SWITCH_NOVEL_' + name)],
-  ['features/source/SourceSwitchCompletionOverlay.ets', ['TYPE_SOURCE_SWITCH_NOVEL_TOAST']],
-]) {
-  const source = read(path);
-  const carriers = auditTypographyConsumers(source,'entry/src/main/ets/'+path);
-  for (const name of names) {
-    if (name.endsWith('_NARROW')) {
-      assert.ok(source.includes(`${name}.fontSizeFp`) && source.includes(`${name}.lineHeightFp`), 'narrow discovery consumes the selected smaller line box');
-    } else {
-      const action = name === 'TYPE_SOURCE_SWITCH_NOVEL_ACTION' || name === 'TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT';
-      const weight = action ? 'this.compactDiscoveryAction() ? TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT.fontWeight : TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontWeight' : `${name}.fontWeight`;
-      const line = action ? 'this.compactDiscoveryAction() ? TYPE_SOURCE_SWITCH_NOVEL_ACTION_COMPACT.lineHeightFp : TYPE_SOURCE_SWITCH_NOVEL_ACTION.lineHeightFp' : `${name}.lineHeightFp`;
-      assert.ok(carriers.some(node => node.modifiers.fontWeight?.expression === weight), 'actual novel text consumes explicit weight: ' + name);
-      if(name==='TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS') {
-        const narrowLine='this.narrowWindow() ? TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS_NARROW.lineHeightFp : TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.lineHeightFp';
-        assert.ok(carriers.some(node=>node.modifiers.lineHeight?.expression===narrowLine),'actual discovery label consumes the explicit normal/narrow line boxes');
-      } else assert.ok(carriers.some(node => node.modifiers.lineHeight?.expression === line), 'actual novel text consumes the CSS line box: ' + name);
-      if(name==='TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT'){
-        const count=carriers.filter(node=>node.modifiers.fontWeight?.expression===weight);
-        assert.equal(count.length,1);assert.deepEqual(count[0].modifiers.fontWeight.extra,['{ enableVariableFontWeight: true }'],'only count opts into the existing Inter variable axis');
-      }
-    }
-  }
-}
-
-console.log('PASS source-switch typography: historical compact tuples retained; 23 bounded novel roles match independent selected design sizes, physical weights and line boxes; actual SDK AST checks direct/finite action roles and the sole count variable axis');
+for(const id of selectContractCases({'design-roles':'Independent selected source-switch design record → semantic roles','candidate-roles':'Actual compact CandidateRow role propagation with mutation'})){await ({'design-roles':designRoles,'candidate-roles':candidateRoles})[id]();recordContractCasePass(id);}

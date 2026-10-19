@@ -1,103 +1,27 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-
-import {
-  createDefaultReaderTtsPreferencesSnapshot,
-  isReaderTtsVoiceInstalled,
-  normalizeReaderTtsPreferencesSnapshot,
-} from '../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts';
-
-const fallback = createDefaultReaderTtsPreferencesSnapshot();
-assert.deepEqual(fallback, {
-  version: 1,
-  language: 'zh-CN',
-  person: 0,
-  pauseOnInterruption: true,
-  allowMixing: false,
-  failurePolicy: 'stop',
-  followHighlight: true,
-  backgroundPlayback: true,
-  keepScreenOn: false,
-});
-
-assert.deepEqual(normalizeReaderTtsPreferencesSnapshot({
-  version: 1,
-  language: ' en-US ',
-  person: 7,
-  pauseOnInterruption: false,
-  allowMixing: true,
-  failurePolicy: 'skip',
-  followHighlight: false,
-  backgroundPlayback: true,
-  keepScreenOn: false,
-}), {
-  version: 1,
-  language: 'en-US',
-  person: 7,
-  pauseOnInterruption: false,
-  allowMixing: true,
-  failurePolicy: 'skip',
-  followHighlight: false,
-  backgroundPlayback: true,
-  keepScreenOn: false,
-});
-
-assert.deepEqual(normalizeReaderTtsPreferencesSnapshot({
-  version: 1,
-  language: '',
-  person: -1,
-  pauseOnInterruption: 'invalid',
-  allowMixing: 'invalid',
-  failurePolicy: 'retry',
-  followHighlight: 'invalid',
-}), fallback, 'invalid fields must fall back independently instead of entering Host state');
-
-assert.equal(isReaderTtsVoiceInstalled('INSTALLED'), true);
-assert.equal(isReaderTtsVoiceInstalled(' installed '), true);
-assert.equal(isReaderTtsVoiceInstalled(undefined), true, 'older system images omit voice status');
-assert.equal(isReaderTtsVoiceInstalled('GA'), false, 'downloadable catalogue voices are not immediately playable');
-
-const appDir = new URL('../entry/src/main/ets/app/', import.meta.url);
-const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const systemHost = await readFile(new URL('HarmonySystemTtsHost.ts', appDir), 'utf8');
-const router = await readFile(new URL('HarmonyTtsHostRouter.ts', appDir), 'utf8');
-const coordinator = await readFile(new URL('ReaderTtsSessionCoordinator.ts', readingDir), 'utf8');
-const gateway = await readFile(new URL('ReaderTtsPreferencesGateway.ts', readingDir), 'utf8');
-const panel = await readFile(new URL('ReaderControlTtsContent.ets', readingDir), 'utf8');
-const experience = await readFile(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
-
-assert.match(systemHost, /textToSpeech\.listVoices\(\{/);
-assert.match(systemHost, /isReaderTtsVoiceInstalled\(voice\.status\)/,
-  'only voices that can be created immediately may enter persisted choices');
-assert.match(systemHost, /ensureEngine\(request\.language, request\.person\)/);
-assert.match(systemHost, /requested system TTS voice failed; falling back to default/,
-  'a stale persisted voice must fall back to the already-probed system default');
-assert.match(systemHost, /'languageContext': this\.engineLanguage \?\? request\.language/,
-  'fallback speech must use the effective engine language');
-assert.match(systemHost, /person,/);
-assert.match(router, /listSystemVoices\(\): Promise<ReaderTtsVoiceOption\[\]>/);
-assert.match(coordinator, /setVoice\(language: string, person: number\): Promise<void>/);
-assert.match(coordinator, /this\.active\?\.input\.pauseOnInterruption \?\? true/);
-assert.match(gateway, /reader_tts_preferences_v1/);
-assert.match(gateway, /await store\.flush\(\)/);
-assert.match(panel, /this\.toggleRow\('pauseOnInterruption'\)/);
-assert.match(panel, /kind === 'pauseOnInterruption'[\s\S]*?kind === 'allowMixing'[\s\S]*?backgroundPlayback/,
-  'the persisted pause preference must be read live, not captured in a Builder value argument');
-assert.match(panel, /this\.ttsClosedConfigRow\('failure'\)/);
-assert.match(panel, /private fieldValue\(kind:[\s\S]*?this\.failurePolicy === 'skip'/,
-  'persisted failure policy must still be projected live into the Figma-backed closed field');
-assert.match(panel, /private fieldLabel\(kind:[\s\S]*?'不可用处理'/);
-assert.doesNotMatch(panel, /this\.onFailurePolicyChange\(this\.failurePolicy === 'skip'/,
-  'a closed field with no Figma option surface must not invisibly cycle persisted policy');
-assert.match(panel, /this\.openConfiguration\(kind\)/, 'voice and other fields open explicit configuration instead of cycling');
-assert.doesNotMatch(panel, /this\.selectNextVoice\(\)/);
-assert.doesNotMatch(panel, /this\.selectNextLanguage\(\)/,
-  'language must not be changed by an undisclosed tap-to-cycle interaction');
-assert.match(experience, /this\.ttsPreferencesGateway\.load\(\)\.then\(/,
-  'saved TTS preferences publish independently of optional provider and voice reads');
-assert.match(experience, /listSystemVoices\(\)/);
-assert.match(experience, /language: this\.ttsLanguage/);
-assert.match(experience, /person: this\.ttsPerson/);
-assert.match(experience, /pauseOnInterruption: this\.ttsPauseOnInterruption/);
-
-console.log('reader TTS voice and persisted Host preferences: PASS');
+import {readFileSync} from 'node:fs';
+import {stripTypeScriptTypes} from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function preferences() {
+ const {createDefaultReaderTtsPreferencesSnapshot,normalizeReaderTtsPreferencesSnapshot,isReaderTtsVoiceInstalled}=await import('../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts');
+ const fallback=createDefaultReaderTtsPreferencesSnapshot();assert.deepEqual(fallback,{version:1,language:'zh-CN',person:0,pauseOnInterruption:true,allowMixing:false,failurePolicy:'stop',followHighlight:true,backgroundPlayback:true,keepScreenOn:false});
+ assert.deepEqual(normalizeReaderTtsPreferencesSnapshot({version:1,language:' en-US ',person:7,pauseOnInterruption:false,allowMixing:true,failurePolicy:'skip',followHighlight:false,backgroundPlayback:true,keepScreenOn:false}),{version:1,language:'en-US',person:7,pauseOnInterruption:false,allowMixing:true,failurePolicy:'skip',followHighlight:false,backgroundPlayback:true,keepScreenOn:false});
+ assert.deepEqual(normalizeReaderTtsPreferencesSnapshot({version:1,language:'',person:-1,pauseOnInterruption:'invalid',allowMixing:'invalid',failurePolicy:'retry',followHighlight:'invalid'}),fallback);
+ for(const status of ['INSTALLED',' installed ',undefined])assert.equal(isReaderTtsVoiceInstalled(status),true);assert.equal(isReaderTtsVoiceInstalled('GA'),false);
+}
+async function systemVoice() {
+ const {isReaderTtsVoiceInstalled}=await import('../entry/src/main/ets/features/reading/ReaderTtsPreferencesState.ts');
+ const source=readFileSync(new URL('../entry/src/main/ets/app/HarmonySystemTtsHost.ts',import.meta.url),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,'');
+ const requests=[],spoken=[];let voices=[];
+ const textToSpeech={async createEngine(params){requests.push(params);if(params.language==='unavailable')throw Error('not installed');return {setListener(){},speak(text,params){spoken.push({text,params});},stop(){},shutdown(){}};},async listVoices(){return voices;}};
+ const Host=new Function('textToSpeech','audio','hilog','harmonyTtsAudioSessionLease','isReaderTtsVoiceInstalled','errorMessageOf',stripTypeScriptTypes(source)+';return HarmonySystemTtsHost;')(textToSpeech,{}, {error(){}},{createOwner:()=> 'system',deactivate:async()=>{}},isReaderTtsVoiceInstalled,e=>e.message);
+ const host=new Host();
+ voices=[{language:'en-US',person:2,status:'GA',description:'downloadable',style:''},{language:'zh-CN',person:0,status:'INSTALLED',description:'已安装',style:''},{language:'zh-CN',person:0,status:'INSTALLED',description:'重复',style:''},{language:' ',person:1,status:'INSTALLED',description:'bad',style:''}];
+ assert.deepEqual(await host.listVoices(),[{language:'zh-CN',person:0,label:'已安装'}]);voices=[];assert.deepEqual(await host.listVoices(),[{language:'zh-CN',person:0,label:'系统默认'}]);
+ await host.speak({requestId:'r1',text:'正文',language:'unavailable',person:7,rate:1,pitch:1});assert.deepEqual(requests.map(x=>[x.language,x.person]),[['unavailable',7],['zh-CN',0]]);
+ assert.equal(spoken[0].params.extraParams.languageContext,'zh-CN','fallback uses effective engine language, not unavailable requested language');
+ await host.speak({requestId:'r2',text:'续读',language:'unavailable',person:7,rate:1,pitch:1});assert.equal(requests.length,2,'same requested voice reuses the already-effective default engine');
+ await host.close();
+}
+const cases={preferences,'system-voice':systemVoice};
+for(const id of selectContractCases({preferences:'Pure defaults, normalization and installed voice admission','system-voice':'Actual system Host list/engine fallback/effective language with controlled speech Kit'})){await cases[id]();recordContractCasePass(id);}

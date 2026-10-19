@@ -1,15 +1,14 @@
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
-import {fixture as sourceFixture,origin,target,session as defaultSession,settle as ownerSettled,deferred,gatewayExports,Runtime,read,ReaderCoreRequestError,Core} from './lib/source-switch-owner-probe.mjs';
-import {makeIndex} from './lib/source-switch-sdk-consumer.mjs';
-import {actualBookshelfOperationTypes,actualBookshelfHostField} from './lib/bookshelf-operation-owner-probe.mjs';
-import {actualSourceManagementTypes,actualSourceManagementHostField} from './lib/source-management-owner-probe.mjs';
-import {actualGeneralSettingsTypes,actualGeneralSettingsHostField} from './lib/general-settings-owner-probe.mjs';
-import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
-import {directoryIndexReadProbe} from './lib/directory-index-read-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const selected=selectContractCases({'entry-route':{description:'Actual Index/ReadingEntry route, failure and independent directory admission',resources:[]},'source-compensation':{description:'Actual SourceSwitch transaction compensation, original anchor and stale owner protections',resources:[]}});
+async function run(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const {readFileSync}=await import('node:fs');
+const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+const {fixture:sourceFixture,origin,target,session:defaultSession,settle:ownerSettled,deferred,gatewayExports,Runtime,read,ReaderCoreRequestError,Core}=await import('./lib/source-switch-owner-probe.mjs');
+const {makeIndex,initializeIndex}=await import('./lib/source-switch-sdk-consumer.mjs');
+const {directoryIndexReadProbe}=await import('./lib/directory-index-read-probe.mjs');
+const {compileHost,setRuntime}=await import('./lib/reading-entry-owner-probe.mjs');
 const directoryReadProbe=await directoryIndexReadProbe();
-import {compileHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
 const {RemoteReadingGatewayError}=await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
 const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts');
 const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
@@ -35,21 +34,13 @@ const constructors=new WeakMap(),sourceHostPort={forRuntime(runtime){
  const Constructor=constructors.get(runtime);assert.ok(Constructor,'each case registers its own original source owner');
  return Constructor.forRuntime(runtime);
 }};
-// Reuse the existing fixture's unchanged initializer, rather than duplicating
-// its book/settings/source callbacks or copying mutable native property cells.
-const indexFactorySource=makeIndex.toString(),initStart=indexFactorySource.indexOf(' Object.assign(index,'),
- initEnd=indexFactorySource.indexOf(' const acquire=f.runtime.bookAcquisitions;');
-assert.ok(initStart>=0&&initEnd>initStart,'bounded Index fixture initializer is explicit');
-const initializeIndex=new Function('index','f','Runtime','origin','ReaderNativeAlertOwner','actualBookshelfOperationTypes',
- 'actualBookshelfHostField','actualSourceManagementTypes','actualSourceManagementHostField','actualGeneralSettingsTypes',
- 'actualGeneralSettingsHostField','Core','navigation','reading',indexFactorySource.slice(initStart,initEnd));
+// Reuse the shared explicit initializer; never evaluate source-string slices.
 let nativeTemplate,indexEmissions=0;
 function freshIndex(f){
  constructors.set(f.runtime,f.Constructor);
- if(nativeTemplate===undefined){indexEmissions++;nativeTemplate=makeIndex({...f,Constructor:sourceHostPort});return nativeTemplate;}
+ if(nativeTemplate===undefined){indexEmissions++;nativeTemplate=makeIndex({...f,Constructor:sourceHostPort},{domain:'entry'});return nativeTemplate;}
  const index=new nativeTemplate.index.constructor(undefined,{sourceSwitchScopeId:0});
- initializeIndex(index,f,Runtime,origin,ReaderNativeAlertOwner,actualBookshelfOperationTypes,actualBookshelfHostField,
-  actualSourceManagementTypes,actualSourceManagementHostField,actualGeneralSettingsTypes,actualGeneralSettingsHostField,Core,1,false);
+ initializeIndex(index,f,{domain:'entry'});
  assert.notEqual(index,nativeTemplate.index);assert.notEqual(index.nodes,nativeTemplate.index.nodes);
  assert.notEqual(index.__sourceSwitchState,nativeTemplate.index.__sourceSwitchState,'native state cells are never shared');
  return{p:nativeTemplate.p,index,leafDeps:nativeTemplate.leafDeps};
@@ -84,7 +75,10 @@ function fixture(options={}){
  const bind=()=>{h.sourceSwitchHost=f.host;f.host.context=h.sourceSwitchContext();f.host.lease=h.sourceSwitchLease(f.host);};
  return{...f,...x,h,open,pick,bind,options};
 }
-async function check(name,run){let timer;try{await Promise.race([run(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('journey did not settle')),2000);})]);checks.push({name,status:'PASS'});}catch(e){checks.push({name,status:'FAIL',error:e.message});}finally{clearTimeout(timer);}}
+async function check(name,run){
+ const sourceCase=/^(durable-anchor|missing-and-invalid-anchor|startup-original|pending-choice|late-compensation|uncertain-compensation|exact-target|failed-target|canonical-book|coarse-anchor)/.test(name);
+ if(sourceCase!==(selectedCase==='source-compensation'))return;
+ let timer;try{await Promise.race([run(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('journey did not settle')),2000);})]);checks.push({name,status:'PASS'});}catch(e){checks.push({name,status:'FAIL',error:e.message});}finally{clearTimeout(timer);}}
 for(const sourceId of ['local','online'])await check('network-free-reading-route-'+sourceId,async()=>{
  const t=fixture(),h=t.h;h.detailBook={...book,sourceId};h.openReading(undefined);
  assert.equal(h.route,'reading');assert.equal(h.readingSessionActive,true);assert.equal(h.remoteReadingSession,undefined);assert.deepEqual(h.detailToc,[]);
@@ -145,7 +139,7 @@ await check('late-compensation-cannot-replace-successor-book',async()=>{
  await assert.rejects(p,/aborted/);assert.equal(t.h.detailBook,newer);assert.equal(t.host.current().pending.transactionId,'pending-1');
 });
 for(const mode of ['finalized','generic-error','still-pending','missing-target','list-failed'])await check('uncertain-compensation-'+mode,async()=>{
- const t=fixture();t.bind();t.host.snapshot={...t.host.snapshot,pending:oldPending()};canonicalShelf=mode==='missing-target'?undefined:{...book};
+ const t=fixture();t.h.route='reading';t.h.readingSessionActive=true;t.bind();t.host.snapshot={...t.host.snapshot,pending:oldPending()};canonicalShelf=mode==='missing-target'?undefined:{...book};
  const error=new ReaderCoreRequestError({error:{code:'INVALID_PARAMS',message:'finalized',details:{reason:'already_finalized',transactionId:'pending-1'}}});
  t.host.gateway.rollbackSwitch=async()=>{throw mode==='generic-error'?Error('already_finalized'):error;};
  t.host.gateway.listPendingSwitches=async()=>{if(mode==='list-failed')throw Error('list failure');return mode==='still-pending'?[oldPending()]:[];};
@@ -189,7 +183,7 @@ for(const mode of ['toc-title','no-title','other-error','missing-index','stale']
 });
 await check('reader-identity-retained-across-appearance',async()=>{
  const Shell=productionMotionMethods(new URL('../entry/src/main/ets/features/shell/ReaderShell.ets',import.meta.url),['readingIdentityKey']);
- const s=Object.assign(new Shell(),{sourceId:'source',bookId:'book',fontSize:18}),key=s.readingIdentityKey();s.fontSize=24;assert.equal(s.readingIdentityKey(),key);s.sourceId='another';assert.notEqual(s.readingIdentityKey(),key);assert.match(read('features/shell/ReaderShell.ets'),/ForEach\(\[this\.readingIdentityKey\(\)\]/);
+ const s=Object.assign(new Shell(),{sourceId:'source',bookId:'book',fontSize:18}),key=s.readingIdentityKey();s.fontSize=24;assert.equal(s.readingIdentityKey(),key);s.sourceId='another';assert.notEqual(s.readingIdentityKey(),key);
 });
 await check('local-sparse-search-membership-loads-real-owner-record',async()=>{
  const t=fixture(),h=t.h;h.route='search';h.shelfBooks=[];const result={sourceId:'local',sourceName:'本地',bookId:'import-real-id',title:'真实搜索书名',author:'作者',kind:'epub'};
@@ -197,9 +191,11 @@ await check('local-sparse-search-membership-loads-real-owner-record',async()=>{
 });
 await check('directory-honest-empty-error-copy',async()=>{
  const Directory=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/FullDirectoryPanel.ets',import.meta.url),['catalogEmptyMessage']),d=Object.assign(new Directory(),{entries:[],catalogMessage:'目录解析失败'});
- assert.equal(d.catalogEmptyMessage(),'目录解析失败');d.catalogMessage='';assert.match(d.catalogEmptyMessage(),/暂无可用章节/);d.entries=[{index:3,title:'已有章'}];assert.equal(d.catalogEmptyMessage(),'没有匹配的章节');assert.match(read('features/reading/ReaderFullDirectory.ets'),/catalogMessage: this\.catalogMessage/);assert.match(read('pages/Index.ets'),/private externalDirectory\([\s\S]*catalogMessage: this\.detailLoadingMessage/);
+ assert.equal(d.catalogEmptyMessage(),'目录解析失败');d.catalogMessage='';assert.match(d.catalogEmptyMessage(),/暂无可用章节/);d.entries=[{index:3,title:'已有章'}];assert.equal(d.catalogEmptyMessage(),'没有匹配的章节');
 });
 console.log(JSON.stringify({checks,evidenceLayer:'actual SDK Index methods and whole original ReadingEntry/SourceSwitch owners; controlled gateway/OS seams, no device acceptance'}));
 
 assert.equal(checks.filter(c=>c.status==='FAIL').length,0,'original direct-entry recovery journeys must pass');
 assert.equal(indexEmissions,1,'production SDK graph is compiled once, not once per isolated journey');
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

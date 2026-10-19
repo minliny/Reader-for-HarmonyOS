@@ -1,22 +1,24 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
-import { registerHooks,createRequire } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
-import {ProductionHost,setRuntime} from './lib/reading-entry-owner-probe.mjs';
-import { readingPrefetchOwnerProbe } from './lib/reading-prefetch-owner-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { resolveEtsLoaderRoot, virtualFilePath }=await import('./lib/tool-environment.mjs');
+
+const { registerHooks,createRequire }=await import('node:module');
+const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
+const { readFileSync }=await import('node:fs');
+const { createHash }=await import('node:crypto');
+const {ProductionHost,setRuntime}=await import('./lib/reading-entry-owner-probe.mjs');
+const { readingPrefetchOwnerProbe }=await import('./lib/reading-prefetch-owner-probe.mjs');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
-const baseline=process.argv.includes('--baseline');
-const root=new URL(baseline?'../../.reader-isolated/catalog-949-20260925/Reader-for-HarmonyOS/':'../',import.meta.url);
+const root=new URL('../',import.meta.url);
 const { ReadingOfflineGateway }=await import(new URL('entry/src/main/ets/features/reading/ReadingOfflineGateway.ts',root));
 const { RemoteReadingFlowGateway }=await import(new URL('entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts',root));
 const { LocalReadingFlowGateway }=await import(new URL('entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts',root));
 const { sameRemoteSessionEvidence }=await import(new URL('entry/src/main/ets/features/reading/RemoteReadingEvidence.ts',root));
 const { BookAcquisitionCoordinator }=await import(new URL('entry/src/main/ets/app/BookAcquisitionCoordinator.ts',root));
 const file=new URL('entry/src/main/ets/pages/Index.ets',root),checks=[],warnings=[];
-let currentOwner;
+let currentOwner;const ownedHosts=new Set();
 const ownerProbe=readingPrefetchOwnerProbe(()=>currentOwner);
 const Index=productionMotionMethods(file,['applyReadingCommit','prefetchReadingWindow','readingPrefetchLease','isRemoteCatalogNearEnd','bindReadingEntryReader'],{
  ...ownerProbe,ReadingEntryHost:ProductionHost,EMPTY_READABLE_ADMISSION:{generation:0,adding:false,cancelling:false,confirmation:'none'},LOCAL_SOURCE_ID:'local',ReadingOfflineGateway,RemoteReadingFlowGateway,LocalReadingFlowGateway,sameRemoteSessionEvidence,READING_CACHE_BEFORE:2,READING_CACHE_AFTER:2,CATALOG_REFRESH_NEAR_END:3,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,DOMAIN:0,hilog:{warn(...v){warnings.push(v);},error(...v){assert.fail(`unexpected directory failure ${v}`);}},
@@ -47,7 +49,7 @@ function sdkReaderPayload(page){
  return{render,retained,readerConstructions};
 }
 
-async function until(predicate){const deadline=Date.now()+10000;while(!predicate()){assert.ok(Date.now()<deadline,'production boundary not reached');await new Promise(r=>setTimeout(r,1));}}
+async function until(predicate){for(let turn=0;turn<1000;turn++){if(predicate())return;await new Promise(setImmediate);}assert.fail('controlled production boundary not reached');}
 function fixture(count=1370){
  const sourceId='source',bookId='book',calls=[],body='完整的离线小说正文。'.repeat(700);
  const session={identity:{sourceId,bookId},sourceVersion:'v8',catalogVersion:'catalog',contextVersion:'context',acquisitionMode:'online',book:{title:'终宋',author:'作者'},detailUrl:bookId,continuationVariables:[],hostRequirements:[],entries:Array.from({length:count},(_,index)=>({index,title:`章${index}`,url:`https://source.invalid/${index}`,variables:[]}))};
@@ -68,10 +70,13 @@ function fixture(count=1370){
  const page=Object.assign(new Index(),{readingEntryScopeId:-1,route:'reading',readingOriginRoute:'detail',readableAdmissions:[],shelfOperation:{removalKey:'',busy:false},mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,shelfReceiptRetired:false,remoteSessionGeneration:1,detailBook:{sourceId,bookId,...session.book},remoteReadingSession:session,readingSessionActive:true,navigationGeneration:1,readingReadyGeneration:1,consumeSystemFileOpen(){},refreshRemoteCatalogNearEnd(){assert.fail('fixture chapter not near tail');}});
  let publications=0,toc=session.entries.map(e=>({index:e.index,title:e.title,navigable:true,downloadState:'completed',bookmarks:[]}));
  Object.defineProperty(page,'detailToc',{get:()=>toc,set:v=>{publications++;toc=v;}});
- const active=[],prefetch=page.prefetchReadingWindow.bind(page);page.prefetchReadingWindow=(...a)=>{const work=prefetch(...a);active.push(work);return work;};
+ const active=[],prefetch=page.prefetchReadingWindow.bind(page);page.prefetchReadingWindow=(...a)=>{const work=prefetch(...a);const host=ownerProbe.ReadingPrefetchHost.forRuntime(runtime);if(host)ownedHosts.add(host);active.push(work);return work;};
  const commit=(index=988,offset=0)=>page.applyReadingCommit({...page.remoteReadingSession.identity,chapterIndex:index,chapterOffset:offset});
  return{session,state,runtime,page,calls,body,execute,commit,publications:()=>publications,count:m=>calls.filter(c=>c.method===m).length,settle:()=>Promise.all(active),reads:()=>calls.filter(c=>c.method==='chapter.content').map(c=>c.p.chapterIndex)};
 }
+
+try{
+if(id==='index-remount'){
 {
  const f=fixture(),gate=deferred();f.state.beforePrefetch=async()=>gate.promise;
  const original=ownerProbe.ReadingPrefetchHost.forRuntime(f.runtime),old=f.page.prefetchReadingWindow(f.session,988);
@@ -86,7 +91,8 @@ function fixture(count=1370){
  assert.equal(f.count('chapter.content'),5);assert.equal(f.publications(),0,'retired physical owner receives no late rows');
  checks.push('same-Runtime physical Index successor shares actual accepted queue and native drain without forking');
 }
-
+}
+if(id==='retained-reader'){
 {
  const f=fixture(),sdk=sdkReaderPayload(f.page),oldActor=sdk.render(),oldRows=f.page.detailToc;
  f.state.missingManifests.add(988);await f.page.prefetchReadingWindow(f.session,988);
@@ -98,66 +104,94 @@ function fixture(count=1370){
  gate.resolve();await f.settle();assert.equal(f.count('cache.book.prefetch'),1,'retired actual physical commit cannot dispatch optional IO');
  checks.push('actual Host-Gateway→Index→SDK retained ReaderShell/ReadingExperience metadata Prop patch and retired physical callback');
 }
-
-{
- const f=fixture(),started=performance.now();for(let i=0;i<4;i++)f.commit(988,i*100);await f.settle();
- const result={mode:baseline?'baseline':'regression',chapters:1370,pageCommits:4,prefetchCalls:f.count('cache.book.prefetch'),bodyReads:f.count('chapter.content'),manifestChecks:f.state.manifest,peakBodyRequests:f.state.peakBodies,peakPrefetchCommands:f.state.peakPrefetch,fullTocPublications:f.publications(),materializedBodyChars:f.count('chapter.content')*f.body.length,hostProbeElapsedMs:Number((performance.now()-started).toFixed(2)),indexSha256:createHash('sha256').update(readFileSync(file)).digest('hex')};
- if(baseline){assert.equal(result.bodyReads,1370*4);assert.equal(result.prefetchCalls,4);assert.equal(result.fullTocPublications,4);}else{assert.equal(result.prefetchCalls,1);assert.equal(result.bodyReads,5);assert.equal(result.manifestChecks,5);assert.equal(result.fullTocPublications,0);for(let i=0;i<4;i++){f.commit(988,500+i*100);await f.settle();}assert.equal(f.count('cache.book.prefetch'),1);checks.push('1370 chapters / eight same-chapter commits use one five-chapter window');}
- console.log(JSON.stringify(result,null,2));
 }
-if(!baseline){
- {
+if(id==='window-counts'){
+const f=fixture();for(let i=0;i<4;i++)f.commit(988,i*100);await f.settle();assert.equal(f.count('cache.book.prefetch'),1);assert.equal(f.count('chapter.content'),5);assert.equal(f.state.manifest,5);assert.equal(f.publications(),0);for(let i=0;i<4;i++){f.commit(988,500+i*100);await f.settle();}assert.equal(f.count('cache.book.prefetch'),1);
+}
+if(id==='content-revision'){
+{
   const f=fixture(),old=f.page.detailToc;old[988].bookmarks=[{id:'kept'}];await f.page.prefetchReadingWindow(f.session,988);f.state.contentRevision++;f.state.missingManifests.add(988);await f.page.prefetchReadingWindow(f.session,988);
   assert.equal(f.count('cache.book.prefetch'),2);assert.equal(f.count('chapter.content'),10);assert.equal(f.publications(),1);assert.equal(f.page.detailToc[988].downloadState,'cached');assert.equal(f.page.detailToc[988].bookmarks,old[988].bookmarks);assert.equal(f.page.detailToc[987],old[987]);assert.equal(f.page.detailToc[100],old[100]);checks.push('content mutation rechecks identities; missing resource patches only its row and preserves bookmarks');
  }
- {
+}
+if(id==='latest-window'){
+{
   const f=fixture(),gate=deferred();f.state.beforePrefetch=async p=>{if(p.chapterRange[0]===986)await gate.promise;};const first=f.page.prefetchReadingWindow(f.session,988);await until(()=>f.count('cache.book.prefetch')===1);const middle=f.page.prefetchReadingWindow(f.session,989),latest=f.page.prefetchReadingWindow(f.session,995);gate.resolve();await Promise.all([first,middle,latest]);
   assert.deepEqual(f.calls.filter(c=>c.method==='cache.book.prefetch').map(c=>c.p.chapterRange),[[986,991],[993,998]]);assert.deepEqual(f.reads().sort((a,b)=>a-b),[993,994,995,996,997]);assert.equal(f.state.peakPrefetch,1);checks.push('pending windows coalesce to latest and old window performs no body work');
  }
- {
+}
+if(id==='source-retirement'){
+{
   const f=fixture(),gate=deferred();f.state.beforeBody=async p=>{if(p.chapterIndex>=986&&p.chapterIndex<991)await gate.promise;};const first=f.page.prefetchReadingWindow(f.session,988);await until(()=>f.count('chapter.content')===5);f.state.missingManifests.add(988);f.page.navigationGeneration++;const newer={...f.session,identity:{sourceId:'other-source',bookId:'other-book'},contextVersion:'new'};f.page.remoteReadingSession=newer;f.page.detailBook=newer.identity;const next=f.page.prefetchReadingWindow(newer,995);gate.resolve();await Promise.all([first,next]);
   assert.equal(f.page.detailToc[988].downloadState,'completed');assert.equal(f.publications(),0);assert.equal(f.count('cache.book.prefetch'),2);assert.equal(f.state.manifest,5);checks.push('late body results from old source cannot publish after navigation and session switch');
  }
- {
+}
+if(id==='runtime-replacement'){
+{
   const f=fixture(),gate=deferred();f.state.beforePrefetch=async()=>gate.promise;const old=f.page.prefetchReadingWindow(f.session,988);await until(()=>f.count('cache.book.prefetch')===1);const replacement=fixture();const next=replacement.page.prefetchReadingWindow(replacement.session,988);gate.resolve();await Promise.all([old,next]);assert.equal(f.count('chapter.content'),0);assert.equal(replacement.count('chapter.content'),5);checks.push('runtime replacement admits only its own mounted Index, not a retiring page factory');
  }
- {
+}
+if(id==='network-backoff'){
+{
   const f=fixture(),before=warnings.length,realNow=Date.now;let now=realNow();Date.now=()=>now;
   try{f.state.failPrefetch=true;await f.page.prefetchReadingWindow(f.session,988);for(let i=0;i<4;i++){f.commit();await f.settle();}assert.equal(f.count('cache.book.prefetch'),1);assert.equal(warnings.length,before+1);assert.equal(f.publications(),0);f.state.failPrefetch=false;now+=30001;await f.page.prefetchReadingWindow(f.session,988);assert.equal(f.count('chapter.content'),5);}finally{Date.now=realNow;}
   checks.push('network failure is retried after short backoff without a per-page storm');
  }
- {
+}
+if(id==='failed-status'){
+{
   const f=fixture(),realNow=Date.now;let now=realNow();Date.now=()=>now;
   try{f.state.failedChapters.add(988);await f.page.prefetchReadingWindow(f.session,988);assert.equal(f.page.detailToc[988].downloadState,'cached');await f.page.prefetchReadingWindow(f.session,988);assert.equal(f.count('cache.book.prefetch'),1);f.state.failedChapters.clear();now+=30001;await f.page.prefetchReadingWindow(f.session,988);assert.equal(f.count('cache.book.prefetch'),2);assert.equal(f.page.detailToc[988].downloadState,'completed');}finally{Date.now=realNow;}
   checks.push('Core failed status remains retryable even when its retained body is cached');
  }
- {
+}
+if(id==='materialized-window'){
+{
   const f=fixture(12);f.state.leases=[4,5,6,7,8];const gateway=new ReadingOfflineGateway(f.runtime),result=await gateway.prefetchWindow(f.session,4,9);assert.deepEqual(result.entries.map(e=>e.index),[4,5,6,7,8]);assert.equal(f.count('chapter.content'),5);assert.equal(f.state.materialized.length,5);assert.equal(f.state.reports.length,5);assert.equal(result.completedChapters,5);const full=await gateway.loadProjection(f.session);assert.equal(full.length,12);assert.equal(f.count('chapter.content'),17);assert.ok(full.every(e=>e.downloadState==='completed'));checks.push('materialized window reuses exact identity once; full explicit projection verifies all chapters');
  }
- {
+}
+if(id==='explicit-range'){
+{
   const f=fixture(12);f.state.missingManifests.add(5);const full=await new ReadingOfflineGateway(f.runtime).prefetchRange(f.session,4,9);assert.equal(full.length,12);assert.equal(f.count('chapter.content'),12);assert.equal(full[5].downloadState,'cached');checks.push('explicit range retains whole-book completion semantics and missing-resource downgrade');
  }
- {
+}
+if(id==='independent-books'){
+{
   const f=fixture(12),other={...f.session,identity:{sourceId:'other',bookId:'other-book'}};await Promise.all([f.page.prefetchReadingWindow(f.session),f.page.prefetchReadingWindow(other)]);assert.equal(f.count('reading.progress.get'),2);assert.equal(f.count('cache.book.prefetch'),2);assert.deepEqual(new Set(f.calls.filter(c=>c.method==='cache.book.prefetch').map(c=>c.p.bookId)),new Set(['book','other-book']));checks.push('manual shelf update preserves independent work for each book');
  }
- {
+}
+if(id==='background-lane'){
+{
   const f=fixture(12),coordinator=new BookAcquisitionCoordinator(f.execute),priorities=[];let manualFence=0;const suspend=coordinator.readingPreparations.suspend.bind(coordinator.readingPreparations);coordinator.readingPreparations.suspend=()=>{manualFence++;suspend();};const request=coordinator.request.bind(coordinator);coordinator.request=(m,p,o,priority)=>{priorities.push(priority);return request(m,p,o,priority);};f.runtime.bookAcquisitions=()=>coordinator;f.runtime.request=(...a)=>coordinator.request(...a);
   try{await new ReadingOfflineGateway(f.runtime).prefetchWindow(f.session,4,9);assert.equal(manualFence,0);assert.ok(priorities.every(p=>p==='background'));await new ReadingOfflineGateway(f.runtime).prefetchRange(f.session,4,9);assert.equal(manualFence,1);}finally{coordinator.close();}checks.push('real coordinator runs window in background; explicit downloads retain foreground fence');
  }
- {
+}
+if(id==='response-cancel'){
+{
   const f=fixture(12);f.state.leases=[4,5,6,7,8];let current=true;f.state.beforePrefetch=async()=>{current=false;};await assert.rejects(new ReadingOfflineGateway(f.runtime).prefetchWindow(f.session,4,9,()=>current));assert.equal(f.count('chapter.content'),0);assert.deepEqual(f.state.reports.map(r=>r.chapterIndex).sort((a,b)=>a-b),[4,5,6,7,8]);assert.ok(f.state.reports.every(r=>r.outcome==='failed'&&r.errorCode==='cancelled'));checks.push('cancelled prefetch response closes every returned lease without reading bodies');
  }
- {
+}
+if(id==='body-cancel'){
+{
   const f=fixture(12),gate=deferred();f.state.leases=[4,5,6,7,8];let current=true;f.state.beforeBody=async()=>gate.promise;const work=new ReadingOfflineGateway(f.runtime).prefetchWindow(f.session,4,9,()=>current);await until(()=>f.count('chapter.content')===2);current=false;gate.resolve();await assert.rejects(work);assert.equal(f.count('chapter.content'),2);assert.deepEqual(f.state.reports.map(r=>r.chapterIndex).sort((a,b)=>a-b),[4,5,6,7,8]);assert.ok(f.state.reports.every(r=>r.outcome==='failed'));checks.push('mid-materialization cancellation drains unclaimed leases before rejecting');
  }
- {
+}
+if(id==='terminal-failure'){
+{
   const f=fixture(12);f.state.leases=[4,5,6,7,8];f.state.failReport.add(4);await assert.rejects(new ReadingOfflineGateway(f.runtime).prefetchWindow(f.session,4,9));assert.deepEqual(new Set(f.state.reports.map(r=>r.chapterIndex)),new Set([4,5,6,7,8]));assert.equal(f.state.reports.filter(r=>r.chapterIndex===4).length,3);checks.push('one terminal report failure is surfaced without stranding other leases');
  }
- {
+}
+if(id==='directory-metadata'){
+{
   const f=fixture();f.runtime.bookAcquisitions=()=>({setPreparationVisible(){},readingProjectionRevision:()=>0});f.page.bindReadingEntryReader();const entry=f.page.getReadingEntryHost();await entry.projectDirectory(f.page.readingEntryScopeId);const entries=f.page.detailToc;assert.equal(entries.length,1370);assert.ok(entries.every(e=>e.downloadState==='cached'));assert.equal(f.count('cache.book.status'),1);assert.equal(f.count('chapter.content'),0);assert.equal(f.state.manifest,0);assert.equal(f.count('bookmark.list'),1);assert.equal(entries[988].bookmarks[0].content,'书签');checks.push('production Entry/Directory owners and Index 1370-entry directory preserve bookmarks with one metadata read and zero body or manifest work');
  }
- {
+}
+if(id==='directory-invalidated'){
+{
   const f=fixture(),gate=deferred();f.state.beforeStatus=async()=>gate.promise;const work=new ReadingOfflineGateway(f.runtime).loadDirectoryProjection(f.session);await until(()=>f.count('cache.book.status')===1);f.state.contentRevision++;gate.resolve();await assert.rejects(work);assert.equal(f.count('chapter.content'),0);checks.push('directory metadata projection rejects content mutation during status read');
  }
- console.log(JSON.stringify({checks:checks.length,passed:checks},null,2));
 }
+}finally{for(const host of ownedHosts)host.retire();currentOwner=undefined;setRuntime(undefined);}
+}
+const definitions={"index-remount": "index-remount actual scoped catalog/prefetch ownership; controlled Core/manifest port", "retained-reader": "retained-reader actual scoped catalog/prefetch ownership; controlled Core/manifest port", "window-counts": "window-counts actual scoped catalog/prefetch ownership; controlled Core/manifest port", "content-revision": "content-revision actual scoped catalog/prefetch ownership; controlled Core/manifest port", "latest-window": "latest-window actual scoped catalog/prefetch ownership; controlled Core/manifest port", "source-retirement": "source-retirement actual scoped catalog/prefetch ownership; controlled Core/manifest port", "runtime-replacement": "runtime-replacement actual scoped catalog/prefetch ownership; controlled Core/manifest port", "network-backoff": "network-backoff actual scoped catalog/prefetch ownership; controlled Core/manifest port", "failed-status": "failed-status actual scoped catalog/prefetch ownership; controlled Core/manifest port", "materialized-window": "materialized-window actual scoped catalog/prefetch ownership; controlled Core/manifest port", "explicit-range": "explicit-range actual scoped catalog/prefetch ownership; controlled Core/manifest port", "independent-books": "independent-books actual scoped catalog/prefetch ownership; controlled Core/manifest port", "background-lane": "background-lane actual scoped catalog/prefetch ownership; controlled Core/manifest port", "response-cancel": "response-cancel actual scoped catalog/prefetch ownership; controlled Core/manifest port", "body-cancel": "body-cancel actual scoped catalog/prefetch ownership; controlled Core/manifest port", "terminal-failure": "terminal-failure actual scoped catalog/prefetch ownership; controlled Core/manifest port", "directory-metadata": "directory-metadata actual scoped catalog/prefetch ownership; controlled Core/manifest port", "directory-invalidated": "directory-invalidated actual scoped catalog/prefetch ownership; controlled Core/manifest port"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

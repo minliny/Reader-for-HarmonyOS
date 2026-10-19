@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { registerHooks }=await import('node:module');
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -40,12 +43,6 @@ let failImage = false;
 let dropNextReportResult = false;
 let supersedeAfterImage = false;
 let requestCurrent = true;
-
-assert.doesNotThrow(() => assertReadingOfflineWriteCapacity(48, 16, 32));
-assert.throws(
-  () => assertReadingOfflineWriteCapacity(47, 16, 32),
-  (error) => error instanceof ReadingOfflineMaterializationError && error.code === 'storage_full',
-);
 
 const session = {
   acquisitionMode: 'online',
@@ -174,8 +171,19 @@ class FakeRuntime {
   }
 }
 
-const runtime = new FakeRuntime();
-const gateway = new ReadingOfflineGateway(runtime);
+const runtime=new FakeRuntime(),gateway=new ReadingOfflineGateway(runtime);
+
+try{
+if(id==='capacity'){
+assert.doesNotThrow(() => assertReadingOfflineWriteCapacity(48, 16, 32));
+assert.throws(
+  () => assertReadingOfflineWriteCapacity(47, 16, 32),
+  (error) => error instanceof ReadingOfflineMaterializationError && error.code === 'storage_full',
+);
+
+
+}
+if(id==='complete'){
 const projection = await gateway.prefetchRange(session, 0, 2, () => true);
 assert.deepEqual(projection.map((entry) => entry.downloadState), ['completed', 'completed']);
 assert.equal(persistedImages.length, 1);
@@ -185,6 +193,9 @@ assert.deepEqual(calls.find((call) => call.method === 'cache.book.prefetch').par
 assert.deepEqual(materializationReports.map((report) => report.outcome), ['completed', 'completed']);
 assert.ok(materializationReports.every((report) => report.errorCode === undefined));
 
+
+}
+if(id==='storage-failure'){
 completedManifests.clear();
 failImage = true;
 dropNextReportResult = true;
@@ -203,6 +214,9 @@ const retryProjection = await gateway.prefetchRange(session, 0, 1, () => true);
 assert.equal(retryProjection[0].downloadState, 'completed');
 assert.equal(materializationReports.at(-1).outcome, 'completed');
 
+
+}
+if(id==='cancellation'){
 completedManifests.clear();
 requestCurrent = true;
 supersedeAfterImage = true;
@@ -216,6 +230,9 @@ assert.equal(completedManifests.has(0), false);
 assert.equal(materializationReports.at(-1).outcome, 'failed');
 assert.equal(materializationReports.at(-1).errorCode, 'cancelled');
 
+
+}
+if(id==='projection'){
 coreStates[0] = 'cached';
 coreStates[1] = 'completed';
 completedManifests.add(0);
@@ -228,6 +245,9 @@ const missingManifestProjection = await gateway.loadProjection(session, () => tr
 assert.deepEqual(missingManifestProjection.map((entry) => entry.downloadState), ['cached', 'cached'],
   'Core completion without a Host manifest must remain cached');
 
+
+}
+if(id==='text-only'){
 let textOnlyState = 'missing';
 let textOnlyBytes = 0;
 const textOnlyRuntime = {
@@ -276,9 +296,16 @@ const textOnlyProjection = await textOnlyGateway.prefetchRange(session, 1, 2, ()
 assert.equal(textOnlyProjection[1].downloadState, 'cached',
   'a text-only chapter must prefetch without any image persistence callbacks');
 
+
+}
+if(id==='clear'){
+completedManifests.add(0);
 await gateway.clearBook(session, () => true);
 assert.equal(completedManifests.size, 0);
 
+
+}
+if(id==='whole-book'){
 const wholeBookChapterCount = 45;
 const wholeBookRanges = [];
 const wholeBookProgress = [];
@@ -328,6 +355,9 @@ assert.deepEqual(wholeBookProgress, [[20, 0, 45], [40, 0, 45], [45, 0, 45]],
 assert.equal(wholeBookProjection.length, wholeBookChapterCount);
 assert.ok(wholeBookProjection.every(entry => entry.downloadState === 'cached'));
 
+
+}
+if(id==='offline-missing'){
 let offlineChapterRequests = 0;
 const cachedRuntime = {
   async request(method) {
@@ -359,10 +389,9 @@ assert.equal(cachedSession.acquisitionMode, 'offline');
 await assert.rejects(() => remote.loadChapter(cachedSession, 0), /REMOTE_CHAPTER_NOT_DOWNLOADED/);
 assert.equal(offlineChapterRequests, 0, 'offline missing body must fail before chapter.content and Host HTTP');
 
-console.log('reading offline gateway deterministic runtime: PASS');
 
-// Volume headings retain canonical positions but never become download actors,
-// manifest requests, progress totals or chapter materialization work.
+}
+if(id==='volume'){
 for (const linkedHeadings of [false, true]) {
   const volumeSession = { ...session, entries: [
     { index: 0, title: 'volume', level: 1, url: linkedHeadings ? '/volume/0' : '', navigable: false, variables: [] },
@@ -390,11 +419,9 @@ for (const linkedHeadings of [false, true]) {
   maliciousLease = true;
   await assert.rejects(gateway.prefetchRange(volumeSession, 0, 3), /invalid materialization lease/);
 }
-console.log('offline canonical volume projection, range guard, readable totals and lease rejection: PASS');
 
-// Feed the real offline projection into the reading owner's real selection,
-// page-boundary and TTS-next methods. A linked volume remains non-readable
-// after offline status refresh, so no later automatic consumer can revive it.
+}
+if(id==='reading-consumers'){
 {
   const { fileURLToPath } = await import('node:url');
   const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
@@ -433,4 +460,9 @@ console.log('offline canonical volume projection, range guard, readable totals a
   const next=await owner.loadNextTtsChapter(current,1);
   assert.equal(next.chapter.chapterIndex,3);assert.deepEqual(loads,[3],'TTS skips the intervening linked group and reads the next canonical chapter');
 }
-console.log('PASS actual offline projection to reading methods: linked groups excluded from selection, automatic next boundary and TTS body acquisition');
+
+}
+}finally{}
+}
+const definitions={"capacity": "capacity actual scoped owner/gateway/storage path; controlled Core/OS ports", "complete": "complete actual scoped owner/gateway/storage path; controlled Core/OS ports", "storage-failure": "storage-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "cancellation": "cancellation actual scoped owner/gateway/storage path; controlled Core/OS ports", "projection": "projection actual scoped owner/gateway/storage path; controlled Core/OS ports", "text-only": "text-only actual scoped owner/gateway/storage path; controlled Core/OS ports", "clear": "clear actual scoped owner/gateway/storage path; controlled Core/OS ports", "whole-book": "whole-book actual scoped owner/gateway/storage path; controlled Core/OS ports", "offline-missing": "offline-missing actual scoped owner/gateway/storage path; controlled Core/OS ports", "volume": "volume actual scoped owner/gateway/storage path; controlled Core/OS ports", "reading-consumers": "reading-consumers actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

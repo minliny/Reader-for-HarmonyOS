@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
-import { writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { fixture, seedEntry, settle } from './lib/rss-management-durable-probe.mjs';
-import { fixture as sourceFixture } from './lib/source-management-durable-probe.mjs';
-import { deferred, until } from './lib/rules-mutation-durable-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { writeFileSync }=await import("node:fs");
+const { resolve }=await import("node:path");
+const { fixture, seedEntry, settle }=await import("./lib/rss-management-durable-probe.mjs");
+const { fixture: sourceFixture }=await import("./lib/source-management-durable-probe.mjs");
+const { deferred, until }=await import("./lib/rules-mutation-durable-probe.mjs");
 
 const clone = value => structuredClone(value);
 const sourceDocument = JSON.stringify({bookSourceUrl:'https://original-source.test',bookSourceName:'Original Source',enabled:true});
-let groups = 0;
+
 function route(f, alive = {value:true}) {
   const originals=[], values=[], operations=[], reads=[], errors=[];
   const host=f.Orchestrator.forRuntime(f.runtime);
@@ -36,6 +38,11 @@ function unchanged(f, disk, local, applied) {
   assert.equal(f.writes().length,applied,'pure query never dispatches mutation.apply');
 }
 
+const {cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');
+console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...durableFixtureToolEvidence()}));
+let passed=false;try{
+const key=id;
+if(key==='foreign-source-rules'){
 for (const kind of ['source-cleanup','rules-before','rules-after']) {
   const f=kind==='source-cleanup' ? await sourceCleanupPending() : await rulesPending(kind==='rules-before'?'beforeMethod':'afterMethod');
   let cleanup=0;f.runtime.clearSourceCookieSession=async()=>{cleanup++;};
@@ -57,9 +64,10 @@ for (const kind of ['source-cleanup','rules-before','rules-after']) {
   assert.equal(f.owner.snapshot().canRetryOriginal,false,'foreign original cannot acquire continuation permission');
   unchanged(f,disk,local,applied);assert.equal(cleanup,0);
   if(kind==='source-cleanup')assert.equal(f.owner.snapshot().confirmation,'confirmed','denied foreign retry does not erase confirmed Core truth');
-  groups++;
+  
 }
-
+}
+if(key==='entry-continuation'){
 for(const failure of ['beforeMethod','afterMethod']) {
   const f=await entryPending(failure),r=route(f),disk=f.disk(),local=f.io.finishes;
   r.host.loadSourceFeed('s',r.binding.emit,r.binding.failed,r.binding.current,r.binding.emitOperation,r.binding.emitRead,r.binding.emitOriginal);
@@ -76,9 +84,10 @@ for(const failure of ['beforeMethod','afterMethod']) {
   assert.equal(f.writes().length,failure==='beforeMethod'?1:0);assert.equal(f.disk(),'');
   if(f.writes().length)assert.deepEqual(f.writes()[0].params,{operationId:JSON.parse(disk).operationId,
     sequence:JSON.parse(disk).sequence,mutation:JSON.parse(disk).mutation},'explicit original continuation preserves full accepted tuple');
-  groups++;
+  
 }
-
+}
+if(key==='source-cleanup-owner'){
 {
   const f=await sourceCleanupPending(),r=route(f),disk=f.disk(),local=f.io.finishes;
   r.host.loadFeed(r.binding.emit,r.binding.emitRead,r.binding.current,undefined,r.binding.emitOriginal);await settle(r.host);
@@ -86,9 +95,10 @@ for(const failure of ['beforeMethod','afterMethod']) {
   const original=r.originals.at(-1);r.host.reconcileFeedOriginal(original,r.binding.emit,r.binding.emitRead,r.binding.current,r.binding.emitOriginal);
   await settle(r.host);assert.equal(r.originals.at(-1).confirmation,'confirmed');unchanged(f,disk,local,0);
   f.retire();const source=await sourceFixture(f);await source.recoverSource(true);
-  assert.equal(source.writes().length,0);assert.deepEqual(source.cleanupCalls,['https://original-source.test']);assert.equal(source.disk(),'');groups++;
+  assert.equal(source.writes().length,0);assert.deepEqual(source.cleanupCalls,['https://original-source.test']);assert.equal(source.disk(),'');
 }
-
+}
+if(key==='late-query'){
 for(const replacement of ['route','runtime']) {
   const f=await rulesPending('afterMethod'),r=route(f);r.host.loadSourceFeed('s',r.binding.emit,r.binding.failed,r.binding.current,r.binding.emitOperation,r.binding.emitRead,r.binding.emitOriginal);
   await settle(r.host);const original=r.originals.at(-1),count=r.originals.length,values=r.values.length,disk=f.disk(),local=f.io.finishes;
@@ -97,9 +107,10 @@ for(const replacement of ['route','runtime']) {
   if(replacement==='route')r.alive.value=false;else f.retire();
   f.options.gate.resolve();await settle(r.host);
   assert.equal(r.originals.length,count);assert.equal(r.values.length,values,'late original query cannot publish into replacement view/runtime');
-  unchanged(f,disk,local,0);groups++;
+  unchanged(f,disk,local,0);
 }
-
+}
+if(key==='damaged-intent'){
 for(const damage of ['json','terminal']) {
   const f=await sourceCleanupPending(),intent=JSON.parse(f.disk());
   if(damage==='terminal') {
@@ -111,9 +122,10 @@ for(const damage of ['json','terminal']) {
   r.host.loadSourceFeed('s',r.binding.emit,r.binding.failed,r.binding.current,r.binding.emitOperation,r.binding.emitRead,r.binding.emitOriginal);await settle(r.host);
   const original=r.originals.at(-1);assert.equal(original.scope,'foreign');assert.equal(original.blocked,true);assert.equal(original.canRetryOriginal,false);
   assert.equal(original.operationId,'','damaged local evidence never manufactures a qualified original');
-  r.host.reconcileSourceOriginal(original,r.binding,'s');await settle(r.host);unchanged(c,disk,local,0);groups++;
+  r.host.reconcileSourceOriginal(original,r.binding,'s');await settle(r.host);unchanged(c,disk,local,0);
 }
-
+}
+if(key==='bad-core-receipt'){
 for(const corruption of ['higher-null','invalid-ack']) {
   const f=await rulesPending('afterMethod'),r=route(f),disk=f.disk(),local=f.io.finishes;
   f.options.transformMethod='rules.mutation.query';f.options.transform=value=>corruption==='higher-null' ?
@@ -121,24 +133,28 @@ for(const corruption of ['higher-null','invalid-ack']) {
     {...value,receipt:{...value.receipt,ackFingerprint:'0'.repeat(64)}};
   r.host.loadSourceFeed('s',r.binding.emit,r.binding.failed,r.binding.current,r.binding.emitOperation,r.binding.emitRead,r.binding.emitOriginal);await settle(r.host);
   assert.equal(r.originals.at(-1).confirmation,'unknown');assert.equal(r.originals.at(-1).blocked,true);
-  assert.equal(r.originals.at(-1).canRetryOriginal,false);unchanged(f,disk,local,0);groups++;
+  assert.equal(r.originals.at(-1).canRetryOriginal,false);unchanged(f,disk,local,0);
 }
-
-// Omission control executes the same production gateway with inspection
-// disabled. The no-local-write assertion detects its old automatic cleanup.
+}
+if(key==='inspection-negative'){
 {
   const f=await entryPending('afterMethod'),r=route(f),gateway=r.host.gateway,actual=gateway.recoverOriginalRss.bind(gateway);
   gateway.recoverOriginalRss=(current,expected,retry)=>actual(current,expected,retry,false);
   r.host.loadSourceFeed('s',r.binding.emit,r.binding.failed,r.binding.current,r.binding.emitOperation,r.binding.emitRead,r.binding.emitOriginal);await settle(r.host);
-  assert.equal(f.disk(),'');assert.ok(f.io.finishes>0,'negative control detects omitted inspection flag using actual journal cleanup');groups++;
+  assert.equal(f.disk(),'');assert.ok(f.io.finishes>0,'negative control detects omitted inspection flag using actual journal cleanup');
 }
-
+}
+if(key==='attachment'){
 {
   const f=await fixture(),host=f.Orchestrator.forRuntime(f.runtime),noop=()=>{};
   assert.equal(host.attachPresentation('one',noop,()=>false,noop,noop,f.current),true);
   assert.equal(host.isPresentationCurrent('one'),true,'shared route attachment is independent from management route');
   assert.equal(host.attachPresentation('two',noop,()=>false,noop,noop,f.current),true);
   assert.equal(host.isPresentationCurrent('one'),false);host.detachPresentation('one');assert.equal(host.isPresentationCurrent('two'),true);
-  f.retire();assert.equal(host.isPresentationCurrent('two'),false);groups++;
+  f.retire();assert.equal(host.isPresentationCurrent('two'),false);
 }
-console.log(`RSS cross-domain pure recovery: PASS (${groups} actual SDK/Atomic/cold SQLite groups; zero apply/cleanup/journal-clear).`);
+}
+passed=true;}finally{const cleanup=await cleanupDurableFixtures({retain:!passed});if(!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));}
+}
+const definitions={"foreign-source-rules": {"description": "foreign-source-rules actual production SDK/Core scope", "resources": []}, "entry-continuation": {"description": "entry-continuation actual production SDK/Core scope", "resources": []}, "source-cleanup-owner": {"description": "source-cleanup-owner actual production SDK/Core scope", "resources": []}, "late-query": {"description": "late-query actual production SDK/Core scope", "resources": []}, "damaged-intent": {"description": "damaged-intent actual production SDK/Core scope", "resources": []}, "bad-core-receipt": {"description": "bad-core-receipt actual production SDK/Core scope", "resources": []}, "inspection-negative": {"description": "inspection-negative actual production SDK/Core scope", "resources": []}, "attachment": {"description": "attachment actual production SDK/Core scope", "resources": []}};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

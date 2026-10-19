@@ -91,13 +91,14 @@ for(const retired of ['route','nav','runtime-unset','newRuntime','unmounted']){
   const f=fixture();f.idx.applyBookshelfState(plain([book(99)]));f.fail(1);f.idx.refreshBookshelf();await until(()=>f.idx.bookshelfReadFacts?.fact==='refreshFailed');
   const bridge=actualProjectionSdkFeedback(f),rendered=bridge.project();assert.equal(rendered.shelf.params.books,f.idx.shelfBooks);
   assert.equal(rendered.shelf.params.viewState,f.idx.bookshelfViewState);assert.equal(rendered.shelf.params.continueReading,f.idx.continueReading);
-  assert.ok(rendered.notice);assert.match(rendered.notice.view.message,/保留/);assert.ok(rendered.action);assert.equal(rendered.action.height,36);assert.equal(rendered.action.borderRadius,6);
-  rendered.action.onClick();rendered.action.onClick();await until(()=>f.idx.bookshelfReadFacts?.fact==='current');assert.equal(f.calls.filter(c=>c.method==='bookshelf.list').length,2,'actual native SDK retry dispatches one read');
-  const count=f.calls.length;rendered.action.onClick();await tick();assert.equal(f.calls.length,count,'old recovery actor does not replay');
+  assert.equal(rendered.notice,undefined,'ordinary retained refresh failure has no pending floating Notice');
+  assert.equal(rendered.action,undefined,'no fake inline retry is painted');assert.equal(rendered.toasts.length,1);assert.match(rendered.toasts[0],/保留/);
+  rendered.retry();rendered.retry();await until(()=>f.idx.bookshelfReadFacts?.fact==='current');assert.equal(f.calls.filter(c=>c.method==='bookshelf.list').length,2,'actual Index read delegate dispatches one read');
+  const count=f.calls.length;rendered.retry();await tick();assert.equal(f.calls.length,count,'old recovery actor does not replay');
   const old=rendered.shelf.params;f.idx.navigationGeneration++;f.idx.shelfReadingFilter='all';old.onFilterRequested('reading','online');old.onNextPageRequested();old.onPreviousPageRequested();
   for(const name of ['onRssRequested','onSettingsRequested','onDiscoverRequested','onVisibleBooksChanged','onBookSelected','onBookMultiSelectRequested','onBookInfoRequested','onBookGroupRequested','onBookRemoveRequested'])old[name](book(99));
   await tick();assert.equal(f.idx.shelfReadingFilter,'all');assert.equal(f.calls.length,count,'old physical page filter/paging intent cannot borrow fresh navigation');
-  checks.push('actual Index→SDK Page payload/Shell/shared Notice/36px Action read-only recovery and old physical filter callbacks');
+  checks.push('actual Index→SDK Page payload/Shell Toast, existing pure-read retry delegate and old physical filter callbacks');
 }
 {
   const f=fixture(),apply=f.idx.applyBookshelfProjection.bind(f.idx);let fail=true;

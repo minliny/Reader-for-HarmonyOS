@@ -63,19 +63,24 @@ function failureOwner(input=source){
  o.openReaderControl=()=>{};o.onSwitchSource=()=>{};o.retryReading=()=>o.actions.push(['body']);o.actions=[];
  o.readingFailureContent();return{p,o};
 }
+function failureAction(p,o,label){
+ const actor=p.walk(o).filter(actor=>actor instanceof p.deps.ReaderRecoveryAction&&actor.label===label).at(-1);
+ assert.ok(actor,label+' actual shared recovery actor');
+ return [...actor.nodes.values()].find(node=>typeof node.onClick==='function').onClick;
+}
 {
- const {p,o}=failureOwner();const oldRetry=p.nodes(o).find(n=>n.createWithLabel==='重试').onClick;
- const oldDismiss=p.nodes(o).find(n=>n.createWithLabel==='继续当前书源').onClick;
+ const {p,o}=failureOwner();const oldRetry=failureAction(p,o,'重试');
+ const oldDismiss=failureAction(p,o,'继续当前书源');
  o.sourceSwitchScopeId=2;o.sourceSwitchFailureMessage='new scope';oldRetry();oldDismiss();
  assert.deepEqual(o.actions,[['retry',1],['dismiss',1]],'real SDK physical callbacks preserve original scope');
- o.readingFailureContent();const newRetry=p.nodes(o).filter(n=>n.createWithLabel==='重试').at(-1).onClick;newRetry();assert.deepEqual(o.actions.at(-1),['retry',2]);
- const column=p.nodes(o).find(n=>n.type==='Column');assert.deepEqual(column.create,{space:20});assert.equal(column.padding,24);
+ o.readingFailureContent();const newRetry=failureAction(p,o,'重试');newRetry();assert.deepEqual(o.actions.at(-1),['retry',2]);
+ const column=p.nodes(o).find(n=>n.type==='Column');assert.deepEqual(column.create,{space:12});assert.equal(column.padding,24);
  const plain=failureOwner();plain.o.sourceSwitchFailureMessage='';plain.o.readingFailureContent();
- p.nodes(o).filter(n=>n.createWithLabel==='阅读设置').at(-1).onClick();assert.equal(o.sourceSwitchScopeId,2);
+ failureAction(p,o,'阅读设置')();assert.equal(o.sourceSwitchScopeId,2);
 }
 {
  const unsafe=source.replace('this.onRetryFailedSourceSwitch(scopeId)','this.onRetryFailedSourceSwitch(this.sourceSwitchScopeId)');
- assert.notEqual(unsafe,source);const {p,o}=failureOwner(unsafe),old=p.nodes(o).find(n=>n.createWithLabel==='重试').onClick;
+ assert.notEqual(unsafe,source);const {p,o}=failureOwner(unsafe),old=failureAction(p,o,'重试');
  o.sourceSwitchScopeId=2;old();assert.deepEqual(o.actions,[['retry',2]],'negative actual SDK control reproduces fresh-scope borrowing');
 }
 console.log('PASS actual Gateway canonical finalization ACK→production LRE→ReadingCommit original/wrong/lost/late/local IDs; actual SDK failure action lexical scope/reopen/negative control; native scheduling/target remain separate');

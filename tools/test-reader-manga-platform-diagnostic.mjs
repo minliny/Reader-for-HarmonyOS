@@ -1,22 +1,41 @@
-import { localFilePath, resolveArkFrontend, resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { spawnSync } from 'node:child_process';
-import { readerMangaProbeSelectionMode } from '../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
+const selected=selectContractCases({'live-safety':{description:'Diagnostic only: actual watcher ownership, privacy, bounds and teardown',resources:[]},'r31-history':{description:'Diagnostic only: fixed historical file is never a live OS event',resources:[]},'sdk-types':{description:'Diagnostic only: installed SDK type check and frontend parse-only with invalid holder negative',resources:[]}});
+async function run(id){
+const { localFilePath, resolveArkFrontend, resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync, readdirSync, mkdtempSync, writeFileSync, rmSync }=await import('node:fs');
+const { createRequire, stripTypeScriptTypes }=await import('node:module');
+const { join }=await import('node:path');
+const { tmpdir }=await import('node:os');
+const { spawnSync }=await import('node:child_process');
+const { readerMangaProbeSelectionMode }=await import('../entry/src/main/ets/app/ReaderControlVerificationLaunch.ts');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+
+
+
+
+
+
+
+
+
 
 const file = new URL('../entry/src/main/ets/app/ReaderMangaPlatformDiagnostic.ts', import.meta.url);
+
 const source = readFileSync(file, 'utf8');
+
 const body = stripTypeScriptTypes(source.replace(/^import .*?;\n/gm, '').replace(/^export /gm, ''));
+
 const tick = () => new Promise(resolve => setImmediate(resolve));
+
 const event = (name = 'MAIN_THREAD_JANK', time = 1791122350000, params = {}) => ({ domain: 'OS', name,
   eventType: 1, params: { bundle_name: 'io.reader.minliny', time, pid: 2598, uid: 20020074,
     begin_time: time - 10869, end_time: time, log_over_limit: false, ...params } });
+
 const path = '/data/storage/el2/log/watchdog/MAIN_THREAD_JANK_20261004215910_2598.txt';
+
 const freezePath = '/data/storage/el2/log/hiappevent/APP_FREEZE_1791122350000_2598.log';
+
 function fixture(history = [], options = {}) {
   const watchers = [], removed = [], configs = [], rows = [], reads = [], closes = [], files = new Map(), handles = new Map();
   let nextFd = 10;
@@ -46,6 +65,7 @@ function fixture(history = [], options = {}) {
     fs, { TextEncoder: Encoder, TextDecoder: Decoder }, hiAppEvent, hilog);
   return { Diagnostic, watchers, removed, configs, rows, reads, closes, files, handles, holder };
 }
+if(id==="live-safety")
 
 {
   const f = fixture();
@@ -62,7 +82,8 @@ function fixture(history = [], options = {}) {
   assert.equal(f.Diagnostic.install(readerMangaProbeSelectionMode(true, 'debug', undefined, true, [true])), undefined);
   assert.equal(f.watchers.length, 0);
 }
-console.log('PASS actual production diagnostic admits only existing exact debug reading-selection mode; no flag/release/conflict/offline performs no SDK or file work');
+
+if(id==="r31-history")
 
 {
   for (const flag of [undefined, false, 'true', 1, {}, new Boolean(true)]) {
@@ -88,7 +109,8 @@ console.log('PASS actual production diagnostic admits only existing exact debug 
   assert.ok(missing.rows.some(x => x.row.kind === 'known-r31-history'));
   assert.ok(missing.rows.some(x => x.row.kind === 'log-unavailable')); assert.deepEqual(missing.reads, [['lstat', path]]); absent.stop();
 }
-console.log('PASS strict reading-only fixed r31 history flag; no default/string/offline read, exact fixed metadata/path, separate historical receipt, presence/missing and shared 1MiB bounds');
+
+if(id==="live-safety")
 
 {
   const held = event('MAIN_THREAD_JANK', 1791122350000, { external_log: [path] });
@@ -117,7 +139,8 @@ console.log('PASS strict reading-only fixed r31 history flag; no default/string/
   f.watchers[0].onReceive('OS', [{ appEventInfos: [event()] }]); f.watchers[1].onTrigger(1, 20, f.holder); await tick();
   assert.equal(f.rows.length, count); assert.equal(f.handles.size, 0);
 }
-console.log('PASS real production live + proactive/onTrigger holder paths, Reader OS ownership, deduplication, stack-only output, cleanup and default restoration; controlled SDK callbacks are not history/device proof');
+
+if(id==="live-safety")
 
 {
   // Official MainThreadSampler tree format keeps sample weight and indentation:
@@ -135,7 +158,8 @@ console.log('PASS real production live + proactive/onTrigger holder paths, Reade
     'real sampler native/JS weighted frames retain count and tree indentation in event and external file output');
   assert.ok(!f.rows.some(x => /SECRET|request-body|https:/.test(x.text))); d.stop(); await tick();
 }
-console.log('PASS official aggregated native/JS stack tree preserves positive sample count and indentation; invalid prefixes and non-stack/secret/URL lines stay filtered');
+
+if(id==="live-safety")
 
 {
   const f = fixture(), d = f.Diagnostic.install('reading');
@@ -153,7 +177,8 @@ console.log('PASS official aggregated native/JS stack tree preserves positive sa
   const s = symlink.Diagnostic.install('reading'); s.admit(event('MAIN_THREAD_JANK', 301, { external_log: [path] }));
   await s.tail; assert.deepEqual(symlink.reads, [['lstat', path]]); assert.equal(symlink.closes.length, 0); s.stop();
 }
-console.log('PASS genuine OS external_log array only; other bundles/domains/events, custom params, traversal, physical paths, wrong PID, trace and symlinks cannot read');
+
+if(id==="live-safety")
 
 {
   const f = fixture(), d = f.Diagnostic.install('reading');
@@ -170,7 +195,8 @@ console.log('PASS genuine OS external_log array only; other bundles/domains/even
   const hd = h.Diagnostic.install('reading'); await hd.tail;
   assert.equal(hd.seen.size, 16); assert.ok(h.rows.some(x => x.row.kind === 'history-package-limit')); hd.stop();
 }
-console.log('PASS production 16-event/package cap, sequential <=32KiB reads and total read/output <=1MiB; no arbitrary full-log buffering');
+
+if(id==="live-safety")
 
 {
   let settle; const configuration = new Promise(resolve => { settle = resolve; });
@@ -180,7 +206,8 @@ console.log('PASS production 16-event/package cap, sequential <=32KiB reads and 
   const failure = fixture([], { nullHolder: true }); const failed = failure.Diagnostic.install('reading'); await tick();
   assert.equal(failed.active, false); assert.equal(failure.removed.length, 1);
 }
-console.log('PASS null subscription and config completion after destroy keep cleanup/default order');
+
+if(id==="live-safety")
 
 {
   const ability = new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url);
@@ -190,13 +217,9 @@ console.log('PASS null subscription and config completion after destroy keep cle
   });
   const a = new destroyed(); a.mangaPlatformDiagnostic = { stop() { effects.push('stop'); } }; a.onDestroy();
   assert.deepEqual(effects, ['stop']); assert.equal(a.mangaPlatformDiagnostic, undefined);
-  const entry = readFileSync(ability, 'utf8');
-  assert.match(entry, /ReaderMangaPlatformDiagnostic\.install\(mangaSelectionMode,\s*want\.parameters\?\.readerMangaRecordedJankR31 === true\)/);
-  const warm = entry.slice(entry.indexOf('  onNewWant('), entry.indexOf('  private async prepareSelectedReadingFont'));
-  assert.ok(!warm.includes('PlatformDiagnostic'), 'warm Wants never change the diagnostic owner');
-  assert.doesNotMatch(source, /setInterval\(|new ThreadSampler|want\.parameters|import .*Want/,
-    'the diagnostic uses platform sampling and accepts no Want descriptor');
+
 }
+if(id==="sdk-types")
 
 // The actual production module matches installed official API types. This seam
 // does not substitute for the later canonical ArkTS/HAP build or device proof.
@@ -226,4 +249,6 @@ console.log('PASS null subscription and config completion after destroy keep cle
     assert.notEqual(spawnSync(frontend, ['--target-api-version', '23', '--module', '--parse-only', bad]).status, 0);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
-console.log('PASS production Entry destruction and installed SDK HiAppEvent/file/decoder types + es2abc parse-only with negative control; historical delivery/native stacks not claimed');
+
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

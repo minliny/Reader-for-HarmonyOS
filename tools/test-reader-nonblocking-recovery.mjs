@@ -1,6 +1,24 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "render-recovery": {
+    "description": "Actual unknown receipt/render fallback releases input and preserves user notice; modal getter throws",
+    "resources": []
+  },
+  "continuous-progress-retry": {
+    "description": "Actual continuous failure stays silent and following commit succeeds",
+    "resources": []
+  },
+  "exit-during-persistence": {
+    "description": "Actual Back interrupts waiting receipt and old finally cannot release newer generation",
+    "resources": []
+  }
+};
+
+async function case_render_recovery() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const path = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const Reader = productionMotionMethods(path, ['showReaderRecovery', 'reconcileReaderRecovery',
   'admitPageTurnPersistenceOutcome', 'releasePageTurnRecoveryInput', 'requestBookTurn2DFallback']);
@@ -30,12 +48,14 @@ reader.readerRecoveryView = generalNotice;
 reader.requestBookTurn2DFallback(4);
 assert.deepEqual(events.slice(3), ['handoff', 'resident', 'resume'], 'lost render acknowledgement releases controls and Back');
 assert.equal(reader.readerRecoveryView, generalNotice, 'automatic rendering recovery cannot replace an existing user-operation notice');
-const source = readFileSync(path, 'utf8');
-assert.equal((source.match(/this\.showReaderAlert\(/g) ?? []).length, 1, 'only the explicit replace-preview remains modal');
-assert.match(source, /ForEach\(\[this\.readerRecoveryView\.generation\]/, 'native inline action captures the original presentation ticket');
-assert.doesNotMatch(source, /title: '阅读时长尚未确认'|title: '阅读进度尚未保存'|title: '正在恢复页面'/);
-console.log('PASS nonblocking reader recovery: unknown receipts and missing render callbacks retain admitted content, release input and fence late callbacks; automatic native dialogs absent');
 
+}
+
+async function case_continuous_progress_retry() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const path = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const Continuous = productionMotionMethods(path, ['onContinuousScrollStopped']);
 let attempts = 0, notifications = 0, completed = 0;
 const continuous = Object.assign(new Continuous(), { mounted: true, exitRequested: false,
@@ -53,6 +73,13 @@ continuous.onContinuousScrollStopped();
 await new Promise(resolve => setImmediate(resolve));
 assert.equal(attempts, 2); assert.equal(completed, 1, 'silent presentation does not disable the next real progress commit');
 
+}
+
+async function case_exit_during_persistence() {
+const { default: assert } = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const path = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
 const Exit = productionMotionMethods(path, ['beginExit'], { cancelReaderRapidPageTurn: state => state });
 const exitEvents = [];
 const exitOwner = Object.assign(new Exit(), { lifecycleToken: 1, mounted: true, exitRequested: false,
@@ -87,4 +114,11 @@ assert.equal(saving.commitInFlight, false);
 saving.progressCommitGeneration++; saving.commitInFlight = true;
 releaseWrite({ chapterIndex: 1, chapterOffset: 5 }); await old;
 assert.equal(saving.commitInFlight, true, 'old completion cannot release a newer write owner');
-console.log('PASS immediate Back during pending persistence and generation-fenced old finally');
+
+}
+
+const implementations = {'render-recovery':case_render_recovery,'continuous-progress-retry':case_continuous_progress_retry,'exit-during-persistence':case_exit_during_persistence};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

@@ -1,21 +1,31 @@
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import assert from 'node:assert/strict';
 import { ReaderBrightnessWriter } from '../entry/src/main/ets/app/ReaderBrightnessWriter.ts';
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function runCase() {
 const deferred = () => { let resolve, reject; const promise = new Promise((r,j) => { resolve = r; reject = j; }); return { promise, resolve, reject }; };
 
-// Production regression: a 24ms lookup under continuous 16ms MOVE must keep
-// writing before UP, and the last held sample must reach the window unaided.
-let actual = .5; const writes = []; const begin = performance.now();
+// Hold each real Window lookup while more MOVE samples arrive, then release
+// that lookup explicitly. The writer must not restart it for each new sample.
+// This tests ordering and progress, without a host's 16/24ms scheduling jitter.
+let actual = .5; const writes = [], lookups = []; let moving = true;
 const win = { getWindowProperties: () => ({ brightness: actual }),
-  async setWindowBrightness(value) { actual = value; writes.push({ value, at: performance.now() - begin }); } };
-const writer = new ReaderBrightnessWriter(async () => { await sleep(24); return win; });
+  async setWindowBrightness(value) { actual = value; writes.push({ value, moving }); } };
+const writer = new ReaderBrightnessWriter(() => { const lookup = deferred(); lookups.push(lookup); return lookup.promise; });
 const owner = writer.claim(); const pending = [];
-for (let i = 0; i < 8; i++) { pending.push(writer.request(owner, .1 + i * .1)); await sleep(16); }
-const stopped = performance.now() - begin;
+for (let i = 0; i < 4; i++) pending.push(writer.request(owner, .1 + i * .1));
+assert.equal(lookups.length, 1, 'new samples cannot replace the in-flight lookup');
+lookups[0].resolve(win); await Promise.all(pending);
+assert.deepEqual(writes.map(write => write.value), [.4]);
+for (let i = 4; i < 8; i++) pending.push(writer.request(owner, .1 + i * .1));
+await Promise.resolve();
+assert.equal(lookups.length, 2, 'one new lookup serves the newest pending sample');
+moving = false; lookups[1].resolve(win);
 await Promise.all(pending);
-assert.ok(writes.some(w => w.at < stopped), 'continuous drag must not starve native writes');
+assert.equal(writes[0].moving, true, 'native writes progress before the MOVE stream ends');
 assert.equal(actual, .1 + 7 * .1, 'last held MOVE is written without another event');
-await writer.release(owner); assert.equal(actual, .5);
+const released = writer.release(owner); await Promise.resolve(); lookups[2].resolve(win);
+await released; assert.equal(actual, .5);
 
 // One in-flight write and the newest pending target; automatic beats old manual.
 const gate = deferred(); const issued = []; let concurrent = 0; let peak = 0;
@@ -25,7 +35,7 @@ const slowWin = { getWindowProperties: () => ({ brightness: .6 }), async setWind
   concurrent--;
 } };
 const slow = new ReaderBrightnessWriter(async () => slowWin); const a = slow.claim();
-const first = slow.request(a, .2); await sleep(0);
+const first = slow.request(a, .2); await Promise.resolve();
 const discarded = slow.request(a, .4); const automatic = slow.request(a, -1);
 gate.resolve(); await Promise.all([first, discarded, automatic]);
 assert.deepEqual(issued, [.2, -1]); assert.equal(peak, 1);
@@ -34,7 +44,7 @@ assert.deepEqual(issued, [.2, -1]); assert.equal(peak, 1);
 const block = deferred(); const values = []; let count = 0;
 const shared = new ReaderBrightnessWriter(async () => ({ getWindowProperties: () => ({ brightness: .7 }),
   async setWindowBrightness(v) { values.push(v); if (++count === 1) await block.promise; } }));
-const old = shared.claim(); const oldWrite = shared.request(old, .3); await sleep(0);
+const old = shared.claim(); const oldWrite = shared.request(old, .3); await Promise.resolve();
 const restore = shared.release(old); const next = shared.claim(); const newWrite = shared.request(next, .8);
 block.resolve(); await Promise.all([oldWrite, restore, newWrite]);
 assert.deepEqual(values, [.3, .8]);
@@ -66,10 +76,10 @@ for (const fails of [false, true]) {
   }; });
   const lease = settling.claim();
   const accepted = settling.request(lease, .25); void accepted.catch(() => {});
-  await sleep(0); const dropped = settling.request(lease, .85);
+  await Promise.resolve(); const dropped = settling.request(lease, .85);
   let observed = false;
   const cancellation = settling.cancelAndSettle(lease).then(value => { observed = true; return value; });
-  await sleep(0); assert.equal(observed, false, 'cancel observes the already issued ACK');
+  await Promise.resolve(); assert.equal(observed, false, 'cancel observes the already issued ACK');
   assert.equal((await dropped).applied, false);
   native.resolve(); await accepted.catch(() => {});
   const result = await cancellation; assert.equal(result.applied,true); assert.equal(result.value,fails ? .55 : .25);
@@ -79,7 +89,7 @@ for (const fails of [false, true]) {
 const cancelGate=deferred(); const isolated=new ReaderBrightnessWriter(async()=>({
   getWindowProperties:()=>({brightness:.4}), async setWindowBrightness(){await cancelGate.promise;}
 }));
-const cancelOwner=isolated.claim(); const inflight=isolated.request(cancelOwner,.6); await sleep(0);
+const cancelOwner=isolated.claim(); const inflight=isolated.request(cancelOwner,.6); await Promise.resolve();
 const settled=isolated.cancelAndSettle(cancelOwner); isolated.reset(); cancelGate.resolve();
 await inflight; assert.equal((await settled).applied,false);
 console.log('PASS brightness Cancel settles in-flight success/failure, drops pending, and isolates Window owner');
@@ -128,3 +138,9 @@ for (const replaceWindow of [false, true]) {
   assert.deepEqual(values,[.75,.45],'failed property read neither writes nor consumes the valid restore baseline');
 }
 console.log('PASS brightness failure boundaries: stale Window/owner lookup, current rejection, synchronous properties failure and subsequent drain');
+
+}
+for (const id of selectContractCases({ 'writer-ordering': { description: 'Production brightness writer with explicitly released lookup/native acknowledgements', resources: [] } })) {
+  await runCase();
+  recordContractCasePass(id);
+}

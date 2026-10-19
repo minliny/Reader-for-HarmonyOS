@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
-import {ProductionHost,compileHost,read,setRuntime,readingEvidence,content,BookAcquisitionCoordinator} from './lib/reading-entry-owner-probe.mjs';
-import {fixture,deferred,tick,until,seed,book,session} from './lib/reading-entry-index-fixture.mjs';
-import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
-import {MangaBookPresentation} from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const {ProductionHost,compileHost,read,setRuntime,readingEvidence,content,BookAcquisitionCoordinator}=await import('./lib/reading-entry-owner-probe.mjs');
+const {fixture:productionFixture,deferred,seed,book,session}=await import('./lib/reading-entry-index-fixture.mjs');
+const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+const {MangaBookPresentation}=await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const owned=[];const fixture=(...a)=>{const f=productionFixture(...a);owned.push(f);return f;};const tick=()=>new Promise(setImmediate);async function until(p){for(let t=0;t<1500;t++){if(p())return;await tick();}assert.fail('controlled Host boundary not reached');}
 const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 const checkpoints=[];
 function mangaFixture(){
@@ -25,6 +29,11 @@ function mangaFixture(){
  return{...f,manga,chapter,released,setImageGate:g=>imageGate=g,failImage:()=>fail=true};
 }
 
+function controlledTimers(){const savedSet=globalThis.setTimeout,savedClear=globalThis.clearTimeout,queue=new Map();let seq=0;globalThis.setTimeout=(fn,delay=0)=>{const id=++seq;queue.set(id,{fn,delay});return id;};globalThis.clearTimeout=id=>queue.delete(id);return{async drain(){for(let i=0;i<1000;i++){await new Promise(setImmediate);const next=[...queue].sort((a,b)=>a[1].delay-b[1].delay)[0];if(!next)return;queue.delete(next[0]);next[1].fn();}throw Error('controlled timer bound exceeded');},restore(){globalThis.setTimeout=savedSet;globalThis.clearTimeout=savedClear;}};}
+const clock=id==='retired-preparation'?controlledTimers():undefined;
+
+try{
+if(id==='cold-bookmarks'){
 {
  const f=fixture(),entries=[{index:0,title:'Persisted chapter',downloadState:'unknown'}];
  f.host.bindReader(book(),undefined,entries,false,f.lease);
@@ -35,6 +44,8 @@ function mangaFixture(){
  assert.deepEqual(f.host.snapshot().toc[0].bookmarks,[]);f.close();
  checkpoints.push('actual-persisted-remote-canonical-bookmarks-without-session-or-offline-IO');
 }
+}
+if(id==='late-bookmarks'){
 for(const replacement of ['scope','session-version','offline-generation','runtime']){
  const f=fixture(),entries=[{index:0,title:'Persisted chapter',downloadState:'unknown'}],gate=deferred();
  f.gates.set('bookmark.list:'+f.key('local',undefined),gate);
@@ -52,7 +63,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.host.snapshot().toc,latest);assert.equal(latest[0].bookmarks,undefined);
  f.close();checkpoints.push('actual-cold-bookmark-read-rejects-late-'+replacement);
 }
-
+}
+if(id==='local-entry'){
 {
  const f=fixture();await f.host.openLocal(book('local-book','local'),f.lease,true);assert.equal(f.calls.length,0,'shelf resume performs no detail IO');
  await f.host.openLocal(book('local-book','local'),f.lease);assert.equal(f.host.snapshot().book.sourceName,'本地书籍');assert.equal(f.host.snapshot().toc[0].level,2);
@@ -60,6 +72,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.host.snapshot().toc[0].downloadState,'completed');assert.equal(f.host.snapshot().loadingMessage,'');
  assert.equal(f.host.snapshot().inBookshelf,true);f.close();checkpoints.push('actual-local-TOC-download-only-shared-directory-resume-no-IO');
 }
+}
+if(id==='shelf-resume'){
 {
  const f=fixture(),cached=await f.coordinator.acquireBook(seed());f.calls.length=0;
  await f.host.openRemote({seed:seed(),sourceName:'Source',shelfSnapshot:book(),
@@ -69,6 +83,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.host.snapshot().verdict,'verifying','an unprepared catalog is not a fabricated readable body');
  f.close();checkpoints.push('remote-shelf-resume-preserves-real-preparation-intent-no-detail-IO');
 }
+}
+if(id==='cold-resume'){
 {
  const f=fixture(),cached=session();
  await f.host.openRemote({seed:seed(),sourceName:'Source',shelfSnapshot:book(),validatedSession:cached,resumeImmediately:true},f.lease);
@@ -77,6 +93,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.host.snapshot().session,undefined,'ordinary reader acquisition owns validation after the immediate transition');
  f.close();checkpoints.push('remote-cold-resume-responsive-without-unowned-session-admission');
 }
+}
+if(id==='author-proof'){
 {
  const f=fixture(),authorIdentity={schemaVersion:1,sourceVersion:'v1',field:'search',raw:'@府天',label:'府天',rule:'author-nickname-at-v1'};
  const initial={...seed(),author:'@府天',authorIdentity};
@@ -90,6 +108,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.host.snapshot().book.author,'@府天','detail/session projections retain raw author and its exact proof without inventing an alias');
  f.close();checkpoints.push('remote-seed-and-admitted-session-preserve-exact-author-proof-source-version');
 }
+}
+if(id==='review-admission'){
 {
  const f=fixture(),cached=await f.coordinator.acquireBook(seed());
  const key=JSON.stringify(['s1','book','v1']);
@@ -108,6 +128,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
   'validated-session shortcuts cannot reopen review content or alter user facts');
  f.close();checkpoints.push('remote-validated-review-session-shares-current-source-category-admission');
 }
+}
+if(id==='probe-readable'){
 {
  const f=fixture();await f.host.openRemote({seed:seed(),sourceName:'s1'},f.lease);await until(()=>f.host.snapshot().verdict==='readable');await f.settle();
  assert.equal(f.calls.filter(c=>c.method==='book.detail').length,1);assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);
@@ -116,6 +138,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.calls.filter(c=>c.method==='bookmark.list').length,1);assert.equal(f.host.snapshot().toc[0].downloadState,'cached');
  f.close();checkpoints.push('complete-actual-coordinator-native-catalog-body-name-directory-admission');
 }
+}
+if(id==='candidate-fallback'){
 {
  const f=fixture();for(const index of [0,1,2])f.bodies.set(f.key('s1','book')+':'+index,'章节内容正在加载，请稍候...');
  await f.host.openRemote({seed:seed(),sourceName:'Source',fromSearch:true,fallbackSeeds:[seed('fallback','s2')],fallbackSourceNames:['Fallback']},f.lease);
@@ -124,22 +148,30 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.host.snapshot().book.sourceId,'s2');assert.equal(f.host.snapshot().session.preparedChapter.chapter.bookId,'fallback');
  assert.equal(f.host.snapshot().candidateAdmissionActive,false);f.close();checkpoints.push('actual-candidate-group-readability-fallback-after-exact-shelf-absence');
 }
+}
+if(id==='probe-exact-chapter'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);f.bodies.set(f.key('s1','book')+':2','章节内容正在加载，请稍候...');
  const scope=f.host.snapshot().scopeId;assert.equal(await f.host.probe(scope,2),undefined);assert.equal(f.host.snapshot().verdict,'contentUnavailable');
  assert.deepEqual(f.calls.filter(c=>c.method==='chapter.content').map(c=>c.p.chapterIndex),[2],'resume does not skip persisted chapter');
  await f.host.probe(scope,999);assert.equal(f.calls.filter(c=>c.method==='chapter.content').length,1);f.close();checkpoints.push('actual-probe-resume-exact-chapter-never-skips-or-clamps');
 }
+}
+if(id==='leading-empty'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);f.bodies.set(f.key('s1','book')+':0','章节内容正在加载，请稍候...');
  assert.equal(await f.host.probe(f.host.snapshot().scopeId),1);assert.equal(f.host.snapshot().verdict,'readable');
  assert.deepEqual(f.calls.filter(c=>c.method==='chapter.content').map(c=>c.p.chapterIndex),[0,1]);f.close();checkpoints.push('new-book-only-bounded-leading-blank-skip');
 }
+}
+if(id==='cache-decline'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);f.control.bodyVia='cache';f.bodies.set(f.key('s1','book')+':0','章节内容正在加载，请稍候...');
  assert.equal(await f.host.probe(f.host.snapshot().scopeId),undefined);assert.equal(f.notices.length,1);assert.equal(f.host.snapshot().verdict,'contentUnavailable');
  assert.equal(f.calls.some(c=>c.p.forceRefresh),false);assert.equal(f.host.snapshot().book.bookId,'book');f.close();checkpoints.push('actual-corrupt-cache-kept-choice-no-force-or-progress-replay');
 }
+}
+if(id==='cache-refresh'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);f.control.bodyVia='cache';f.control.decision=true;
  f.bodies.set(f.key('s1','book')+':0','章节内容正在加载，请稍候...');
@@ -148,6 +180,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.coordinator.readingProjectionRevision(),before+2);assert.equal(f.host.snapshot().verdict,'readable');
  assert.equal(f.calls.filter(c=>c.method==='chapter.content'&&c.p.forceRefresh).length,1);f.close();checkpoints.push('actual-user-cache-refresh-with-two-revision-CAS-handoff');
 }
+}
+if(id==='late-cache-choice'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);f.control.bodyVia='cache';f.control.decision=true;f.control.decisionGate=deferred();
  f.bodies.set(f.key('s1','book')+':0','章节内容正在加载，请稍候...');const work=f.host.probe(f.host.snapshot().scopeId);await until(()=>f.notices.length===1);
@@ -155,12 +189,16 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  f.control.decisionGate.resolve();assert.equal(await work,undefined);assert.equal(f.calls.some(c=>c.p.forceRefresh),false);assert.equal(f.changes.length,last);
  assert.equal(f.host.snapshot().book.bookId,'new');f.close();checkpoints.push('old-native-cache-choice-cannot-borrow-reopened-owner');
 }
+}
+if(id==='probe-late-scope'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);const gate=deferred();f.gates.set('chapter.content:'+f.key('s1','book'),gate);
  const work=f.host.probe(f.host.snapshot().scopeId);await until(()=>f.calls.some(c=>c.method==='chapter.content'));
  f.host.bindReader(book('new'),session('new'),[],false,f.lease);const last=f.changes.length;gate.resolve();assert.equal(await work,undefined);
  assert.equal(f.changes.length,last);assert.equal(f.host.snapshot().verdict,'verifying');f.close();checkpoints.push('late-native-body-rejects-old-scope-book-session');
 }
+}
+if(id==='session-proof'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);await f.host.probe(f.host.snapshot().scopeId);
  const admitted=f.host.snapshot().session;const rev=f.coordinator.readingProjectionRevision();
@@ -171,6 +209,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  f.host.acceptSession(admitted,rev+1,row);assert.equal(f.host.snapshot().verdict,'readable');assert.equal(f.host.snapshot().session.preparedChapter,undefined,'Core truth is not an invented reusable body');
  f.close();checkpoints.push('semantic-session-proof-metadata-retention-stale-prepared-removal-exact-Core-verdict');
 }
+}
+if(id==='background-error'){
 {
  const f=fixture(),cached=session(),refresh=deferred();f.coordinator.acquireBookWithBackgroundRefresh=async()=>({session:cached,backgroundRefresh:refresh.promise});
  await f.host.openRemote({seed:seed(),sourceName:'Source',shelfSnapshot:book()},f.lease);await until(()=>f.host.snapshot().verdict==='readable');
@@ -178,12 +218,16 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.host.snapshot().loadingMessage,'');assert.equal(f.host.snapshot().verdict,'readable');assert.equal(f.host.snapshot().session.preparedChapter,body);
  f.close();checkpoints.push('background-failure-preserves-admitted-catalog-body-and-visible-readiness');
 }
+}
+if(id==='membership-read'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);const gate=deferred();f.gates.set('bookshelf.get:'+f.key('s1','book'),gate);
  const work=f.host.readMembership(session(),f.host.snapshot().scopeId,f.lease);await until(()=>f.calls.some(c=>c.method==='bookshelf.get'));
  f.control.memberGeneration++;f.control.member=true;gate.resolve();await work;assert.equal(f.control.member,true,'late absence cannot overwrite explicit shelf mutation');
  f.close();checkpoints.push('membership-read-scoped-to-explicit-mutation-generation');
 }
+}
+if(id==='projection-metadata'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);await f.host.probe(f.host.snapshot().scopeId);
  const prepared=f.host.snapshot().session.preparedChapter;
@@ -194,11 +238,15 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  f.control.failProjection=true;await f.host.refreshProjection();assert.equal(f.host.snapshot().session.preparedChapter,prepared);
  assert.equal(f.host.snapshot().backgroundError,'projection unavailable');f.close();checkpoints.push('actual-canonical-projection-metadata-no-body-reprobe-failed-read-preserves-detail');
 }
+}
+if(id==='terminal-candidate'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);f.host.state.candidateAdmissionFailed=true;
  await f.host.refreshProjection();assert.equal(f.calls.some(c=>c.method==='search-book.get'),false,'terminal candidate failure cannot auto-retry on notification');
  f.close();checkpoints.push('candidate-terminal-failure-suppresses-projection-retry');
 }
+}
+if(id==='shared-preparation'){
 {
  const f=fixture();f.shelves.set(f.key('local','local-book'),book('local-book','local'));
  const shared={runtime:f.runtime,revision:'r1',seeds:Promise.resolve([{sourceId:'local',bookId:'local-book'}])};
@@ -209,6 +257,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.calls.filter(c=>c.method==='reading.entry.prepare').length,7,'actual existing preparation owns neighbor admission');
  f.close();checkpoints.push('actual-Runtime-preparation-shared-revision-seeds-visible-idle-domain-owner');
 }
+}
+if(id==='preparation-visibility'){
 {
  const f=fixture();f.shelves.set(f.key('local','local-book'),book('local-book','local'));let visible=false;
  const supports=f.runtime.supportsCoreCapability;f.runtime.supportsCoreCapability=(capability)=>capability==='bookshelf.pageProjection.v1'||supports(capability);
@@ -223,12 +273,16 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.calls.filter(c=>c.method==='reading.entry.prepare').length,7);
  f.close();checkpoints.push('actual-preparation-visibility-pause-resume-complete-shelf-fallback');
 }
+}
+if(id==='runtime-owner'){
 {
  const f=fixture();const same=ProductionHost.forRuntime(f.runtime);assert.equal(ProductionHost.forRuntime(f.runtime),same);
  f.close();const next=fixture();const newer=ProductionHost.forRuntime(next.runtime);assert.notEqual(newer,same);
  assert.throws(()=>ProductionHost.forRuntime(f.runtime));assert.equal(ProductionHost.forRuntime(next.runtime),newer);next.close();
  checkpoints.push('feature-local-runtime-sharing-old-lookup-cannot-replace-successor');
 }
+}
+if(id==='same-book-generation'){
 {
  const f=fixture();const gate=deferred();f.gates.set('chapter.content:'+f.key('s1','book'),gate);f.control.bodyIgnoreCancellation=true;
  f.host.bindReader(book(),session(),[],false,f.lease);const work=f.host.probe(f.host.snapshot().scopeId);
@@ -236,6 +290,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  gate.resolve();assert.equal(await work,undefined);assert.equal(f.host.snapshot().verdict,'verifying');assert.equal(f.changes.length,changes);
  f.close();checkpoints.push('same-book-same-catalog-reopen-still-rejects-old-body-generation');
 }
+}
+if(id==='negative-probe-generation'){
 {
  const source=read('features/reading/ReadingEntryHost.ts');
  const unsafe=source.replace('generation === this.probeGeneration &&','true &&').replace('scope === this.state.scopeId &&','true &&');
@@ -244,6 +300,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  await until(()=>f.calls.some(c=>c.method==='chapter.content'));f.host.bindReader(book(),session(),[],false,f.lease);gate.resolve();await work;
  assert.equal(f.host.snapshot().verdict,'readable','removing actual generation/scope guards reproduces old body crossing re-open');f.close();
 }
+}
+if(id==='negative-projection-identity'){
 {
  const source=read('features/reading/ReadingEntryHost.ts');
  const unsafe=source.replace('projection?.origin === session.identity.sourceId && projection.bookUrl === session.identity.bookId &&','true &&');
@@ -252,6 +310,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
   verificationCurrent:true,sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1'}});
  assert.equal(f.host.snapshot().verdict,'readable','removing exact projection identity accepts foreign evidence');f.close();
 }
+}
+if(id==='session-ready-directory'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);const first=f.host.deferredDirectoryProjection();
  f.host.bindReader(book(),session(),[],false,f.lease);first();await f.settle();assert.equal(f.calls.length,0);
@@ -261,6 +321,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  const current=f.host.deferredDirectoryProjection();current();await until(()=>f.calls.some(c=>c.method==='bookmark.list'));
  f.close();checkpoints.push('actual-reader-session-ready-DTO-and-deferred-directory-captured-lifecycle');
 }
+}
+if(id==='probe-membership'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);const gate=deferred();f.gates.set('chapter.content:'+f.key('s1','book'),gate);
  const work=f.host.probe(f.host.snapshot().scopeId);await until(()=>f.calls.some(c=>c.method==='chapter.content'));
@@ -268,6 +330,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.control.member,true,'body completion cannot overwrite a newer explicitly confirmed shelf addition');f.close();
  checkpoints.push('independent-probe-publication-preserves-newer-explicit-membership');
 }
+}
+if(id==='fallback-membership'){
 {
  const f=fixture(),gate=deferred();f.gates.set('bookshelf.get:'+f.key('s1','book'),gate);
  const work=f.host.openRemote({seed:seed(),sourceName:'Source',fromSearch:true,fallbackSeeds:[seed('other','s2')]},f.lease);
@@ -275,6 +339,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  await until(()=>f.host.snapshot().verdict==='readable');assert.equal(f.host.snapshot().book.sourceId,'s1');assert.equal(f.host.snapshot().inBookshelf,true);
  f.close();checkpoints.push('late-absence-cannot-open-fallback-after-explicit-shelf-join');
 }
+}
+if(id==='stale-readmission'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);await f.host.probe(f.host.snapshot().scopeId);
  f.rows.set(f.key('s1','book'),{origin:'s1',bookUrl:'book',name:'Book',author:'Writer',variable:'{}',acquisition:{schemaVersion:2,stale:true,
@@ -286,6 +352,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(f.calls.filter(c=>c.method==='chapter.content').length,count,'validated offline stale readmission is not reopened in a loop');
  f.close();checkpoints.push('actual-stale-Core-readmission-single-body-owner-and-offline-loop-protection');
 }
+}
+if(id==='projection-queue'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);await f.host.probe(f.host.snapshot().scopeId);
  const gate=deferred();f.gates.set('search-book.get:'+f.key('s1','book'),gate);
@@ -294,6 +362,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  f.coordinator.projectionRevision++;gate.resolve();await Promise.all([a,b,c]);await until(()=>f.calls.filter(call=>call.method==='search-book.get').length===2);
  await f.settle();assert.equal(f.host.snapshot().verdict,'readable');f.close();checkpoints.push('actual-detail-projection-latest-queue-revision-recheck-one-drain');
 }
+}
+if(id==='late-background'){
 {
  const f=fixture(),cached=session(),refresh=deferred();f.coordinator.acquireBookWithBackgroundRefresh=async()=>({session:cached,backgroundRefresh:refresh.promise});
  await f.host.openRemote({seed:seed(),sourceName:'Source'},f.lease);await until(()=>f.host.snapshot().verdict==='readable');
@@ -301,6 +371,8 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  refresh.resolve({...cached,catalogVersion:'old-refresh'});await f.settle();assert.equal(f.changes.length,last);assert.equal(f.host.snapshot().book.bookId,'new');
  f.close();checkpoints.push('late-background-refresh-never-publishes-into-new-entry');
 }
+}
+if(id==='cache-revision'){
 {
  const f=fixture();f.host.bindReader(book(),session(),[],false,f.lease);f.control.bodyVia='cache';f.control.decision=true;f.control.forceExtraRevision=true;
  f.bodies.set(f.key('s1','book')+':0','章节内容正在加载，请稍候...');
@@ -308,12 +380,16 @@ for(const replacement of ['scope','session-version','offline-generation','runtim
  assert.equal(await f.host.probe(f.host.snapshot().scopeId),undefined);assert.notEqual(f.host.snapshot().verdict,'readable');
  assert.equal(f.notices.at(-1).title,'正文未更新');f.close();checkpoints.push('concurrent-projection-mutation-rejects-cache-refresh-body-handoff');
 }
+}
+if(id==='retired-preparation'){
 {
  const f=fixture(),gate=deferred();f.host.preparePersisted(f.preparationContext,{runtime:f.runtime,revision:'r1',seeds:gate.promise});
- await tick();f.host.retire();gate.resolve([{sourceId:'local',bookId:'old'}]);await new Promise(r=>setTimeout(r,270));
+ await tick();f.host.retire();gate.resolve([{sourceId:'local',bookId:'old'}]);await clock.drain();
  assert.equal(f.calls.some(c=>c.method==='reading.entry.prepare'),false,'retired UI admission cannot dispatch prepared work');
  f.close();checkpoints.push('retired-preparation-admission-keeps-existing-Runtime-owner-no-late-Core-dispatch');
 }
+}
+if(id==='audio-admission'){
 for (const contentKind of ['audio']) {
  const f=fixture(), original=f.host.snapshot();
  await f.host.openRemote({seed:{...seed(),contentKind},sourceName:'Source',resumeImmediately:true},f.lease);
@@ -323,7 +399,8 @@ for (const contentKind of ['audio']) {
  await f.host.openRemote({seed:seed(),sourceName:'Source',shelfSnapshot:{...book(),contentKind}},f.lease);
  assert.equal(f.calls.length,0,'Core shelf media type overrides untyped legacy seed');f.close();
 }
-checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with-no-dispatch');
+}
+if(id==='visible-text-only'){
 {
  const f=fixture(), retained=[{...book('manga'),contentKind:'manga'},{...book('audio'),contentKind:'audio'},book('text','local')];
  f.host.prepareVisible(retained,f.preparationContext,{runtime:f.runtime,revision:'r1',seeds:Promise.resolve([])});
@@ -331,6 +408,8 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
  assert.equal(retained.length,3,'preparation cannot filter the displayed or stored shelf');f.close();
  checkpoints.push('actual-visible-preparation-only-text-retains-display-input');
 }
+}
+if(id==='negative-audio-guard'){
 {
  const source=read('features/reading/ReadingEntryHost.ts');
  const unsafe=source.replace("if (seed.contentKind === 'audio') {",'if (false) {');
@@ -339,6 +418,8 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
  assert.equal(f.calls.some(call=>call.method==='intent'),true,'deleting actual guard reopens unsupported preparation admission');f.close();
  checkpoints.push('actual-media-entry-guard-deletion-negative');
 }
+}
+if(id==='manga-first-image'){
 {
  const f=mangaFixture();await f.host.openRemote({seed:{...seed(),contentKind:'manga'},sourceName:'Source',
   shelfSnapshot:{...book(),contentKind:'manga'},resumeImmediately:true},f.lease);
@@ -354,6 +435,8 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
  assert.equal(f.host.snapshot().book.contentKind,'manga');f.close();
  checkpoints.push('actual-manga-shelf-entry-before-catalog-first-image-readability-type-and-volume-projection');
 }
+}
+if(id==='manga-late-image'){
 {
  const f=mangaFixture(),gate=deferred();f.setImageGate(gate);
  f.host.bindReader({...book(),contentKind:'manga'},f.manga,[],true,f.lease);
@@ -363,6 +446,8 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
  assert.equal(f.host.snapshot().verdict,'verifying');assert.deepEqual(f.released,['/sandbox/first']);f.close();
  checkpoints.push('late-manga-first-image-cannot-publish-after-reader-type-or-scope-replacement');
 }
+}
+if(id==='manga-image-failure'){
 {
  const f=mangaFixture();f.failImage();f.host.bindReader({...book(),contentKind:'manga'},f.manga,[],true,f.lease);
  assert.equal(await f.host.probe(f.host.snapshot().scopeId),undefined);
@@ -370,6 +455,8 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
  assert.equal(f.host.snapshot().session,f.manga,'failed first image preserves admitted catalog/book');f.close();
  checkpoints.push('manga-catalog-only-cannot-fabricate-readability-or-delete-admitted-session');
 }
+}
+if(id==='typed-preparation'){
 {
  const f=fixture(),typed=[{sourceId:'s1',bookId:'manga',contentKind:'manga'},
   {sourceId:'s1',bookId:'audio',contentKind:'audio'},{sourceId:'local',bookId:'local-book',contentKind:'text'}];
@@ -383,9 +470,8 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
  assert.ok(f.preparations.persistedSeeds.every(row=>row.contentKind==='text'),'cached sweep seeds preserve their finite kind fact');
  f.close();checkpoints.push('actual-shared-typed-seeds-and-direct-preparation-owner-exclude-manga-audio');
 }
-// The real prepared-pixel shortcut must still reach the actual entry owner
-// and cached Gateway. A delayed directory projection neither blocks pixels
-// nor borrows an index-only match, and repeated directory intents join it.
+}
+if(id==='manga-prepared-display'){
 {
  const f=mangaFixture(),retained={...session(),contentKind:'manga',requiresContextRefresh:true};
  retained.entries=retained.entries.map((entry,index)=>({...entry,title:`✿·${199+index}回\n`,level:undefined}));
@@ -430,10 +516,8 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
  assert.equal(f.host.snapshot().toc[0].displayTitle,'199回 · 更新');assert.equal(surface.controller,controller);
  f.close();checkpoints.push('actual-prepared-manga-reuse-current-Core-display-readback-dedup-quick-open-keeps-pixels-manifest-xy-downloads');
 }
-
-// Real Gateway strict read and normal catalog-recovery boundary, with only
-// Core responses/network availability as ports. Equal indices alone never
-// admit presentation from a different canonical title, URL or request.
+}
+if(id==='manga-display-proofs'){
 {
  const original={...session(),contentKind:'manga'};
  original.entries=original.entries.map(entry=>({...entry,title:`✿·${99+entry.index}回\n`,level:undefined}));
@@ -473,10 +557,8 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
  }
  checkpoints.push('actual-manga-display-Gateway-full-snapshot-proofs-normal-legacy-recovery-mismatch-offline-network-failure-retired-negative');
 }
-
-// The real coordinator must look up the current source version and reach a
-// manga detail/TOC transport on forceRefresh. A fake returned session alone
-// would miss the legacy text-only catalog admission and stale seed version.
+}
+if(id==='manga-source-recovery'){
 {
  const retained={...session(),contentKind:'manga'},requests=[];
  retained.entries=retained.entries.map(entry=>({...entry,title:`✿·${99+entry.index}回\n`}));
@@ -504,8 +586,8 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
  assert.equal(requests.some(row=>row.method==='chapter.content'),false,'catalog-only permission never opens a novel body lane');
  coordinator.close();checkpoints.push('actual-coordinator-manga-catalog-recovery-discovers-new-source-version-no-stale-seed-or-text-body');
 }
-
-// A delayed old display response cannot publish through a new book/scope.
+}
+if(id==='manga-late-display'){
 {
  const f=fixture(),retained={...session(),contentKind:'manga'},gate=deferred();
  f.runtime.request=async(method)=>{assert.equal(method,'cache.book.status');await gate.promise;return{data:{sourceId:'s1',bookId:'book',tocAvailable:true,
@@ -518,8 +600,8 @@ checkpoints.push('actual-media-entry-guard-preserves-owner-and-stored-books-with
  assert.equal(f.changes.length,changes);assert.deepEqual(f.host.snapshot(),before);f.close();
  checkpoints.push('actual-manga-display-old-response-cannot-borrow-new-book-scope-or-generation');
 }
-console.log(JSON.stringify({status:'PASS',checkpoints,scope:'complete production owner and Gateways through installed SDK emitter + actual coordinator/preparation; controlled native IO; Index/native target proof remains separate'}));
-
+}
+if(id==='display-cover'){
 {
  const f=fixture(), canonical={...seed(),coverUrl:''};
  await f.host.openRemote({seed:canonical,sourceName:'Source',displayCoverUrl:' https://cover.invalid/search.png ',resumeImmediately:true},f.lease);
@@ -533,4 +615,17 @@ console.log(JSON.stringify({status:'PASS',checkpoints,scope:'complete production
  assert.equal(f.host.snapshot().book.displayCoverUrl,undefined,'a different identity cannot inherit the prior visible cover');
  f.close();
 }
-console.log('PASS display-only cover survives admitted same-book metadata and never leaks to a different identity');
+}
+if(id==='probe-position-context'){
+const f=fixture(),gate=deferred();f.gates.set('chapter.content:'+f.key('s1','book'),gate);f.host.bindReader(book(),session(),[],false,f.lease);
+ const context={bodyVersion:'b1',processingVersion:'p1',anchors:[{id:'resume',offset:12}]};const expected=structuredClone(context);
+ const pending=f.host.probe(f.host.snapshot().scopeId,2,context);await until(()=>f.calls.some(c=>c.method==='chapter.content'));
+ assert.equal(f.host.snapshot().verdict,'verifying');context.anchors[0].offset=999;
+ const request=f.calls.find(c=>c.method==='chapter.content');assert.equal(request.p.chapterIndex,2);assert.deepEqual(request.p.positionContext,expected);
+ gate.resolve();assert.equal(await pending,2);assert.equal(f.host.snapshot().verdict,'readable');assert.equal(f.host.snapshot().session.preparedChapter.chapter.chapterIndex,2);
+ assert.deepEqual(f.host.snapshot().session.preparedChapter.positionContext,expected);assert.equal(f.calls.filter(c=>c.method==='chapter.content').length,1);
+}
+}finally{for(const f of owned)f.close();setRuntime(undefined);clock?.restore();}
+}
+const definitions={"cold-bookmarks": "cold-bookmarks actual production scoped behavior, controlled IO; no native device claim", "late-bookmarks": "late-bookmarks actual production scoped behavior, controlled IO; no native device claim", "local-entry": "local-entry actual production scoped behavior, controlled IO; no native device claim", "shelf-resume": "shelf-resume actual production scoped behavior, controlled IO; no native device claim", "cold-resume": "cold-resume actual production scoped behavior, controlled IO; no native device claim", "author-proof": "author-proof actual production scoped behavior, controlled IO; no native device claim", "review-admission": "review-admission actual production scoped behavior, controlled IO; no native device claim", "probe-readable": "probe-readable actual production scoped behavior, controlled IO; no native device claim", "candidate-fallback": "candidate-fallback actual production scoped behavior, controlled IO; no native device claim", "probe-exact-chapter": "probe-exact-chapter actual production scoped behavior, controlled IO; no native device claim", "leading-empty": "leading-empty actual production scoped behavior, controlled IO; no native device claim", "cache-decline": "cache-decline actual production scoped behavior, controlled IO; no native device claim", "cache-refresh": "cache-refresh actual production scoped behavior, controlled IO; no native device claim", "late-cache-choice": "late-cache-choice actual production scoped behavior, controlled IO; no native device claim", "probe-late-scope": "probe-late-scope actual production scoped behavior, controlled IO; no native device claim", "session-proof": "session-proof actual production scoped behavior, controlled IO; no native device claim", "background-error": "background-error actual production scoped behavior, controlled IO; no native device claim", "membership-read": "membership-read actual production scoped behavior, controlled IO; no native device claim", "projection-metadata": "projection-metadata actual production scoped behavior, controlled IO; no native device claim", "terminal-candidate": "terminal-candidate actual production scoped behavior, controlled IO; no native device claim", "shared-preparation": "shared-preparation actual production scoped behavior, controlled IO; no native device claim", "preparation-visibility": "preparation-visibility actual production scoped behavior, controlled IO; no native device claim", "runtime-owner": "runtime-owner actual production scoped behavior, controlled IO; no native device claim", "same-book-generation": "same-book-generation actual production scoped behavior, controlled IO; no native device claim", "negative-probe-generation": "negative-probe-generation actual production scoped behavior, controlled IO; no native device claim", "negative-projection-identity": "negative-projection-identity actual production scoped behavior, controlled IO; no native device claim", "session-ready-directory": "session-ready-directory actual production scoped behavior, controlled IO; no native device claim", "probe-membership": "probe-membership actual production scoped behavior, controlled IO; no native device claim", "fallback-membership": "fallback-membership actual production scoped behavior, controlled IO; no native device claim", "stale-readmission": "stale-readmission actual production scoped behavior, controlled IO; no native device claim", "projection-queue": "projection-queue actual production scoped behavior, controlled IO; no native device claim", "late-background": "late-background actual production scoped behavior, controlled IO; no native device claim", "cache-revision": "cache-revision actual production scoped behavior, controlled IO; no native device claim", "retired-preparation": "retired-preparation actual production scoped behavior, controlled IO; no native device claim", "audio-admission": "audio-admission actual production scoped behavior, controlled IO; no native device claim", "visible-text-only": "visible-text-only actual production scoped behavior, controlled IO; no native device claim", "negative-audio-guard": "negative-audio-guard actual production scoped behavior, controlled IO; no native device claim", "manga-first-image": "manga-first-image actual production scoped behavior, controlled IO; no native device claim", "manga-late-image": "manga-late-image actual production scoped behavior, controlled IO; no native device claim", "manga-image-failure": "manga-image-failure actual production scoped behavior, controlled IO; no native device claim", "typed-preparation": "typed-preparation actual production scoped behavior, controlled IO; no native device claim", "manga-prepared-display": "manga-prepared-display actual production scoped behavior, controlled IO; no native device claim", "manga-display-proofs": "manga-display-proofs actual production scoped behavior, controlled IO; no native device claim", "manga-source-recovery": "manga-source-recovery actual production scoped behavior, controlled IO; no native device claim", "manga-late-display": "manga-late-display actual production scoped behavior, controlled IO; no native device claim", "display-cover": "display-cover actual production scoped behavior, controlled IO; no native device claim", "probe-position-context": "probe-position-context actual production scoped behavior, controlled IO; no native device claim"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

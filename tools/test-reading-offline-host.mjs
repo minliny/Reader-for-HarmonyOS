@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { registerHooks }=await import('node:module');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if((s.startsWith('./')||s.startsWith('../'))&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReadingOfflineHost}=await import(process.env.READER_READING_OWNER_SDK === '1' ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/ReadingOfflineHost.ts');
+const {ReadingOfflineHost}=await import(id.startsWith('sdk-') ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/ReadingOfflineHost.ts');
+const {readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
 const {ReadingOfflineGateway}=await import('../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
 const {ReadingOfflineMaterializationError}=await import('../entry/src/main/ets/features/reading/ReadingOfflineContract.ts');
 const clone=structuredClone,tick=()=>new Promise(r=>setImmediate(r));
@@ -21,45 +25,6 @@ function fixture(){let route=true,owner=true,entries=[{index:0,title:'Chapter',l
  const binding={session,current:()=>route,currentEntries:()=>entries,emitEntries:e=>entries=e,emitOperation:o=>delivered.push(clone(o)),failed:()=>{},onProgress:()=>{}};
  return {rpc,host,binding,delivered,entries:()=>entries,retire:()=>route=false,unset:()=>owner=false,restore:()=>route=owner=true};
 }
-{
- const f=fixture();await f.host.downloadBook(f.binding);assert.equal(f.host.busy(),false);assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedCurrent');assert.equal(f.host.snapshot().materialization,'succeeded');assert.equal(f.entries()[0].downloadState,'completed');assert.equal(f.entries()[0].level,2);assert.equal(f.entries()[0].bookmarks[0].time,4);assert.equal(f.host.snapshot().progress.completedChapters,1);
-}
-{
- const f=fixture();f.rpc.cleanupFail=true;await f.host.clearBook(f.binding);assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.equal(f.host.snapshot().materialization,'failed','Core clear is distinct from Host cleanup');assert.equal(f.entries()[0].downloadState,'missing');const count=f.rpc.calls.filter(c=>c.method==='cache.clear').length;await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.clear').length,count);assert.equal(f.rpc.calls.filter(c=>c.method==='host.clearImages').length,1,'pure read recovery does not replay Host cleanup');
-}
-{
- const f=fixture();f.rpc.lost=true;await f.host.clearBook(f.binding);assert.equal(f.host.snapshot().projection.receipt.confirmation,'unknown');assert.equal(f.host.snapshot().materialization,'failed');assert.equal(f.entries()[0].downloadState,'missing','readback current value separate from old unknown ACK');await f.host.reconcile(f.host.snapshot().generation,f.binding);await f.host.downloadChapter(0,f.binding);await f.host.clearBook(f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.clear').length,1);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.book.prefetch').length,0,'unknown clear cannot erase/overlap a new download');assert.equal(f.host.snapshot().projection.receipt.fact,'pendingReconciliation');
-}
-{
- const f=fixture();f.rpc.lost=true;await f.host.downloadBook(f.binding);assert.equal(f.host.snapshot().projection.receipt.confirmation,'unknown');assert.equal(f.entries()[0].downloadState,'cached','partial durable body survives queue ACK loss');const count=f.rpc.calls.filter(c=>c.method==='cache.book.prefetch').length;await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.book.prefetch').length,count,'recovery issues no download');assert.equal(f.host.snapshot().projection.receipt.fact,'pendingReconciliation');
-}
-for(const action of ['downloadChapter','clearBook'])for(const retire of ['retire','unset']){
- const f=fixture(),d=defer();f.rpc.pause=d;const task=action==='downloadChapter'?f.host.downloadChapter(0,f.binding):f.host.clearBook(f.binding);await tick();const count=f.delivered.length;await f.host.downloadBook(f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.book.prefetch'||c.method==='cache.clear').length,1,'one finite mutex');f[retire]();d.resolve();await task;assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.equal(f.host.snapshot().materialization,'retired');assert.equal(f.host.busy(),false);assert.equal(f.delivered.length,count);
- if(action==='downloadChapter')assert.equal(f.rpc.calls.filter(c=>c.method==='cache.chapter.materialization.report').length,1,'retired granted lease still terminally reported');else assert.equal(f.rpc.calls.filter(c=>c.method==='host.clearImages').length,0,'old owner never clears successor images after retirement');
- f.restore();await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.book.prefetch'||c.method==='cache.clear').length,1);
-}
-{
- const f=fixture();f.rpc.readFail=true;await f.host.downloadBook(f.binding);assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedRefreshFailed');f.rpc.readFail=false;const count=f.rpc.calls.length;await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.ok(f.rpc.calls.slice(count).every(c=>c.method==='cache.book.status'),'recovery only canonical status');
-}
-{
- const f=fixture();assert.equal(ReadingOfflineHost.forRuntime(f.rpc,()=>true),f.host,'same Runtime Index reconstruction retains exact Host');
- f.unset();assert.equal(ReadingOfflineHost.forRuntime(f.rpc,()=>false),undefined);
- const successor=fixture();assert.notEqual(successor.host,f.host);
- assert.equal(ReadingOfflineHost.forRuntime(f.rpc,()=>false),undefined,'retired lookup cannot replace successor cached owner');
- assert.equal(ReadingOfflineHost.forRuntime(successor.rpc,()=>true),successor.host);
-}
-{
- const f=fixture();f.rpc.markOfflineImageChapterComplete=async()=>{throw new ReadingOfflineMaterializationError('storage_full','存储空间不足');};
- await f.host.downloadBook(f.binding);
- assert.equal(f.entries()[0].downloadState,'cached','readable durable body survives its failed materialization');
- assert.equal(f.host.snapshot().progress.completedChapters,0);assert.equal(f.host.snapshot().progress.cachedChapters,1);
- assert.equal(f.host.snapshot().progress.failedChapters,1,'final availability merge retains same-operation failures');
- assert.match(f.host.snapshot().progress.firstFailure.reason,/存储空间不足/);
-}
-console.log('PASS actual ReadingOfflineGateway -> ReadingOfflineHost: queue ACK/materialization/cleanup separation, cached partials, unknown pure reads, mutex, session retirement, terminal lease report and runtime-unset');
-
-// Actual Host + OfflineGateway + MangaDownloadActionsGateway. Only Core/native
-// queue IO and Host image files are controlled; the owners execute unchanged.
 async function until(predicate){for(let n=0;n<1000;n++){if(predicate())return;await tick();}assert.fail('manga owner boundary did not settle');}
 function mangaFixture(count=3){
  let live=true,entries=Array.from({length:count},(_,index)=>({index,title:`话${index}`,level:1,navigable:true,downloadState:'missing',bookmarks:[{time:index}]}));
@@ -126,6 +91,60 @@ function mangaFixture(count=3){
  return{host,binding,runtime,session,state,calls,errors,retained,files,leases,preparations,imageGates,
  claimGate:g=>claimGate=g,entries:()=>entries,seedRetained(index){state[index]='completed';retained.set(index,version(index));files.add(key(index));},close:()=>live=false};
 }
+
+try{
+if(id==='download'){
+{
+ const f=fixture();await f.host.downloadBook(f.binding);assert.equal(f.host.busy(),false);assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedCurrent');assert.equal(f.host.snapshot().materialization,'succeeded');assert.equal(f.entries()[0].downloadState,'completed');assert.equal(f.entries()[0].level,2);assert.equal(f.entries()[0].bookmarks[0].time,4);assert.equal(f.host.snapshot().progress.completedChapters,1);
+}
+}
+if(id==='clear-cleanup'){
+{
+ const f=fixture();f.rpc.cleanupFail=true;await f.host.clearBook(f.binding);assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.equal(f.host.snapshot().materialization,'failed','Core clear is distinct from Host cleanup');assert.equal(f.entries()[0].downloadState,'missing');const count=f.rpc.calls.filter(c=>c.method==='cache.clear').length;await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.clear').length,count);assert.equal(f.rpc.calls.filter(c=>c.method==='host.clearImages').length,1,'pure read recovery does not replay Host cleanup');
+}
+}
+if(id==='unknown-clear'){
+{
+ const f=fixture();f.rpc.lost=true;await f.host.clearBook(f.binding);assert.equal(f.host.snapshot().projection.receipt.confirmation,'unknown');assert.equal(f.host.snapshot().materialization,'failed');assert.equal(f.entries()[0].downloadState,'missing','readback current value separate from old unknown ACK');await f.host.reconcile(f.host.snapshot().generation,f.binding);await f.host.downloadChapter(0,f.binding);await f.host.clearBook(f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.clear').length,1);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.book.prefetch').length,0,'unknown clear cannot erase/overlap a new download');assert.equal(f.host.snapshot().projection.receipt.fact,'pendingReconciliation');
+}
+}
+if(id==='unknown-download'){
+{
+ const f=fixture();f.rpc.lost=true;await f.host.downloadBook(f.binding);assert.equal(f.host.snapshot().projection.receipt.confirmation,'unknown');assert.equal(f.entries()[0].downloadState,'cached','partial durable body survives queue ACK loss');const count=f.rpc.calls.filter(c=>c.method==='cache.book.prefetch').length;await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.book.prefetch').length,count,'recovery issues no download');assert.equal(f.host.snapshot().projection.receipt.fact,'pendingReconciliation');
+}
+}
+if(id==='retirement'){
+for(const action of ['downloadChapter','clearBook'])for(const retire of ['retire','unset']){
+ const f=fixture(),d=defer();f.rpc.pause=d;const task=action==='downloadChapter'?f.host.downloadChapter(0,f.binding):f.host.clearBook(f.binding);await tick();const count=f.delivered.length;await f.host.downloadBook(f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.book.prefetch'||c.method==='cache.clear').length,1,'one finite mutex');f[retire]();d.resolve();await task;assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.equal(f.host.snapshot().materialization,'retired');assert.equal(f.host.busy(),false);assert.equal(f.delivered.length,count);
+ if(action==='downloadChapter')assert.equal(f.rpc.calls.filter(c=>c.method==='cache.chapter.materialization.report').length,1,'retired granted lease still terminally reported');else assert.equal(f.rpc.calls.filter(c=>c.method==='host.clearImages').length,0,'old owner never clears successor images after retirement');
+ f.restore();await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.book.prefetch'||c.method==='cache.clear').length,1);
+}
+}
+if(id==='readback'){
+{
+ const f=fixture();f.rpc.readFail=true;await f.host.downloadBook(f.binding);assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedRefreshFailed');assert.equal(readingDirectoryRecovery('dir',{sourceId:'source',bookId:'book',title:'Book',author:'Author'},undefined,f.host.snapshot()).offlineReadbackFailed,true);assert.notEqual(readingDirectoryRecovery('dir',{sourceId:'source',bookId:'book',title:'Book',author:'Author'},undefined,f.host.snapshot()).offlineKind,'pending');f.rpc.readFail=false;const count=f.rpc.calls.length;await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.ok(f.rpc.calls.slice(count).every(c=>c.method==='cache.book.status'),'recovery only canonical status');
+}
+}
+if(id==='runtime-owner'){
+{
+ const f=fixture();assert.equal(ReadingOfflineHost.forRuntime(f.rpc,()=>true),f.host,'same Runtime Index reconstruction retains exact Host');
+ f.unset();assert.equal(ReadingOfflineHost.forRuntime(f.rpc,()=>false),undefined);
+ const successor=fixture();assert.notEqual(successor.host,f.host);
+ assert.equal(ReadingOfflineHost.forRuntime(f.rpc,()=>false),undefined,'retired lookup cannot replace successor cached owner');
+ assert.equal(ReadingOfflineHost.forRuntime(successor.rpc,()=>true),successor.host);
+}
+}
+if(id==='resource-failure'){
+{
+ const f=fixture();f.rpc.markOfflineImageChapterComplete=async()=>{throw new ReadingOfflineMaterializationError('storage_full','存储空间不足');};
+ await f.host.downloadBook(f.binding);
+ assert.equal(f.entries()[0].downloadState,'cached','readable durable body survives its failed materialization');
+ assert.equal(f.host.snapshot().progress.completedChapters,0);assert.equal(f.host.snapshot().progress.cachedChapters,1);
+ assert.equal(f.host.snapshot().progress.failedChapters,1,'final availability merge retains same-operation failures');
+ assert.match(f.host.snapshot().progress.firstFailure.reason,/存储空间不足/);
+}
+}
+if(id==='manga-supplement'){
 {
  const f=mangaFixture(),gate=defer();f.imageGates.set(0,gate);const work=f.host.downloadBook(f.binding);
  await until(()=>f.calls.some(c=>c.method==='image'));const generation=f.host.snapshot().generation;
@@ -139,6 +158,8 @@ function mangaFixture(count=3){
  assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.equal(f.leases.size,0);assert.equal(f.preparations.size,0);
  assert.ok(f.entries().every(e=>e.bookmarks[0].time===e.index),'download projection preserves newer bookmark rows');
 }
+}
+if(id==='manga-future-cancel'){
 {
  const f=mangaFixture(41),gate=defer();f.state[25]='paused';f.imageGates.set(0,gate);const work=f.host.downloadBook(f.binding);
  await until(()=>f.calls.some(c=>c.method==='image'));await f.host.operateManga('cancel',25,f.binding);gate.resolve();await work;
@@ -146,6 +167,8 @@ function mangaFixture(count=3){
  assert.ok(f.calls.filter(c=>c.method==='cache.book.prefetch').every(c=>!(c.p.chapterRange[0]<=25&&c.p.chapterRange[1]>25)),
   'later whole-book slices cannot reclaim a cancelled chapter');assert.equal(f.retained.size,40);
 }
+}
+if(id==='manga-pending-claim'){
 {
  const f=mangaFixture(),gate=defer();f.claimGate(gate);const work=f.host.downloadBook(f.binding);
  await until(()=>f.calls.some(c=>c.method==='cache.book.prefetch'));
@@ -154,6 +177,8 @@ function mangaFixture(count=3){
  gate.resolve();await Promise.all([work,stop]);assert.equal(f.calls.some(c=>c.method==='image'),false);
  assert.equal(f.leases.size,0);assert.equal(f.host.busy(),false);assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');
 }
+}
+if(id==='manga-clear-drain'){
 {
  const f=mangaFixture(),gate=defer();f.seedRetained(1);f.imageGates.set(0,gate);const work=f.host.downloadBook(f.binding);
  await until(()=>f.calls.some(c=>c.method==='image'));const clear=f.host.clearBook(f.binding);await tick();
@@ -162,6 +187,8 @@ function mangaFixture(count=3){
  assert.equal(f.retained.has(1),true);assert.equal(f.entries()[1].downloadState,'completed','ordinary clear preserves permanent downloads');
  assert.ok(f.calls.findIndex(c=>c.method==='cache.clear')>f.calls.findLastIndex(c=>c.method==='cache.chapter.materialization.report'));
 }
+}
+if(id==='manga-replacement'){
 {
  const f=mangaFixture(),gate=defer();f.seedRetained(1);f.imageGates.set(1,gate);
  const update=f.host.operateManga('updateChapter',1,f.binding);await until(()=>f.calls.some(c=>c.method==='image'));
@@ -170,6 +197,8 @@ function mangaFixture(count=3){
  gate.resolve();await update;await until(()=>!f.host.busy());
  assert.equal(f.retained.get(1),'version-1-1');assert.equal(f.entries()[1].downloadState,'completed');
 }
+}
+if(id==='manga-delete'){
 {
  const f=mangaFixture(),gate=defer();f.imageGates.set(0,gate);const work=f.host.downloadBook(f.binding);
  await until(()=>f.calls.some(c=>c.method==='image'));await f.host.operateManga('cancel',1,f.binding);
@@ -179,8 +208,8 @@ function mangaFixture(count=3){
  const outcome=await f.host.operateManga('deleteDownloads',0,f.binding);assert.equal(outcome.removedVersions,1);
  assert.equal(f.retained.has(0),false);assert.equal(f.files.has('0:version-0-0'),false);
 }
-console.log('PASS actual manga download Owner + Gateways: pending-claim pause, excluded future slice, exact resumed supplement, replacement retention, clear/delete drain, permanent-cache separation and same-operation receipts');
-
+}
+if(id==='manga-directory'){
 {
  const f=mangaFixture(1);await f.host.downloadBook(f.binding);
  const gateway=new ReadingOfflineGateway(f.runtime);
@@ -194,4 +223,30 @@ console.log('PASS actual manga download Owner + Gateways: pending-claim pause, e
  assert.equal(f.calls.slice(before).some(c=>c.method==='manga.entry.get'),false,
   'released retention downgrades before exact-file verification without new cache state');
 }
-console.log('PASS manga directory exact existing retention/manifest/file projection: completed, damaged and released states');
+}
+if(id==='sdk-download'){
+{
+ const f=fixture();await f.host.downloadBook(f.binding);assert.equal(f.host.busy(),false);assert.equal(f.host.snapshot().projection.receipt.fact,'confirmedCurrent');assert.equal(f.host.snapshot().materialization,'succeeded');assert.equal(f.entries()[0].downloadState,'completed');assert.equal(f.entries()[0].level,2);assert.equal(f.entries()[0].bookmarks[0].time,4);assert.equal(f.host.snapshot().progress.completedChapters,1);
+}
+}
+if(id==='sdk-retirement'){
+for(const action of ['downloadChapter','clearBook'])for(const retire of ['retire','unset']){
+ const f=fixture(),d=defer();f.rpc.pause=d;const task=action==='downloadChapter'?f.host.downloadChapter(0,f.binding):f.host.clearBook(f.binding);await tick();const count=f.delivered.length;await f.host.downloadBook(f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.book.prefetch'||c.method==='cache.clear').length,1,'one finite mutex');f[retire]();d.resolve();await task;assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.equal(f.host.snapshot().materialization,'retired');assert.equal(f.host.busy(),false);assert.equal(f.delivered.length,count);
+ if(action==='downloadChapter')assert.equal(f.rpc.calls.filter(c=>c.method==='cache.chapter.materialization.report').length,1,'retired granted lease still terminally reported');else assert.equal(f.rpc.calls.filter(c=>c.method==='host.clearImages').length,0,'old owner never clears successor images after retirement');
+ f.restore();await f.host.reconcile(f.host.snapshot().generation,f.binding);assert.equal(f.rpc.calls.filter(c=>c.method==='cache.book.prefetch'||c.method==='cache.clear').length,1);
+}
+}
+if(id==='sdk-manga-pending-claim'){
+{
+ const f=mangaFixture(),gate=defer();f.claimGate(gate);const work=f.host.downloadBook(f.binding);
+ await until(()=>f.calls.some(c=>c.method==='cache.book.prefetch'));
+ let stopped=false;const stop=f.host.operateManga('pause',undefined,f.binding).then(()=>stopped=true);
+ await until(()=>f.state.every(s=>s==='paused'));assert.equal(stopped,false,'stop waits for an accepted claim still absent from Host results');
+ gate.resolve();await Promise.all([work,stop]);assert.equal(f.calls.some(c=>c.method==='image'),false);
+ assert.equal(f.leases.size,0);assert.equal(f.host.busy(),false);assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');
+}
+}
+}finally{}
+}
+const definitions={"download": "download actual scoped owner/gateway/storage path; controlled Core/OS ports", "clear-cleanup": "clear-cleanup actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-clear": "unknown-clear actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-download": "unknown-download actual scoped owner/gateway/storage path; controlled Core/OS ports", "retirement": "retirement actual scoped owner/gateway/storage path; controlled Core/OS ports", "readback": "readback actual scoped owner/gateway/storage path; controlled Core/OS ports", "runtime-owner": "runtime-owner actual scoped owner/gateway/storage path; controlled Core/OS ports", "resource-failure": "resource-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-supplement": "manga-supplement actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-future-cancel": "manga-future-cancel actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-pending-claim": "manga-pending-claim actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-clear-drain": "manga-clear-drain actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-replacement": "manga-replacement actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-delete": "manga-delete actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-directory": "manga-directory actual scoped owner/gateway/storage path; controlled Core/OS ports", "sdk-download": "sdk-download actual scoped owner/gateway/storage path; controlled Core/OS ports", "sdk-retirement": "sdk-retirement actual scoped owner/gateway/storage path; controlled Core/OS ports", "sdk-manga-pending-claim": "sdk-manga-pending-claim actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

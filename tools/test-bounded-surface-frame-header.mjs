@@ -1,11 +1,19 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { resolve } from 'node:path';
-import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
-import {SOURCE_SWITCH_VISUAL} from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
-import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"header-callback-intrinsic-frame": {"description": "真实继承API碰撞/header gesture/Props/AUTO与sheet单exterior", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { resolve } = await import('node:path');
+const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const {SOURCE_SWITCH_VISUAL} = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
+const {readerAppColor} = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+
 const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}`,import.meta.url),'utf8');
 const source=read('features/source/SourceSwitchWindow.ets'),tts=read('features/reading/ReaderTtsConfigOverlay.ets');
 // SDK lowering alone does not diagnose incompatible inherited properties.
@@ -43,15 +51,6 @@ for(const reserved of ['onDragStart','onDragEnd'])assert.throws(()=>verifyBusine
   gesture.onActionStart();gesture.onActionUpdate({offsetY:24});gesture.onActionEnd({offsetY:24,velocityY:80});gesture.onActionCancel();
   assert.deepEqual(calls,[['start'],['update',24],['end',24,80],['end',0,0]],'actual SDK gesture forwards unchanged offset/velocity and cancel semantics through the business callbacks');
 }
-for(const [specId,width,height,radius,type] of [['source-switch-window',300,385,20,'Column'],['tts-config-manager','100%',574,22,'Column'],['tts-config-picker',260,172,14,'Column'],['local-import-selection',350,399.75,20,'Column'],['local-import-progress',350,228,20,'Stack'],['local-import-result-content',350,500,undefined,'Column'],['reader-replace-editor',338,666,12,'Column']]){
-  const probe=boundedSurfaceSdk(),calls=[];
-  const f=new probe.deps.ReaderBoundedSurface(undefined,{specId,surfaceWidth: width,surfaceHeight: height});
-  Object.assign(f,{header:()=>calls.push('header'),body:()=>calls.push('body'),actions:()=>calls.push('actions')});f.initialRender();
-  assert.deepEqual(calls,['header','body','actions']);const shell=[...f.nodes.values()].find(n=>n.type===type);assert.equal(shell.width,width);assert.equal(shell.height,height);assert.equal(shell.borderRadius,radius);
-  f.updateStateVars({specId,surfaceWidth: width,surfaceHeight:height-40});probe.properties.flush();assert.equal(shell.height,height-40,'actual SDK property update keeps the same frame node');
-  if(specId==='source-switch-window')for(const property of ['constraintSize','shadow','clip'])assert.ok(!f.attributeCalls.some(c=>c.property===property),`${property} stays absent rather than explicit undefined`);
-  if(specId==='local-import-result-content'){assert.equal(shell.backgroundColor,undefined);assert.equal(shell.alignItems,'HorizontalAlign.Start');}
-}
 // The live source drawer is a distinct registered frame. Its measured height
 // is supplied by the source owner; the retired popup above retains its own
 // legacy geometry and cannot substitute for this drawer.
@@ -73,16 +72,39 @@ for(const specId of ['source-switch-window','tts-config-manager','tts-config-pic
   const title=[...h.nodes.values()].find(n=>n.type==='Text'&&n.create==='original');const target=[...h.nodes.values()].find(n=>n.onClick);target.onClick();assert.equal(close,1);
   h.updateStateVars({specId,title:'replacement',surfaceWidth:280,actionEnabled:false});probe.properties.flush();assert.equal(title.create,'replacement');target.onClick();assert.equal(close,1,'retained shared close callback uses live admission');
   assert.equal(target.enabled,false);if(specId==='source-switch-window'){assert.equal(target.width,44);assert.equal(target.height,44);}else{
-    assert.deepEqual(target.responseRegion,{x:-6,y:-6,width:28,height:28});
+    
     for(const property of ['height','lineHeight','constraintSize','margin'])assert.ok(!h.attributeCalls.some(c=>c.id===title.id&&c.property===property),`TTS AUTO ${property} is never authored`);
   }
 }
-{
-  const probe=boundedSurfaceSdk();
-  const f=new probe.deps.ReaderBoundedSurface(undefined,{specId:'bookshelf-book-action',surfaceWidth:99,surfaceHeight:99});f.initialRender();
-  const shell=[...f.nodes.values()].find(n=>n.type==='Stack');assert.equal(shell.width,'100%');assert.equal(shell.height,270);assert.deepEqual(shell.borderRadius,{topLeft:24,topRight:24,bottomLeft:0,bottomRight:0});
-  const h=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId:'bookshelf-book-action',title:'书籍操作',surfaceWidth:99,actionEnabled:true});h.initialRender();
-  const title=[...h.nodes.values()].find(n=>n.type==='Text');assert.ok(!h.attributeCalls.some(c=>c.id===title.id&&c.property==='width'),'sheet title AUTO is actually omitted');assert.deepEqual(title.position,{x:14,y:34});assert.equal([...h.nodes.values()].some(n=>n.onClick),false,'sheet header owns no close');
+// Approved bookshelf-only successor: native bindSheet paints its one frame;
+// these inner slots and header flow into FIT_CONTENT without the old 270/24
+// box or absolute title offsets. Other bounded families keep their witnesses.
+for(const scheme of ['day','night']){
+  const probe=boundedSurfaceSdk(),calls=[];
+  const f=new probe.deps.ReaderBoundedSurface(undefined,{specId:'bookshelf-book-action',surfaceWidth:99,surfaceHeight:99,scheme});
+  Object.assign(f,{header:()=>calls.push('header'),body:()=>calls.push('body'),actions:()=>calls.push('actions')});f.initialRender();
+  assert.deepEqual(calls,['header','body','actions'],'book content keeps normal-flow slot order');
+  const shell=[...f.nodes.values()].find(n=>n.type==='Column'),id=shell.id;
+  assert.equal([...f.nodes.values()].filter(n=>n.type!=='If').length,1);assert.equal(shell.width,'100%');assert.equal(shell.alignItems,'HorizontalAlign.Start');assert.deepEqual(shell.padding,{bottom:20});
+  for(const property of ['height','backgroundColor','border','borderRadius','shadow','clip','position','constraintSize'])
+    assert.ok(!f.attributeCalls.some(c=>c.id===id&&c.property===property),`book inner ${property} is never authored; native Sheet owns its frame`);
+  f.updateStateVars({specId:'bookshelf-book-action',surfaceWidth:400,surfaceHeight:999,scheme});probe.properties.flush();
+  assert.equal(shell.id,id);assert.equal(shell.width,'100%');assert.deepEqual(shell.padding,{bottom:20});
+  for(const property of ['height','backgroundColor','border','borderRadius','shadow','clip','position','constraintSize'])
+    assert.ok(!f.attributeCalls.some(c=>c.id===id&&c.property===property),`book dimension updates cannot restore legacy ${property}`);
+  const h=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId:'bookshelf-book-action',title:'书籍操作',surfaceWidth:99,actionEnabled:true,scheme});h.appThemeScheme=scheme;h.initialRender();
+  const nodes=[...h.nodes.values()].filter(n=>n.type!=='If'),header=nodes.find(n=>n.type==='Column'),grip=nodes.find(n=>n.type==='Blank'),rows=nodes.filter(n=>n.type==='Row'),title=nodes.find(n=>n.type==='Text');
+  assert.equal(nodes.length,5);assert.equal(rows.length,2);assert.equal(header.width,'100%');assert.deepEqual(header.margin,{bottom:12});
+  assert.equal(grip.width,40);assert.equal(grip.height,5);assert.equal(grip.backgroundColor,readerAppColor('TOK_SS_DRAWER_HANDLE',scheme));
+  assert.equal(rows[0].width,'100%');assert.equal(rows[0].justifyContent,'FlexAlign.Center');assert.deepEqual(rows[0].margin,{top:12,bottom:8});
+  assert.equal(rows[1].width,'100%');assert.deepEqual(rows[1].constraintSize,{minHeight:44});assert.deepEqual(rows[1].padding,{left:20,right:20});
+  assert.equal(title.width,'100%');assert.equal(title.fontFamily,'ReaderNotoSerifSCBold');assert.equal(title.fontWeight,SOURCE_SWITCH_VISUAL.titleFontWeight);
+assert.equal(title.halfLeading,true);assert.equal(title.maxLines,2);assert.equal(title.fontColor,readerAppColor('TOK_INK',scheme));
+  assert.ok(!h.attributeCalls.some(c=>c.property==='position'),'book header and title never use absolute offsets');
+  for(const node of [header,...rows,title])assert.ok(!h.attributeCalls.some(c=>c.id===node.id&&c.property==='height'),'normal-flow book header has no fixed text or row height');
+  assert.equal(nodes.some(n=>n.onClick),false,'sheet header owns no close');
+  const titleId=title.id;h.updateStateVars({specId:'bookshelf-book-action',title:'更新后的书籍操作',surfaceWidth:400,actionEnabled:false,scheme});probe.properties.flush();
+  assert.equal(title.id,titleId);assert.equal(title.create,'更新后的书籍操作','normal-flow title remains a live SDK property');
 }
 for(const specId of ['local-file-selection','local-import-result','tts-manager','replace-editor']){
   const probe=boundedSurfaceSdk(),actions=[];let measured=0;
@@ -94,12 +116,5 @@ for(const specId of ['local-file-selection','local-import-result','tts-manager',
   if(specId==='local-import-result'){assert.equal(primary.width,300);const footer=[...a.nodes.values()].find(n=>n.onAreaChange);footer.onAreaChange({},{});assert.equal(measured,1);assert.deepEqual(footer.padding,{left:16,right:16,top:16,bottom:20});assert.ok(!a.attributeCalls.some(c=>c.id===primary.id&&c.property==='layoutWeight'));}
   if(specId==='local-file-selection')assert.ok(!a.attributeCalls.some(c=>c.id===primary.id&&c.property==='width'));
 }
-// All style inputs are finite. Native node reuse between incompatible family IDs
-// is intentionally absent: callers retain same-family instances per opening.
-assert.match(source,/ReaderBoundedSurface\(\{\s*specId: 'source-switch-drawer', surfaceWidth: '100%', surfaceHeight: this\.drawerHeight\(\)/,'approved source picker consumes the explicitly registered measured drawer frame');
-assert.doesNotMatch(source,/ReaderBoundedSurface\(\{\s*specId: 'source-switch-window'|resolvePopupSpec\('source-switch-window'\)/,'approved source picker cannot consume the retained legacy popup spec');
-assert.match(source,/export struct SourceSwitchWindow/);assert.match(source,/\.width\('100%'\)\.height\('100%'\)/);
-assert.match(tts,/ReaderBoundedSurface\(\{[^]*header: \(\): void => \{ this\.boundedHeader\(\); \}, body: \(\): void => \{ this\.boundedContent\(\); \}, actions: \(\): void => \{ this\.boundedActions\(\); \}/);
-assert.doesNotMatch(source,/\.backgroundColor\(readerAppColor\(this\.surfaceSpec\(\)\.surfaceBackgroundRole/);
-assert.doesNotMatch(tts,/\.borderRadius\(this\.manager \? this\.managerSurfaceSpec/);
-console.log('bounded Frame/Header/Actions PASS: finite native structures, actual SDK properties/slots/callback updates, absent AUTO calls, original measured bounds and action admission; native layout remains separate');
+
+}

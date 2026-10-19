@@ -1,19 +1,19 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { createRequire } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import * as state from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import * as style from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
-import { READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { readerControlHostVisible } from '../entry/src/main/ets/features/reading/ReaderControlHostSession.ts';
-import { createReaderControlSessionState } from '../entry/src/main/ets/features/reading/ReaderControlSessionState.ts';
-import { readerWidthClass, resolveReaderReadingLayout } from '../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts';
-import { ReaderWindowMetricsSnapshot, ReaderRectVp } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const selected=selectContractCases({"status-band": {"description": "Actual status underlay observation and Shell overlay paint", "resources": []}, "theme-texture": {"description": "Theme changes invalidate textures without repagination", "resources": []}, "launch-work": {"description": "Moving capsule launch blocks captures/preparation until settled", "resources": []}, "volume-policy": {"description": "Actual volume handler policy and InputKit partial cleanup", "resources": []}, "font-import": {"description": "Custom font action, persisted descriptor and file URI registration", "resources": []}});
+async function run(selectedCase){
+const { resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const { createRequire }=await import('node:module');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
+const state=await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
+const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const { READER_THEME_DEFINITIONS }=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { readerControlHostVisible }=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
+const { createReaderControlSessionState }=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
+const { readerWidthClass, resolveReaderReadingLayout }=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const { ReaderWindowMetricsSnapshot, ReaderRectVp }=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
 
 const require = createRequire(import.meta.url);
 const ts = require(((resolveEtsLoaderRoot()) + '/node_modules/typescript'));
@@ -22,27 +22,19 @@ const statusPaperSource = readFileSync(new URL('../entry/src/main/ets/features/r
 syntax.componentCollection.customComponents.add('ReaderStatusBarPaper');
 syntax.propCollection.set('ReaderStatusBarPaper', new Set([...statusPaperSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
 class StatusPaper { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-const baseline = process.env.READER_CONTROLS_BASELINE;
-const scratch = baseline ? mkdtempSync(join(tmpdir(), 'reader-controls-baseline-')) : undefined;
-function sourcePath(relative) {
-  if (!baseline) return new URL(`../entry/src/main/ets/${relative}`, import.meta.url);
-  const path = join(scratch, relative.replaceAll('/', '-'));
-  writeFileSync(path, execFileSync('git',
-    ['show', `${baseline}:entry/src/main/ets/${relative}`], { cwd: new URL('..', import.meta.url) }));
-  return path;
-}
+const sourcePath=relative=>new URL(`../entry/src/main/ets/${relative}`,import.meta.url);
 const lre = sourcePath('features/reading/LocalReadingExperience.ets');
 const results = [];
 async function check(name, run) {
+  const group=name.startsWith('PH108: real SDK')||name.startsWith('PH108: shell')?'status-band':name.startsWith('PH108: every')?'theme-texture':name.startsWith('PH104:')?'launch-work':name.startsWith('PH107:')?'volume-policy':name.startsWith('PH106:')?'font-import':'download-feedback';
+  if(group!==selectedCase)return;
   try { await run(); results.push({ name, status: 'PASS' }); }
   catch (error) { results.push({ name, status: 'FAIL', error: error.message }); }
 }
 function ordinary(file, names, deps = {}) {
   const source = readFileSync(file, 'utf8');
-  return productionMotionMethods(file, names.filter(name => source.includes(`${name}(`)), deps);
+  return productionMotionMethods(file, names, deps);
 }
-const tick = () => new Promise(resolve => setImmediate(resolve));
-async function settled() { for (let i = 0; i < 5; i++) await tick(); }
 
 await check('PH108: real SDK If observes independent status preference and control visibility', () => {
   const source = readFileSync(lre, 'utf8');
@@ -111,7 +103,7 @@ await check('PH108: every theme-only change invalidates page textures without re
   }
 });
 
-if (!baseline) await check('PH108: shell repaints the reader band above directory and source-switch overlays', () => {
+await check('PH108: shell repaints the reader band above directory and source-switch overlays', () => {
   const source = readFileSync(sourcePath('features/shell/ReaderShell.ets'), 'utf8');
   for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 'reading']) {
     const { owner } = createReaderBuilderProbe(source, ['overlayStatusBarUnderlay', 'chromeMetrics'], {
@@ -164,7 +156,7 @@ await check('PH107: native volume subscriptions are absent in controls, overlays
   }
 });
 
-if (!baseline) await check('PH107: actual InputKit host releases partial registrations, deduplicates and disposes', () => {
+await check('PH107: actual InputKit host releases partial registrations, deduplicates and disposes', () => {
   const src = readFileSync(sourcePath('app/ReaderReadingSystemEventHost.ts'), 'utf8');
   const output = ts.transpileModule(src, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
   const listeners = new Set(); let failDown = false, subscriptions = 0;
@@ -184,7 +176,7 @@ if (!baseline) await check('PH107: actual InputKit host releases partial registr
   host.setVolumeKeyHandler(() => {}); assert.equal(listeners.size, 0);
 });
 
-if (!baseline) await check('PH106: import stays an action; a separate selected custom font survives restore and reorder', () => {
+await check('PH106: import stays an action; a separate selected custom font survives restore and reorder', () => {
   const descriptor = new state.ReaderCustomFontDescriptor('测试字体', 'ReaderCustom_aaaaaaaaaaaaaaaa',
     '/data/storage/el2/base/files/reader-fonts/' + 'a'.repeat(64) + '.ttf', 'a'.repeat(64));
   const snapshot = state.setReaderAppearanceCustomFont(state.createDefaultReaderAppearanceSnapshot(), descriptor);
@@ -213,124 +205,9 @@ await check('PH106: actual font Host registers persisted sandbox font through fi
   assert.equal(registered.familySrc, 'file://' + descriptor.filePath);
 });
 
-if (baseline) await check('PH105: download feedback starts immediately, verifies completion and ignores stale owner', async () => {
-  const src = sourcePath('pages/Index.ets');
-  for (const mode of ['complete', 'partial', 'failure', 'stale']) {
-    let resolve, reject, calls = 0;
-    const pending = new Promise((a,b) => { resolve = a; reject = b; });
-    class Gateway { prefetchBook() { calls++; return pending; } async loadProjection() { return []; } }
-    const C = ordinary(src, ['downloadDirectoryBook', 'showOfflineDownloadFeedback'], {
-      ReadingOfflineGateway: Gateway, ReaderRuntimeOwner: { current: () => ({}) }, hilog: { error() {} }, DOMAIN: 0,
-    });
-    const messages = [], errors = [];
-    const p = Object.assign(new C(), { remoteReadingSession: { identity: { sourceId: 's', bookId: 'b' }, entries: [{ url: 'chapter' }] },
-      offlineMutationActiveKey: '', mangaDownloadActionActiveKey: '', offlineMutationGeneration: 0, detailToc: [{ index: 0 }],
-      getUIContext: () => ({ getPromptAction: () => ({ showToast: ({ message }) => messages.push(message) }) }),
-      mergeDirectoryBookmarks: entries => entries, showReadingFailure: (...args) => errors.push(args),
-    });
-    p.downloadDirectoryBook();
-    assert.ok(messages[0]?.includes('开始下载'), 'immediate accepted feedback');
-    assert.equal(calls, 1);
-    if (mode === 'stale') p.remoteReadingSession = undefined;
-    if (mode === 'failure') reject(new Error('offline unavailable'));
-    else resolve([{ index: 0, navigable: true, downloadState: mode === 'partial' ? 'cached' : 'completed' }]);
-    await settled();
-    if (mode === 'complete') assert.ok(messages.at(-1).includes('下载完成'));
-    if (mode === 'partial') assert.ok(messages.at(-1).includes('0/1'));
-    if (mode === 'failure') assert.equal(errors.length, 1);
-    if (mode === 'stale') assert.equal(messages.length, 1);
-    assert.equal(p.offlineMutationActiveKey, '');
-  }
-});
-if (!baseline) await check('PH105: real Gateway/Host feedback preserves verified completion, partial body, failure and retired owner', async () => {
-  const { actualCacheAuthorityFixture, makeIndex, settled: ownerSettled } = await import('./lib/reading-directory-sdk-consumer.mjs');
-  const { deferred, until } = await import('./lib/reading-operation-durable-probe.mjs');
-  for (const mode of ['complete', 'partial', 'failure', 'stale']) {
-    const f = await actualCacheAuthorityFixture(true), pending = deferred(), messages = [];
-    const model = { state: mode==='failure'?'cached':'missing', bytes: mode==='failure'?64:0, manifest: false, lastError: undefined, queued: 0 };
-    const privateFailure='offline unavailable https://fixture.invalid/?token=PRIVATE_TEST_TOKEN Cookie=PRIVATE_TEST_COOKIE';
-    f.runtime.supportsCoreCapability = capability => capability === 'chapter.content.cacheOnly.v1';
-    f.runtime.markOfflineImageChapterComplete = async () => { model.manifest = mode !== 'partial'; };
-    f.runtime.isOfflineImageChapterComplete = async () => model.manifest;
-    f.runtime.request = async (method, params, options = {}) => {
-      f.calls.push({ method, params: structuredClone(params), options });
-      if (options.canDispatch?.() === false) throw Error('actual adapter refused before send');
-      options.onDispatch?.();
-      if (method === 'cache.book.prefetch') {
-        assert.equal(options.shouldCancel, undefined, 'accepted queue cannot be cancelled by the UI');
-        model.queued++; await pending.promise; model.state = 'inProgress'; model.bytes = 4;
-        return { data: { sourceId: 'source', bookId: 'book', chapterRange: params.chapterRange,
-          chapterCount: 1, prefetchedCount: 1, materializations: [{ chapterIndex: 0, token: 'actual-queue-lease' }] } };
-      }
-      if (method === 'cache.book.status') return { data: { sourceId: 'source', bookId: 'book', tocAvailable: true,
-        chapters: [{ chapterIndex: 0, title: 'Chapter', url: '/chapter', state: model.state, cachedBytes: model.bytes, lastError: model.lastError }] } };
-      if (method === 'chapter.content') return { data: { sourceId: 'source', bookId: 'book', chapterTitle: 'Chapter', content: '这是能够通过既有正文准入的真实章节内容。'.repeat(20), via: 'cache' } };
-      if (method === 'cache.chapter.materialization.report') {
-        model.state = params.outcome; model.lastError = params.errorCode;
-        return { data: { sourceId: 'source', bookId: 'book', chapterIndex: 0, state: params.outcome, retainedCachedBody: true } };
-      }
-      throw Error('Unexpected offline boundary: ' + method);
-    };
-    const { idx, render, p, click } = makeIndex(f, { remote: true });
-    idx.detailToc = [{ index: 0, title: 'Chapter', navigable: true, downloadState: model.state }];
-    idx.getUIContext = () => ({ getPromptAction: () => ({ showToast: ({ message }) => messages.push(message) }) });
-    // Keep exercising durable legacy-operation recovery through its actual
-    // Host and Index binding. Directory buttons now admit persistent shared
-    // jobs, with acceptance/navigation tested separately.
-    void f.offline.downloadBook(idx.offlineBinding(f.runtime,idx.remoteReadingSession));
-    await until(() => model.queued === 1);
-    assert.equal(f.offline.busy(), true);
-    assert.equal(idx.offlineOperationActive,true,'the actual binding publishes pending operation state before the materialization ACK');
-    assert.equal(messages.length,0,'a retained Host operation never invents completion or a shared-job acceptance receipt');
-    if (mode === 'stale') idx.remoteReadingSession = undefined;
-    if (mode === 'failure') pending.reject(Error(privateFailure));
-    else pending.resolve();
-    await ownerSettled(f);
-    assert.equal(model.queued, 1, 'one actual queue write');
-    if (mode === 'complete') {
-      assert.match(messages.at(-1), /全部 1 章下载完成/);
-      assert.equal(idx.detailToc[0].downloadState, 'completed');
-    }
-    if (mode === 'partial') {
-      assert.match(messages.at(-1), /已完成 0\/1 章.*1 章正文已缓存/);
-      assert.equal(idx.detailToc[0].downloadState, 'cached');
-    }
-    if (mode === 'failure') {
-      assert.equal(idx.offlineOperation.projection.receipt.confirmation, 'unknown');
-      const leaf = render();
-      const generation=idx.offlineOperation.generation;
-      assert.equal(idx.offlineOperation.operationFailure,privateFailure,'actual private cause stays independent of the unknown write receipt');
-      const notice=p.walk(leaf).find(actor=>actor instanceof p.deps.ReaderRecoveryNotice&&actor.view?.generation===generation);
-      assert.ok(notice?.view.visible,'the actual notice represents this unknown queue operation');
-      assert.match(notice.view.message,/结果尚未确认/);assert.match(notice.view.message,/已有内容仍保留/);
-      assert.doesNotMatch(notice.view.message,/PRIVATE_TEST|fixture\.invalid|Cookie=|offline unavailable/);
-      assert.equal(notice.view.canRetry,false,'the notice itself does not dispatch recovery');
-      assert.equal(idx.directoryRecovery().offline.canRetry,true);
-      const action=p.walk(leaf).find(actor=>actor instanceof p.deps.ReaderRecoveryAction&&actor.label==='核对离线结果');
-      assert.ok(action);assert.equal(action.generation,generation);assert.equal(action.actionEnabled,true);
-      assert.equal(messages.length,1,'the actual retained Index binding shows one safe unknown-ACK feedback');
-      assert.match(messages[0],/结果尚未确认/);assert.doesNotMatch(messages.join('\n'),/PRIVATE_TEST|fixture\.invalid|Cookie=|offline unavailable/);
-      assert.equal(idx.detailToc[0].downloadState,'cached');assert.equal(model.bytes,64,'unknown queue ACK preserves the previously cached body');
-      const reads=f.calls.filter(call=>call.method==='cache.book.status').length;
-      const oldNative=[...action.nodes.values()].find(node=>typeof node.onClick==='function').onClick;
-      click(leaf,'核对离线结果');await ownerSettled(f);
-      assert.ok(f.calls.filter(call=>call.method==='cache.book.status').length>reads,'actual reconciliation performs only a canonical read');
-      assert.equal(model.queued,1,'a recovery click cannot dispatch a second queue write');
-      assert.equal(f.calls.filter(call=>call.method==='cache.clear').length,0);
-      assert.equal(idx.offlineOperation.projection.receipt.confirmation,'unknown','availability is not an ACK of the original queue write');
-      assert.equal(idx.offlineOperation.operationFailure,privateFailure);assert.equal(idx.detailToc[0].downloadState,'cached');
-      const before=f.calls.length;
-      idx.directoryPresentationGeneration++;oldNative();await ownerSettled(f);assert.equal(f.calls.length,before,'obsolete physical recovery actor cannot consume the reopened directory');
-      idx.directoryPresentationGeneration--;f.unset();oldNative();await ownerSettled(f);assert.equal(f.calls.length,before,'unset Runtime rejects the old admitted actor');
-      f.install({...f.runtime});oldNative();await ownerSettled(f);assert.equal(f.calls.length,before,'replacement Runtime cannot lend authority to the old actor');
-    }
-    if (mode === 'stale') {
-      assert.equal(messages.length, 0, 'retired UI gets no delayed toast');
-      assert.equal(f.offline.snapshot().projection.receipt.confirmation, 'confirmed', 'accepted queue ACK settles in the original domain owner');
-      assert.equal(f.calls.filter(call => call.method === 'cache.chapter.materialization.report').length, 1, 'granted lease is terminally reported after UI retirement');
-    }
-    assert.equal(f.offline.busy(), false, 'actual owner mutex released');
-  }
-});
+// Retained PH105 materialization journey is independently selectable in
+// test-reader-chapter-download-feedback.mjs#retained-materialization; never imported here.
 for (const result of results) console.log(JSON.stringify(result));
 assert.equal(results.filter(result => result.status === 'FAIL').length, 0, 'PH104–108 production regression');
+}
+for(const id of selected){await run(id);recordContractCasePass(id);}

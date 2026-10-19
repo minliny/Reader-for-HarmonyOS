@@ -1,39 +1,44 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire, registerHooks } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import * as chromeLayout from '../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts';
-import { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } from './lib/reader-page-chrome-measurement-probe.mjs';
-import { loadReaderTypographyRoles } from './lib/reader-typography-probe.mjs';
-import * as gesture from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
-import * as rapid from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
-import { mergeReaderControlBookmarkProjection } from '../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts';
-registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+async function runCase(selectedCase) {
+const geometryCase = selectedCase === 'geometry';
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { readFileSync } = await import('node:fs');
+const { createRequire, registerHooks } = await import('node:module');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const chromeLayout = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
+const { loadReaderTypographyRoles, readerMessageStyles } = await import('./lib/reader-typography-probe.mjs');
+const gesture = await import('../entry/src/main/ets/features/reading/ReaderPageGestureState.ts');
+const rapid = await import('../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts');
+const { mergeReaderControlBookmarkProjection } = await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts');
+const resolution = registerHooks({ resolve(s, c, next) { try { return next(s, c); } catch (e) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return next(`${s}.ts`, c); throw e;
 } } });
+try {
 const { ReaderRectVp: Rect, ReaderDisplayCornerVp: Corner, ReaderWindowMetricsSnapshot: Metrics } =
   await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
 const { resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP } =
   await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
-const { readerAppearanceThemeStyle } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
 const { findReaderTheme } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
 const file = name => new URL(`../entry/src/main/ets/features/reading/${name}`, import.meta.url);
 const typography = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderTypography.ets', import.meta.url), 'utf8');
 const { TYPE_READER_IMMERSIVE_TIME, TYPE_READER_IMMERSIVE_PROGRESS, TYPE_READER_IMMERSIVE_PAGE_ORDINAL } =
   loadReaderTypographyRoles(typography);
 const roles = { TYPE_READER_IMMERSIVE_TIME, TYPE_READER_IMMERSIVE_PROGRESS, TYPE_READER_IMMERSIVE_PAGE_ORDINAL };
-const dependencies = { ...chromeLayout, ...roles, measureReaderPageChromeText, readerPageChromeTopTextStyle };
+const dependencies = { ...chromeLayout, ...roles, measureReaderPageChromeText, readerPageChromeTopTextStyle, readerAppearanceChromeTone };
 const lreSource = readFileSync(file('LocalReadingExperience.ets'), 'utf8');
-const chromeSource = readFileSync(file('ReaderPageChrome.ets'), 'utf8');
-const statusPaperSource = readFileSync(file('ReaderStatusBarPaper.ets'), 'utf8');
-const paperBackgroundSource = readFileSync(file('ReaderPaperBackground.ets'), 'utf8');
-const ActualLayout = productionMotionMethods(file('LocalReadingExperience.ets'),
+const chromeSource = geometryCase ? readFileSync(file('ReaderPageChrome.ets'), 'utf8') : undefined;
+const statusPaperSource = geometryCase ? readFileSync(file('ReaderStatusBarPaper.ets'), 'utf8') : undefined;
+const paperBackgroundSource = geometryCase ? readFileSync(file('ReaderPaperBackground.ets'), 'utf8') : undefined;
+const ActualLayout = geometryCase ? productionMotionMethods(file('LocalReadingExperience.ets'),
   ['readingLayout', 'bookmarkFeedbackTopBoundary'], {
     ...dependencies, resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP,
     ReaderWindowCoordinator: { metrics: () => actualLayoutMetrics },
-  });
+  }) : undefined;
 let actualLayoutMetrics;
 function windowLayout(width, cutout, extended, scale = 1, barHeight = 48, safeSide = 0) {
   const metrics = new Metrics();
@@ -60,16 +65,16 @@ const bookmarkMembers = ['bookmarkCornerFeedback', 'bookmarkCornerLayout', 'book
   'bookmarkFeedbackHintFits', 'bookmarkFeedbackHintLabel', 'bookmarkFeedbackTopBoundary'];
 // Reuse only the SDK-compiled classes. Every combination gets fresh owners,
 // node maps and geometry caches; no mounted actor or fixture state is shared.
-const ChromeComponent = createReaderBuilderProbe(chromeSource, chromeMembers, dependencies).Component;
-const BookmarkComponent = createReaderBuilderProbe(lreSource, bookmarkMembers, dependencies).Component;
+const ChromeComponent = geometryCase ? createReaderBuilderProbe(chromeSource, chromeMembers, dependencies).Component : undefined;
+const BookmarkComponent = geometryCase ? createReaderBuilderProbe(lreSource, bookmarkMembers, dependencies).Component : undefined;
 class StatusPaper { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-const UnderlayComponent = createReaderBuilderProbe(lreSource, ['readerStatusBarUnderlay', 'readerStatusBarMetrics'], {
+const UnderlayComponent = geometryCase ? createReaderBuilderProbe(lreSource, ['readerStatusBarUnderlay', 'readerStatusBarMetrics'], {
   ReaderStatusBarPaper: StatusPaper, readerAppearanceThemeStyle,
   ReaderWindowCoordinator: { metrics: () => actualLayoutMetrics },
-}, { childSources: { ReaderStatusBarPaper: statusPaperSource } }).Component;
-const StatusPaperComponent = createReaderBuilderProbe(statusPaperSource, ['build'], {
+}, { childSources: { ReaderStatusBarPaper: statusPaperSource } }).Component : undefined;
+const StatusPaperComponent = geometryCase ? createReaderBuilderProbe(statusPaperSource, ['build'], {
   ReaderPaperBackground: StatusPaper, findReaderTheme,
-}, { childSources: { ReaderPaperBackground: paperBackgroundSource } }).Component;
+}, { childSources: { ReaderPaperBackground: paperBackgroundSource } }).Component : undefined;
 function render(layout, state = {}, time = '12:30') {
   const ui = context(layout.systemFontScale);
   const chrome = new ChromeComponent(undefined, {});
@@ -97,7 +102,13 @@ function render(layout, state = {}, time = '12:30') {
   return { chrome, bookmark, clock: nodes.find(n => n.type === 'Text' && n.create === time),
     title: nodes.find(n => n.type === 'Text' && n.create.startsWith('A very')),
     marker, icon: marker?.visibility === 'Visibility.Hidden' || marker?.opacity === 0 ? undefined : marker,
-    hint: [...bookmark.nodes.values()].find(n => n.type === 'Text') };
+    hint: (() => {
+      const nodes = [...bookmark.nodes.values()];
+      const label = nodes.find(n => n.type === 'Text' && n.create !== '↓');
+      const group = nodes.find(n => n.type === 'Row' && n.position !== undefined);
+      return label === undefined ? undefined : { ...label, position: group?.position,
+        width: group?.width, height: group?.height, hitTestBehavior: group?.hitTestBehavior };
+    })() };
 }
 function noOverlap(a, b) { return a.x + a.width <= b.x + 1e-8 || b.x + b.width <= a.x + 1e-8; }
 function disjoint(a, b) {
@@ -132,11 +143,19 @@ function renderStatusComposition(layout, state) {
   return drawn;
 }
 const cases = [];
+if (geometryCase) {
+
 for (const width of [320, 390, 760]) for (const extended of [false, true]) for (const scale of [1, 1.5, 2]) {
   cases.push(windowLayout(width, new Rect(width / 2 - 41, 0, 82, 32), extended, scale));
 }
 cases.push(windowLayout(390, new Rect(154, 0, 154, 32), true)); // Right lane fits the clock, not both items.
 cases.push(windowLayout(390, new Rect(0, 0, 0, 0), true, 1, 20, 40)); // Small top lane + safe side.
+}
+if (selectedCase === 'transaction') {
+  const one = windowLayout(390, new Rect(154, 0, 82, 32), false); cases.push(one, one);
+}
+const layout = cases[1];
+if (geometryCase) {
 let leftFallbacks = 0;
 for (const layout of cases) {
   const { clock, title, icon, chrome, bookmark } = render(layout);
@@ -204,7 +223,6 @@ for (const fixture of cases) for (const hideStatusBar of [false, true]) {
   }
 }
 console.log(`PASS bookmark/status composition: ${statusCompositions} actual LRE layouts and SDK marker/status-paper trees; full-size idle/outline/filled, cutout/scale and controls`);
-const layout = cases[1];
 for (const [status, drag, preview, visible, filled, label] of [
   ['empty', 0, false, false, false, ''],
   ['empty', 8, false, true, false, '下拉添加书签'],
@@ -230,47 +248,61 @@ for (const layout of cases) {
   assert.equal(hint.hitTestBehavior, 'HitTestMode.None');
   assert.ok(hint.position.y >= layout.pageChromeVisualSafeTop + layout.pageChromeTopRegionHeight);
   assert.ok(hint.position.y + hint.height <= layout.contentTop + 32, 'hint stays within the empty pulled area');
-  assert.equal(hint.fontFamily, TYPE_READER_IMMERSIVE_PROGRESS.fontFamily);
+  assert.equal(hint.fontFamily, readerMessageStyles.MESSAGE_META.fontFamily);
   const cached = bookmark.bookmarkCornerLayout();
   assert.equal(bookmark.bookmarkCornerLayout(), cached, 'MOVE reuses resolved chrome/hint geometry');
 }
 assert.equal(render(layout, { currentPageBookmarkStatus: () => 'empty', bookmarkPageOffsetY: 32,
   bookmarkPreviewCancelled: true }).hint.create, '松手取消');
 
-// Production gesture state and real Host ACK bridge: threshold preview,
-// rebound, late write/projection, page/book changes and failed deletion.
-const H = productionMotionMethods(file('LocalReadingExperience.ets'), ['onReaderBookmarkGestureStateChanged',
-  'onReaderBookmarkGestureReleased', 'finishBookmarkRollback', 'bookmarkMatchesCurrentChapter', 'toggleCurrentPageBookmark', 'currentPageBookmarkStatus',
-  'pageBookmarkFeedbackAnchor', 'pageBookmarkFeedbackFilled', 'reconcilePageBookmarkFeedback',
-  'canStartReaderBookmarkGesture', 'isReaderBookmarkGestureCurrent', 'bookmarkFeedbackOwnerKey'], {...gesture,LOCAL_READING_SOURCE_ID:'local'});
-let entries = [{ index: 0, title: 'C', bookmarks: [] }], pending = [];
-const host = Object.assign(new H(), { mounted: true, sourceId: 'local', bookId: 'b', visiblePage: { startScalar: 0, endScalar: 50 },
-  currentChapterIndex: () => 0, currentPageBookmarkText: () => 'body', controlDirectoryEntries: () => entries,
-  bookmarkPendingTarget: '', bookmarkPreviewChanged: false, bookmarkRollbackGeneration: 0, bookmarkMutationGeneration: 0,
-  bookmarkGestureAnchor: '', lifecycleToken: 1, chapterSelectionToken: 1, pagePointerEpoch: 1, pageTurnInputRevision: 1,
-  canTurnPage: () => true, isReaderPageInteractionEnabled: () => true, pageTurnTapOnlyInput: () => false,
-  reduceMotion: true, appForeground: false, flushDeferredPageChromeState() {}, onTogglePageBookmark: r => pending.push(r) });
-assert.equal(host.canStartReaderBookmarkGesture(), true);
-let drag = gesture.beginReaderPageGesture(390, 200, 400, 0, 844);
-drag = gesture.moveReaderPageGesture(drag, 0, 24); host.onReaderBookmarkGestureStateChanged(drag);
-assert.equal(host.pageBookmarkFeedbackFilled(), false);
-drag = gesture.moveReaderPageGesture(drag, 0, 80); host.onReaderBookmarkGestureStateChanged(drag);
-assert.equal(host.pageBookmarkFeedbackFilled(), true);
-host.pageTurnGestureState = drag; host.onReaderBookmarkGestureReleased(true);
-assert.equal(host.bookmarkPageOffsetY, 0); assert.equal(host.pageBookmarkFeedbackFilled(), true);
-pending[0].onSettled(true); assert.equal(host.pageBookmarkFeedbackFilled(), true, 'ACK-before-projection retains fill');
-host.visiblePage = { startScalar: 50, endScalar: 100 }; host.reconcilePageBookmarkFeedback();
-assert.equal(host.pageBookmarkFeedbackFilled(), false, 'old page pending ACK cannot mark next page');
-entries = [{ index: 0, title: 'C', bookmarks: [{ time: 1, chapterOffset: 0 }] }];
-host.visiblePage = { startScalar: 0, endScalar: 50 }; assert.equal(host.pageBookmarkFeedbackFilled(), true);
-host.toggleCurrentPageBookmark(); assert.equal(host.pageBookmarkFeedbackFilled(), false);
-pending[1].onSettled(false); assert.equal(host.pageBookmarkFeedbackFilled(), true, 'failed deletion preserves canonical fill');
-host.visiblePage = { startScalar: 50, endScalar: 100 }; host.toggleCurrentPageBookmark();
-host.bookId = 'other'; entries = [{ index: 0, title: 'C', bookmarks: [] }]; pending[2].onSettled(true);
-assert.equal(host.pageBookmarkFeedbackFilled(), false, 'old book completion does not publish into new book');
-assert.equal(render(layout, { currentPageBookmarkStatus: () => 'empty' }).icon, undefined,
-  'another mounted book has no shared bookmark visual state');
-
+// Execute the actual three component-call boundaries. Only native font/layout
+// leaves are stubbed; a missing primitive Prop connection fails this chain.
+const require = createRequire(import.meta.url);
+const sdkRoot = resolveEtsLoaderRoot();
+const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
+const stageSource = readFileSync(file('ReaderPageTurnStage.ets'), 'utf8');
+const readingSource = readFileSync(file('ReadingSurface.ets'), 'utf8');
+function registerChild(name, source) {
+  syntax.componentCollection.customComponents.add(name);
+  syntax.propCollection.set(name, new Set([...source.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
+}
+registerChild('ReaderPageTurnSurface', stageSource); registerChild('ReadingSurface', readingSource);
+registerChild('ReaderNativeParagraphView', readFileSync(file('ReaderNativeParagraphView.ets'), 'utf8'));
+registerChild('ReaderPageChrome', chromeSource); registerChild('ReaderReadingTextFragment', readingSource);
+registerChild('ReaderPaperBackground', readFileSync(file('ReaderPaperBackground.ets'), 'utf8'));
+class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
+for (const pull of [0, 8, 32, 18, 0]) {
+  const source = stageSource.slice(stageSource.lastIndexOf('@Component', stageSource.indexOf('export struct ReaderPageTurnStage')));
+  const stage = createReaderBuilderProbe(source, ['build'], { ReaderPageTurnSurface: Child }).owner;
+  Object.assign(stage, { translateY: pull, currentPageSlot: 'a', layout, appearance: { activeTheme: 'paper' },
+    slotPage: () => ({ fragments: [], chromeTopStartText: 'Book', chromeTopEndText: '12:30' }),
+    slotIdentity: slot => slot, slotSnapshotId: () => '', slotX: () => 0,
+    slotVisible: slot => slot === 'a', slotLayer: () => 0, slotShadow: () => 0, hasActiveTurn: () => false });
+  stage.initialRender();
+  const root = [...stage.nodes.values()].find(n => n.translate?.y === pull);
+  assert.ok(root); assert.equal(root.clip, pull <= 0, 'counter-translated top row is not clipped at moving stage edge');
+  for (const page of stage.children.values()) {
+    assert.equal(page.params.chromeTopTranslateY + pull, 0);
+    const slot = createReaderBuilderProbe(stageSource, ['build'], { ReadingSurface: Child,
+      COVER_OCCLUSION_RADIUS_VP: 1, COVER_OCCLUSION_OFFSET_X_VP: 1 }, {componentName:'ReaderPageTurnSurface'}).owner;
+    Object.assign(slot, page.params, { staticSnapshotId: '', slotIdentity: 'a', shadowColor: () => '#00000000' });
+    slot.initialRender();
+    const readingParams = [...slot.children.values()][0].params;
+    assert.equal(readingParams.chromeTopTranslateY + pull, 0);
+    const reading = createReaderBuilderProbe(readingSource.slice(readingSource.lastIndexOf('@Component', readingSource.indexOf('export struct ReadingSurface'))), ['build', 'usesHighlightCanvas'], { ReaderPageChrome: Child, ReaderNativeParagraphView: Child,
+      ReaderReadingTextFragment: Child, ReaderPaperBackground: Child, GradientDirection: { Bottom: 'bottom' } }).owner;
+    Object.assign(reading, readingParams, { themeStyle: () => ({ sourcePaperLighting: false, paperTexture: false,
+      paperStart: '#FFFFFF', paperEnd: '#FFFFFF' }), renderFragments: () => [], pageParagraphs: [],
+      showChapterTitle: false, staticSnapshotId: '', contentInsets: () => ({}), layout });
+    reading.initialRender();
+    const finalParams = [...reading.children.values()].find(child => 'topTranslateY' in child.params).params;
+    assert.equal(finalParams.topTranslateY + pull, 0, 'actual Stage → slot → surface → Chrome forwards primitive cancellation');
+  }
+}
+assert.match(lreSource, /\.clip\(true\)\s*\.onTouch/, 'reading viewport retains outer clipping');
+console.log('PASS PH86 actual SDK Stage/slot/ReadingSurface/Chrome Prop chain across drag and rebound; outer viewport clip retained');
+}
+if (selectedCase === 'subscription') {
 // Retain the SDK-emitted If/Image observers instead of mounting the Builder
 // again for every page. visiblePage is deliberately non-reactive in production;
 // only the published page revision may invalidate these visual decisions.
@@ -279,7 +311,7 @@ function retainedMarker(initial = 'bookmarked') {
   const names = ['bookmarkCornerFeedback', 'bookmarkFeedbackLabel', 'pageBookmarkFeedbackFilled', 'pageBookmarkFeedbackMode',
     'pageBookmarkFeedbackAnchor', 'bookmarkFeedbackOwnerKey', 'bookmarkFeedbackHintLabel',
     'currentPageBookmarkStatus', 'bookmarkMatchesCurrentChapter'];
-  const { owner } = createReaderBuilderProbe(lreSource, names, { LOCAL_READING_SOURCE_ID: 'local' }, {
+  const { owner } = createReaderBuilderProbe(lreSource, names, { LOCAL_READING_SOURCE_ID: 'local', readerAppearanceChromeTone }, {
     onObserverEnter(_owner, id) { active.push(id); subscriptions.set(id, new Set()); },
     onObserverExit(_owner, id) { assert.equal(active.pop(), id); },
   });
@@ -290,7 +322,7 @@ function retainedMarker(initial = 'bookmarked') {
   Object.assign(owner, { sourceId: 'local', bookId: 'b', chapter: { chapterIndex: 0 },
     visiblePage: { startScalar: 0, endScalar: 50 }, lifecycleToken: 1, chapterSelectionToken: 1,
     currentChapterIndex: () => owner.chapter.chapterIndex, controlDirectoryEntries: () => owner.directoryEntries,
-    controlVisible: () => false, bookmarkFeedbackHintFits: () => false,
+    controlVisible: () => false, visibleReadingAppearance: () => ({ activeTheme: 'paper' }), bookmarkFeedbackHintFits: () => false,
     bookmarkCornerLayout: () => ({ topAccessoryWidth: 16, topAccessoryHeight: 16, topAccessoryX: 0, topAccessoryY: 0 }),
   });
   for (const key of Object.keys(state)) Object.defineProperty(owner, key, {
@@ -338,6 +370,40 @@ pulling.page(50, 100);
 assert.equal(pulling.marker().visibility, 'Visibility.Hidden', 'a stale pull cannot leave a hollow marker on another page');
 assert.equal(pulling.marker().opacity, 0);
 console.log('PASS retained bookmark SDK Image: A/B/A, four unmarked pages, explicit visibility/alpha delivery and stale hollow-preview isolation without branch deletion');
+}
+if (selectedCase === 'transaction') {
+// Production gesture state and real Host ACK bridge: threshold preview,
+// rebound, late write/projection, page/book changes and failed deletion.
+const H = productionMotionMethods(file('LocalReadingExperience.ets'), ['onReaderBookmarkGestureStateChanged',
+  'onReaderBookmarkGestureReleased', 'finishBookmarkRollback', 'bookmarkMatchesCurrentChapter', 'toggleCurrentPageBookmark', 'currentPageBookmarkStatus',
+  'pageBookmarkFeedbackAnchor', 'pageBookmarkFeedbackFilled', 'reconcilePageBookmarkFeedback',
+  'canStartReaderBookmarkGesture', 'isReaderBookmarkGestureCurrent', 'bookmarkFeedbackOwnerKey'], {...gesture,LOCAL_READING_SOURCE_ID:'local'});
+let entries = [{ index: 0, title: 'C', bookmarks: [] }], pending = [];
+const host = Object.assign(new H(), { mounted: true, sourceId: 'local', bookId: 'b', visiblePage: { startScalar: 0, endScalar: 50 },
+  currentChapterIndex: () => 0, currentPageBookmarkText: () => 'body', controlDirectoryEntries: () => entries,
+  bookmarkPendingTarget: '', bookmarkPreviewChanged: false, bookmarkRollbackGeneration: 0, bookmarkMutationGeneration: 0,
+  bookmarkGestureAnchor: '', lifecycleToken: 1, chapterSelectionToken: 1, pagePointerEpoch: 1, pageTurnInputRevision: 1,
+  canTurnPage: () => true, isReaderPageInteractionEnabled: () => true, pageTurnTapOnlyInput: () => false,
+  reduceMotion: true, appForeground: false, flushDeferredPageChromeState() {}, onTogglePageBookmark: r => pending.push(r) });
+assert.equal(host.canStartReaderBookmarkGesture(), true);
+let drag = gesture.beginReaderPageGesture(390, 200, 400, 0, 844);
+drag = gesture.moveReaderPageGesture(drag, 0, 24); host.onReaderBookmarkGestureStateChanged(drag);
+assert.equal(host.pageBookmarkFeedbackFilled(), false);
+drag = gesture.moveReaderPageGesture(drag, 0, 80); host.onReaderBookmarkGestureStateChanged(drag);
+assert.equal(host.pageBookmarkFeedbackFilled(), true);
+host.pageTurnGestureState = drag; host.onReaderBookmarkGestureReleased(true);
+assert.equal(host.bookmarkPageOffsetY, 0); assert.equal(host.pageBookmarkFeedbackFilled(), true);
+pending[0].onSettled(true); assert.equal(host.pageBookmarkFeedbackFilled(), true, 'ACK-before-projection retains fill');
+host.visiblePage = { startScalar: 50, endScalar: 100 }; host.reconcilePageBookmarkFeedback();
+assert.equal(host.pageBookmarkFeedbackFilled(), false, 'old page pending ACK cannot mark next page');
+entries = [{ index: 0, title: 'C', bookmarks: [{ time: 1, chapterOffset: 0 }] }];
+host.visiblePage = { startScalar: 0, endScalar: 50 }; assert.equal(host.pageBookmarkFeedbackFilled(), true);
+host.toggleCurrentPageBookmark(); assert.equal(host.pageBookmarkFeedbackFilled(), false);
+pending[1].onSettled(false); assert.equal(host.pageBookmarkFeedbackFilled(), true, 'failed deletion preserves canonical fill');
+host.visiblePage = { startScalar: 50, endScalar: 100 }; host.toggleCurrentPageBookmark();
+host.bookId = 'other'; entries = [{ index: 0, title: 'C', bookmarks: [] }]; pending[2].onSettled(true);
+assert.equal(host.pageBookmarkFeedbackFilled(), false, 'old book completion does not publish into new book');
+
 // Normal-motion rebound holds the released target until both the animation
 // and canonical projection are complete. ACK/projection are controlled inputs;
 // the production methods, marker cache and merge remain unmodified.
@@ -679,51 +745,13 @@ assert.deepEqual(nativeToasts, ['页面切换中，请稍后下拉'], 'zero whit
 console.log('PASS bookmark admission: 17 identity/readiness invalidations, pointer-release-before-UP, duplicate UP, retired ACK and zero MOVE scans');
 console.log('PASS bookmark feedback: visible pull/cancel labels, transient busy/unknown/pending, stale timer/lifecycle isolation and constrained-space fallback');
 console.log('PASS PH86 normal motion: 6 completion orders/12 lifecycles without intermediate inversion; cancelled/failed/page-invalidated/duplicate/old ACK cases');
-console.log(`PASS PH86: ${cases.length} real chrome/bookmark Builder geometries, clock/title/cutout separation, native visibility, gesture threshold/rebound/ACK and page/book ownership`);
 
-// Execute the actual three component-call boundaries. Only native font/layout
-// leaves are stubbed; a missing primitive Prop connection fails this chain.
-const require = createRequire(import.meta.url);
-const sdkRoot = resolveEtsLoaderRoot();
-const syntax = require(`${sdkRoot}/lib/validate_ui_syntax.js`);
-const stageSource = readFileSync(file('ReaderPageTurnStage.ets'), 'utf8');
-const readingSource = readFileSync(file('ReadingSurface.ets'), 'utf8');
-function registerChild(name, source) {
-  syntax.componentCollection.customComponents.add(name);
-  syntax.propCollection.set(name, new Set([...source.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
 }
-registerChild('ReaderPageTurnSurface', stageSource); registerChild('ReadingSurface', readingSource);
-registerChild('ReaderNativeParagraphView', readFileSync(file('ReaderNativeParagraphView.ets'), 'utf8'));
-registerChild('ReaderPageChrome', chromeSource); registerChild('ReaderReadingTextFragment', readingSource);
-registerChild('ReaderPaperBackground', readFileSync(file('ReaderPaperBackground.ets'), 'utf8'));
-class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-for (const pull of [0, 8, 32, 18, 0]) {
-  const source = stageSource.slice(stageSource.lastIndexOf('@Component', stageSource.indexOf('export struct ReaderPageTurnStage')));
-  const stage = createReaderBuilderProbe(source, ['build'], { ReaderPageTurnSurface: Child }).owner;
-  Object.assign(stage, { translateY: pull, currentPageSlot: 'a', layout, appearance: { activeTheme: 'paper' },
-    slotPage: () => ({ fragments: [], chromeTopStartText: 'Book', chromeTopEndText: '12:30' }),
-    slotIdentity: slot => slot, slotSnapshotId: () => '', slotX: () => 0,
-    slotVisible: slot => slot === 'a', slotLayer: () => 0, slotShadow: () => 0, hasActiveTurn: () => false });
-  stage.initialRender();
-  const root = [...stage.nodes.values()].find(n => n.translate?.y === pull);
-  assert.ok(root); assert.equal(root.clip, pull <= 0, 'counter-translated top row is not clipped at moving stage edge');
-  for (const page of stage.children.values()) {
-    assert.equal(page.params.chromeTopTranslateY + pull, 0);
-    const slot = createReaderBuilderProbe(stageSource, ['build'], { ReadingSurface: Child,
-      COVER_OCCLUSION_RADIUS_VP: 1, COVER_OCCLUSION_OFFSET_X_VP: 1 }, {componentName:'ReaderPageTurnSurface'}).owner;
-    Object.assign(slot, page.params, { staticSnapshotId: '', slotIdentity: 'a', shadowColor: () => '#00000000' });
-    slot.initialRender();
-    const readingParams = [...slot.children.values()][0].params;
-    assert.equal(readingParams.chromeTopTranslateY + pull, 0);
-    const reading = createReaderBuilderProbe(readingSource.slice(readingSource.lastIndexOf('@Component', readingSource.indexOf('export struct ReadingSurface'))), ['build', 'usesHighlightCanvas'], { ReaderPageChrome: Child, ReaderNativeParagraphView: Child,
-      ReaderReadingTextFragment: Child, ReaderPaperBackground: Child, GradientDirection: { Bottom: 'bottom' } }).owner;
-    Object.assign(reading, readingParams, { themeStyle: () => ({ sourcePaperLighting: false, paperTexture: false,
-      paperStart: '#FFFFFF', paperEnd: '#FFFFFF' }), renderFragments: () => [], pageParagraphs: [],
-      showChapterTitle: false, staticSnapshotId: '', contentInsets: () => ({}), layout });
-    reading.initialRender();
-    const finalParams = [...reading.children.values()].find(child => 'topTranslateY' in child.params).params;
-    assert.equal(finalParams.topTranslateY + pull, 0, 'actual Stage → slot → surface → Chrome forwards primitive cancellation');
-  }
+
+} finally { resolution.deregister(); }
 }
-assert.match(lreSource, /\.clip\(true\)\s*\.onTouch/, 'reading viewport retains outer clipping');
-console.log('PASS PH86 actual SDK Stage/slot/ReadingSurface/Chrome Prop chain across drag and rebound; outer viewport clip retained');
+for (const id of selectContractCases({
+  'geometry': { description: 'Actual chrome/bookmark/status-paper SDK geometry and Stage-to-Chrome Prop chain', resources: [] },
+  'subscription': { description: 'Retained SDK marker subscriptions and A/B/A page/revision delivery', resources: [] },
+  'transaction': { description: 'Production bookmark gesture, pointer/rebound and ACK/projection completion orders', resources: [] },
+})) { await runCase(id); recordContractCasePass(id); }

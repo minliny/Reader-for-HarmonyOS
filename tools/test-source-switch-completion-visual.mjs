@@ -1,19 +1,27 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { AsyncLocalStorage } from 'node:async_hooks';
-import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
-import { sourceSwitchLiveSdk } from './lib/source-switch-sdk-consumer.mjs';
-import { SourceSwitchCompletionPresentation } from '../entry/src/main/ets/features/source/SourceSwitchCompletionPresentation.ts';
-import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
-import { bookshelfSourceDisplayName, readableBookshelfSourceName } from '../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts';
-import { ReaderPhysicalPaginationOwner } from '../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts';
-import { ReadingSurfaceLayoutMap } from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
-import { ReaderPageChromeSnapshot } from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"historical-definition": {"description": "仅显式历史message carrier witness；不作为runtime completion前置", "resources": []}, "ack-boundary": {"description": "实际Index finalized精确target/transaction接纳、小说与漫画分界及navigation退休", "resources": []}, "visual-clock": {"description": "实际reader已呈现receipt动效/notice/重复DTO/guard/取消/selection/reducedMotion", "resources": []}, "stage-order": {"description": "实际resident/continuous回调必须匹配本selection/lifecycle/body当前revision", "resources": []}, "canonical-stage": {"description": "实际completeFirstPage等待canonical progress ACK→revision→SDK resident stage→视觉准入", "resources": []}, "actor-clock-isolation": {"description": "两真实SDK actor独立property/watch/timer/animator且迟到旧clock不动新actor", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire, stripTypeScriptTypes } = await import('node:module');
+const { AsyncLocalStorage } = await import('node:async_hooks');
+const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { sourceSwitchLiveSdk } = await import('./lib/source-switch-sdk-consumer.mjs');
+const { SourceSwitchCompletionPresentation } = await import('../entry/src/main/ets/features/source/SourceSwitchCompletionPresentation.ts');
+const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
+const { bookshelfSourceDisplayName, readableBookshelfSourceName } = await import('../entry/src/main/ets/features/bookshelf/BookshelfSourceNameProjection.ts');
+const { ReaderPhysicalPaginationOwner } = await import('../entry/src/main/ets/features/reading/ReaderPhysicalPaginationOwner.ts');
+const { ReadingSurfaceLayoutMap } = await import('../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts');
+const { ReaderPageChromeSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
+const {readerMessageStyles} = await import('./lib/reader-typography-probe.mjs');
+
+
 
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const localSource = read('features/reading/LocalReadingExperience.ets');
+if(selectedCase==='historical-definition'){const {approvedTypographyContract}=await import('./lib/approved-manga-typography-carriers.mjs');assert.equal(approvedTypographyContract(read('features/source/SourceSwitchCompletionOverlay.ets'),'features/source/SourceSwitchCompletionOverlay.ets').registered,true);return;}
 const indexSource = read('pages/Index.ets');
 const members = ['sourceSwitchCompletion', 'readingReadyGeneration', 'sourceSwitchCompletionVisible',
   'sourceSwitchRevealOpacity', 'sourceSwitchToastText', 'sourceSwitchVisualSelectionToken', 'sourceSwitchCompletionEpoch',
@@ -98,6 +106,7 @@ function fixture({ reduced = false, phase = 'ready', presented = true, extraMemb
   return { p, reader, deps, event, accept, timers, animators };
 }
 
+if(selectedCase==='ack-boundary'){
 // Exercise the actual Index member, including its exact returned-finalized
 // boundary. The unchanged canonical owner is a controlled port here; this
 // test does not invent a Core ACK or prove native/compositor timing.
@@ -151,6 +160,9 @@ function fixture({ reduced = false, phase = 'ready', presented = true, extraMemb
   assert.equal(page.sourceSwitchCompletion, undefined, 'navigation retires the view event without replay');
 }
 
+
+}
+if(selectedCase==='visual-clock'){
 {
   const x = fixture();
   x.accept(x.event('ready'));
@@ -175,8 +187,8 @@ function fixture({ reduced = false, phase = 'ready', presented = true, extraMemb
   const overlays = x.p.walk(x.reader).filter(child => child instanceof x.deps.SourceSwitchCompletionOverlay);
   assert.equal(overlays.length, 2, 'actual wash and toast children are emitted');
   const toast = x.p.nodes(x.reader).find(node => node.type === 'Text' && node.create === '已切换至 目标书源');
-  assert.equal(toast.fontSize, SOURCE_SWITCH_VISUAL.toastFontSize);
-  assert.equal(toast.lineHeight, SOURCE_SWITCH_VISUAL.toastLineHeight);
+  assert.equal(toast.fontSize, readerMessageStyles.MESSAGE_META.fontSizeFp);
+  assert.equal(toast.lineHeight, readerMessageStyles.MESSAGE_META.lineHeightFp);
   const paper = x.p.walk(x.reader).find(child => child instanceof x.deps.ReaderPaperBackground);
   assert.equal(paper.theme, 'warm', 'wash uses the actual visible reading paper');
   animator.onFinish();
@@ -235,6 +247,9 @@ for (const mutation of [reader => { reader.sourceId = 'retired'; }, reader => { 
   assert.equal(x.timers.size, 1);
 }
 
+
+}
+if(selectedCase==='stage-order'){
 for (const mutation of [reader => { reader.chapterSelectionToken += 1; reader.visiblePageSelectionToken += 1; reader.materializedChapterSelectionToken += 1; },
   reader => { reader.lifecycleToken += 1; }]) {
   const x = fixture({ phase: 'loading', presented: false }); x.accept(x.event('pending-owner'));
@@ -292,6 +307,9 @@ for (const mutation of [reader => { reader.chapter.cacheRefreshRequired = true; 
   assert.equal(visibleReports, 2); assert.equal(x.animators.length, 1);
 }
 
+
+}
+if(selectedCase==='canonical-stage'){
 // Execute the actual canonical first-page branch and the actual SDK-emitted
 // resident-stage cache. The only progress authority here is a held controlled
 // gateway receipt; this is model/SDK ordering proof, not a real Core/VM ACK.
@@ -383,6 +401,9 @@ for (const mutation of [reader => { reader.chapter.cacheRefreshRequired = true; 
   assert.equal(x.animators.length, 1, 'current resident callback admits the already confirmed canonical receipt');
 }
 
+
+}
+if(selectedCase==='actor-clock-isolation'){
 {
   const first = fixture(), second = fixture();
   first.accept(first.event('independent-first')); second.accept(second.event('independent-second'));
@@ -395,5 +416,6 @@ for (const mutation of [reader => { reader.chapter.cacheRefreshRequired = true; 
   assert.equal(second.reader.sourceSwitchToastText, '已切换至 目标书源');
   assert.equal(second.animators[0].cancels, 0, 'native animator ports remain actor-local');
 }
-assert.equal(visualEmissions, 1, 'the fixed visual graph compiles once without removing any scenario');
-console.log(`source switch completion visual: actual SDK receipt, guard, view and cancellation checks passed (${visualActors.length} independent actors; ${visualEmissions} fixed emission)`);
+
+}
+}

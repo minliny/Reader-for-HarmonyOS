@@ -34,8 +34,8 @@ let indexIdentity=0;
 function fixture(r=rpc(),indexText=source('pages/Index.ets')){currentOwner=r;const {owner:index}=createReaderBuilderProbe(indexText,['isCurrentRuntime','isCurrentDiscoverPresentation','getDiscoverOrchestrator','discoverPageContent','discoverPageSurface'],{DiscoverPage:Child,DiscoverOrchestrator,ReaderRuntimeOwner,deviceInfo:{deviceType:'phone'}});Object.assign(index,{route:'discover',mountedRuntimeOwner:r,shelfReceiptRetired:false,navigationGeneration:1,detailShelfAdmissionMount:1,rssInstanceIdentity:++indexIdentity,discoverPresentation:clone(EMPTY_DISCOVER_PRESENTATION)});const owner=index.getDiscoverOrchestrator();
  const settle=async()=>{await owner.operationTail;};
  const props=()=>{index.discoverPageContent();return [...index.children.values()].at(-1).params;};
- const page=()=>{const page=createReaderBuilderProbe(source('features/discover/DiscoverPage.ets'),['operationFeedback','recovery'],{ReaderRecoveryNotice:Child,readerRecoveryView}).owner;Object.assign(page,props());page.operationFeedback();const notice=createReaderBuilderProbe(source('features/common/ReaderRecoveryNotice.ets'),['build'],{ReaderRecoveryAction:Child}).owner;Object.assign(notice,{actionLabel:'刷新列表'},[...page.children.values()].at(-1).params,{appThemeScheme:'day'});notice.initialRender();const child=[...notice.children.values()].at(-1);if(child){const action=createReaderBuilderProbe(source('features/common/ReaderRecoveryAction.ets'),['build']).owner;Object.assign(action,{actionEnabled:true},child.params,{appThemeScheme:'day'});action.initialRender();for(const [id,node]of action.nodes)notice.nodes.set(-id,node);}return notice;};
- const retry=async p=>{const button=[...p.nodes.values()].find(n=>n.type==='Text'&&n.height===36);assert.ok(button,'actual public read-only recovery action');button.onClick();button.onClick();await settle();};
+ const page=()=>{const runtime=boundedSurfaceSdk({allowEmptyBranchAdmission:true}),page=runtime.consumer(source('features/discover/DiscoverPage.ets'),['operationFeedback','recovery','resultList','paginationRow','pageAction'],{readerRecoveryView},props());Object.assign(page,props(),{appThemeScheme:'day'});if(page.presentation.books.length===0)page.resultList();else page.operationFeedback();return{view:page.recovery(),nodes:new Map(runtime.nodes(page).map((n,i)=>[i,n]))};};
+ const retry=async p=>{const button=[...p.nodes.values()].find(n=>n.type==='Stack'&&n.constraintSize?.minHeight===44&&n.onClick);assert.ok(button,'actual public read-only recovery action');button.onClick();button.onClick();await settle();};
  return{r,index,owner,settle,page,retry,props,open:async()=>{owner.open();await settle();},op:()=>index.discoverPresentation.operation,p:()=>index.discoverPresentation};}
 for(const method of ['source.list','source.exploreKinds','source.explore']){
  const f=fixture();f.r.fail=method;await f.open();assert.equal(f.op().fact,'failed');assert.equal(f.op().hasValue,false);assert.ok(f.page().view.canRetry);const before=f.r.count(method);await f.retry(f.page());assert.equal(f.op().fact,'current');assert.equal(f.r.count(method),before+1,'double click schedules one retry chain');assert.equal(f.p().books.length,1);
@@ -66,8 +66,8 @@ function wholePage(f) {
  metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
  const page=sdk.consumer(source('features/discover/DiscoverPage.ets'),['presentation','isTablet',
   'onBack','onRssRequested','onSettingsRequested','onRetryRead','onRefresh','onCycleSource','onSelectKind','onPreviousPage','onNextPage',
-  'operationFeedback','recovery'],{readerRecoveryView},f.props());
- page.operationFeedback();return{sdk,page,actions:()=>sdk.nodes(page).filter(n=>n.type==='Text'&&n.height===36&&n.onClick)};
+  'operationFeedback','recovery','onPresentationChanged','readFeedbackIdentity','mounted','lastReadFeedback'],{readerRecoveryView},f.props());
+ page.operationFeedback();return{sdk,page,actions:()=>sdk.nodes(page).filter(n=>n.type==='Stack'&&n.constraintSize?.minHeight===44&&n.onClick)};
 }
 {
  const f=fixture();await f.open();f.r.fail='source.explore';f.owner.refresh();await f.settle();

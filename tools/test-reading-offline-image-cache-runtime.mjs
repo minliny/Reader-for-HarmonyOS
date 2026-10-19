@@ -1,15 +1,18 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
-import { stripTypeScriptTypes } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { createMangaAtomicPayloadReaderFixture, createMangaAtomicPayloadBindingFixture, checkMangaAtomicPayloadSdk } from './lib/manga-atomic-payload-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
 
-checkMangaAtomicPayloadSdk();
+const fs=await import('node:fs/promises');
+const { readFileSync }=await import('node:fs');
+const { tmpdir }=await import('node:os');
+const { dirname, join, resolve }=await import('node:path');
+const { fileURLToPath }=await import('node:url');
+const { createHash }=await import('node:crypto');
+const { stripTypeScriptTypes }=await import('node:module');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { createMangaAtomicPayloadReaderFixture, createMangaAtomicPayloadBindingFixture, checkMangaAtomicPayloadSdk }=await import('./lib/manga-atomic-payload-probe.mjs');
+
+if(id.startsWith('worker-'))checkMangaAtomicPayloadSdk();
 
 // Execute the whole production class. Only Harmony's platform APIs are adapted
 // to a real temporary filesystem; this is not device or platform durability proof.
@@ -17,7 +20,7 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const source = readFileSync(join(repo, 'entry/src/main/ets/app/ReadingImageDiskCache.ts'), 'utf8');
 // Negative control restores the former whole-book deletion in the executed
 // class. The same filesystem assertions must catch its ownership violation.
-const negativeControl = process.argv.includes('--negative-control=whole-tree-clear');
+const negativeControl=id==='negative-whole-tree-clear';
 const broadClear = `const removeTree = async (path) => {
   if (!(await fileIo.access(path))) return;
   for (const name of await fileIo.listFile(path)) {
@@ -38,7 +41,7 @@ let failUnlink = () => false;
 let failRead = () => false;
 // Focused RED control: replay the former synchronous payload call inside the
 // unchanged production class. It must fail the worker-wait regression below.
-if (process.env.READER_MANGA_ATOMIC_READ_MUTANT === 'host-sync') executable = executable.replace(
+if (id==='worker-sync-negative') executable = executable.replace(
   'await readMangaAtomicPayload(path, stat.size, MAX_READING_IMAGE_BYTES, isCurrent)',
   'new Uint8Array(new fileIo.AtomicFile(path).readFully())');
 let nanosecondStats = true;
@@ -87,10 +90,11 @@ const io = {
     }
   },
 };
+const {createRequire}=await import('node:module');const {resolveEtsLoaderRoot}=await import('./lib/tool-environment.mjs');const sdkLru=createRequire(import.meta.url)(resolveEtsLoaderRoot()+'/node_modules/lru-cache');
 const util = {
   // Platform LRU substitute only for the native API boundary; cache validity
   // policy remains the production class exercised below.
-  LRUCache: class { constructor(capacity){this.capacity=capacity;this.items=new Map();} get(key){return this.items.get(key);} put(key,value){this.items.delete(key);this.items.set(key,value);if(this.items.size>this.capacity)this.items.delete(this.items.keys().next().value);} remove(key){this.items.delete(key);} keys(){return [...this.items.keys()];} clear(){this.items.clear();} },
+  LRUCache: class {constructor(capacity){this.cache=new sdkLru({max:capacity});}get(k){return this.cache.get(k);}put(k,v){this.cache.set(k,v);}remove(k){this.cache.del(k);}keys(){return this.cache.keys();}clear(){this.cache.reset();}},
   TextEncoder: class { encodeInto(value) { return new TextEncoder().encode(value); } },
   TextDecoder: { create: (_, options) => ({ decodeToString: bytes => new TextDecoder('utf-8', options).decode(bytes) }) },
 };
@@ -129,7 +133,9 @@ async function seedLegacy(identity, override = {}) {
   await fs.writeFile(join(directory, 'manifest.json'), JSON.stringify({ formatVersion: 1, ...identity, resourceHashes: [resourceHash], ...override }));
   return directory;
 }
-try {
+
+try{
+if(id==='profile-upgrade'){
   // Historical v2 contains prepared JPEG bytes, without a processing profile.
   // This fixture deliberately interprets the independent regional BGRA golden
   // as RGBA via Pillow JPEG; it models the old channel mistake, not native codec proof.
@@ -203,6 +209,9 @@ try {
   await owner.prefetchReadingImageOwned(scripted, () => current, 'source-rules', false);assert.equal(prepareCalls, callsAfterRepair);
   assert.deepEqual(new Uint8Array(await fs.readFile(oldPath)), oldBytes);assert.equal(await fs.readFile(oldManifestPath, 'utf8'), oldManifest);
   pass('scripted profile isolates legacy wrong-channel JPEG and completion; cold opaque refs, online repair, failed/cancelled repair preserve old bytes; identity-v1 retains the original path');
+
+}
+if(id==='bounded-write'){
   // >2MiB and a nonzero view prevent an accidental whole-backing-buffer write.
   // Partial writes must preserve all bytes while each platform call is <=1MiB.
   const chunked={...image,bookId:'bounded-write'};
@@ -224,6 +233,9 @@ try {
   assert.deepEqual(new Uint8Array(await fs.readFile(stablePath)),expected);
   assert.equal(handles.size,0);assert.equal((await fs.readdir(dirname(stablePath))).some(name=>name.includes('.tmp-')),false);
   pass('1MiB partial-write windows preserve nonzero-view snapshots; cancellation and ENOSPC keep old bytes and close/delete partial output');
+
+}
+if(id==='manga-identity-proof'){
   const manga = { ...image, bookId: 'manga-proof-book', contentVersion: 'manga-v1', mangaDecodeRevision: 'identity-v1', resourceRef: `manga:mp1:${'a'.repeat(64)}` };
   await cache.storeResource(manga, bytes);
   const renewed = { ...manga, imageUrl: 'https://new-cdn/image?signature=renewed', baseUrl: 'https://new-cdn/' };
@@ -257,6 +269,9 @@ try {
   const reopenedProofs=new Cache({filesDir:root});resourceReads=0;
   assert.equal(await reopenedProofs.isChapterComplete(manga),true);assert.ok(resourceReads>=2,'cold cache must verify bytes again');
   pass('bounded native LRU skips repeated hash I/O only with nanosecond identity; same-size damage, coarse clocks, conservative manga clear and restart remain verified');
+
+}
+if(id==='version-isolation'){
   await cache.storeResource(image, bytes);
   await cache.markChapterComplete(chapter, [image, image]);
   const second = { ...image, contentVersion: 'B' };
@@ -282,6 +297,9 @@ try {
   assert.equal(await cache.isChapterComplete(chapter), true);
   pass('zero-length/missing resources cannot certify completion or harm another version');
 
+
+}
+if(id==='legacy-migration'){
   const legacy = { ...image, bookId: 'legacy' };
   await seedLegacy(legacy);
   assert.deepEqual(await cache.loadResource(legacy), bytes);
@@ -307,6 +325,10 @@ try {
   assert.deepEqual(await cache.loadResource(ambiguous), bytes);
   pass('legacy migration requires exact identity/version; neither ordinal nor delimiter collision is trusted');
 
+
+}
+if(id==='manifest-atomic'){
+await cache.storeResource(image,bytes);await cache.markChapterComplete(chapter,[image]);
   const failed = { ...image, contentVersion: 'failed-publication' };
   await cache.storeResource(failed, bytes);
   const failedManifest = join(await cache.chapterDirectory(failed), 'manifest.json');
@@ -321,6 +343,9 @@ try {
   assert.equal(await new Cache({ filesDir: root }).isChapterComplete(failed), false);
   pass('failed manifest rename/crash temp cannot complete a chapter or replace the prior version');
 
+
+}
+if(id==='clear-generation'){
   const stale = cache.captureValidity(image.sourceId, image.bookId);
   await cache.clearBook(image.sourceId, image.bookId);
   await assert.rejects(cache.storeResource(image, bytes, stale), /superseded/);
@@ -328,6 +353,10 @@ try {
   await cache.storeResource(image, bytes);
   pass('a request captured before clear cannot republish; a fresh request can');
 
+
+}
+if(id==='clear-fsync'){
+const legacy={...image,bookId:'legacy'};await seedLegacy(legacy);await cache.loadResource(legacy);
   let reachedSync;
   let releaseSync;
   const reached = new Promise(resolve => { reachedSync = resolve; });
@@ -346,6 +375,9 @@ try {
   assert.deepEqual(await cache.loadResource(legacy), bytes);
   pass('clear during fsync invalidates publication before rename and preserves unrelated books');
 
+
+}
+if(id==='clear-restart'){
   const interrupted = { ...image, bookId: 'interrupted-clear' };
   await seedLegacy(interrupted);
   await cache.loadResource(interrupted);
@@ -369,6 +401,10 @@ try {
   assert.deepEqual(await reopened.loadResource(interrupted), bytes);
   pass('failed clear survives restart, denies reads until cleanup completes, and permanently revokes v1 fallback');
 
+
+}
+if(['mixed-clear','negative-whole-tree-clear'].includes(id)){
+const check=async()=>{
   const mixed = { ...image, bookId: 'mixed-owners' };
   await cache.storeResource(mixed, bytes);
   assert.equal(await cache.isChapterComplete(mixed), false, 'text ownership is not an offline-completion manifest');
@@ -430,6 +466,10 @@ try {
   assert.equal(await cache.isChapterComplete(unowned), false);
   pass('mixed clear removes only exact text resources; manga, unknown owners and unlisted nested files stay byte-identical');
 
+
+};if(id==='negative-whole-tree-clear')await assert.rejects(check,e=>e.code==='ENOENT'&&e.path.includes('manga-identity.json'));else await check();
+}
+if(id==='old-pending'){
   const pendingMixed = { ...image, bookId: 'old-pending-mixed' };
   await cache.storeResource(pendingMixed, bytes); await cache.markChapterComplete(pendingMixed, [pendingMixed]);
   const pendingMixedBook = dirname(dirname(await cache.chapterDirectory(pendingMixed)));
@@ -445,6 +485,9 @@ try {
   assert.deepEqual(new Uint8Array(await fs.readFile(pendingUnknown)), bytes);
   pass('a historical broad pending intent resumes with current text ownership, preserving other owners');
 
+
+}
+if(id==='ownership-read'){
   const ownershipReadFailure = { ...image, bookId: 'ownership-read-failure' };
   await cache.storeResource(ownershipReadFailure, bytes); await cache.markChapterComplete(ownershipReadFailure, [ownershipReadFailure]);
   const ownershipManifest = join(await cache.chapterDirectory(ownershipReadFailure), 'manifest.json');
@@ -459,6 +502,9 @@ try {
   assert.equal(await exists(readFailurePending), false);
   pass('ownership I/O failure remains retryable and never publishes a completed clear');
 
+
+}
+if(id==='clear-markers'){
   const markerFailure = { ...image, bookId: 'marker-failure' };
   await cache.storeResource(markerFailure, bytes);
   const markerPending = await cache.clearMarkerPath(markerFailure.sourceId, markerFailure.bookId);
@@ -475,6 +521,9 @@ try {
   assert.equal(await exists(markerPending), false);
   pass('revocation publication and pending-marker removal failures cannot falsely settle clear and retry after restart');
 
+
+}
+if(id==='close'){
   const closing = new Cache({ filesDir: root });
   const beforeClose = closing.captureValidity(image.sourceId, image.bookId);
   closing.close();
@@ -482,6 +531,10 @@ try {
   await assert.rejects(closing.loadResource(image), /superseded/);
   pass('runtime close invalidates queued and newly requested cache operations');
 
+
+}
+if(['worker-ownership','worker-sync-negative'].includes(id)){
+const check=async()=>{
   const foreground = { ...image, bookId:'worker-foreground', chapterId:'https://chapter/foreground',
     resourceRef:`manga:mp1:${'7'.repeat(64)}`, mangaDecodeRevision:'identity-v1' };
   const waiting = { ...foreground, bookId:'worker-waiting', chapterId:'https://chapter/waiting', resourceRef:`manga:mp1:${'8'.repeat(64)}` };
@@ -569,10 +622,10 @@ try {
     'a conflicting late install cannot replace the stable worker binding');
   pass('actual TS port fails closed before ETS install, installs idempotently and rejects conflicting rebinding');
 
-  console.log(JSON.stringify({ status: 'PASS', productionSourceSha256: hash(source), negativeControl, checks }, null, 2));
-} finally {
-  failUnlink = () => false;
-  failRead = () => false;
-  failRename = () => false;
-  await fs.rm(root, { recursive: true, force: true });
+
+};if(id==='worker-sync-negative')await assert.rejects(check,/payload returned before any SDK worker dispatch/);else await check();
 }
+}finally{failUnlink=()=>false;failRead=()=>false;failRename=()=>false;for(const handle of handles.values())await handle.close().catch(()=>{});await fs.rm(root,{recursive:true,force:true});}
+}
+const definitions={"profile-upgrade": "profile-upgrade actual scoped owner/gateway/storage path; controlled Core/OS ports", "bounded-write": "bounded-write actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-identity-proof": "manga-identity-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "version-isolation": "version-isolation actual scoped owner/gateway/storage path; controlled Core/OS ports", "legacy-migration": "legacy-migration actual scoped owner/gateway/storage path; controlled Core/OS ports", "manifest-atomic": "manifest-atomic actual scoped owner/gateway/storage path; controlled Core/OS ports", "clear-generation": "clear-generation actual scoped owner/gateway/storage path; controlled Core/OS ports", "clear-fsync": "clear-fsync actual scoped owner/gateway/storage path; controlled Core/OS ports", "clear-restart": "clear-restart actual scoped owner/gateway/storage path; controlled Core/OS ports", "mixed-clear": "mixed-clear actual scoped owner/gateway/storage path; controlled Core/OS ports", "old-pending": "old-pending actual scoped owner/gateway/storage path; controlled Core/OS ports", "ownership-read": "ownership-read actual scoped owner/gateway/storage path; controlled Core/OS ports", "clear-markers": "clear-markers actual scoped owner/gateway/storage path; controlled Core/OS ports", "close": "close actual scoped owner/gateway/storage path; controlled Core/OS ports", "worker-ownership": "worker-ownership actual scoped owner/gateway/storage path; controlled Core/OS ports", "negative-whole-tree-clear": "old whole-tree clear must violate exact preserved manga owner file", "worker-sync-negative": "old synchronous AtomicFile path must violate queued SDK worker ownership"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

@@ -1,8 +1,15 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {createRequire} from 'node:module';
-import {fixture,compile,until,deferred} from './lib/rules-mutation-durable-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'sdk-transactions':{description:'Current conversion transaction matrix via actual installed SDK and existing Core CLI',resources:[]},
+ 'compiler-parity':{description:'Explicit tool diagnostic: strip/SDK same transaction matrix; excluded from ordinary release prerequisite',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {resolveEtsLoaderRoot}=await import('./lib/tool-environment.mjs');
+const {default:assert}=await import('node:assert/strict');
+const {readFileSync}=await import('node:fs');
+const {createRequire}=await import('node:module');
+const {fixture,compile,until,deferred,cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');
 const require=createRequire(import.meta.url),ts=require((resolveEtsLoaderRoot())+'/node_modules/typescript');
 const lre=readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'utf8');
 const options=require((resolveEtsLoaderRoot())+'/lib/ets_checker.js').compilerOptions;
@@ -14,7 +21,9 @@ const body=names.map(name=>{const method=klass.members.find(n=>ts.isMethodDeclar
 let cases=0;
 function gateway(f,official){const Gateway=compile('features/reading/ReaderChineseConversionGateway.ts','ReaderChineseConversionGateway',{RulesMutationOwner:f.Owner,RulesManagementGateway:f.Gateway,ReaderRuntimeOwner:f.Runtime},official);return new Gateway(f.runtime);}
 function reading(f,official){const Reader=compile('features/reading/LocalReadingExperience.ets','Reader',{},official,'export class Reader{\n'+body+'\n}');const r=new Reader();r.mounted=true;r.lifecycleToken=1;r.bookId='book';r.sourceId='source';r.chineseConversionMode='none';r.chineseConversionLoaded=false;r.chineseConversionOperationId='';r.chineseConversionMutationGeneration=0;r.isSessionActive=t=>r.mounted&&r.lifecycleToken===t;r.chineseConversionGateway=gateway(f,official);r.persistCount=0;r.persistBeforeContentMutation=async()=>{r.persistCount++;return()=>true;};r.quickSearchPublication={cancel(){}};r.publishQuickSearchState=()=>{};r.phase='ready';r.chapter=undefined;r.notices=[];r.getUIContext=()=>({getPromptAction:()=>({showToast:({message})=>r.notices.push(message)})});return r;}
-for(const official of [false,true]){
+console.log(JSON.stringify({kind:'reader-existing-tool-evidence',...durableFixtureToolEvidence()}));
+try {
+for(const official of selectedCase==='sdk-transactions'?[true]:[false,true]){
  {const f=await fixture(official),g=gateway(f,official);assert.equal(await g.getMode(),'none');assert.equal(await g.putMode('s2t'),'s2t');assert.equal(f.writes()[0].params.mutation.method,'reader.chinese-conversion.put');assert.equal(f.writes()[0].params.mutation.params.mode,'s2t');assert.equal(await g.getMode(),'s2t');await assert.rejects(g.putMode('invalid'),/must be none, t2s, or s2t/);cases++;}
  {const f=await fixture(official),g=gateway(f,official);f.options.transformMethod='reader.chinese-conversion.get';f.options.transform=()=>({config:{mode:'unexpected'}});await assert.rejects(g.getMode(),/config.mode must be none/);cases++;}
  {const f=await fixture(official),g=gateway(f,official);f.options.capability=false;await assert.rejects(g.putMode('t2s'),/未派发/);assert.equal(f.writes().length,0);assert.equal(f.disk(),'');cases++;}
@@ -26,4 +35,8 @@ for(const official of [false,true]){
  {const f=await fixture(official),r=reading(f,official);const stale=r.chineseConversionAction();r.bookId='new';stale('t2s');r.bookId='book';r.lifecycleToken++;stale('t2s');await new Promise(q=>setTimeout(q,20));assert.equal(f.writes().length,0);assert.equal(r.persistCount,0);cases++;}
  {const f=await fixture(official),r=reading(f,official);const gate=deferred();f.options.pauseMethod='rules.mutation.apply';f.options.gate=gate;r.chineseConversionAction()('t2s');await until(()=>f.writes().length===1);r.mounted=false;gate.resolve();await until(()=>r.chineseConversionGateway.snapshot().confirmation==='confirmed');assert.equal(r.chineseConversionMode,'none','retired view does not install late original ACK');assert.equal((await f.command('reader.chinese-conversion.get')).data.config.mode,'t2s','accepted durable write is not canceled by UI retirement');cases++;}
 }
-console.log(`PASS ${cases} actual conversion Gateway/RulesOwner/LRE methods + installed SDK/cold SQLite proofs; original read/validation preserved, no matching-row receipt inference.`);
+console.log(`PASS ${selectedCase}: ${cases} actual conversion Gateway/RulesOwner/LRE transactions; existing CLI cold SQLite, no matching-row receipt inference`);
+} finally { await cleanupDurableFixtures(); }
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

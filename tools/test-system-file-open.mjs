@@ -1,12 +1,15 @@
-import { resolveOpenHarmonySdkRoot } from './lib/tool-environment.mjs';
-import {systemFileIndexFixture} from './lib/system-file-open-index-probe.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { ReaderSystemFileOpenQueue } from '../entry/src/main/ets/app/ReaderSystemFileOpenQueue.ts';
-import { isReaderLocalBookFileName } from '../entry/src/main/ets/app/ReaderLocalBookFormatAdmission.ts';
-import { localImportFailure } from '../entry/src/main/ets/app/LocalImportFailure.ts';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { resolveOpenHarmonySdkRoot }=await import('./lib/tool-environment.mjs');
+let systemFileIndexFixture;if(id==='index-navigation')({systemFileIndexFixture}=await import('./lib/system-file-open-index-probe.mjs'));
+
+const { readFileSync }=await import('node:fs');
+const { createRequire, stripTypeScriptTypes }=await import('node:module');
+const { ReaderSystemFileOpenQueue }=await import('../entry/src/main/ets/app/ReaderSystemFileOpenQueue.ts');
+const { isReaderLocalBookFileName }=await import('../entry/src/main/ets/app/ReaderLocalBookFormatAdmission.ts');
+const { localImportFailure }=await import('../entry/src/main/ets/app/LocalImportFailure.ts');
+const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 const read = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
@@ -16,6 +19,15 @@ const book = { sourceId: 'local', bookId: 'local:hash', title: '本地书', auth
 
 // Actual queue: cold delivery survives a late/rebuilt page, a warm delivery is
 // serialized, repeated active/completed Wants coalesce, new retries are allowed.
+const hostCode=stripTypeScriptTypes(read('entry/src/main/ets/app/ReaderSystemFileOpenHost.ts')
+  .replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''));
+function hostType(core,gateway,barrier={prepareUserChange:async()=>{}}) {
+  return new Function('ReaderRuntimeOwner','ReaderCoreGateway','LocalBookImportGateway','ReaderSystemFileOpenQueue','hilog','ReaderThemeHost',
+    hostCode+';return ReaderSystemFileOpenHost;')({},core,gateway,ReaderSystemFileOpenQueue,{warn(){}},barrier);
+}
+
+try{
+if(id==='queue'){
 {
   const gate = deferred(), calls = [];
   const queue = new ReaderSystemFileOpenQueue(async (uri, current) => { calls.push(uri); await gate.promise; return current() ? { book } : {}; });
@@ -34,12 +46,16 @@ const book = { sourceId: 'local', bookId: 'local:hash', title: '本地书', auth
   let reconstructed = 0; queue.subscribe(() => reconstructed++); assert.equal(reconstructed, 1);
   queue.dispose(); assert.equal(queue.peek(), undefined); assert.equal(queue.enqueue('file://p/f.txt'), 'closed');
 }
+}
+if(id==='queue-dispose'){
 {
   const gate = deferred(); let currentAfterDestroy;
   const queue = new ReaderSystemFileOpenQueue(async (_uri, current) => { await gate.promise; currentAfterDestroy=current(); return {book}; });
   let callbacks=0; queue.subscribe(() => callbacks++); queue.enqueue('file://provider/a.txt'); queue.dispose(); gate.resolve();
   await until(() => currentAfterDestroy !== undefined); assert.equal(currentAfterDestroy,false); assert.equal(callbacks,1);
 }
+}
+if(id==='queue-retry'){
 {
   let attempts=0;
   const queue=new ReaderSystemFileOpenQueue(async()=>{ attempts++; throw Error('private://do-not-leak'); });
@@ -47,9 +63,8 @@ const book = { sourceId: 'local', bookId: 'local:hash', title: '本地书', auth
   assert.equal(queue.peek().failure.code,'readFailed'); assert.ok(!JSON.stringify(queue.peek()).includes('private://'));
   queue.acknowledge(queue.peek().id); queue.enqueue('file://provider/a.txt'); await until(()=>attempts===2); queue.dispose();
 }
-
-// Run production Host boundary with OS filesystem operations substituted. The
-// actual filesystem read/copy/hash, limits, and Core parser are shared with picker.
+}
+if(id==='uri-admission'){
 {
   const Host=productionMotionMethods(new URL('../entry/src/main/ets/app/ReaderHostRegistry.ts',import.meta.url),
     ['prepareSystemLocalBookInput'], {isReaderLocalBookFileName,localImportFailure,errorMessageOf:e=>e.message});
@@ -68,16 +83,8 @@ const book = { sourceId: 'local', bookId: 'local:hash', title: '本地书', auth
   host.stageLocalBook=async()=>{throw Error('open URI permission denied');};
   assert.equal((await host.prepareSystemLocalBookInput('file://provider/book.epub')).failure.code,'readFailed');
 }
-
-// Execute the real full Host class. Import is stubbed only at the existing
-// transaction boundary: dedup, recovery ordering, private stage cleanup, stale
-// owner suppression and completion handoff are the production implementation.
-const hostCode=stripTypeScriptTypes(read('entry/src/main/ets/app/ReaderSystemFileOpenHost.ts')
-  .replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''));
-function hostType(core,gateway,barrier={prepareUserChange:async()=>{}}) {
-  return new Function('ReaderRuntimeOwner','ReaderCoreGateway','LocalBookImportGateway','ReaderSystemFileOpenQueue','hilog','ReaderThemeHost',
-    hostCode+';return ReaderSystemFileOpenHost;')({},core,gateway,ReaderSystemFileOpenQueue,{warn(){}},barrier);
 }
+if(id==='host-reuse'){
 for (const existing of [true,false]) {
   const calls=[], ready=deferred(); let imported=false;
   class Core {async loadShelfBook(){calls.push('get');return existing||imported ? book : undefined;}}
@@ -92,6 +99,8 @@ for (const existing of [true,false]) {
   assert.deepEqual(calls,existing?['stage','get','asset','discard']:['stage','get','import','get']);
   Host.detach({}); assert.ok(Host.peek(),'another owner cannot detach active queue'); Host.detach(owner); assert.equal(Host.peek(),undefined);
 }
+}
+if(id==='host-retired'){
 {
   const ready=deferred(),calls=[];
   class Core {async loadShelfBook(){assert.fail('destroyed owner cannot enter Core');}}
@@ -100,6 +109,8 @@ for (const existing of [true,false]) {
   Host.install(owner,ready.promise); Host.receive({action:'ohos.want.action.viewData',uri:'file://p/a.txt'}); await tick();
   Host.detach(owner); ready.resolve(); await until(()=>calls.length); assert.deepEqual(calls,['discard']); assert.equal(Host.peek(),undefined);
 }
+}
+if(id==='host-recovery'){
 {
   const calls=[];
   class Core {async loadShelfBook(){assert.fail('failed restore must block Core import');}}
@@ -109,9 +120,8 @@ for (const existing of [true,false]) {
   Host.install(owner,Promise.resolve());Host.receive({action:'ohos.want.action.viewData',uri:'file://p/a.txt'});
   await until(()=>Host.peek());assert.equal(Host.peek().failure.code,'readFailed');assert.deepEqual(calls,['discard']);Host.detach(owner);
 }
-
-// Actual Index navigation methods must wait for progress-preserving exit, defer
-// pending source switch, and acknowledge only a consumed result (never raw URI).
+}
+if(id==='index-navigation'){
 {
   let result={id:1,book}; const actions=[];
   const Host={subscribe:()=>()=>{},peek:()=>result, acknowledge:id=>{assert.equal(id,result.id);actions.push('ack');result=undefined;}};
@@ -140,7 +150,8 @@ for (const existing of [true,false]) {
   index.consumeSystemFileOpen();assert.ok(actions.includes('open'),'inactive other-book journal is preserved without stranding local file opens');
   assert.equal(index.pendingSourceSwitch.transactionId,'other-book');f.dispose();
 }
-
+}
+if(id==='manifest-utd'){
 const manifest=JSON.parse(read('entry/src/main/module.json5'));
 const ability=manifest.module.abilities.find(x=>x.name==='EntryAbility');
 assert.equal(ability.launchType,'singleton');assert.equal(ability.exported,true);
@@ -159,4 +170,9 @@ const ajv=new Ajv({strict:false,allErrors:true});
 const moduleSchema=JSON.parse(readFileSync(sdk+'/toolchains/modulecheck/module.json','utf8'));
 for(const skill of ability.skills)assert.ok(ajv.validate(moduleSchema.properties.module.properties.abilities.items.properties.skills.items,skill),JSON.stringify(ajv.errors));
 assert.ok(ajv.validate(JSON.parse(readFileSync(sdk+'/toolchains/modulecheck/customUtds.json','utf8')),utd),JSON.stringify(ajv.errors));
-console.log('PASS system file open: cold/warm queue, reuse/stage cleanup, recovery/teardown fencing, URI admission, existing progress, guarded reader exit, source-switch deferral and manifest');
+
+}
+}finally{}
+}
+const definitions={"queue": "queue actual scoped owner/gateway/storage path; controlled Core/OS ports", "queue-dispose": "queue-dispose actual scoped owner/gateway/storage path; controlled Core/OS ports", "queue-retry": "queue-retry actual scoped owner/gateway/storage path; controlled Core/OS ports", "uri-admission": "uri-admission actual scoped owner/gateway/storage path; controlled Core/OS ports", "host-reuse": "host-reuse actual scoped owner/gateway/storage path; controlled Core/OS ports", "host-retired": "host-retired actual scoped owner/gateway/storage path; controlled Core/OS ports", "host-recovery": "host-recovery actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-navigation": "index-navigation actual scoped owner/gateway/storage path; controlled Core/OS ports", "manifest-utd": "manifest-utd actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

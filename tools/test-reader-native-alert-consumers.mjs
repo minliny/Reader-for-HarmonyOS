@@ -1,6 +1,24 @@
-import assert from 'node:assert/strict';
-import { ReaderNativeAlertOwner, ReaderNativeAlertLease } from './lib/reader-native-alert-sdk-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+export const CONTRACT_CASES = {
+  "reader-inline-recovery": {
+    "description": "Actual LRE inline recovery once-only and stale generation/unmount/exit; native modal forbidden port",
+    "resources": []
+  },
+  "source-export-lease": {
+    "description": "Actual SourceTools export lease across selection/source/session/busy/mount; fake native Alert callback",
+    "resources": []
+  },
+  "settings-reset-lease": {
+    "description": "Actual Settings reset native action and revision invalidation; real alert lease helper",
+    "resources": []
+  }
+};
+
+async function case_reader_inline_recovery() {
+const { default: assert } = await import('node:assert/strict');
+const { ReaderNativeAlertOwner, ReaderNativeAlertLease } = await import('./lib/reader-native-alert-sdk-probe.mjs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const Reading = productionMotionMethods(file('features/reading/LocalReadingExperience.ets'),
   ['requestCachedChapterRefresh', 'showReaderRecovery', 'reconcileReaderRecovery']);
@@ -18,7 +36,16 @@ for (const stale of ['none', 'generation', 'unmount', 'exit']) {
   if (stale === 'exit') reading.exitRequested = true;
   reading.reconcileReaderRecovery(generation); reading.reconcileReaderRecovery(generation);
   assert.equal(refreshed, stale === 'none' ? 1 : 0, 'only the original live inline action can refresh, once');
+
 }
+
+}
+
+async function case_source_export_lease() {
+const { default: assert } = await import('node:assert/strict');
+const { ReaderNativeAlertOwner, ReaderNativeAlertLease } = await import('./lib/reader-native-alert-sdk-probe.mjs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const Source = productionMotionMethods(file('features/source/SourceToolsPage.ets'), ['confirmExportThen'], { ReaderNativeAlertOwner, ReaderNativeAlertLease, hilog: { warn() {} } });
 for (const stale of ['none', 'selection', 'sources', 'session', 'busy', 'exit']) {
   let shown, exports = 0;
@@ -34,6 +61,14 @@ for (const stale of ['none', 'selection', 'sources', 'session', 'busy', 'exit'])
   shown.primaryButton.action(); shown.primaryButton.action(); assert.equal(exports, stale === 'none' ? 1 : 0);
   assert.equal(shown.primaryButton.value, '继续导出'); assert.equal(shown.secondaryButton.value, '取消');
 }
+
+}
+
+async function case_settings_reset_lease() {
+const { default: assert } = await import('node:assert/strict');
+const { ReaderNativeAlertOwner, ReaderNativeAlertLease } = await import('./lib/reader-native-alert-sdk-probe.mjs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const Settings = productionMotionMethods(file('features/settings/SettingsPage.ets'), ['requestRestoreDefaults'], { ReaderNativeAlertOwner, ReaderNativeAlertLease, hilog: { warn() {} } });
 for (const stale of [false, true]) {
   let shown, resets = 0;
@@ -44,4 +79,11 @@ for (const stale of [false, true]) {
   shown.secondaryButton.action(); shown.secondaryButton.action(); assert.equal(resets, stale ? 0 : 1);
   assert.equal(Object.hasOwn(shown, 'autoCancel'), false, 'original native AUTO policy remains omitted');
 }
-console.log('PASS actual SDK-parsed reader/source/settings Alert consumers: nonmodal cache recovery/retirement, exact export selection/session, reset revision, once-only native callbacks and baseline slots');
+
+}
+
+const implementations = {'reader-inline-recovery':case_reader_inline_recovery,'source-export-lease':case_source_export_lease,'settings-reset-lease':case_settings_reset_lease};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

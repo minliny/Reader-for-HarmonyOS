@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict';
-import {writeFileSync} from 'node:fs';
-import {resolve} from 'node:path';
-import {fixture,draft,seedEntry,settle} from './lib/rss-management-durable-probe.mjs';
-import {deferred,until} from './lib/rules-mutation-durable-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const {writeFileSync}=await import("node:fs");
+const {resolve}=await import("node:path");
+const {fixture,draft,seedEntry,settle}=await import("./lib/rss-management-durable-probe.mjs");
+const {deferred,until}=await import("./lib/rules-mutation-durable-probe.mjs");
 const clone=value=>structuredClone(value);
 const management=f=>{const values=[],operations=[],reads=[],host=new f.Orchestrator(v=>values.push(clone(v)),f.current,f.runtime,o=>operations.push(clone(o)),r=>reads.push(clone(r)));return{host,values,operations,reads};};
 const editor=f=>{const lane=management(f).host,values=[],saved=[],host=new f.Editor(s=>values.push(clone(s)),id=>saved.push(id),f.current,f.runtime,work=>lane.runSerialized(work));return{lane,host,values,saved,settle:()=>settle(lane)};};
 let cases=0;
+const {cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...durableFixtureToolEvidence()}));let passed=false;try{
+const key=id;
+if(key==='management'){
 for(const failure of ['beforeMethod','afterMethod']) {
  const f=await fixture();await seedEntry(f);const warm=management(f);warm.host.open();await settle(warm.host);
  f.options[failure]='rules.mutation.apply';warm.host.toggleSubscription('s',false);await settle(warm.host);
@@ -24,8 +29,10 @@ for(const failure of ['beforeMethod','afterMethod']) {
   assert.equal(cold.disk(),retained);assert.equal(cold.io.finishes,local,'pure management reconcile never clears the original journal');
   m.host.continueOriginal(m.operations.at(-1).original);await settle(m.host);assert.equal(cold.writes().length,0);assert.equal(cold.disk(),'');
  }
- cases++;
+ 
 }
+}
+if(key==='editor'){
 for(const failure of ['beforeMethod','afterMethod']) {
  const f=await fixture(),warm=editor(f);warm.host.openCreate();await warm.settle();
  warm.host.updateFeedUrl(draft(30).feedUrl);warm.host.updateTitle('Original accepted title');
@@ -45,15 +52,19 @@ for(const failure of ['beforeMethod','afterMethod']) {
   assert.equal(cold.disk(),retained);assert.equal(cold.io.finishes,local,'pure editor reconcile never clears the original journal');
   e.host.continueOriginal(e.values.at(-1).original);await e.settle();assert.equal(cold.writes().length,0);
  }
- assert.equal(cold.disk(),'');assert.equal((await cold.rss.loadSubscriptions())[0].title,'Original accepted title');cases++;
+ assert.equal(cold.disk(),'');assert.equal((await cold.rss.loadSubscriptions())[0].title,'Original accepted title');
 }
+}
+if(key==='readback'){
 {
  const f=await fixture();await seedEntry(f);const m=management(f);m.host.open();await settle(m.host);
  f.options.beforeMethod='rss-source.list';m.host.toggleSubscription('s',false);await settle(m.host);
  assert.equal(m.operations.at(-1).projection.receipt.fact,'confirmedRefreshFailed');assert.equal(m.operations.at(-1).original.blocked,false);
  const writes=f.writes().length;m.host.reconcileManagementOperation(m.operations.at(-1));await settle(m.host);
- assert.equal(f.writes().length,writes);assert.equal(m.operations.at(-1).projection.receipt.fact,'confirmedCurrent');cases++;
+ assert.equal(f.writes().length,writes);assert.equal(m.operations.at(-1).projection.receipt.fact,'confirmedCurrent');
 }
+}
+if(key==='entry'){
 for(const method of ['read','favorite','unfavorite']) for(const failure of ['beforeMethod','afterMethod']) {
  const f=await fixture();await seedEntry(f);
  if(method==='unfavorite')await f.command('rss.favorite.persist',{subscriptionId:'s',guid:'g',addedAt:1});
@@ -74,8 +85,10 @@ for(const method of ['read','favorite','unfavorite']) for(const failure of ['bef
   assert.equal(cold.disk(),retained);assert.equal(cold.io.finishes,local,'pure entity reconcile never clears the original journal');
   m.host.continueEntryOriginal(operations.at(-1).original,binding);await settle(m.host);assert.equal(cold.writes().length,0);assert.equal(cold.disk(),'');
  }
- cases++;
+ 
 }
+}
+if(key==='management-attachment'){
 {
  const f=await fixture();await seedEntry(f);const host=f.Orchestrator.forRuntime(f.runtime),old=[],fresh=[];
  const attach=(id,values)=>host.attachPresentation(id,v=>values.push(clone(v)),f.current,()=>{},()=>{},f.current);
@@ -86,8 +99,10 @@ for(const method of ['read','favorite','unfavorite']) for(const failure of ['bef
  host.continueOriginal(original,'management-old');await settle(host);assert.equal(f.writes().length,writes);
  host.detachPresentation('management-old');
  host.continueOriginal(original,'management-new');await settle(host);
- assert.equal(f.writes().length,writes+1);assert.equal(fresh.at(-1)[0].enabled,false);cases++;
+ assert.equal(f.writes().length,writes+1);assert.equal(fresh.at(-1)[0].enabled,false);
 }
+}
+if(key==='editor-accepted-transfer'){
 for(const lost of [false,true]) {
  const f=await fixture(),lane=f.Orchestrator.forRuntime(f.runtime),host=f.Editor.forRuntime(f.runtime,work=>lane.runSerialized(work));
  const old=[],fresh=[],oldSaved=[],freshSaved=[];
@@ -107,8 +122,10 @@ for(const lost of [false,true]) {
   assert.equal(fresh.at(-1).original.confirmation,'confirmed','pure exact query qualifies the original lost ACK');
   assert.equal(fresh.at(-1).operation.receipt.confirmation,'confirmed');
  }
- cases++;
+ 
 }
+}
+if(key==='editor-original'){
 {
  const f=await fixture(),lane=f.Orchestrator.forRuntime(f.runtime),host=f.Editor.forRuntime(f.runtime,work=>lane.runSerialized(work)),values=[];
  const attach=id=>host.attachPresentation(id,v=>values.push(clone(v)),()=>{},f.current,f.current);
@@ -120,8 +137,10 @@ for(const lost of [false,true]) {
  original=values.at(-1).original;
  host.continueOriginal(original,'editor-first');await settle(lane);assert.equal(f.writes().length,writes);
  host.detachPresentation('editor-first');assert.equal(host.ownsPresentation('editor-reopened'),true);
- host.continueOriginal(original,'editor-reopened');await settle(lane);assert.equal(f.writes().length,writes+1);cases++;
+ host.continueOriginal(original,'editor-reopened');await settle(lane);assert.equal(f.writes().length,writes+1);
 }
+}
+if(key==='damaged-intent'){
 for(const damage of ['json','checksum']) {
  const f=await fixture();f.options.beforeMethod='rules.mutation.apply';await assert.rejects(f.rss.createSubscription(draft(120)));
  const intent=JSON.parse(f.disk());intent.recordFingerprint='0'.repeat(64);
@@ -131,6 +150,10 @@ for(const damage of ['json','checksum']) {
  assert.equal(original.operationId,'','absence is not a manufactured original identity');assert.equal(original.canRetryOriginal,false);
  assert.equal(e.values.at(-1).canSave,false,'corrupt durable authority is visible before accepting a new draft');
  e.host.updateFeedUrl(draft(121).feedUrl);e.host.save();e.host.continueOriginal(original);await e.settle();
- assert.equal(cold.writes().length,0);assert.ok(cold.disk(),'damaged evidence is preserved');cases++;
+ assert.equal(cold.writes().length,0);assert.ok(cold.disk(),'damaged evidence is preserved');
 }
-console.log(`RSS management/editor actual SDK owners + Atomic + cold SQLite: PASS (${cases} groups).`);
+}
+passed=true;}finally{const cleanup=await cleanupDurableFixtures({retain:!passed});if(!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));}
+}
+const definitions={"management": {"description": "management actual production owner/SDK scope", "resources": []}, "editor": {"description": "editor actual production owner/SDK scope", "resources": []}, "readback": {"description": "readback actual production owner/SDK scope", "resources": []}, "entry": {"description": "entry actual production owner/SDK scope", "resources": []}, "management-attachment": {"description": "management-attachment actual production owner/SDK scope", "resources": []}, "editor-accepted-transfer": {"description": "editor-accepted-transfer actual production owner/SDK scope", "resources": []}, "editor-original": {"description": "editor-original actual production owner/SDK scope", "resources": []}, "damaged-intent": {"description": "damaged-intent actual production owner/SDK scope", "resources": []}};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

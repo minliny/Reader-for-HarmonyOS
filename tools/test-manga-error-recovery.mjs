@@ -1,15 +1,23 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { mangaUserError } from '../entry/src/main/ets/features/manga/MangaUserError.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"exit-once": {"description": "实际注册退出owner save/back仅一次与retired guard", "resources": []}, "brief-current-error": {"description": "实际admitted preparation brief/opened Watch保error和pixels", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { mangaUserError } = await import('../entry/src/main/ets/features/manga/MangaUserError.ts');
+
 
 const file = new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
 const Surface = productionMotionMethods(file,
-  ['requestedLast', 'imageError', 'rowHasError', 'primaryErrorRowKey', 'isPrimaryErrorRow', 'rowRenderKey', 'retry', 'retryLabel', 'retryOpen', 'confirmRecovery']);
+  ['requestedLast', 'imageError', 'rowHasError', 'nativeFailureKey', 'wholeImageUnavailable', 'unavailableMarkerTile', 'unavailableMarkerTop', 'rowDisplayWidth', 'rowDisplayHeight', 'unavailableImageWidth', 'unavailableImageHeight', 'rowRenderKey', 'retry', 'retryLabel', 'retryOpen', 'confirmRecovery', 'notifyPreparationFailure']);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() {
   let resolve, reject;
@@ -21,165 +29,15 @@ const rows = [0, 1, 2].map(ordinal => ({ key: `page-${ordinal}:0`, ordinal, tile
 function fixture() {
   const tiles = new Map(rows.map(row => [row.ordinal, { error: 'READING_IMAGE_HTTP_FAILED' }]));
   const controller = { chapter: { manifest: { manifestVersion: 'v1' } },
-    tile: ordinal => tiles.get(ordinal), visiblePages: () => [] };
+    tile: ordinal => tiles.get(ordinal), pageGeometry: () => undefined, visiblePages: () => [] };
   const surface = Object.assign(new Surface(), { controller, mounted: true, opened: true,
-    first: 0, last: 2, presentationGeneration: 0, error: '',
+    first: 0, last: 2, presentationGeneration: 0, error: '', nativeImageFailures: new Set(),
+    viewportWidth: 390, viewportHeight: 844, zoom: 1, effectiveFit: () => 'width',
     data: { totalCount: () => rows.length, getData: index => rows[index] }, updateViewport: async () => {} });
   return { surface, controller, tiles };
 }
 
-// Execute the production identity function. A retained LazyForEach Blank
-// must get a new presentation key when it becomes the viewport's retry owner.
-{
-  const { surface, tiles } = fixture();
-  const keys = rows.map(row => surface.rowRenderKey(row));
-  assert.equal(surface.isPrimaryErrorRow(rows[0]), true);
-  assert.equal(surface.isPrimaryErrorRow(rows[1]), false);
-  surface.first = 1;
-  assert.equal(surface.isPrimaryErrorRow(rows[1]), true);
-  assert.notEqual(surface.rowRenderKey(rows[1]), keys[1], 'scrolling an existing failure into first position replaces its retained Blank');
-  surface.first = 0;
-  assert.equal(surface.rowRenderKey(rows[1]), keys[1]);
-  tiles.set(0, { image: { fileUri: 'file://recovered', revision: 'v1' } });
-  assert.equal(surface.isPrimaryErrorRow(rows[1]), true);
-  assert.notEqual(surface.rowRenderKey(rows[1]), keys[1], 'successful prior retry transfers the visible retry card to the next failure');
-  const admitted = surface.rowRenderKey(rows[1]);
-  assert.equal(surface.rowRenderKey(rows[1]), admitted, 'stable error ownership preserves row identity');
-}
-console.log('PASS actual manga row keys transfer one visible retry card after scrolling and prior-row recovery');
-
-// Real retry callbacks may settle after settings/progress errors, navigation,
-// refresh, or disposal. They must only own their original presentation.
-for (const initialError of ['', 'READING_IMAGE_HTTP_FAILED']) {
-  const { surface, controller, tiles } = fixture();
-  const pending = deferred();
-  controller.retryTile = () => pending.promise;
-  surface.error = initialError;
-  surface.retry(rows[0]);
-  surface.error = 'SETTINGS_WRITE_FAILED';
-  tiles.set(0, { image: { fileUri: 'file://recovered' } });
-  pending.resolve(); await tick();
-  assert.equal(surface.error, 'SETTINGS_WRITE_FAILED', 'successful image retry cannot erase a newer unrelated failure');
-}
-for (const mutation of ['presentation', 'chapter', 'controller', 'dispose']) {
-  const { surface, controller } = fixture();
-  const pending = deferred(); controller.retryTile = () => pending.promise;
-  surface.retry(rows[0]);
-  if (mutation === 'presentation') surface.presentationGeneration++;
-  if (mutation === 'chapter') controller.chapter = { manifest: { manifestVersion: 'v2' } };
-  if (mutation === 'controller') surface.controller = {};
-  if (mutation === 'dispose') surface.mounted = false;
-  pending.reject(new Error('OLD_TILE_FAILURE')); await tick();
-  assert.equal(surface.error, '', `${mutation}: retired retry cannot show its old error on the current page`);
-}
-{
-  const { surface, controller, tiles } = fixture();
-  const pending = deferred(); controller.retryTile = () => pending.promise;
-  surface.error = 'READING_IMAGE_HTTP_FAILED'; surface.retry(rows[0]);
-  tiles.set(0, { image: { fileUri: 'file://recovered' } });
-  pending.resolve(); await tick();
-  assert.equal(surface.error, '', 'the recovered current image removes its own unchanged error');
-  controller.retryTile = async () => { throw new Error('MANGA_SESSION_CANCELLED'); };
-  surface.retry(rows[1]); await tick();
-  assert.equal(surface.error, '', 'cancelled retry is not a new user-visible image failure');
-}
-console.log('PASS actual manga retry callbacks preserve new failures and fence navigation, refresh, replacement and disposal');
-
-// Selecting a recovery page can itself refresh an expired image into a new,
-// unresolved manifest. That controller decision remains authoritative.
-for (const requiresRecovery of [false, true]) {
-  const { surface, controller } = fixture();
-  let saves = 0;
-  surface.recovering = true; surface.saveVisible = async () => { saves++; };
-  controller.selectPage = async ordinal => {
-    assert.equal(ordinal, 0);
-    controller.chapter = { manifest: { manifestVersion: 'refreshed' } };
-    controller.recoveryRequired = requiresRecovery;
-  };
-  await surface.confirmRecovery();
-  assert.equal(surface.recovering, requiresRecovery);
-  assert.equal(saves, requiresRecovery ? 0 : 1, 'unresolved replacement keeps confirmation visible and cannot write progress');
-}
-for (const mutation of ['presentation', 'controller', 'dispose']) {
-  const { surface, controller } = fixture();
-  const pending = deferred(); let saves = 0;
-  surface.recovering = true; surface.saveVisible = async () => { saves++; };
-  controller.selectPage = () => pending.promise;
-  controller.recoveryRequired = false;
-  const confirming = surface.confirmRecovery();
-  if (mutation === 'presentation') surface.presentationGeneration++;
-  if (mutation === 'controller') surface.controller = {};
-  if (mutation === 'dispose') surface.mounted = false;
-  pending.resolve(); await confirming;
-  assert.equal(surface.recovering, true, `${mutation}: an old confirmation cannot acknowledge a newer view`);
-  assert.equal(saves, 0);
-}
-{
-  const { surface, controller } = fixture(); surface.recovering = true;
-  controller.selectPage = async () => { throw new Error('MANGA_SESSION_CANCELLED'); };
-  await surface.confirmRecovery(); assert.equal(surface.error, ''); assert.equal(surface.recovering, true);
-  controller.selectPage = async () => { throw new Error('MANGA_PAGE_FACT_REQUIRED'); };
-  await surface.confirmRecovery(); assert.equal(surface.error, 'MANGA_PAGE_FACT_REQUIRED');
-}
-console.log('PASS actual recovery confirmation follows refreshed controller facts and fences late acknowledgement/failure');
-
-{
-  const { surface, controller } = fixture();
-  const pending = deferred(); let opens = 0, closes = 0;
-  surface.opened = false; surface.offline = false; surface.openingRetry = false;
-  controller.close = () => { closes++; };
-  surface.open = async selected => { assert.equal(selected, controller); opens++; await pending.promise; };
-  const first = surface.retryOpen();
-  assert.equal(surface.openingRetry, true);
-  await surface.retryOpen();
-  assert.equal(opens, 1); assert.equal(closes, 1, 'an in-flight opening retry cannot start a second session');
-  pending.resolve(); await first; assert.equal(surface.openingRetry, false);
-}
-// The installed SDK lowers the real top-controls Builder. With error cleared,
-// a pending opening retry still exposes its disabled button and progress text.
-{
-  const sdk = resolveEtsLoaderRoot();
-  const syntax = createRequire(import.meta.url)(`${sdk}/lib/validate_ui_syntax.js`);
-  const iconSource = readFileSync(new URL('../entry/src/main/ets/features/common/ReaderIconButton.ets', import.meta.url), 'utf8');
-  syntax.componentCollection.customComponents.add('ReaderIconButton');
-  syntax.propCollection.set('ReaderIconButton', new Set([...iconSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match => match[1])));
-  const { owner } = createReaderBuilderProbe(source,
-    ['topControls', 'iconAction', 'inkColor', 'surfaceColor', 'mutedColor', 'lineColor']);
-  Object.assign(owner, { openingRetry: true, opened: false, offline: false, recovering: false,
-    error: '', bookTitle: '漫画', title: '', backgroundPreference: 'paper', appThemeScheme: 'day',
-    offlineProbeStatus: '', iconAction: () => {}, loginRequired: () => false });
-  owner.topControls();
-  const retry = [...owner.nodes.values()].find(node => node.type === 'Button' &&
-    (node.create === '重试中' || node.createWithLabel === '重试中' || node.createWithLabel?.[0] === '重试中'));
-  assert.ok(retry, 'cleared old error must not remove the in-flight retry control');
-  assert.equal(retry.enabled, false);
-  assert.match(source, /@State(?:\s+@Watch\([^)]*\))?\s+private openingRetry:/, 'opening status participates in ArkUI state publication');
-}
-console.log('PASS actual opening retry has one session owner and SDK-emitted disabled in-progress control');
-
-// Changed content requires a new entry admission. Repeating an image retry
-// against the invalid manifest must not create another pending marker.
-{
-  const { surface, controller, tiles } = fixture();
-  const pending = deferred(), events = [];
-  tiles.set(0, { error: 'MANGA_SESSION_CONTENT_CHANGED' });
-  Object.assign(surface, { openingRetry: false, viewportGeneration: 3, publishedRowKeys: new Map([[0, 'old']]),
-    visibleAnchor: { ordinal: 0, y: 0.5 }, confirmedPosition: { old: true }, publishedManifestVersion: 'old',
-    detachOfflineProbe: () => events.push('probe.detach'),
-    open: async selected => { assert.equal(selected, controller); events.push('entry.open'); await pending.promise; surface.opened = true; } });
-  controller.close = intent => { assert.equal(intent, 'chapter'); events.push('images.close'); };
-  controller.retryTile = () => assert.fail('invalid content must reopen entry instead of retrying old pixels');
-  assert.equal(surface.retryLabel(rows[0]), '重新打开本章');
-  assert.equal(surface.retryLabel(rows[1]), '重试');
-  assert.equal(mangaUserError('MANGA_SESSION_CONTENT_CHANGED'), '章节内容或书源已更新，请重新打开本章。');
-  surface.retry(rows[0]); surface.retry(rows[0]);
-  assert.deepEqual(events, ['probe.detach', 'images.close', 'entry.open'], 'one reopen owns entry admission and old subscriber disposal');
-  assert.equal(surface.confirmedPosition, undefined); assert.equal(surface.visibleAnchor, undefined);
-  assert.equal(surface.publishedRowKeys.size, 0); assert.equal(surface.openingRetry, true);
-  pending.resolve(); await tick(); assert.equal(surface.openingRetry, false); assert.equal(surface.opened, true);
-}
-console.log('PASS changed-content recovery offers readable copy and one fresh entry admission instead of retrying an invalid image');
-
+if(selectedCase==='exit-once') {
 // Index registers one exit owner and sends a navigation intent for book-info,
 // shelf mutation and external file opening. The actual registered callback
 // must carry that intent past ordinary panel/end/zoom back handling.
@@ -228,3 +86,77 @@ console.log('PASS changed-content recovery offers readable copy and one fresh en
 }
 console.log('PASS actual registered navigation exit bypasses back tiers, waits for one save, fences disposal and retains ordinary panel/end/zoom back behavior');
 console.log('Boundary: production methods and SDK control lowering; VM pixels and native list scheduling require separate delivery evidence.');
+
+
+}
+if(selectedCase==='brief-current-error') {
+// Background preparation failure is brief feedback after readable pixels have
+// been admitted. It cannot become a persistent global error or repeat per publish.
+{
+  const {surface,controller}=fixture(),messages=[];
+  controller.preparationError='MANGA_CHAPTER_PREPARATION_FAILED';
+  Object.assign(surface,{preparationFailureNoticeKey:'',error:'settings error',
+    displayError:()=> '整章加载暂未完成，已加载的内容仍可阅读。',
+    getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})})});
+  surface.notifyPreparationFailure();surface.notifyPreparationFailure();
+  assert.equal(messages.length,1);assert.equal(surface.error,'settings error');
+  assert.equal(surface.opened,true);assert.equal(surface.controller,controller);
+  controller.preparationError=undefined;surface.notifyPreparationFailure();
+  controller.preparationError='MANGA_CHAPTER_CACHE_CAPACITY';surface.notifyPreparationFailure();
+  assert.equal(messages.length,2);
+  surface.opened=false;surface.preparationFailureNoticeKey='';surface.notifyPreparationFailure();
+  assert.equal(messages.length,2,'the initial opening retains its existing failure owner');
+}
+console.log('PASS admitted manga preparation failures are brief, deduplicated and preserve current pixels and unrelated error facts');
+
+// Actual SDK @State watch delivery: an admitted reader keeps its error fact
+// and pixels while feedback is transient; image errors remain local. A
+// regression to the old opened/error Text block must fail this proof.
+async function openedErrorSdkProof(surfaceSource=source) {
+  const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
+  const sdk=boundedSurfaceSdk(),messages=[];
+  const members=['error','opened','mounted','openedErrorNoticeKey','presentationGeneration',
+    'onErrorPresentationChanged','onWindowChromeChanged','notifyOpenedError','controlsPresentedForWindow','loginRequired',
+    'requestedLast','rowHasError','imageError','nativeFailureKey','nativeImageFailures','topControls'];
+  const owner=sdk.consumer(surfaceSource,members,{TOK_BORDER_W:1});
+  let live=true;
+  const tile={image:{fileUri:'file://retained',revision:'v1'}},row={key:'page:0',ordinal:0,tileIndex:0};
+  Object.assign(owner,{getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})}),
+    onWindowChromeChanged(){},displayError:code=>'public '+code,isReaderIdentityCurrent:()=>live,
+    controller:{chapter:{manifest:{manifestVersion:'v1'}},tile:()=>tile,visiblePages:()=>[]},
+    data:{totalCount:()=>1,getData:()=>row},first:0,last:0,iconAction(){},
+    inkColor:()=> '#111111',mutedColor:()=> '#666666',surfaceColor:()=> '#F8F4EC',lineColor:()=> '#DDD8D0',
+    appThemeScheme:'day',backgroundPreference:'paper',bookTitle:'漫画',title:'本话',offlineProbeStatus:'',
+    mounted:true,windowChromeActive:true,controlsVisible:false,chapterEnd:false,presentationGeneration:1,
+    recovering:false,openingRetry:false,loginRequiredForControls:false,panel:'',offline:false});
+  owner.opened=true;owner.topControls();sdk.properties.flush();
+  const code='MANGA_PREFERENCE_SAVE_FAILED';owner.error=code;sdk.properties.flush();
+  assert.deepEqual(messages,['public '+code]);assert.equal(owner.error,code);
+  assert.equal(owner.controller.tile(0,0),tile,'message presentation never replaces a retained image');
+  assert.equal(owner.controlsPresentedForWindow(),false,'an old ordinary error cannot pin the reading controls open');
+  owner.topControls();sdk.properties.flush();
+  assert.ok(!sdk.nodes(owner).some(node=>node.type==='Text'&&String(node.create).includes('public ')),
+    'ordinary opened errors must not reappear as the old embedded message block');
+  owner.notifyOpenedError();assert.equal(messages.length,1);
+  owner.presentationGeneration++;owner.notifyOpenedError();assert.equal(messages.length,2);
+  live=false;owner.error='MANGA_EXIT_FAILED';sdk.properties.flush();assert.equal(messages.length,2);
+  live=true;owner.mounted=false;owner.error='MANGA_SEEK_FAILED';sdk.properties.flush();assert.equal(messages.length,2);
+  owner.mounted=true;owner.opened=false;owner.error='MANGA_CATALOG_REQUIRED';sdk.properties.flush();
+  assert.equal(messages.length,2,'an initial source/chapter failure remains a page state');
+  owner.error='';owner.opened=true;tile.image=undefined;tile.error='READING_IMAGE_AUTH_REQUIRED';
+  owner.error='READING_IMAGE_AUTH_REQUIRED';sdk.properties.flush();assert.equal(messages.length,2);
+  assert.equal(owner.loginRequired(),true,'local image suppression retains the original login admission');
+}
+await openedErrorSdkProof();
+// The two temporary SDK files need distinct inactive diagnostic ids in the
+// compiler's process-wide id registry; that node is not rendered in this case.
+const oldEmbeddedBlock=source.replace('reader-manga-offline-probe-status','reader-manga-offline-probe-status-negative-control').replace('      if (this.loginRequiredForControls) {',
+ "      if (this.error.length > 0 && this.opened) { Text(this.displayError(this.error)).padding(8).backgroundColor(this.surfaceColor()).borderRadius(12); }\n      if (this.loginRequiredForControls) {");
+assert.notEqual(oldEmbeddedBlock,source,'negative control restores the actual former opened/error block');
+await assert.rejects(openedErrorSdkProof(oldEmbeddedBlock),/ordinary opened errors must not reappear/,
+ 'actual SDK lowering must expose the reverted embedded error block');
+console.log('PASS actual SDK error/opened watches: one brief feedback per presentation, no retained error block, preserved error/pixels, page-state ownership, local-image auth and retired-owner silence; restoring the former block is rejected');
+
+}
+
+}

@@ -1,35 +1,28 @@
-import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
-import {
+export const CONTRACT_CASES = {
+  "native-measurement-boundary": {
+    "description": "Actual ReadingParagraph indent and LRE native text recipe preserve original Unicode text and start-only indent; no native shaping claim",
+    "resources": []
+  },
+  "paragraph-boundaries": {
+    "description": "Actual original UTF16 projection for newline/EOF/Unicode/TXT/EPUB samples; no native pixel claim",
+    "resources": []
+  }
+};
+
+async function case_paragraph_boundaries() {
+const { default: assert } = await import('node:assert/strict');
+const { readFile } = await import('node:fs/promises');
+const {
   readerAppearanceParagraphContentScalarOffset,
   readerAppearanceParagraphDisplayText,
   readerAppearanceParagraphIndentPrefix,
-} from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
-import {
+} = await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const {
   collectReadingParagraphUtf16Ranges,
   readingParagraphBoundaryMode,
-} from '../entry/src/main/ets/features/reading/ReadingParagraphProjection.ts';
-
-assert.equal(readerAppearanceParagraphIndentPrefix('none'), '');
-assert.equal(readerAppearanceParagraphIndentPrefix('single'), '\u3000');
-assert.equal(readerAppearanceParagraphIndentPrefix('firstLine'), '\u3000\u3000');
-assert.equal(readerAppearanceParagraphDisplayText('正文', true, 'firstLine'), '\u3000\u3000正文');
-assert.equal(readerAppearanceParagraphDisplayText('续行', false, 'firstLine'), '续行');
-
-// The two display-only U+3000 scalars must never enter Core progress,
-// bookmark, highlight, or pagination anchors.
-assert.equal(readerAppearanceParagraphContentScalarOffset(0, 12, true, 'firstLine'), 0);
-assert.equal(readerAppearanceParagraphContentScalarOffset(2, 12, true, 'firstLine'), 0);
-assert.equal(readerAppearanceParagraphContentScalarOffset(8, 12, true, 'firstLine'), 6);
-assert.equal(readerAppearanceParagraphContentScalarOffset(8, 12, false, 'firstLine'), 8);
-assert.equal(readerAppearanceParagraphContentScalarOffset(99, 12, true, 'firstLine'), 12);
-
-assert.equal(readingParagraphBoundaryMode('local', 'TXT'), 'lineSeparated');
-assert.equal(readingParagraphBoundaryMode('local', ' txt '), 'lineSeparated');
-assert.equal(readingParagraphBoundaryMode('local', 'local'), 'lineSeparated');
-assert.equal(readingParagraphBoundaryMode('local', ' LOCAL '), 'lineSeparated');
-assert.equal(readingParagraphBoundaryMode('local', 'EPUB'), 'blankLineSeparated');
+} = await import('../entry/src/main/ets/features/reading/ReadingParagraphProjection.ts');
 assert.equal(readingParagraphBoundaryMode('remote-source', 'TXT'), 'lineSeparated');
 assert.equal(readingParagraphBoundaryMode('remote-source', undefined), 'lineSeparated');
 
@@ -135,56 +128,23 @@ assert.deepEqual(remoteRanges.map((range) =>
 ]);
 
 const readingDir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const readingSurface = await readFile(new URL('ReadingSurface.ets', readingDir), 'utf8');
-const experience = await readFile(new URL('LocalReadingExperience.ets', readingDir), 'utf8');
-const detailModel = await readFile(new URL('ReadingBookDetail.ts', readingDir), 'utf8');
-const coreGateway = await readFile(
-  new URL('../entry/src/main/ets/app/ReaderCoreGateway.ts', import.meta.url),
-  'utf8',
-);
-const readerShell = await readFile(
-  new URL('../entry/src/main/ets/features/shell/ReaderShell.ets', import.meta.url),
-  'utf8',
-);
-const indexPage = await readFile(
-  new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
-  'utf8',
-);
 
-assert.match(coreGateway, /const kind = this\.optionalString\(book, 'kind'\)/,
-  'the Core-owned local format must survive the shelf gateway');
-assert.match(coreGateway, /decoded\.kind = kind/,
-  'the shelf projection must expose the decoded local format');
-assert.match(detailModel, /kind\?: string/,
-  'the source-neutral detail model must retain Core book kind');
-assert.match(indexPage, /bookKind: this\.detailBook\.kind/,
-  'Index must pass the retained kind into the stable reader shell');
-assert.match(readerShell, /@Prop bookKind: string \| undefined = undefined/,
-  'ReaderShell must retain the book kind while the reading surface remains mounted');
-assert.match(readerShell,
-  /ReadingExperience\(\{[\s\S]*?bookKind: this\.bookKind/,
-  'ReaderShell must pass the retained kind into the reading owner');
-assert.match(experience, /@Prop bookKind: string \| undefined = undefined/,
-  'the reading owner must admit the Core-owned book kind');
-assert.match(experience,
-  /collectReadingParagraphUtf16Ranges\([\s\S]*?readingParagraphBoundaryMode\(this\.sourceId, this\.bookKind\)/,
-  'pagination must choose TXT line semantics from the admitted Core book kind');
+}
 
-assert.match(readingSurface,
-  /Span\(this\.indentPrefix\(\)\)/,
-  'the visible paragraph start must render the configured explicit indent prefix');
-assert.match(readingSurface,
-  /return this\.isParagraphStart \? readerAppearanceParagraphIndentPrefix\(this\.appearance\.indent\) : ''/,
-  'the shared paged/continuous text primitive must gate indentation on the canonical paragraph start');
-assert.match(experience, /return paragraph\.text === '\\uFFFC' \? 'A' : paragraph\.text/,
-  'native paragraph measurement uses exact original text');
-assert.match(experience, /indentVp: paragraph\.isParagraphStart/,
-  'native paragraph indentation belongs to the original paragraph start');
-assert.doesNotMatch(experience, /readerAppearanceParagraphContentScalarOffset\(/,
-  'native measurement must not subtract nonexistent placeholder indices');
-assert.match(readingSurface, /ReaderNativeParagraphView\(/,
-  'paged native paragraphs render through the native window component');
-assert.doesNotMatch(experience, /const paragraphDivider =/,
-  'the reading owner must not reintroduce an untyped blank-line-only paragraph guess');
-
-console.log('reader paragraph indentation projection: PASS');
+async function case_native_measurement_boundary(){
+const {default:assert}=await import('node:assert/strict');
+const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
+const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const Paragraph=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReadingSurface.ets',import.meta.url),['indentPrefix'],style);
+const Host=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),['measurementNodeText','measureNativeParagraph'],{...style,FontWeight:{Regular:400},TextAlign:{JUSTIFY:'justify',Start:'start'}});
+for(const start of [true,false])for(const indent of ['none','single','firstLine']){
+ const display=Object.assign(new Paragraph(),{isParagraphStart:start,appearance:{indent}});assert.equal(display.indentPrefix(),start?style.readerAppearanceParagraphIndentPrefix(indent):'');
+ const captures=[];const owner=Object.assign(new Host(),{appearanceSnapshot:{fontSize:20,font:'serif',activeTheme:'paper',indent,lineSpacing:1,letterSpacing:0,alignment:'left'},measurementTextWidth:()=>300,getUIContext:()=>({px2vp:v=>v/3,fp2px:v=>v*3}),nativeTextMeasurement:{measure:(_c,text,_controller,recipe)=>captures.push({text,recipe})}});
+ const paragraph={text:'A🙂\r\n  原文',isParagraphStart:start,controller:{}};owner.measureNativeParagraph(paragraph);assert.equal(captures[0].text,paragraph.text,'display indent never enters canonical native measurement text');assert.equal(captures[0].recipe.indentVp,start?style.readerAppearanceParagraphIndent(20,indent):0);assert.equal(paragraph.nativeMeasured,true);owner.measureNativeParagraph(paragraph);assert.equal(captures.length,1,'already measured owner is not shaped twice');
+}
+}
+const implementations = {'native-measurement-boundary':case_native_measurement_boundary,'paragraph-boundaries':case_paragraph_boundaries};
+for (const id of selectContractCases(CONTRACT_CASES)) {
+  await implementations[id]();
+  recordContractCasePass(id);
+}

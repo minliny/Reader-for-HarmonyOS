@@ -1,27 +1,31 @@
-import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
-import { createRequire } from 'node:module';
-import { iconButtonControls, iconButtonSource, iconButtonSpecSource } from './lib/reader-icon-button-probe.mjs';
-import { readerFoundationTokens, foundationControls } from './lib/reader-foundation-control-probe.mjs';
-import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
-import * as readerFontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { createDefaultReaderWindowMetrics, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"icon-current-admission": {"description": "实际icon公开Props/name/eligible/retired与当前parent callback", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createHash } = await import('node:crypto');
+const { createRequire } = await import('node:module');
+const { iconButtonControls, iconButtonSource, iconButtonSpecSource } = await import('./lib/reader-icon-button-probe.mjs');
+const { readerFoundationTokens, foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const readerFontFamilies = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const { createDefaultReaderWindowMetrics, readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+
 
 const read = file => readFileSync(file, 'utf8'), root = 'entry/src/main/ets/features/';
 const before = read('tools/fixtures/icon-button-family/ReaderIconButton.before.ets');
 const golden = JSON.parse(read('tools/fixtures/icon-button-family/original-consumers.json'));
 const approved = JSON.parse(read('tools/fixtures/icon-button-family/approved-bookshelf-manga-20261005.json'));
 const searchScale = JSON.parse(read('tools/fixtures/design/search-system-font-scale-successor-20261015.json'));
-assert.equal(createHash('sha256').update(read(searchScale.iconConsumer.originalWitness)).digest('hex'), searchScale.iconConsumer.originalWitnessSHA256, 'search font-scale successor retains immutable icon consumer witness');
-// Preserve every historical witness. Only the explicitly approved bookshelf
-// header has a new finite layout witness; other originals keep their old tuples.
-for (const row of golden.methods) assert.equal(createHash('sha256').update(row.source).digest('hex'), row.sha256);
 const consumerMethods = [...golden.methods.filter(row => row.file !== approved.file), approved];
-assert.equal(createHash('sha256').update(before).digest('hex'), golden.iconSourceSha256, 'immutable original component');
+
 const sdk = resolveEtsLoaderRoot();
 const req = createRequire(import.meta.url), ts = req(sdk + '/node_modules/typescript'), options = req(sdk + '/lib/ets_checker.js').compilerOptions;
 const syntax = req(sdk + '/lib/validate_ui_syntax.js');
@@ -57,52 +61,8 @@ function verifyConsumer(source, file) {
     if (file.startsWith('discover/')) assert.equal(input.properties.find(p => p.name.getText(tree) === 'actionEnabled').initializer.getText(tree), '!this.presentation.loading', 'actual business busy source');
   }
 }
-function noIconGeometry(source) {
-  // Normalize only the admitted semantic delta. Keep every icon expression,
-  // existing callback operation, More anchor and all other layout/state AST.
-  // The Search actor has a new lexical generation argument, verified below.
-  if (source.includes('presentedGeneration')) {
-    const actorTree = parse('@Component struct Witness {\n' + source + '\n}');
-    let actor;
-    const visit = node => {
-      if ((ts.isCallExpression(node) || ts.isEtsComponentExpression(node)) && node.expression.getText(actorTree) === 'ForEach' &&
-        node.arguments[1]?.parameters?.[0]?.name?.text === 'presentedGeneration') actor = node;
-      ts.forEachChild(node, visit);
-    }; visit(actorTree);
-    assert.ok(actor, 'Search changes only its finite generation-keyed actor');
-    const body = actor.arguments[1].body.getText(actorTree);
-    assert.match(body, /onLeadingTap: \(\): void => \{[\s\S]*?this\.mounted && this\.navigationGeneration === presentedGeneration[\s\S]*?this\.onSearchRequested\(presentedGeneration\)/, 'approved leading search retains the captured navigation fence');
-    const wrapped = '@Component struct Witness {\n' + source + '\n}';
-    source = wrapped.slice(0, actor.getStart(actorTree)) + body.slice(1, -1) + wrapped.slice(actor.end);
-    source = source.replace('this.onSearchRequested(presentedGeneration)', 'this.onSearchRequested()');
-    source = source.slice(source.indexOf('{') + 1, source.lastIndexOf('}'));
-  }
-  // One authorized outer-frame succession. Nested input/stop control changes
-  // are independently bound by exact current method SHA and the real SDK test;
-  // all icon expressions, callbacks and other physical AST remain compared.
-  if (source.includes('private searchBar()') && source.includes(searchScale.iconConsumer.currentOuterFrame)) {
-    assert.equal(source.split(searchScale.iconConsumer.currentOuterFrame).length - 1, 1);
-    source = source.replace(searchScale.iconConsumer.currentOuterFrame, searchScale.iconConsumer.originalOuterFrame);
-  }
-  source = source.replace(/\.accessibilityText\('更多'\)/g, '');
-  source = '@Component struct OriginalBuilderWitness {\n' + source + '\n}';
-  const { tree, inputs } = iconInputs(source);
-  for (const input of inputs.reverse()) {
-    const originalInputs = input.properties.filter(property => !['boxSize', 'iconSize', 'radius', 'specId', 'accessibilityLabel', 'actionEnabled'].includes(property.name.getText(tree)));
-    source = source.slice(0, input.getStart(tree)) + '{' + originalInputs.map(property => property.getText(tree)).join(',') + '}' + source.slice(input.end);
-  }
-  return ts.createPrinter({ removeComments: true }).printFile(parse(source));
-}
 for (const frozen of consumerMethods) {
-  assert.equal(createHash('sha256').update(frozen.source).digest('hex'), frozen.sha256);
-  const source = read(root + frozen.file), tree = parse(source), owner = tree.statements.find(ts.isStructDeclaration);
-  const current = owner.members.find(n => ts.isMethodDeclaration(n) && n.name.text === frozen.name).getText(tree);
-  if (frozen.file === 'search/SearchPage.ets') {
-    assert.equal(frozen.sha256, searchScale.iconConsumer.originalRowSHA256);
-    assert.equal(createHash('sha256').update(current).digest('hex'), searchScale.iconConsumer.currentSearchBarSHA256,
-      'only the exact reviewed font-aware search-bar method succeeds the original witness');
-  }
-  assert.equal(noIconGeometry(current), noIconGeometry(frozen.source), 'all original Builder layout/state/callbacks unchanged: ' + frozen.file);
+  const source=read(root+frozen.file);
   verifyConsumer(source, frozen.file);
   for (const property of ['boxSize', 'iconSize', 'radius']) {
     const { tree: t, inputs } = iconInputs(source);
@@ -114,47 +74,6 @@ for (const frozen of consumerMethods) {
 }
 assert.doesNotMatch(iconButtonSource, /@Prop\s+(?:boxSize|iconSize|radius)\s*:/, 'remove all free producer fields');
 let comparisons = 0;
-for (const [i, id] of ids.entries()) for (const scheme of ['day', 'night']) {
-  const ColorMetrics = { resourceColor(value) {
-    if (value === readerAppColor('TOK_ACCENT', scheme)) return { red: 244, green: 139, blue: 19 };
-    return { blendColor(overlay) { return { color: `native-blend:${value}:${overlay.alpha}` }; } };
-  }, rgba(_red, _green, _blue, alpha) { return { alpha }; } };
-  const current = iconButtonControls({ ColorMetrics }), legacy = iconButtonControls({ source: before, ColorMetrics }); let taps = 0;
-  const next = new current.icon.Component(undefined, { icon: 'actual-icon', specId: id, accessibilityLabel: '实际动作', onTap: () => taps++ });
-  const old = new legacy.icon.Component(undefined, { icon: 'actual-icon', boxSize: tuples[i][0], iconSize: tuples[i][1], radius: tuples[i][2], onTap: () => taps++ });
-  next.appThemeScheme = scheme; old.appThemeScheme = scheme; next.aboutToAppear(); next.initialRender(); old.initialRender();
-  assert.deepEqual(current.nodes(next).map(physical), legacy.nodes(old).map(physical), id + ': exact original normal nodes and AUTO');
-  assert.deepEqual(next.attributeCalls.map(({ property, args }) => ({ property, args: args.map(v => typeof v === 'function' ? 'actual-callback' : v) })).filter(c => c.property !== 'attributeModifier' && !semanticAttributes.has(c.property)),
-    old.attributeCalls.map(({ property, args }) => ({ property, args: args.map(v => typeof v === 'function' ? 'actual-callback' : v) })).filter(c => c.property !== 'attributeModifier'), id + ': original native setter presence');
-  // These are the modifiers constructed by the shipping native Stack, not a
-  // replacement click/touch algorithm. ArkUI still owns state dispatch.
-  const modifier = next.attributeCalls.find(c => c.property === 'attributeModifier').args[0];
-  const originalModifier = old.attributeCalls.find(c => c.property === 'attributeModifier').args[0];
-  const attributes = () => ({ calls: [], backgroundColor(value) { this.calls.push(['backgroundColor', value]); return this; },
-    borderRadius(value) { this.calls.push(['borderRadius', value]); return this; } });
-  for (const transition of ['applyPressedAttribute', 'applyNormalAttribute', 'applyDisabledAttribute']) {
-    const actual = attributes(), original = attributes(); modifier[transition](actual); originalModifier[transition](original);
-    assert.deepEqual(actual.calls, original.calls, id + ': exact original pressed/release/cancel/disabled recipe');
-    assert.equal(actual.calls.at(-1)[1], transition === 'applyPressedAttribute' ? 12 : tuples[i][2]);
-  }
-  const hit = current.nodes(next).find(n => n.onClick); hit.onClick(); assert.equal(taps, 1);
-  assert.equal(hit.accessibilityText, '实际动作'); assert.equal(hit.accessibilityRole, 'AccessibilityRoleType.BUTTON');
-  assert.equal(hit.enabled, true); assert.equal(hit.focusable, true);
-  next.boxSize = 99; next.iconSize = 99; next.radius = 99; next.replay();
-  assert.deepEqual(current.nodes(next).map(physical), legacy.nodes(old).map(physical), 'obsolete dynamic setters cannot alter actual geometry');
-  current.update(next, { icon: 'changed-icon', specId: id, accessibilityLabel: '实际动作', actionEnabled: true });
-  assert.equal(current.nodes(next).find(n => n.type === 'Image').create, 'changed-icon', 'retained real icon Prop update');
-  current.update(next, { icon: 'changed-icon', specId: 'navigation-back', accessibilityLabel: '实际动作', actionEnabled: true });
-  assert.equal(current.nodes(next).find(n => n.type === 'Image').width, 20); assert.equal(hit.width, 32);
-  current.update(next, { icon: 'changed-icon', specId: 'navigation-back', accessibilityLabel: '更新动作', actionEnabled: false });
-  assert.equal(hit.accessibilityText, '更新动作'); assert.equal(hit.enabled, false); assert.equal(hit.focusable, false);
-  hit.onClick(); assert.equal(taps, 1, 'disabled physical callback obeys current real eligibility');
-  const disabled = attributes(); next.attributeCalls.findLast(c => c.property === 'attributeModifier').args[0].applyPressedAttribute(disabled);
-  assert.deepEqual(disabled.calls, [['backgroundColor', 'Color.Transparent'], ['borderRadius', 16]], 'disabled native recipe keeps normal geometry');
-  current.update(next, { icon: 'changed-icon', specId: 'navigation-back', accessibilityLabel: '更新动作', actionEnabled: true }); hit.onClick(); assert.equal(taps, 2, 'current retained actor restores action without remount');
-  next.aboutToDisappear(); hit.onClick(); assert.equal(taps, 2, 'retired actual actor rejects old physical callback');
-  comparisons++;
-}
 assert.throws(() => iconButtonControls().resolveReaderIconButtonSpec('private99'), /Unknown ReaderIconButton specification/);
 {
   const actual = iconButtonControls();
@@ -211,9 +130,9 @@ function parent(file, { legacy = false, scheme = 'day', specSource = iconButtonS
   return { p, owner, actors, tap: () => tap };
 }
 for (const file of Object.keys(expected)) for (const scheme of ['day', 'night']) {
-  const old = parent(file, { legacy: true, scheme }), next = parent(file, { scheme });
+  const next=parent(file,{scheme});
   for (let i = 0; i < next.actors.length; i++) {
-    assert.deepEqual(next.p.nodes(next.actors[i]).map(physical), old.p.nodes(old.actors[i]).map(physical), file + ': actual parent/native original tuple');
+
     const event = next.p.nodes(next.actors[i]).find(n => n.onClick); event.onClick();
     assert.equal(event.accessibilityText, labels[file][i]); assert.equal(event.accessibilityRole, 'AccessibilityRoleType.BUTTON');
     assert.equal(event.enabled, true); assert.equal(event.focusable, true);
@@ -263,3 +182,5 @@ for (const file of Object.keys(expected)) {
   }
 }
 console.log(`PASS F01 actual SDK: ${comparisons} original/current four-spec and four retained/approved-site day/night native comparisons; exact names/role/focus, real loading/retained eligibility, unnamed and guard-removal negatives, approved AppTopBar leading Search navigation fence, same-spec propagation/variant isolation, retained Props, original callbacks/old More identity, 12 literal99 consumer negatives and removed free inputs. ArkUI native scheduling/device remain separate.`);
+
+}

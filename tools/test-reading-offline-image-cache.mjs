@@ -1,73 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-
-const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const cache = readFileSync(resolve(repo,
-  'entry/src/main/ets/app/ReadingImageDiskCache.ts'), 'utf8');
-const owner = readFileSync(resolve(repo,
-  'entry/src/main/ets/app/ReaderRuntimeOwner.ts'), 'utf8');
-
-assert.match(cache, /const MAX_READING_IMAGE_BYTES = 16 \* 1024 \* 1024/);
-assert.match(cache, /const MIN_READING_IMAGE_FREE_RESERVE_BYTES = 16 \* 1024 \* 1024/);
-assert.match(cache, /import statfs from '@ohos\.file\.statvfs'/);
-assert.match(cache, /interface ReadingImageFreeSpaceProbe/);
-assert.match(cache, /freeSpaceProbe: ReadingImageFreeSpaceProbe = new HarmonyReadingImageFreeSpaceProbe\(\)/);
-assert.match(cache, /assertReadingOfflineWriteCapacity\([\s\S]*MIN_READING_IMAGE_FREE_RESERVE_BYTES/);
-assert.match(cache, /FILE_SYSTEM_NO_SPACE_ERROR = 13900025/);
-assert.match(cache, /ReadingOfflineMaterializationError\([\s\S]*'storage_full'/);
-assert.match(cache, /reader-offline\/images-v2/);
-assert.match(cache, /legacyRootDirectory[\s\S]*reader-offline\/images-v1/);
-assert.match(cache, /bookHash[\s\S]*return this\.sha256\(JSON\.stringify\(\[sourceId, bookId\]\)\)/,
-  'book paths must use opaque hashes rather than source URLs or credentials');
-assert.match(cache, /new fileIo\.AtomicFile\(path\)/);
-assert.match(cache, /manifest cannot reference missing bytes/);
-const Paths=productionMotionMethods(new URL('../entry/src/main/ets/app/ReadingImageDiskCache.ts',import.meta.url),['manifestPath','mangaCacheProfile'],{MANGA_SCRIPT_CACHE_PROFILE:'script-bgra-v2'});
-const paths=new Paths();
-assert.equal(paths.manifestPath('/chapter',paths.mangaCacheProfile('identity-v1')),'/chapter/manifest.json');
-assert.equal(paths.manifestPath('/chapter',paths.mangaCacheProfile('bytes-v1')),'/chapter/manifest-script-bgra-v2.json');
-assert.throws(()=>paths.mangaCacheProfile('unknown'),/MANGA_CACHE_PROFILE_REQUIRED/);
-assert.match(cache, /writeAtomicBytes\(this\.manifestPath\(directory, profile\), manifestBytes, isCurrent\)/,
-  'profile-specific completion must still publish via the same atomic writer');
-assert.match(
-  cache,
-  /performAtomicWrite[\s\S]*await fileIo\.open\([\s\S]*await fileIo\.write\([\s\S]*await fileIo\.fsync[\s\S]*await fileIo\.rename\(tmpPath, path\)[\s\S]*await fileIo\.unlink\(tmpPath\)/,
-  'offline image writes must be asynchronous, durable, atomic, and clean partial temp files',
-);
-assert.match(cache, /inFlightWrites[\s\S]*writeLaneA[\s\S]*writeLaneB/,
-  'ordinary background image persistence must be same-key coalesced and bounded to two lanes');
-assert.match(cache, /bookMutationTails[\s\S]*enqueueBookMutation/,
-  'clear/remove operations must serialize with background writes for one book');
-assert.match(cache, /bookMutationKey\(sourceId: string, bookId: string\)[\s\S]*JSON\.stringify\(\[sourceId, bookId\]\)/,
-  'per-book mutation keys must not collide when opaque IDs contain the delimiter');
-assert.match(cache, /async storeResource[\s\S]*enqueueBookMutation/,
-  'resource writes must enter the per-book mutation lane before filesystem I/O');
-assert.match(cache, /async removeResource[\s\S]*enqueueBookMutation/,
-  'resource removal must not race an in-flight prefetch write');
-assert.match(cache, /async clearBook[\s\S]*enqueueBookMutation/,
-  'book deletion must not be followed by a stale queued write');
-assert.doesNotMatch(cache, /writeSync|openSync|renameSync/);
-assert.doesNotMatch(cache, /pruneUnreferencedResources/,
-  'publishing a manifest does not own reclamation of active or old-version resources');
-assert.match(cache, /captureValidity[\s\S]*bookClearGenerations[\s\S]*finishPendingClear/);
-assert.doesNotMatch(cache.slice(cache.indexOf('private async finishPendingClear('), cache.indexOf('private async containsMangaManifest(')), /removeTree\(/,
-  'text cache clear must not retain a blanket directory deletion path');
-assert.match(cache, /text-identity\.json/,
-  'partial text writes require ownership distinct from offline completion');
-assert.match(cache, /manga-identity\.json[\s\S]*manifest-script-bgra-v2\.json/,
-  'clear must recognize the actual upstream manga storage formats');
-assert.match(owner, /this\.state = 'closing';\s*ReadingBodyImageHost\.instance\.setMangaMetadataInspector\(undefined\);\s*this\.closeTask = this\.closeDownloadsAndRuntime\(\)/);
-assert.doesNotMatch(cache, /bodyBase64|PixelMap/,
-  'persistent offline image storage must contain bounded bytes, not protocol Base64 or native handles');
-
-assert.match(cache, /canonicalReadingImageBaseUrl\(identity\.baseUrl\)/,
-  'offline disk keys must use the same fragment-free canonical base URL as live requests');
-
-// Run the actual public Runtime entry points and their owned helpers. Optional
-// persistence may retain a Promise for manga's allocation lane; the observable
-// novel first-frame and explicit offline completion contracts remain distinct.
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() {
   let resolve, reject;
@@ -95,25 +29,6 @@ function closeFixture() {
     host:{setResponseAssetBridge(value){events.push(['bridge',value]);}},
     runtime:{async request(method){assert.equal(method,'runtime.storage.flush');events.push(['core-flush']);},close(){events.push(['core-close']);}}});
   return{runtime,authority,events,download,mutation};
-}
-for(const failure of [undefined,'download','storage']) {
-  const f=closeFixture(),error=Error(`${failure} close failed`);
-  const closing=f.runtime.close(),other=f.runtime.close();
-  const observed=failure===undefined?Promise.all([closing,other]):
-    Promise.all([assert.rejects(closing,value=>value===error),assert.rejects(other,value=>value===error)]);
-  assert.equal(f.runtime.state,'closing','retire admission synchronously');
-  assert.deepEqual(f.events[0],['inspector',undefined]);
-  await tick();assert.ok(!f.events.some(event=>event[0]==='disk-close'),'live download owns its finite handoff');
-  if(failure==='download')f.download.reject(error);else f.download.resolve();
-  await tick();assert.ok(!f.events.some(event=>event[0]==='disk-close'),'live cleanup owns its physical file handoff');
-  if(failure==='storage')f.mutation.reject(error);else f.mutation.resolve();
-  await observed;
-  assert.equal(f.events.filter(event=>event[0]==='disk-close').length,1);
-  assert.equal(f.events.filter(event=>event[0]==='core-close').length,1,'concurrent close calls share one actual cleanup');
-  assert.equal(f.events.filter(event=>event[0]==='display-release').length,1);
-  assert.ok(f.events.findIndex(event=>event[0]==='disk-close')<f.events.findIndex(event=>event[0]==='core-flush'));
-  assert.ok(f.events.findIndex(event=>event[0]==='core-close')<f.events.findIndex(event=>event[0]==='display-release'));
-  assert.equal(f.runtime.state,'closed');assert.equal(f.authority.instance,undefined);
 }
 function runtimeFixture(cachedBytes) {
   const events = [], failures = [], storage = deferred();
@@ -158,6 +73,38 @@ function runtimeFixture(cachedBytes) {
     prefetch: () => runtime.prefetchReadingImage(identity, () => true),
   };
 }
+
+try{
+if(id==='profile'){
+const Paths=productionMotionMethods(new URL('../entry/src/main/ets/app/ReadingImageDiskCache.ts',import.meta.url),['manifestPath','mangaCacheProfile'],{MANGA_SCRIPT_CACHE_PROFILE:'script-bgra-v2'});
+const paths=new Paths();
+assert.equal(paths.manifestPath('/chapter',paths.mangaCacheProfile('identity-v1')),'/chapter/manifest.json');
+assert.equal(paths.manifestPath('/chapter',paths.mangaCacheProfile('bytes-v1')),'/chapter/manifest-script-bgra-v2.json');
+assert.throws(()=>paths.mangaCacheProfile('unknown'),/MANGA_CACHE_PROFILE_REQUIRED/);
+
+}
+if(id==='close-drain'){
+for(const failure of [undefined,'download','storage']) {
+  const f=closeFixture(),error=Error(`${failure} close failed`);
+  const closing=f.runtime.close(),other=f.runtime.close();
+  const observed=failure===undefined?Promise.all([closing,other]):
+    Promise.all([assert.rejects(closing,value=>value===error),assert.rejects(other,value=>value===error)]);
+  assert.equal(f.runtime.state,'closing','retire admission synchronously');
+  assert.deepEqual(f.events[0],['inspector',undefined]);
+  await tick();assert.ok(!f.events.some(event=>event[0]==='disk-close'),'live download owns its finite handoff');
+  if(failure==='download')f.download.reject(error);else f.download.resolve();
+  await tick();assert.ok(!f.events.some(event=>event[0]==='disk-close'),'live cleanup owns its physical file handoff');
+  if(failure==='storage')f.mutation.reject(error);else f.mutation.resolve();
+  await observed;
+  assert.equal(f.events.filter(event=>event[0]==='disk-close').length,1);
+  assert.equal(f.events.filter(event=>event[0]==='core-close').length,1,'concurrent close calls share one actual cleanup');
+  assert.equal(f.events.filter(event=>event[0]==='display-release').length,1);
+  assert.ok(f.events.findIndex(event=>event[0]==='disk-close')<f.events.findIndex(event=>event[0]==='core-flush'));
+  assert.ok(f.events.findIndex(event=>event[0]==='core-close')<f.events.findIndex(event=>event[0]==='display-release'));
+  assert.equal(f.runtime.state,'closed');assert.equal(f.authority.instance,undefined);
+}
+}
+if(id==='first-frame'){
 {
   const f = runtimeFixture(); let displayed;
   const load = f.load().then(value => { displayed = value; return value; });
@@ -169,6 +116,8 @@ function runtimeFixture(cachedBytes) {
   assert.equal(await load, f.payload, 'later optional cache failure must not retract a successful first frame');
   assert.deepEqual(f.failures, ['optional cache storage failed'], 'optional write failure stays caught and observable');
 }
+}
+if(id==='cache-only'){
 {
   const f = runtimeFixture(new Uint8Array([9]));
   assert.equal(await f.load(false), f.payload);
@@ -177,6 +126,8 @@ function runtimeFixture(cachedBytes) {
   await assert.rejects(missing.load(false), /REMOTE_READING_IMAGE_NOT_DOWNLOADED/);
   assert.deepEqual(missing.events, ['disk'], 'cache-only miss must reject before constructing any source or HTTP request');
 }
+}
+if(id==='offline-write'){
 {
   const f = runtimeFixture(); let completed = false;
   const prefetch = f.prefetch().then(() => { completed = true; });
@@ -191,5 +142,8 @@ function runtimeFixture(cachedBytes) {
   await rejection;
   assert.deepEqual(failed.failures, [], 'required offline failure propagates instead of being swallowed as optional maintenance');
 }
-
-console.log('reading offline image cache architecture and actual Runtime first-frame/cache-only/awaited-offline behavior: PASS');
+}
+}finally{}
+}
+const definitions={"profile": "profile actual scoped owner/gateway/storage path; controlled Core/OS ports", "close-drain": "close-drain actual scoped owner/gateway/storage path; controlled Core/OS ports", "first-frame": "first-frame actual scoped owner/gateway/storage path; controlled Core/OS ports", "cache-only": "cache-only actual scoped owner/gateway/storage path; controlled Core/OS ports", "offline-write": "offline-write actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

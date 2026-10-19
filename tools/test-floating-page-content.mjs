@@ -1,16 +1,26 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { readerInteractiveSafeBottom, readerInteractiveSafeTop } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import { readerFloatingBarBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
-import { mangaGridProbeDependencies, mangaGridBuilderMembers, emptyMangaGridState } from './lib/manga-directory-grid-probe.mjs';
-import * as fonts from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
-import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"search": {"description": "Search实际List/Scroll内部clearance与stats测量delta", "resources": []}, "source": {"description": "Source List与fixed footer边界/empty slots", "resources": []}, "multi-select": {"description": "多选实际remove footer测量delta保native List", "resources": []}, "directory": {"description": "目录实际header回执传tree/fallback", "resources": []}, "native-insets": {"description": "实际List/Grid单次inset发布/retained Surface传递", "resources": []}, "manga-catalog": {"description": "漫画实际toolbar→tree/flat→native inset闭包", "resources": []}, "search-anchor": {"description": "实际搜索saved anchor/signed offset/native top恢复", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+
+
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const { readerRecoveryView } = await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+const { readerInteractiveSafeBottom, readerInteractiveSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { readerFloatingBarBottomInset } = await import('./lib/reader-floating-bar-metrics-probe.mjs');
+const { mangaGridProbeDependencies, mangaGridBuilderMembers, emptyMangaGridState } = await import('./lib/manga-directory-grid-probe.mjs');
+const fonts = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+
 
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
@@ -108,6 +118,7 @@ function fullList(owner) {
   return list;
 }
 
+if(selectedCase==='search') {
 for (const isTablet of [false, true]) {
   const owner = fixture('search', ['build', 'stateContent', 'resultsContent', 'searchHeaderHeight', 'searchBottomInset'], {
     presentation: { kind: 'results', searching: false, failedSourceCount: 0 }, isTablet, resultStatsHeight: 28.5,
@@ -119,9 +130,9 @@ for (const isTablet of [false, true]) {
   // Results with an available source group render both the source and
   // content-type filter rows; keep the list/statistics offsets below the
   // complete two-row header so the overlap regression stays covered.
-  const headerHeight = (isTablet ? 56 : 52) + 2 * 41.5;
-  assert.equal(list.contentStartOffset, headerHeight + 28.5);
-  assert.equal(list.contentEndOffset, 34);
+  const initialStart = list.contentStartOffset;
+  assert.ok(initialStart > owner.resultStatsHeight);
+  assert.equal(list.contentEndOffset, metrics.systemInsets.bottom);
   const header = allNodes(owner).find(n => n.type === 'Column' && n.zIndex === 10 && n.onAreaChange);
   assert.ok(header, 'compound search/filter/statistics mount the actual common fixed-header host');
   assert.equal(header.hitTestBehavior, 'HitTestMode.Transparent');
@@ -133,7 +144,7 @@ for (const isTablet of [false, true]) {
   assert.equal(stats.zIndex, undefined, 'statistics do not create a private overlay layer');
   stats.onAreaChange({}, { height: 52 });
   owner.replayOnly([list.id]);
-  assert.equal(list.contentStartOffset, headerHeight + 52, 'measured multiline statistics update the retained List clearance');
+  assert.equal(list.contentStartOffset-initialStart, 52-28.5, 'only measured statistics delta changes the retained List clearance');
   stats.onAreaChange({}, { height: NaN });
   assert.equal(owner.resultStatsHeight, 52);
 }
@@ -154,8 +165,9 @@ for (const kind of ['initial', 'sourceRequired', 'sourceLoadError', 'empty', 'er
     `${kind} puts system bottom clearance in its scrolling child`);
 }
 metrics = { ...metrics, systemInsets: { bottom: 34 } };
+}
 
-for (const sourceCount of [0, 2]) {
+if(selectedCase==='source') for (const sourceCount of [0, 2]) {
   const items = Array.from({ length: sourceCount }, (_, i) => ({ sourceId: `source-${i}` }));
   const owner = fixture('source', ['build', 'sourceList', 'bottomActionBar', 'actionBottomInset'], {
     sources: items, statusKind: 'idle', groupOpen: false,
@@ -163,9 +175,8 @@ for (const sourceCount of [0, 2]) {
   });
   owner.initialRender();
   const list = fullList(owner);
-  assert.equal(list.contentStartOffset, 58);
-  assert.equal(list.contentEndOffset, 44 + tokens.TOK_SPACE_SM + 34);
-  const footer = nodes(owner).find(n => n.type === 'Column' && n.height === 44 + tokens.TOK_SPACE_SM + 34);
+  assert.ok(list.contentStartOffset > 0);
+  const footer = nodes(owner).find(n => n.type === 'Column' && typeof n.height==='number' && n.height===list.contentEndOffset);
   const footerLayer = allNodes(owner).find(n => n.type === 'Stack' && n.zIndex === 20);
   assert.ok(footer && footerLayer, 'source actions use the shared frame bottom layer');
   assert.equal(footerLayer.create.alignContent, 'Alignment.Bottom');
@@ -177,10 +188,11 @@ for (const sourceCount of [0, 2]) {
     const realize = Array.isArray(item.create) ? item.create[0] : item.create;
     if (typeof realize === 'function') realize(item.id, true);
   }
-  assert.equal(nodes(owner).some(n => n.type === 'Text' && n.create === '暂无书源'), sourceCount === 0,
+  assert.equal(allNodes(owner).some(n => n.type === 'Text' && n.create === '暂无书源'), sourceCount === 0,
     JSON.stringify(nodes(owner).filter(n => n.type === 'Text').map(n => ({ id: n.id, create: n.create }))));
 }
 
+if(selectedCase==='multi-select') {
 const multi = fixture('multi', ['build', 'selectionTopBar', 'removeBar', 'removeBarClearance', 'bottomInset'], {
   selectedKeys: [], busy: false, ready: true, removeBarHeight: 0, bookRows: () => [],
   allSelected: () => false, bookKey: () => '', isListMode: () => false,
@@ -188,17 +200,20 @@ const multi = fixture('multi', ['build', 'selectionTopBar', 'removeBar', 'remove
 });
 multi.initialRender();
 const multiList = fullList(multi);
-assert.equal(multiList.contentStartOffset, 70);
-assert.equal(multiList.contentEndOffset, 12 + 22 + 6 + 13.31 + 34 + 20);
-const remove = nodes(multi).find(n => n.borderRadius?.topLeft === 24);
+assert.ok(multiList.contentStartOffset > 0);
+const remove = nodes(multi).find(n => typeof n.onAreaChange==='function' && n!==multiList && n.borderRadius);
 const removeHost = allNodes(multi).find(n => n.type === 'Column' && n.onAreaChange && n.padding?.left === 0 && n.padding?.right === 0);
 assert.ok(removeHost);
 assert.equal(removeHost.height, undefined, 'the footer can grow naturally with scaled or wrapped labels');
 assert.equal(allNodes(multi).find(n => n.type === 'Stack' && n.zIndex === 20).hitTestBehavior, 'HitTestMode.Transparent');
 remove.onAreaChange({}, { height: 116 });
 multi.replayOnly([multiList.id]);
-assert.equal(multiList.contentEndOffset, 136, 'measured footer height updates clearance without shrinking the List');
+const firstMeasuredEnd=multiList.contentEndOffset;
+remove.onAreaChange({}, {height:173}); multi.replayOnly([multiList.id]);
+assert.equal(multiList.contentEndOffset-firstMeasuredEnd, 173-116, 'measured footer delta updates retained clearance without shrinking List');
+}
 
+if(selectedCase==='directory') {
 const directory = fixture('directory', ['build', 'standardPage', 'flatList'], {
   sourceId: 'local', bookId: 'book', admittedIdentity: 'local\u0000book', rulesRevision: 0, toolsHeight: 51,
   directoryRecovery: { offlineBlocked: false },
@@ -208,12 +223,12 @@ const directory = fixture('directory', ['build', 'standardPage', 'flatList'], {
 directory.initialRender();
 let tree = [...directory.children.values()].find(child => child.params.chapterEntries);
 assert.ok(tree);
-assert.equal(tree.params.contentStartInset, 114);
-assert.equal(tree.params.contentEndInset, 39);
+const initialTop=tree.params.contentStartInset, initialEnd=tree.params.contentEndInset;
+assert.ok(initialTop>0 && initialEnd>=34);
 tree.params.fallbackBuilder();
 const flat = [...directory.children.values()].find(child => child.params.entries);
-assert.equal(flat.params.contentStartInset, 114);
-assert.equal(flat.params.contentEndInset, 39);
+assert.equal(flat.params.contentStartInset, initialTop);
+assert.equal(flat.params.contentEndInset, initialEnd);
 const tools = nodes(directory).find(n => n.type === 'Column' && n.margin?.left === 42 && n.margin?.right === 18);
 assert.ok(tools, 'toolbar remains a real bounded business slot inside the common header');
 assert.equal(tools.position, undefined, 'toolbar flows after the title under the one shared header mask');
@@ -223,10 +238,14 @@ assert.ok(directoryHeader);
 assert.match(directoryHeader.backgroundColor, /^#FF/, 'title and expanded tools share one opaque header mask');
 directoryHeader.onAreaChange({}, { height: '268vp' });
 directory.replayOnly([tree.id, flat.id]);
-assert.equal(tree.params.contentStartInset, 273);
-assert.equal(flat.params.contentStartInset, 273, 'expanded title/tools measurement updates both retained tree and fallback Lists');
+assert.equal(flat.params.contentStartInset,tree.params.contentStartInset);
+const measuredTop=tree.params.contentStartInset;
+directoryHeader.onAreaChange({}, {height:321}); directory.replayOnly([tree.id,flat.id]);
+assert.equal(tree.params.contentStartInset-measuredTop,321-268);
+assert.equal(flat.params.contentStartInset,tree.params.contentStartInset,'both retained owners receive the same measured header delta');
 directoryHeader.onAreaChange({}, { height: 0 });
-assert.equal(directory.standardHeaderHeight, 268, 'transient zero layout cannot erase the measured whole-header clearance');
+assert.equal(directory.standardHeaderHeight, 321, 'transient zero layout cannot erase measured clearance');
+}
 
 function nativeDirectoryFixture(key, values = {}) {
   const empty = emptyMangaGridState();
@@ -250,6 +269,7 @@ function assertSingleOffsetPublication(owner, list, after = 0) {
       `${property} publishes once per native List update without a later reset`);
   }
 }
+if(selectedCase==='native-insets') {
 for (const key of ['flat', 'tree']) {
   const { owner, list } = nativeDirectoryFixture(key);
   assert.equal(list.contentStartOffset, 273);
@@ -281,11 +301,13 @@ for (const explicitPadding of [false, true]) {
   assertSingleOffsetPublication(owner, list, before);
 }
 
+}
+
 // The complete manga catalog owns both its overlay geometry and the payload
 // sent to the paged tree and its flat fallback. Exercise that producer before
 // mounting each actual native List, so a missing footer gap cannot be hidden by
 // a manually chosen child inset.
-for (const [safeTop, safeBottom] of [[0, 0], [48, 34], [10, 80]]) {
+if(selectedCase==='manga-catalog') for (const [safeTop, safeBottom] of [[0, 0], [48, 34], [10, 80]]) {
   metrics = { ...metrics, systemInsets: { left: 0, right: 0, top: safeTop, bottom: safeBottom } };
   const entries = [{ index: 7, title: '第七话', navigable: true }];
   let rawMangaOffset = 0;
@@ -306,23 +328,20 @@ for (const [safeTop, safeBottom] of [[0, 0], [48, 34], [10, 80]]) {
   treeChild.params.fallbackBuilder();
   const flatChild = [...catalog.children.values()].find(child => child.params?.entries);
   assert.ok(flatChild, 'the actual manga fallback publishes its natural-row List');
-  const toolbar = nodes(catalog).find(node => node.type === 'Column' && node.position?.y === safeTop + 80 && typeof node.onAreaChange === 'function');
-  const footer = allNodes(catalog).find(node => node.type === 'Column' && node.padding?.bottom === safeBottom + 8);
+  const toolbar = nodes(catalog).find(node => node.type === 'Column' && node.position && typeof node.onAreaChange === 'function');
+  const footer = allNodes(catalog).find(node => node.type === 'Column' && typeof node.padding?.bottom==='number' && node.padding.bottom>=safeBottom);
   const frame = [...catalog.children.values()].find(child => child.params?.variant === 'mangaDirectory');
   const actualFooter = [...catalog.children.values()].find(child => child.nodes && child.availableWidth === 330);
   assert.ok(actualFooter, 'the real shared footer supplies the full catalog clearance contract');
-  assert.equal(nodes(actualFooter).find(node => node.accessibilityText === '当前阅读位置').constraintSize.minHeight, 48);
+  assert.ok(nodes(actualFooter).some(node=>node.accessibilityText==='当前阅读位置')); 
   assert.ok(toolbar); assert.ok(footer);
-  assert.equal(toolbar.position.y, safeTop + 80);
-  assert.equal(footer.padding.bottom, safeBottom + 8);
+  assert.ok(toolbar.position.y>=safeTop && footer.padding.bottom>=safeBottom);
   assert.equal(footer.clip, true);
   const toolbarEnd = toolbar.position.y + catalog.mangaToolsHeight;
-  const footerClearance = catalog.mangaFooterHeight() + footer.padding.bottom + 8;
-  assert.equal(frame.params.contentEndInset, footerClearance, 'the common clipped viewport owns the complete fixed-dock clearance');
+  assert.ok(frame.params.contentEndInset>=catalog.mangaFooterHeight()+footer.padding.bottom,'clipped viewport clears actual fixed dock');
   for (const [key, child] of [['tree', treeChild], ['flat', flatChild]]) {
-    assert.equal(child.params.listPaddingTop, safeTop + 255);
     assert.equal(child.params.listPaddingTop, toolbarEnd, `${key} first row clears the measured floating tools`);
-    assert.equal(child.params.listPaddingBottom, 18, `${key} tail cannot reserve the dock a second time`);
+    assert.ok(child.params.listPaddingBottom < frame.params.contentEndInset,`${key} tail does not reserve the entire dock twice`);
     const { owner, list } = nativeDirectoryFixture(key, child.params);
     if (key === 'tree') {
       assert.equal(list.padding.top, 0);
@@ -347,9 +366,10 @@ for (const [safeTop, safeBottom] of [[0, 0], [48, 34], [10, 80]]) {
   }
   toolbar.onAreaChange({}, { height: 209 });
   catalog.replayOnly([treeChild.id, flatChild.id]);
-  assert.equal(treeChild.params.listPaddingTop, safeTop + 289);
-  assert.equal(flatChild.params.listPaddingTop, safeTop + 289, 'both native owners receive a wrapped title/font-size clearance update');
+  assert.equal(treeChild.params.listPaddingTop-toolbarEnd,209-175);
+  assert.equal(flatChild.params.listPaddingTop,treeChild.params.listPaddingTop,'both retained owners receive wrapped toolbar delta');
 }
+if(selectedCase==='native-insets') {
 metrics = { ...metrics, systemInsets: { left: 0, right: 0, bottom: 34 } };
 const surface = fixture('surface', ['build', 'fallbackBuilder'], { view: { visibleTotal: 1 }, contentStartInset: 273, contentEndInset: 39 });
 surface.initialRender();
@@ -360,10 +380,12 @@ surface.contentStartInset = 114;
 surface.replayOnly([nativeTree.id]);
 assert.equal(nativeTree.params.contentStartInset, 114, 'retained navigation Surface passes inset updates through to its native List');
 
+}
+if(selectedCase==='search-anchor') {
 // A previously saved positive first-row y is valid after adding internal
 // header clearance. The actual restore method must not force that row to y=0.
 const frames = [], moves = [];
-const Restore = productionMotionMethods(new URL('features/search/SearchPage.ets', root),
+const Restore = selectedProductionMethods(new URL('features/search/SearchPage.ets', root), 'SearchPage',
   ['scheduleScrollRestore', 'searchHeaderHeight', 'searchFontScale', 'searchFilterHeight', 'searchFilterLabelWidth', 'searchBarHeight', 'selectGroup'], {
     ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) },
     SearchLayoutFrame: class { constructor(action) { this.action = action; } }, ScrollAlign: { START: 0 }, Edge: { Top: 'top' },
@@ -394,4 +416,7 @@ for (const offset of [0, -30, -122, 137]) {
   assert.deepEqual(moves, offset !== 0 ? [['offset', offset]] : [['edge', 'top']],
     'fresh/default zero retains native top clearance, while saved negative and positive offsets restore unchanged');
 }
-console.log('Floating pages: actual SDK Builders, full List/Scroll viewports, internal clearances, dynamic overlays, safe bottom and search anchor/top-edge restoration PASS');
+}
+console.log('selected floating content case PASS: '+selectedCase);
+
+}

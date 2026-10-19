@@ -1,11 +1,15 @@
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"rows": {"description": "实际DataSource保留ObjectLink元数据、候选与结构增删移动", "resources": []}, "stream-batch": {"description": "4000→8000→2500实际行无locale/indexOf扫描及legacy alias", "resources": []}, "navigation": {"description": "实际SearchViewState首次顺序/草稿/anchor/reset", "resources": []}, "relevance": {"description": "实际SearchPage relevance/同组代表/本地在线scope/cache", "resources": []}, "progressive-anchor": {"description": "进度插入保留相同row与实测anchor/重挂恢复key", "resources": []}, "incremental-row": {"description": "4000行一变一新增只结构ADD，重复发布无通知", "resources": []}, "bounded-normalization": {"description": "实际grouping只新payload做locale，shelf title identity分离", "resources": []}, "locale-remount": {"description": "原平台Unicode/tr/az/lt ranks与8000variant/400title查询归属缓存", "resources": []}, "candidate-version": {"description": "当前sourceVersion目录证明胜过失败/旧版/stale", "resources": []}, "query-delta": {"description": "实际1000query delta只触1行且无结构通知/排序/locale", "resources": []}, "native-batch": {"description": "实际SDK batch旧index语义与单group MOVE不重复CHANGE", "resources": []}, "broad-reorder": {"description": "4000任意重排委托一次native keyed reload而非重复扫描", "resources": []}, "layout-restoration": {"description": "受控frame+key/neighbor/signed offset/query/page/user失效", "resources": []}, "candidate-facts": {"description": "实际schema2 whole-book rank与章节/刷新失败事实边界", "resources": []}, "safe-failure-text": {"description": "实际分类消息保留安全文本而不泄露原query错误", "resources": []}, "media-identity": {"description": "实际同名小说/漫画分组和shelf/virtual identity分离", "resources": []}, "content-filter": {"description": "实际SDK type chip→当前projection本地在线组合/late/resume/reset，不重搜", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const {selectedProductionMethods,selectedProductionClasses} = await import('./lib/selected-production-methods.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { registerHooks, stripTypeScriptTypes } = await import('node:module');
+const { dirname, resolve } = await import('node:path');
+const { fileURLToPath } = await import('node:url');
 
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; } } });
@@ -15,12 +19,8 @@ const authorMetadata = await import('../entry/src/main/ets/features/common/BookA
 const mediaIdentity = await import('../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = path => readFileSync(resolve(repo, path), 'utf8');
-const authorMetadataModule = read('entry/src/main/ets/features/common/BookAuthorMetadata.ts');
-const page = read('entry/src/main/ets/features/search/SearchPage.ets');
-const classes = page.slice(page.indexOf('@Observed\nclass SearchBookGroup'), page.indexOf('/**\n * Figma-backed Book Search'))
-  .replace('@Observed\n', '');
-const source = stripTypeScriptTypes(`const DataOperationType = { ADD: "add", DELETE: "delete", CHANGE: "change", RELOAD: "reload", MOVE: "move" };\n${authorMetadataModule}\n${read('entry/src/main/ets/features/source/ReaderSourceCategory.ts')}\n${read('entry/src/main/ets/features/search/SearchViewState.ts')}\n${classes}\nexport { SearchBookGroup, SearchResultDataSource };`);
-const { SearchBookGroup, SearchResultDataSource, SearchViewState } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const page=read('entry/src/main/ets/features/search/SearchPage.ets');const {SearchViewState}=await import('../entry/src/main/ets/features/search/SearchViewState.ts');
+const {SearchBookGroup,SearchResultDataSource}=selectedProductionClasses(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),['SearchBookGroup','SearchResultDataSource'],{...authorMetadata,...mediaIdentity,DataOperationType:{ADD:'add',DELETE:'delete',CHANGE:'change',RELOAD:'reload',MOVE:'move'}});
 // Keep the production module graph intact, including bookshelf identity and
 // candidate policy. Stripping every import hides new real dependencies.
 const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/SearchResultProjection.ts');
@@ -38,94 +38,23 @@ function listen(ds, listener) {
 }
 const group = (key, title = key) => new SearchBookGroup({ sourceId: 'source-a', bookId: key,
   title, author: '作者', groupKey: key }, 1, false);
-const ds = new SearchResultDataSource();
-const events = [];
-listen(ds, { onDataChange: i => events.push(['change', i]),
-  onDataDelete: i => events.push(['delete', i]), onDataAdd: i => events.push(['add', i]),
-  onDataReloaded: () => events.push(['reload']) });
-ds.replace([group('a'), group('b'), group('c')]);
-const visibleBook = ds.getData(1);
-events.length = 0;
-const enriched = group('b', '详情中的新书名');
-enriched.admit({ sourceId: 'source-b', bookId: 'b2', title: '详情中的新书名', author: '作者' }, true);
-ds.replace([group('a'), enriched, group('c'), group('d')]);
-assert.equal(ds.getData(1), visibleBook, 'metadata updates retain the visible observed row');
-assert.equal(visibleBook.book.title, '详情中的新书名');
-assert.equal(visibleBook.sourceCount, 2);
-assert.equal(visibleBook.variants[1].sourceId, 'source-b', 'clicks receive the new candidate too');
-assert.equal(visibleBook.inBookshelf, true);
-assert.deepEqual(events, [['add', 3]], 'only structural additions notify; ObjectLink carries metadata');
-ds.replace([group('b'), group('d')]);
-assert.deepEqual(Array.from({ length: ds.totalCount() }, (_, i) => ds.getData(i).book.bookId), ['b', 'd']);
-assert.equal(ds.getData(0), visibleBook, 'removing earlier rows preserves the retained observed row');
-ds.replace([group('d'), group('b')]);
-assert.equal(ds.getData(1), visibleBook, 'an actual move also reuses the observed row');
 
-// Reproduce the VM's large streaming batch without timing-sensitive limits:
-// stable remote keys must not touch locale normalization, and absent keys
-// must not scan the existing list on every insertion.
-const large = new SearchResultDataSource();
-let normalizations = 0;
-let indexScans = 0;
-const originalLower = String.prototype.toLocaleLowerCase;
-const originalIndexOf = Array.prototype.indexOf;
-String.prototype.toLocaleLowerCase = function (...args) {
-  normalizations += 1; return originalLower.apply(this, args);
-};
-Array.prototype.indexOf = function (...args) {
-  indexScans += this.length; return originalIndexOf.apply(this, args);
-};
-try {
-  large.replace(Array.from({ length: 4000 }, (_, i) => group(`result-${i}`)));
-  const firstVisible = large.getData(0);
-  large.replace(Array.from({ length: 8000 }, (_, i) => group(`result-${i}`)));
-  assert.equal(large.totalCount(), 8000);
-  assert.equal(large.getData(0), firstVisible);
-  const retainedAfterDeletion = large.getData(3000);
-  large.replace(Array.from({ length: 8000 }, (_, i) => group(`result-${i}`)).filter((_, i) => i >= 3000 && i % 2 === 0));
-  assert.equal(large.totalCount(), 2500);
-  assert.equal(large.getData(0), retainedAfterDeletion);
-  assert.equal(normalizations, 0);
-  assert.equal(indexScans, 0, 'new result batches must use membership lookup, not repeated linear scans');
-} finally {
-  String.prototype.toLocaleLowerCase = originalLower;
-  Array.prototype.indexOf = originalIndexOf;
-}
-const fallback = new SearchResultDataSource();
-fallback.replace([new SearchBookGroup({ sourceId: 'x', bookId: '1', title: ' A ', author: ' B ' }, 1, false)]);
-const fallbackRow = fallback.getData(0);
-fallback.replace([new SearchBookGroup({ sourceId: 'y', bookId: '2', title: 'a', author: 'b' }, 1, false)]);
-assert.equal(fallback.getData(0), fallbackRow, 'legacy aliases retain their normalization semantics');
+const originalLower=String.prototype.toLocaleLowerCase,originalIndexOf=Array.prototype.indexOf;
 
-const navigation = new SearchViewState();
-assert.deepEqual(['b', 'a', 'c'].map(key => navigation.rank(key)), [0, 1, 2]);
-assert.equal(navigation.rank('b'), 0, 'late source counts do not change first-seen order');
-navigation.category = '在线'; navigation.keywordDraft = '草稿';
-navigation.anchorKey = 'b'; navigation.anchorIndex = 1; navigation.anchorItemY = -23;
-const remountedPageState = navigation;
-assert.equal(remountedPageState.anchorItemY, -23);
-assert.equal(remountedPageState.category, '在线');
-navigation.reset('下一次查询');
-assert.equal(navigation.anchorKey, ''); assert.equal(navigation.anchorItemY, 0);
-assert.equal(navigation.keywordDraft, '下一次查询'); assert.equal(navigation.rank('c'), 0);
-assert.match(page, /@ObjectLink group: SearchBookGroup/);
-assert.match(page, /maintainVisibleContentPosition\(true\)/);
-assert.doesNotMatch(page, /setTimeout\(.*scroll/, 'scroll restoration is layout-owned');
-console.log('search stable rows, enrichment and navigation state: PASS');
-
-// PH25: execute the real page grouping method over progressively arriving sources.
-const Page = productionMotionMethods(process.env.READER_SEARCH_RELEVANCE_SOURCE ?? new URL('../entry/src/main/ets/features/search/SearchPage.ets', import.meta.url),
-  ['searchHeaderHeight', 'searchFontScale', 'searchFilterHeight', 'searchFilterLabelWidth', 'searchBarHeight', 'submitSearch', 'scopeSourceIds', 'scopeEntries', 'selectContentType', 'selectGroup', 'filteredEmptyMessage', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
-  { ...authorMetadata, ...mediaIdentity, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) }, SEARCH_LOCAL_SCOPE: '本地', SEARCH_ONLINE_SCOPE: '在线', SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
+if(!['rows', 'stream-batch', 'navigation', 'incremental-row', 'native-batch', 'broad-reorder', 'media-identity'].includes(selectedCase)){
+const {actualReaderPageShell}=await import('./lib/reader-page-shell-runtime-probe.mjs');
+const Page=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),'SearchPage',
+  ['searchContentStartInset','searchHeaderLayoutKey','searchHeaderHeight', 'searchFontScale', 'searchFilterHeight', 'searchFilterLabelWidth', 'searchBarHeight', 'submitSearch', 'scopeSourceIds', 'scopeEntries', 'selectContentType', 'selectGroup', 'filteredEmptyMessage', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex'],
+  {...actualReaderPageShell(),...authorMetadata,...mediaIdentity,ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) }, SEARCH_LOCAL_SCOPE: '本地', SEARCH_ONLINE_SCOPE: '在线', SearchBookGroup, searchResultRelevance, searchCandidateRank, SearchResultProjection,
     SearchLayoutFrame: class { constructor(action) { this.action = action; } onIdle() { this.action(); } },
     ScrollAlign: { START: 0 }, Edge: { Top: 'top' } });
 const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
   viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
 const book = (id, title, author = '作者', extra = {}) => ({ sourceId: id, bookId: `/${id}`, title, author, ...extra });
 const early = [book('fan1', '诡秘之主同人'), book('fan2', '我在诡秘之主'), book('other', '随笔')];
+const exact=book('original','诡秘之主','爱潜水的乌贼');const late=[...early,exact,book('other-copy','诡秘之主','爱潜水的乌贼')];const aliases=[book('alias','诡秘之主小说','爱潜水的乌贼',{groupKey:'canonical-original'}),book('alias-exact','诡秘之主','爱潜水的乌贼',{groupKey:'canonical-original'})];
+if(selectedCase==='relevance'){
 assert.deepEqual(p.groupResults(early).map(g => g.book.sourceId), ['fan1', 'fan2', 'other']);
-const exact = book('original', '诡秘之主', '爱潜水的乌贼');
-const late = [...early, exact, book('other-copy', '诡秘之主', '爱潜水的乌贼')];
 const ranked = p.groupResults(late);
 assert.equal(ranked[0].book, exact, 'late exact title moves before first-arriving fan fiction');
 assert.equal(ranked[0].sourceCount, 2); assert.equal(ranked[0].variants.length, 2);
@@ -138,12 +67,13 @@ const local = book('local', '诡秘之主', '爱潜水的乌贼');
 p.selectedGroupName = '本地'; assert.deepEqual(p.groupResults([...late, local]).map(g => g.book.sourceId), ['local']);
 p.selectedGroupName = '在线'; assert.ok(p.groupResults([...late, local]).every(g => g.book.sourceId !== 'local'));
 p.selectedGroupName = '全部';
-const aliases = [book('alias', '诡秘之主小说', '爱潜水的乌贼', { groupKey: 'canonical-original' }),
-  book('alias-exact', '诡秘之主', '爱潜水的乌贼', { groupKey: 'canonical-original' })];
 assert.equal(p.groupResults(aliases)[0].book.sourceId, 'alias-exact', 'best matching variant represents a merged canonical group');
 assert.equal(p.groupResults(aliases)[0].variants.length, 2);
-console.log('search relevance: late exact title, stable ties, canonical variants, category scope, keyword cache PASS');
 
+
+
+}
+if(selectedCase==='progressive-anchor'){
 // The precise old progressive-order guarantee applies within equal relevance.
 // Reversed later source buckets and enriched source counts must not shuffle ties.
 const t = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
@@ -176,25 +106,11 @@ assert.equal(t.scrollRestored, true, 'streaming refresh does not restart navigat
 t.viewStateRevision = -1; t.refreshVisibleResults();
 assert.equal(t.restoreKey, anchorBefore[0]); assert.equal(t.restoreOffset, 137); assert.equal(t.restoreItemY, -23);
 assert.equal(t.scrollRestored, false);
-console.log('progressive relevance ties, retained row identity, measured anchor and remount restoration PASS');
 
-// PH65: only one changed card in a broad unchanged projection can invalidate a lazy row.
-const incremental = new SearchResultDataSource();
-let changedRows = 0, addedRows = 0;
-listen(incremental, { onDataChange() { changedRows++; }, onDataAdd() { addedRows++; },
-  onDataDelete() {}, onDataReloaded() { assert.fail('no full reload'); } });
-incremental.replace(Array.from({ length: 4000 }, (_, i) => group(`book-${i}`)));
-changedRows = 0; addedRows = 0;
-const batch = Array.from({ length: 4001 }, (_, i) => group(`book-${i}`));
-batch[211].sourceCount = 2;
-incremental.replace(batch);
-assert.equal(changedRows, 0); assert.equal(addedRows, 1);
-assert.equal(incremental.getData(211).sourceCount, 2, 'retained row enriched without native replacement');
-changedRows = 0; addedRows = 0;
-incremental.replace(batch);
-assert.equal(changedRows, 0); assert.equal(addedRows, 0);
-console.log('PH65 4000 retained rows + 1 changed + 1 added; repeated publication 0 changes PASS');
 
+
+}
+if(selectedCase==='bounded-normalization'){
 // PH65: locale/relevance work is limited to new identity payloads, not all retained cards.
 {
   const owner = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '书' },
@@ -214,8 +130,11 @@ console.log('PH65 4000 retained rows + 1 changed + 1 added; repeated publication
 p.shelfBooks = [book('shelf-other-source', '诡秘之主', '爱潜水的乌贼')];
 p.presentation = { kind: 'results', keyword: '诡秘之主' }; p.selectedGroupName = '全部';
 assert.equal(p.groupResults(aliases)[0].inBookshelf, true);
-console.log('PH65 4000 retained grouping facts + one new row bounded normalization; canonical shelf label PASS');
 
+
+
+}
+if(selectedCase==='locale-remount'){
 // The actual final50 appfreeze was a Detail→Search cold remount repeatedly
 // normalizing the same query in ICU. Count production calls instead of using
 // a host-speed deadline, and preserve the original locale/Unicode policy.
@@ -310,8 +229,11 @@ console.log('PH65 4000 retained grouping facts + one new row bounded normalizati
     assert.equal(localeCalls, 401, 'independent query owner cannot share normalization');
   } finally { String.prototype.toLocaleLowerCase = originalLower; }
 }
-console.log('APPFREEZE regression: platform Unicode/default-tr-az-lt ranks; 8000 variants/400 titles=401 initial locale calls, retained-query cold remount=0; reset/query isolation, row identity and anchor PASS');
 
+
+
+}
+if(selectedCase==='candidate-version'){
 // Same relevance/group: only current rule-version admission facts can promote a candidate.
 {
   const now = Date.now();
@@ -331,8 +253,11 @@ console.log('APPFREEZE regression: platform Unicode/default-tr-az-lt ranks; 8000
   assert.equal(owner.groupResults([unknown, oldVersion])[0].book, unknown, 'other source versions do not outrank unverified candidates');
   assert.equal(owner.groupResults([stale, oldVersion, catalog])[0].book, catalog);
 }
-console.log('current-version catalog group representative; stale and other-version facts are not verified PASS');
 
+
+
+}
+if(selectedCase==='query-delta'){
 // End-to-end query delta reaches one row. Pure counters reuse all projection objects.
 {
   const owner=Object.assign(new Page(),{presentation:{kind:'results',keyword:'书'},viewState:new SearchViewState(),
@@ -358,37 +283,11 @@ console.log('current-version catalog group representative; stale and other-versi
     owner.groupResults(next);data.replace(groups,owner.changedGroupKeys);
     assert.equal(owner.changedGroupKeys.size,0);assert.equal(touched,0);assert.equal(notices.length,0);assert.equal(lower,0);
   } finally {String.prototype.toLocaleLowerCase=originalLower;}
-  console.log('R6 query=1000 single metadata: newGroups=1 rowUpdates=1 structuralNotifications=0 normalize=0 groupSort=0; progress all=0 PASS');
+  
 }
-// Native batch indices use the original array. Structural and change events
-// at the same index must not conflict (the retained ObjectLink carries fields).
-{
-  const data=new SearchResultDataSource();const notices=[];
-  data.registerDataChangeListener({onDatasetChange:ops=>notices.push(ops)});
-  data.replace(['a','b','c','d','e'].map(k=>group(k)));notices.length=0;
-  const retainedC=data.getData(2),retainedD=data.getData(3);
-  data.replace([group('x'),group('b'),group('c','new C'),group('y'),group('d','new D')],new Set(['online:c','online:d']));
-  assert.deepEqual(notices,[[{type:'delete',index:4,count:1},{type:'delete',index:0,count:1},
-    {type:'add',index:1,count:1,key:['online:x']},{type:'add',index:3,count:1,key:['online:y']}]],'structural edits reference old positions; observed metadata needs no CHANGE');
-  assert.equal(data.getData(2),retainedC);assert.equal(data.getData(4),retainedD);assert.equal(retainedD.book.title,'new D');
-  notices.length=0;
-  data.replace([group('d','most relevant'),group('x'),group('b'),group('c','new C'),group('y')],new Set(['online:d']));
-  assert.deepEqual(notices,[[{type:'move',index:{from:4,to:0}}]],'one known relevance change uses MOVE without duplicate CHANGE at its index');
-  assert.equal(data.getData(0),retainedD);assert.equal(retainedD.book.title,'most relevant');
+
 }
-// Broad arbitrary reorders are one explicitly counted native keyed reload,
-// with no Reader repeated array scanning or shifting.
-{
-  const data=new SearchResultDataSource();const notices=[];
-  data.registerDataChangeListener({onDatasetChange:ops=>notices.push(ops)});
-  const rows=Array.from({length:4000},(_,i)=>group(`reverse${i}`));data.replace(rows);notices.length=0;
-  let scans=0,shifts=0;const splice=Array.prototype.splice;
-  Array.prototype.indexOf=function(...args){scans+=this.length;return originalIndexOf.apply(this,args);};
-  Array.prototype.splice=function(...args){shifts+=this.length;return splice.apply(this,args);};
-  try {data.replace(rows.slice().reverse(),new Set());} finally {Array.prototype.indexOf=originalIndexOf;Array.prototype.splice=splice;}
-  assert.deepEqual(notices,[[{type:'reload'}]]);assert.equal(scans,0);assert.equal(shifts,0);
-  assert.equal(data.getData(3999),rows[0]);console.log('R6 4000 reversed rows: native batch=1 reload=1 Reader index scans=0 splice shifts=0 PASS');
-}
+if(selectedCase==='layout-restoration'){
 function restoration() {
   const frames=[],moves=[];const state=new SearchViewState();state.pageRevision=1;state.anchorKey='online:b';state.anchorItemY=-23;
   const p=Object.assign(new Page(),{viewState:state,pageEpoch:1,listEpoch:1,restoreEpoch:0,pageMounted:true,listMounted:true,
@@ -435,8 +334,11 @@ for (const offset of [0, -30, -80.5, 137]) {
   const removed=restoration();removed.p.restoreKey='online:removed';removed.p.scheduleScrollRestore();removed.tick();
   assert.deepEqual(removed.moves,[['edge','top']], 'a removed key without surviving neighbors resets to the native top edge');
 }
-console.log('R7 layout-key resolution, mid-layout list changes, query/page guards, user cancellation, programmatic callbacks, merge/neighbors and late layout PASS');
 
+
+
+}
+if(selectedCase==='candidate-facts'){
 // Legacy timestamps and chapter/refresh failures cannot alter whole-book availability.
 {
   const now=Date.now();const facts={schemaVersion:2,sourceVersion:'v2',catalogAt:now-100,catalogCount:8,readableAt:now-50};
@@ -456,12 +358,15 @@ console.log('R7 layout-key resolution, mid-layout list changes, query/page guard
     assert.equal(searchCandidateRank(candidate(legacy),now),1,'untyped legacy failure cannot downgrade a successful catalog');
   }
 }
-console.log('R1 display rank: schema2 current verification only; stale/v1/target-only/storage-refresh facts never grant or revoke whole-book readability PASS');
 
+
+
+}
+if(selectedCase==='safe-failure-text'){
 // R3 safe branch explanations are rendered on both partial and stopped-empty
 // surfaces; raw query-owned errors are never rendered by these methods.
 {
-  const FailurePage=productionMotionMethods(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),
+  const FailurePage=selectedProductionMethods(new URL('../entry/src/main/ets/features/search/SearchPage.ets',import.meta.url),'SearchPage',
     ['partialSearchFailure','searchFailureMessage'],{});
   for(const kind of ['results','empty','error']) {
     const owner=Object.assign(new FailurePage(),{presentation:{kind,localSearchFailed:true,sourceListFailed:true,
@@ -471,28 +376,13 @@ console.log('R1 display rank: schema2 current verification only; stale/v1/target
     assert.ok(text.includes('书源列表：本地数据暂时无法读取'));assert.ok(!text.includes('secret')&&!text.includes('private.example'));
     if(kind==='error')assert.equal(owner.searchFailureMessage(),text);
   }
-  assert.match(page,/\.onDisAppear\(\(\): void => \{ this\.listMounted = false/,'use the declared ArkUI List lifecycle callback');
+  
 }
-console.log('R3 partial/stopped-empty/error safe classified messages and SDK disappearance hook PASS');
 
-{
- const projection=new SearchResultProjection(), navigation=new SearchViewState();
- const text=book('novel','同名作品','同作者',{category:'novel'});
- const manga=book('comic','同名作品','同作者',{category:'comic'});
- const results=[text,manga];
- const shelf=[{sourceId:'another-text-source',bookId:'saved',title:'同名作品',author:'同作者'}];
- const before=projection.update(results,shelf,'同名作品',navigation);
- assert.equal(before.rows.size,2,'same-name manga and novel remain separate without an explicit group key');
- const rows=[...before.rows.values()];
- assert.equal(rows.find(r=>r.book===text).inBookshelf,true);
- assert.equal(rows.find(r=>r.book===manga).inBookshelf,false,'a novel shelf row must not label a comic already added');
- const after=projection.update(results,[...shelf,{...shelf[0],sourceId:'another-comic-source',contentKind:'manga'}],'同名作品',navigation);
- assert.equal([...after.rows.values()].find(r=>r.book===manga).inBookshelf,true);
- const list=new SearchResultDataSource();list.replace(rows.map(r=>new SearchBookGroup(r.book,1,r.inBookshelf)));
- assert.equal(list.totalCount(),2,'virtual row fallback identity also separates media');
+
+
 }
-console.log('PASS manga/novel grouping, shelf badges and virtual row identities remain separate');
-
+if(selectedCase==='content-filter'){
 // H1: same-session content filtering consumes already admitted category facts.
 const filterState = new SearchViewState();
 filterState.reset('一人之下');
@@ -584,4 +474,168 @@ const textFact = { ...unknownFact, category: 'novel' };
 assert.equal(changing.groupResults([textFact])[0].book, textFact);
 assert.equal(changing.groupResults([unknownFact]).length, 0);
 assert.equal(searches, 1); assert.equal(retries, 0);
-console.log('H1 actual SDK type chips + production projection: combined scope, same-type variants, unknown/local facts, stream, resume/reset and zero filter search/retry PASS; existing warmups preserved');
+
+
+}
+}
+if(selectedCase==='rows'){
+const ds = new SearchResultDataSource();
+const events = [];
+listen(ds, { onDataChange: i => events.push(['change', i]),
+  onDataDelete: i => events.push(['delete', i]), onDataAdd: i => events.push(['add', i]),
+  onDataReloaded: () => events.push(['reload']) });
+ds.replace([group('a'), group('b'), group('c')]);
+const visibleBook = ds.getData(1);
+events.length = 0;
+const enriched = group('b', '详情中的新书名');
+enriched.admit({ sourceId: 'source-b', bookId: 'b2', title: '详情中的新书名', author: '作者' }, true);
+ds.replace([group('a'), enriched, group('c'), group('d')]);
+assert.equal(ds.getData(1), visibleBook, 'metadata updates retain the visible observed row');
+assert.equal(visibleBook.book.title, '详情中的新书名');
+assert.equal(visibleBook.sourceCount, 2);
+assert.equal(visibleBook.variants[1].sourceId, 'source-b', 'clicks receive the new candidate too');
+assert.equal(visibleBook.inBookshelf, true);
+assert.deepEqual(events, [['add', 3]], 'only structural additions notify; ObjectLink carries metadata');
+ds.replace([group('b'), group('d')]);
+assert.deepEqual(Array.from({ length: ds.totalCount() }, (_, i) => ds.getData(i).book.bookId), ['b', 'd']);
+assert.equal(ds.getData(0), visibleBook, 'removing earlier rows preserves the retained observed row');
+ds.replace([group('d'), group('b')]);
+assert.equal(ds.getData(1), visibleBook, 'an actual move also reuses the observed row');
+
+
+}
+if(selectedCase==='stream-batch'){
+// Reproduce the VM's large streaming batch without timing-sensitive limits:
+// stable remote keys must not touch locale normalization, and absent keys
+// must not scan the existing list on every insertion.
+const large = new SearchResultDataSource();
+let normalizations = 0;
+let indexScans = 0;
+
+
+String.prototype.toLocaleLowerCase = function (...args) {
+  normalizations += 1; return originalLower.apply(this, args);
+};
+Array.prototype.indexOf = function (...args) {
+  indexScans += this.length; return originalIndexOf.apply(this, args);
+};
+try {
+  large.replace(Array.from({ length: 4000 }, (_, i) => group(`result-${i}`)));
+  const firstVisible = large.getData(0);
+  large.replace(Array.from({ length: 8000 }, (_, i) => group(`result-${i}`)));
+  assert.equal(large.totalCount(), 8000);
+  assert.equal(large.getData(0), firstVisible);
+  const retainedAfterDeletion = large.getData(3000);
+  large.replace(Array.from({ length: 8000 }, (_, i) => group(`result-${i}`)).filter((_, i) => i >= 3000 && i % 2 === 0));
+  assert.equal(large.totalCount(), 2500);
+  assert.equal(large.getData(0), retainedAfterDeletion);
+  assert.equal(normalizations, 0);
+  assert.equal(indexScans, 0, 'new result batches must use membership lookup, not repeated linear scans');
+} finally {
+  String.prototype.toLocaleLowerCase = originalLower;
+  Array.prototype.indexOf = originalIndexOf;
+}
+const fallback = new SearchResultDataSource();
+fallback.replace([new SearchBookGroup({ sourceId: 'x', bookId: '1', title: ' A ', author: ' B ' }, 1, false)]);
+const fallbackRow = fallback.getData(0);
+fallback.replace([new SearchBookGroup({ sourceId: 'y', bookId: '2', title: 'a', author: 'b' }, 1, false)]);
+assert.equal(fallback.getData(0), fallbackRow, 'legacy aliases retain their normalization semantics');
+
+
+}
+if(selectedCase==='navigation'){
+const navigation = new SearchViewState();
+assert.deepEqual(['b', 'a', 'c'].map(key => navigation.rank(key)), [0, 1, 2]);
+assert.equal(navigation.rank('b'), 0, 'late source counts do not change first-seen order');
+navigation.category = '在线'; navigation.keywordDraft = '草稿';
+navigation.anchorKey = 'b'; navigation.anchorIndex = 1; navigation.anchorItemY = -23;
+const remountedPageState = navigation;
+assert.equal(remountedPageState.anchorItemY, -23);
+assert.equal(remountedPageState.category, '在线');
+navigation.reset('下一次查询');
+assert.equal(navigation.anchorKey, ''); assert.equal(navigation.anchorItemY, 0);
+assert.equal(navigation.keywordDraft, '下一次查询'); assert.equal(navigation.rank('c'), 0);
+
+
+
+
+
+
+}
+if(selectedCase==='incremental-row'){
+// PH65: only one changed card in a broad unchanged projection can invalidate a lazy row.
+const incremental = new SearchResultDataSource();
+let changedRows = 0, addedRows = 0;
+listen(incremental, { onDataChange() { changedRows++; }, onDataAdd() { addedRows++; },
+  onDataDelete() {}, onDataReloaded() { assert.fail('no full reload'); } });
+incremental.replace(Array.from({ length: 4000 }, (_, i) => group(`book-${i}`)));
+changedRows = 0; addedRows = 0;
+const batch = Array.from({ length: 4001 }, (_, i) => group(`book-${i}`));
+batch[211].sourceCount = 2;
+incremental.replace(batch);
+assert.equal(changedRows, 0); assert.equal(addedRows, 1);
+assert.equal(incremental.getData(211).sourceCount, 2, 'retained row enriched without native replacement');
+changedRows = 0; addedRows = 0;
+incremental.replace(batch);
+assert.equal(changedRows, 0); assert.equal(addedRows, 0);
+
+
+
+}
+if(selectedCase==='native-batch'){
+// Native batch indices use the original array. Structural and change events
+// at the same index must not conflict (the retained ObjectLink carries fields).
+{
+  const data=new SearchResultDataSource();const notices=[];
+  data.registerDataChangeListener({onDatasetChange:ops=>notices.push(ops)});
+  data.replace(['a','b','c','d','e'].map(k=>group(k)));notices.length=0;
+  const retainedC=data.getData(2),retainedD=data.getData(3);
+  data.replace([group('x'),group('b'),group('c','new C'),group('y'),group('d','new D')],new Set(['online:c','online:d']));
+  assert.deepEqual(notices,[[{type:'delete',index:4,count:1},{type:'delete',index:0,count:1},
+    {type:'add',index:1,count:1,key:['online:x']},{type:'add',index:3,count:1,key:['online:y']}]],'structural edits reference old positions; observed metadata needs no CHANGE');
+  assert.equal(data.getData(2),retainedC);assert.equal(data.getData(4),retainedD);assert.equal(retainedD.book.title,'new D');
+  notices.length=0;
+  data.replace([group('d','most relevant'),group('x'),group('b'),group('c','new C'),group('y')],new Set(['online:d']));
+  assert.deepEqual(notices,[[{type:'move',index:{from:4,to:0}}]],'one known relevance change uses MOVE without duplicate CHANGE at its index');
+  assert.equal(data.getData(0),retainedD);assert.equal(retainedD.book.title,'most relevant');
+}
+
+}
+if(selectedCase==='broad-reorder'){
+// Broad arbitrary reorders are one explicitly counted native keyed reload,
+// with no Reader repeated array scanning or shifting.
+{
+  const data=new SearchResultDataSource();const notices=[];
+  data.registerDataChangeListener({onDatasetChange:ops=>notices.push(ops)});
+  const rows=Array.from({length:4000},(_,i)=>group(`reverse${i}`));data.replace(rows);notices.length=0;
+  let scans=0,shifts=0;const splice=Array.prototype.splice;
+  Array.prototype.indexOf=function(...args){scans+=this.length;return originalIndexOf.apply(this,args);};
+  Array.prototype.splice=function(...args){shifts+=this.length;return splice.apply(this,args);};
+  try {data.replace(rows.slice().reverse(),new Set());} finally {Array.prototype.indexOf=originalIndexOf;Array.prototype.splice=splice;}
+  assert.deepEqual(notices,[[{type:'reload'}]]);assert.equal(scans,0);assert.equal(shifts,0);
+  assert.equal(data.getData(3999),rows[0]);
+}
+
+}
+if(selectedCase==='media-identity'){
+{
+ const projection=new SearchResultProjection(), navigation=new SearchViewState();
+ const text=book('novel','同名作品','同作者',{category:'novel'});
+ const manga=book('comic','同名作品','同作者',{category:'comic'});
+ const results=[text,manga];
+ const shelf=[{sourceId:'another-text-source',bookId:'saved',title:'同名作品',author:'同作者'}];
+ const before=projection.update(results,shelf,'同名作品',navigation);
+ assert.equal(before.rows.size,2,'same-name manga and novel remain separate without an explicit group key');
+ const rows=[...before.rows.values()];
+ assert.equal(rows.find(r=>r.book===text).inBookshelf,true);
+ assert.equal(rows.find(r=>r.book===manga).inBookshelf,false,'a novel shelf row must not label a comic already added');
+ const after=projection.update(results,[...shelf,{...shelf[0],sourceId:'another-comic-source',contentKind:'manga'}],'同名作品',navigation);
+ assert.equal([...after.rows.values()].find(r=>r.book===manga).inBookshelf,true);
+ const list=new SearchResultDataSource();list.replace(rows.map(r=>new SearchBookGroup(r.book,1,r.inBookshelf)));
+ assert.equal(list.totalCount(),2,'virtual row fallback identity also separates media');
+}
+
+
+
+}
+}

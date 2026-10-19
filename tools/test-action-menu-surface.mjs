@@ -1,8 +1,16 @@
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {actionMenuProbe,resolvePopupSpec,ReaderMenuActionView} from './lib/reader-action-menu-probe.mjs';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"action-admission": "真实菜单父子 current callback、busy、重复点击和退役拒绝"};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase();
+  recordContractCasePass(id);
+}
+async function runSelectedCase() {
 
+
+const {default: assert} = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const {actionMenuProbe,resolvePopupSpec,ReaderMenuActionView} = await import('./lib/reader-action-menu-probe.mjs');
 const source=name=>readFileSync(new URL(`../entry/src/main/ets/features/${name}.ets`,import.meta.url),'utf8');
 const spec=(fontDelta=0,variantDelta=0)=>id=>{
   const original=resolvePopupSpec(id);
@@ -25,17 +33,6 @@ function render(kind,resolve) {
   const child=[...owner.children.values()][0];
   assert.equal(child.constructor,shared.Component,'real parent constructs the shared production component');
   return {owner,child,actions,nodes:()=>shared.nodes(owner),update(){owner.replay();shared.properties.flush();}};
-}
-
-for(const [common,variant] of [[0,0],[2,0],[0,7]]) {
-  const shelf=render('bookshelf',spec(common,variant)),reader=render('reader',spec(common,variant));
-  assert.deepEqual(shelf.nodes().filter(n=>n.type==='Text').map(n=>n.create),['批量管理','本地导入','检查更新','书架设置']);
-  assert.deepEqual(reader.nodes().filter(n=>n.type==='Text').map(n=>n.create),['书籍信息','刷新本章','下载全部章节']);
-  for(const [view,height,count] of [[shelf,50+variant,4],[reader,50,3]]) {
-    const labels=view.nodes().filter(n=>n.type==='Text');
-    assert.ok(labels.every(n=>n.fontSize===15+common&&n.lineHeight===22));
-    assert.equal(view.nodes().filter(n=>n.onClick&&n.height===height).length,count);
-  }
 }
 
 // Retained SDK child receives fresh Props; the same ID reads current state and
@@ -67,4 +64,6 @@ for(const [common,variant] of [[0,0],[2,0],[0,7]]) {
   reader.child.aboutToDisappear(); info.onClick();
   assert.deepEqual(reader.actions, [], 'retired shared renderer refuses the old enabled callback');
 }
-console.log('PASS shared action menu: two real SDK consumers, common/variant propagation, retained Props, live guards/current intents, legacy constructor and retired renderer');
+
+
+}

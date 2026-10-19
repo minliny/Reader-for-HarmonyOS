@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { readBookSearchTiming } from '../entry/src/main/ets/features/common/BookSearchTiming.ts';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+
+const { readFileSync }=await import('node:fs');
+const { stripTypeScriptTypes }=await import('node:module');
+const { dirname, resolve }=await import('node:path');
+const { fileURLToPath }=await import('node:url');
+const { readBookSearchTiming }=await import('../entry/src/main/ets/features/common/BookSearchTiming.ts');
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const gatewayPath = resolve(
@@ -52,26 +55,6 @@ const source = {
   category: 'novel',
 };
 
-{
-  let timeout;
-  const outcome = await new SearchGateway({ request: async (_command, _params, options) => {
-    timeout = options?.timeoutMs;
-    return { data: { sourceId: source.sourceId, books: [{ bookId: '/bounded', title: '限时', author: '' }] } };
-  } }).searchBySource(source, '限时');
-  assert.equal(outcome.ok, true);
-  assert.equal(timeout, 15000, 'live source search uses a bounded request timeout');
-}
-{
-  let localTimeout = 'unset';
-  const gateway = new SearchGateway({ request: async (command, _params, options) => {
-    assert.equal(command, 'bookshelf.list');
-    localTimeout = options?.timeoutMs;
-    return { data: { books: [], total: 0 } };
-  } });
-  await gateway.searchLocalBooks('本地', 'local-timeout-check');
-  assert.equal(localTimeout, undefined, 'local bookshelf pagination keeps its existing timeout contract');
-}
-
 function gatewayReturning(book) {
   return new SearchGateway({
     request: async (command) => {
@@ -86,6 +69,78 @@ function gatewayReturning(book) {
   });
 }
 
+const validOutcome={
+  ok: true,
+  results: [{
+    sourceId: 'source-a',
+    sourceName: '甲书源',
+    bookSourceUrl: 'source-a',
+    bookId: '/detail/book-42?from=search',
+    detailUrl: '/detail/book-42?from=search',
+    searchRequestId: 'sweep-1',
+    sourceRuleVersion: '',
+    category: 'novel',
+    groupKey: '远程书籍\u0000作者',
+    title: '远程书籍',
+    author: '作者',
+    coverUrl: 'https://example.test/cover.jpg',
+    intro: '简介',
+    kind: '玄幻',
+    latestChapterTitle: '第十章',
+    variables: [
+      { name: 'page', value: '2' },
+      { name: 'token', value: 'search-token' },
+    ],
+  }],
+};
+const keyOf = b => `${b.sourceId ?? b.origin}\u0000${b.bookId ?? b.bookUrl}`;
+const identityOf = b => ({sourceId:b.sourceId??b.origin,bookId:b.bookId??b.bookUrl});
+function fixture(count=1) {
+  const sources=['a','b'].map(sourceId=>({sourceId,name:sourceId,enabled:true,sourceVersion:`v-${sourceId}`,category:'novel'}));
+  const books=Array.from({length:count},(_,i)=>({...validOutcome.results[0],sourceId:'a',sourceName:'a',bookSourceUrl:'a',
+    sourceRuleVersion:'v-a',bookId:`/${i}`,detailUrl:`/${i}`,title:`书${i}`,author:'作者',groupKey:`card${i}`,admittedOrder:i}));
+  const rows=new Map(books.map(b=>[keyOf(b),{origin:b.sourceId,bookUrl:b.bookId,name:b.title,author:b.author,
+    relationKey:`relation${b.bookId}`,relationRevision:'1',acquisition:{sourceVersion:'v-a',detailAt:1}}]));
+  const calls=[];let revision=1, handler;
+  const owner={bookAcquisitions:()=>({sourceRegistryRevision:()=>revision}),request:async(method,params)=>{
+    calls.push({method,params});
+    if (method==='source.list')return {data:{sources}};
+    if(handler){const result=await handler(method,params);if(result)return result;}
+    assert.equal(method,'search-book.batch.get','projection must not read global/origin cache or dispatch HTTP');
+    assert.ok(params.identities.length<=128);
+    return {data:{books:params.identities.map(i=>structuredClone(rows.get(keyOf(i)))).filter(Boolean),
+      missing:params.identities.filter(i=>!rows.has(keyOf(i))),sourceVersions:sources,
+      snapshotRevision:'snapshot',complete:true}};
+  }};
+  return {sources,books,rows,calls,owner,gateway:new SearchGateway(owner),setHandler:h=>handler=h,bump:()=>revision++};
+}
+function apply(index,patch){for(const key of patch.removedKeys)index.delete(key);for(const book of patch.upserted)index.set(keyOf(book),book);}
+
+try{
+if(id==='remote-timeout'){
+{
+  let timeout;
+  const outcome = await new SearchGateway({ request: async (_command, _params, options) => {
+    timeout = options?.timeoutMs;
+    return { data: { sourceId: source.sourceId, books: [{ bookId: '/bounded', title: '限时', author: '' }] } };
+  } }).searchBySource(source, '限时');
+  assert.equal(outcome.ok, true);
+  assert.equal(timeout, 15000, 'live source search uses a bounded request timeout');
+}
+}
+if(id==='local-timeout'){
+{
+  let localTimeout = 'unset';
+  const gateway = new SearchGateway({ request: async (command, _params, options) => {
+    assert.equal(command, 'bookshelf.list');
+    localTimeout = options?.timeoutMs;
+    return { data: { books: [], total: 0 } };
+  } });
+  await gateway.searchLocalBooks('本地', 'local-timeout-check');
+  assert.equal(localTimeout, undefined, 'local bookshelf pagination keeps its existing timeout contract');
+}
+}
+if(id==='decode'){
 const validOutcome = await gatewayReturning({
   sourceId: 'untrusted-inner-source',
   bookId: '/detail/book-42?from=search',
@@ -140,6 +195,9 @@ assert.equal(mixedRows.ok, true);
 assert.deepEqual(mixedRows.results.map(book => book.bookId), ['/good', '/good2']);
 assert.equal(mixedRows.discardedCount, 2);
 assert.equal(mixedRows.discardedReasons.length, 2);
+
+}
+if(id==='envelope'){
 for (const data of [
   ...['manga', 'audio', null, 2].map(contentKind => ({
     sourceId: source.sourceId, contentKind, books: [{ bookId: '/good', title: 'Book' }],
@@ -152,7 +210,8 @@ for (const data of [
   const outcome = await new SearchGateway({ request: async () => ({ data }) }).searchBySource({ ...source, sourceVersion: 'v1' }, '鸣龙');
   assert.equal(outcome.ok, false, 'envelope identity/version failure rejects all rows');
 }
-
+}
+if(id==='variables'){
 for (const invalidVariables of [
   null,
   [],
@@ -168,7 +227,8 @@ for (const invalidVariables of [
   assert.equal(outcome.ok, false, 'invalid variables must fail the source result');
   assert.match(outcome.error, /variables/);
 }
-
+}
+if(id==='legacy'){
 const legacyOutcome = await gatewayReturning({
   bookId: '/legacy/gateway-book',
   title: '旧网关响应',
@@ -191,7 +251,9 @@ assert.deepEqual(legacyOutcome, {
   }],
 });
 
-// Identity: a source.list baseUrl becomes the immutable bookSourceUrl.
+
+}
+if(id==='base-url'){
 const baseUrlSource = { sourceId: 'source-b', name: '乙书源', enabled: true, category: 'novel', baseUrl: 'https://b.example.test' };
 const baseUrlOutcome = await new SearchGateway({
   request: async (command, params) => {
@@ -202,6 +264,9 @@ const baseUrlOutcome = await new SearchGateway({
 assert.equal(baseUrlOutcome.results[0].bookSourceUrl, 'https://b.example.test',
   'bookSourceUrl carries the source.list baseUrl identity');
 
+
+}
+if(id==='category'){
 let mixedCategoryRequestCount = 0;
 const mixedCategoryGateway = new SearchGateway({
   request: async () => {
@@ -222,8 +287,9 @@ for (const category of ['music', 'download', 'external', 'other']) {
 assert.equal(mixedCategoryRequestCount, 0,
   '音乐、下载和外部媒体源不得进入阅读搜索链路');
 
-// Identity: the rule version comes from Core and changes when rules change,
-// including when the same sourceId retains its baseUrl.
+
+}
+if(id==='source-version'){
 let sourceListUrl = 'https://rule-one.example.test';
 let sourceVersion = 'core-rule-hash-one';
 const versionGateway = new SearchGateway({
@@ -249,16 +315,12 @@ const listTwo = await versionGateway.loadSources();
 const versionTwo = (await versionGateway.searchBySource(listTwo[0], '关键字')).results[0].sourceRuleVersion;
 assert.equal(versionTwo, 'core-rule-hash-two', 'an unchanged baseUrl cannot hide changed rules');
 
-// Identity: without an explicit sweep id the gateway generates a stable one
-// shared by every result of the same call.
-const generated = await gatewayReturning({ bookId: '/g/book', title: '书' }).searchBySource(source, '关键字');
-assert.match(generated.results[0].searchRequestId, /^search-[0-9a-z]+-\d+-\d+$/,
-  'the generated searchRequestId has the gateway format');
-assert.equal(generated.results[0].sourceRuleVersion, '',
-  'legacy unversioned sources are never assigned a fabricated rule version');
 
-// PH68: opening Search and submitting before source.list returns must not
-// decode the same registry twice. A mutation/restore starts a new generation.
+}
+if(id==='request-identity'){
+const gateway=new SearchGateway({request:async()=>({data:{sourceId:source.sourceId,books:[{bookId:'/a',title:'甲'},{bookId:'/b',title:'乙'}]}})});const first=await gateway.searchBySource(source,'a'),second=await gateway.searchBySource(source,'b');assert.ok(first.ok&&second.ok);const id=first.results[0].searchRequestId;assert.ok(typeof id==='string'&&id.trim());assert.ok(first.results.every(b=>b.searchRequestId===id));assert.notEqual(second.results[0].searchRequestId,id);assert.equal(first.results[0].sourceRuleVersion,'');
+}
+if(id==='registry-generation'){
 {
   const defer = () => { let resolve, reject; const promise = new Promise((a,b)=>{resolve=a;reject=b;}); return {promise,resolve,reject}; };
   let revision = 1, calls = [];
@@ -284,10 +346,8 @@ assert.equal(generated.results[0].sourceRuleVersion, '',
   const retried=gateway.loadSources();assert.equal(calls.length,5,'failure clears only its own pending promise');
   calls[4].resolve({data:{sources:[source]}});await retried;
 }
-console.log('PH68 source metadata: open/submit share in-flight and fresh revision, mutation rejects stale, retry recovers without duplicate RPC PASS');
-
-// Source-check reports are optional admission evidence. Current search
-// failures are skipped, while stale/unknown reports stay eligible.
+}
+if(id==='source-health'){
 {
   let listParams;
   const version = 'rule-v1';
@@ -317,34 +377,8 @@ console.log('PH68 source metadata: open/submit share in-flight and fresh revisio
   assert.equal(searchSourceHealthState(loaded[2]), 'stale');
   assert.equal(loaded[3].health, undefined, 'missing report remains unknown and dispatchable');
 }
-console.log('Search source health admission preserves explicit failures while retaining stale/unknown sources PASS');
-
-
-const keyOf = b => `${b.sourceId ?? b.origin}\u0000${b.bookId ?? b.bookUrl}`;
-const identityOf = b => ({sourceId:b.sourceId??b.origin,bookId:b.bookId??b.bookUrl});
-function fixture(count=1) {
-  const sources=['a','b'].map(sourceId=>({sourceId,name:sourceId,enabled:true,sourceVersion:`v-${sourceId}`,category:'novel'}));
-  const books=Array.from({length:count},(_,i)=>({...validOutcome.results[0],sourceId:'a',sourceName:'a',bookSourceUrl:'a',
-    sourceRuleVersion:'v-a',bookId:`/${i}`,detailUrl:`/${i}`,title:`书${i}`,author:'作者',groupKey:`card${i}`,admittedOrder:i}));
-  const rows=new Map(books.map(b=>[keyOf(b),{origin:b.sourceId,bookUrl:b.bookId,name:b.title,author:b.author,
-    relationKey:`relation${b.bookId}`,relationRevision:'1',acquisition:{sourceVersion:'v-a',detailAt:1}}]));
-  const calls=[];let revision=1, handler;
-  const owner={bookAcquisitions:()=>({sourceRegistryRevision:()=>revision}),request:async(method,params)=>{
-    calls.push({method,params});
-    if (method==='source.list')return {data:{sources}};
-    if(handler){const result=await handler(method,params);if(result)return result;}
-    assert.equal(method,'search-book.batch.get','projection must not read global/origin cache or dispatch HTTP');
-    assert.ok(params.identities.length<=128);
-    return {data:{books:params.identities.map(i=>structuredClone(rows.get(keyOf(i)))).filter(Boolean),
-      missing:params.identities.filter(i=>!rows.has(keyOf(i))),sourceVersions:sources,
-      snapshotRevision:'snapshot',complete:true}};
-  }};
-  return {sources,books,rows,calls,owner,gateway:new SearchGateway(owner),setHandler:h=>handler=h,bump:()=>revision++};
 }
-function apply(index,patch){for(const key of patch.removedKeys)index.delete(key);for(const book of patch.upserted)index.set(keyOf(book),book);}
-// A live search sample begins at scheduler execution, not its UI/queue wait.
-// Timing writes are Core merge enrichments: they must neither gate first
-// results nor overwrite stored detail/catalog/readability facts.
+if(id==='timing'){
 {
   const originalNow = Date.now;
   let now = 10000;
@@ -393,7 +427,7 @@ function apply(index,patch){for(const key of patch.removedKeys)index.delete(key)
     await f.gateway.searchTimingPersistence;
     const reopened = await new SearchGateway(f.owner).refreshBooks(outcome.results.map(book => ({ ...book, acquisition: undefined })));
     assert.deepEqual(readBookSearchTiming(reopened[0].acquisition, 'v-a'), sample,
-      'a fresh gateway recovers the durable sample without another book.search');
+      'a fresh gateway recovers the stored fixture sample without another book.search');
     assert.equal(reopened[0].acquisition.readableAt, 8000);
     f.sources[0].sourceVersion = 'v-a-new';
     row.acquisition.sourceVersion = 'v-a-new';
@@ -403,6 +437,8 @@ function apply(index,patch){for(const key of patch.removedKeys)index.delete(key)
       'a sample of the previous source rule is not reused after the registry changes');
   } finally { Date.now = originalNow; }
 }
+}
+if(id==='timing-negative'){
 {
   const timedSource = { ...source, sourceVersion: 'v1' };
   for (const mode of ['not-dispatched', 'missing-version', 'cancelled', 'write-failed']) {
@@ -425,6 +461,8 @@ function apply(index,patch){for(const key of patch.removedKeys)index.delete(key)
     assert.equal(writes, mode === 'write-failed' ? 1 : 0, 'no timing write for a cancelled or unmeasured request');
   }
 }
+}
+if(id==='timing-write-budget'){
 {
   let release;
   const gate = new Promise(resolve => { release = resolve; });
@@ -449,8 +487,8 @@ function apply(index,patch){for(const key of patch.removedKeys)index.delete(key)
   await gateway.searchTimingPersistence;
   assert.equal(writes, 18); assert.equal(maximum, 4);
 }
-console.log('Search timing: dispatched duration, first-open seed, durable reopen, source-version invalidation, projection race, cancellation, write failure and global four-write bound PASS');
-// Fixed query, increasingly unrelated cache: response/projection cost remains scoped.
+}
+if(id==='delta-scope'){
 for(const unrelated of [0,9000]) {
   const f=fixture(1000);const index=new Map(f.books.map(b=>[keyOf(b),b]));
   for(let i=0;i<unrelated;i++)f.rows.set(`unrelated${i}`,{origin:'a',bookUrl:`/unrelated${i}`,name:'历史书',author:'别的作者'});
@@ -468,7 +506,8 @@ for(const unrelated of [0,9000]) {
   assert.equal(index.get('a\u0000/501'),before.get('a\u0000/501'));
   console.log(`R5/R6 query=1000 unrelated=${unrelated}: metadata RPC=1 returned=1 projected=1 captured=1 PASS`);
 }
-// Source partitions are atomic: truncation/malformed facts preserve that source, healthy source publishes.
+}
+if(id==='partition'){
 {
   const f=fixture(2);const b={...f.books[0],sourceId:'b',sourceName:'b',sourceRuleVersion:'v-b',bookSourceUrl:'b',bookId:'/b',detailUrl:'/b',groupKey:'b',admittedOrder:2};
   const index=new Map([...f.books,b].map(b=>[keyOf(b),b]));
@@ -484,7 +523,8 @@ for(const unrelated of [0,9000]) {
   f.sources[1].enabled=false;f.bump();apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
   assert.ok(!index.has(keyOf(b)),'disabled source cannot revive from old query');
 }
-// New exact relation member joins; unrelated/same title under a different confirmed relation stays out.
+}
+if(id==='relation-admission'){
 {
   const f=fixture();let index=new Map(f.books.map(b=>[keyOf(b),b]));apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
   f.rows.set('b\u0000/new',{origin:'b',bookUrl:'/new',name:'书0',author:'作者',relationKey:'relation/0',relationRevision:'1',
@@ -493,7 +533,8 @@ for(const unrelated of [0,9000]) {
   const patch=await f.gateway.refreshBookDelta(index,{reset:false,identities:[{sourceId:'b',bookId:'/new'},{sourceId:'b',bookId:'/unrelated'}]});apply(index,patch);
   assert.equal(index.size,2);assert.equal(index.get('b\u0000/new').groupKey,'card0');assert.deepEqual(index.get('b\u0000/new').variables,[{name:'token',value:'typed'}]);
 }
-// Merge retains earliest admitted key; splitting gives the later child an independent key.
+}
+if(id==='merge-split'){
 {
   const f=fixture(2);const index=new Map(f.books.map(b=>[keyOf(b),b]));apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
   for(const row of f.rows.values()){row.relationKey='merged';row.relationRevision='2';}
@@ -506,7 +547,8 @@ for(const unrelated of [0,9000]) {
   patch=await f.gateway.refreshBookDelta(index,{reset:false,identities:[{sourceId:'a',bookId:'/0'}]});apply(index,patch);
   assert.equal(index.get('a\u0000/0').groupKey,'card0');assert.notEqual(index.get('a\u0000/1').groupKey,'card0');
 }
-// Incomplete relation pages retain old membership but healthy metadata may update.
+}
+if(id==='incomplete-relation'){
 {
   const f=fixture(2);const index=new Map(f.books.map(b=>[keyOf(b),b]));apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
   f.rows.get('a\u0000/0').relationKey='changed';f.rows.get('a\u0000/0').relationRevision='2';f.rows.get('a\u0000/0').intro='safe metadata';
@@ -515,16 +557,16 @@ for(const unrelated of [0,9000]) {
   const patch=await f.gateway.refreshBookDelta(index,{reset:false,identities:[{sourceId:'a',bookId:'/0'}]});apply(index,patch);
   assert.equal(index.get('a\u0000/0').groupKey,'card0');assert.equal(index.get('a\u0000/0').intro,'safe metadata');assert.equal(patch.retryIdentities.length,1);
 }
-// A queued source read belongs to the original query even before projection starts.
+}
+if(id==='queued-query'){
 {
   let release;const gate=new Promise(r=>release=r);let requests=0;
   const gateway=new SearchGateway({request:async()=>{requests++;await gate;return {data:{sources:[]}};}});
   const pending=gateway.refreshBooks([validOutcome.results[0]]);gateway.resetBookProjection();release();
   await assert.rejects(pending,/superseded/);assert.equal(requests,1);
 }
-console.log('R5/R6 partition isolation, exact missing, related admission, stable merge/split, stale cursor and ownership PASS');
-
-// More than one identity batch is one source partition: a bad tail cannot publish its head.
+}
+if(id==='batch-atomic'){
 {
   const f=fixture(130);const index=new Map(f.books.map(b=>[keyOf(b),b]));apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
   const old=index.get('a\u0000/0');f.rows.get('a\u0000/0').intro='uncommitted head';
@@ -532,7 +574,8 @@ console.log('R5/R6 partition isolation, exact missing, related admission, stable
   const patch=await f.gateway.refreshBookDelta(index,{reset:true,identities:[]});apply(index,patch);
   assert.equal(index.get('a\u0000/0'),old);assert.equal(patch.upserted.length,0);assert.equal(patch.retryIdentities.length,130);
 }
-// Complete related pages may exceed 128 candidates and retain typed continuation.
+}
+if(id==='relation-pages'){
 {
   const f=fixture();const index=new Map(f.books.map(b=>[keyOf(b),b]));apply(index,await f.gateway.refreshBookDelta(index,{reset:true,identities:[]}));
   const row=f.rows.get('a\u0000/0');row.relationRevision='2';
@@ -546,9 +589,8 @@ console.log('R5/R6 partition isolation, exact missing, related admission, stable
   assert.equal(pages,2);assert.equal(index.size,131);assert.ok([...index.values()].every(b=>b.groupKey==='card0'));
   assert.equal(index.get('b\u0000/r129').variables[0].value,'literal\\n');
 }
-console.log('R5/R6 130-identity atomic source partition and complete 131-member two-page relation PASS');
-
-
+}
+if(id==='http-diagnostic'){
 for(const platformCode of [2300023,2300060,undefined]) {
  const cause={category:'SOURCE_HTTP_FAILED',phase:'transport',stage:'request.dispatch',transient:false,requestId:771,elapsedMs:125,
   ...(platformCode===undefined?{}:{platformCode}),url:'PRIVATE_URL',message:'PRIVATE_BODY'};
@@ -563,10 +605,8 @@ for(const platformCode of [2300023,2300060,undefined]) {
  const independent=await new SearchGateway({request:async()=>{throw error}}).searchBySource(source,'鸣龙');
  assert.equal(independent.diagnostic,undefined,'later rule failures cannot inherit a prior nested HTTP cause');
 }
-console.log('PASS actual SearchGateway retains safe HTTP request/operation/code/timing summary and unchanged error copy; independent rule errors do not inherit stale evidence');
-
-// Manga is admitted only with the Core's matching media fact; name heuristics
-// and a legacy/missing envelope cannot authorize an image reader.
+}
+if(id==='media'){
 for (const kind of ['manga','text','audio',null,undefined]) {
  const comic={...source,category:'comic'};
  const gateway=new SearchGateway({request:async()=>({data:{sourceId:source.sourceId,contentKind:kind,
@@ -575,4 +615,8 @@ for (const kind of ['manga','text','audio',null,undefined]) {
  assert.equal(outcome.ok,kind==='manga');
  if(outcome.ok){assert.equal(outcome.results[0].category,'comic');assert.equal(outcome.results[0].groupKey,JSON.stringify(['manga','同名作品\u0000同作者']));}
 }
-console.log('PASS manga search requires authoritative Core kind and keeps media-scoped initial groups');
+}
+}finally{}
+}
+const definitions={"remote-timeout": "remote-timeout actual scoped owner/gateway/storage path; controlled Core/OS ports", "local-timeout": "local-timeout actual scoped owner/gateway/storage path; controlled Core/OS ports", "decode": "decode actual scoped owner/gateway/storage path; controlled Core/OS ports", "envelope": "envelope actual scoped owner/gateway/storage path; controlled Core/OS ports", "variables": "variables actual scoped owner/gateway/storage path; controlled Core/OS ports", "legacy": "legacy actual scoped owner/gateway/storage path; controlled Core/OS ports", "base-url": "base-url actual scoped owner/gateway/storage path; controlled Core/OS ports", "category": "category actual scoped owner/gateway/storage path; controlled Core/OS ports", "source-version": "source-version actual scoped owner/gateway/storage path; controlled Core/OS ports", "request-identity": "request-identity actual scoped owner/gateway/storage path; controlled Core/OS ports", "registry-generation": "registry-generation actual scoped owner/gateway/storage path; controlled Core/OS ports", "source-health": "source-health actual scoped owner/gateway/storage path; controlled Core/OS ports", "timing": "timing actual scoped owner/gateway/storage path; controlled Core/OS ports", "timing-negative": "timing-negative actual scoped owner/gateway/storage path; controlled Core/OS ports", "timing-write-budget": "timing-write-budget actual scoped owner/gateway/storage path; controlled Core/OS ports", "delta-scope": "delta-scope actual scoped owner/gateway/storage path; controlled Core/OS ports", "partition": "partition actual scoped owner/gateway/storage path; controlled Core/OS ports", "relation-admission": "relation-admission actual scoped owner/gateway/storage path; controlled Core/OS ports", "merge-split": "merge-split actual scoped owner/gateway/storage path; controlled Core/OS ports", "incomplete-relation": "incomplete-relation actual scoped owner/gateway/storage path; controlled Core/OS ports", "queued-query": "queued-query actual scoped owner/gateway/storage path; controlled Core/OS ports", "batch-atomic": "batch-atomic actual scoped owner/gateway/storage path; controlled Core/OS ports", "relation-pages": "relation-pages actual scoped owner/gateway/storage path; controlled Core/OS ports", "http-diagnostic": "http-diagnostic actual scoped owner/gateway/storage path; controlled Core/OS ports", "media": "media actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

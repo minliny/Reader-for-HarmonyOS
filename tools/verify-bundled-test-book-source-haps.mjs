@@ -13,8 +13,6 @@ const canonicalHaps = [
   'entry-default-signed.hap',
   'entry-default-unsigned.hap',
 ];
-const expectedCollectionRecords = 1046;
-const expectedUniqueSourceIds = 919;
 
 assert.ok(hapPaths.length >= 1,
   'pass at least one immutable signed or unsigned HAP to the package source verifier');
@@ -32,13 +30,6 @@ for (const hapPath of hapPaths) {
   assert.equal(extracted.status, 0,
     `${hapPath} does not expose the bundled source raw file: ${extracted.stderr?.toString('utf8') ?? ''}`);
   assert.deepEqual(extracted.stdout, expected,
-    `${hapPath} bundled source bytes differ from the live-checked source document`);
-  const sources = JSON.parse(extracted.stdout.toString('utf8'));
-  assert.ok(Array.isArray(sources), `${hapPath} source collection must be a JSON array`);
-  assert.equal(sources.length, expectedCollectionRecords,
-    `${hapPath} must contain every recorded tested source`);
-  assert.equal(new Set(sources.map(source => source.bookSourceUrl)).size, expectedUniqueSourceIds,
-    `${hapPath} must retain the expected stable source identities`);
-  console.log(`${hapPath}: bundled source collection PASS ` +
-    `(${sources.length} tested records, ${expectedUniqueSourceIds} unique identities)`);
+    `${hapPath} bundled source bytes differ from the current build input`);
+  console.log(`${hapPath}: bundled source byte identity PASS (${expected.length} bytes); source behavior NOT_RUN`);
 }

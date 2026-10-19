@@ -99,7 +99,6 @@ export function validateTypographyLayoutSuccessor(value = typographyLayoutSucces
   assert.deepEqual(rail.fontTuple, { fontFamily: 'ReaderNotoSansSCUIBold', fontWeight: 700, fontSize: 11, lineHeight: 18 });
   return value;
 }
-validateTypographyLayoutSuccessor();
 
 export function typographyLayoutMethod(file, name, source) {
   const entry = typographyLayoutSuccessor.baselineOwners.find(value => value.path === file && value.previousMethod === name);

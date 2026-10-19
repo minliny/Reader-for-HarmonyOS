@@ -59,8 +59,8 @@ function index(r,text=indexSource){
  const props=()=>{i.sourceManagementContent();return [...i.children.values()].findLast(c=>c.params.sources)?.params;};
  const page=()=>{
   const params=props(),p=sdk.consumer(pageSource,['appThemeScheme','operation','statusKind','statusMessage','onReconcile','onToggleSource','onDetectSource','onLoginSource','onAddSource','onOpenTools','onRetryLoad',
-   'recovery','statusBanner','sourceRow','statusBadgeBackground','statusBadgeDot','statusBadge','detectButton','loginButton','sourceSwitch','sourceToggleBusy','sourceToggleEnabled','bottomActionBar'],{readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel},params);
-  p.mounted=true;p.temporaryBackIdentity='source-sdk-visit';p.contentFrame=()=>({width:350});p.actionBottomInset=()=>0;
+   'onMessageChanged','lastFeedbackIdentity','lastToastMessage','feedbackIdentity','mounted','recovery','statusBanner','sourceRow','statusBadgeBackground','statusBadgeDot','statusBadge','detectButton','loginButton','sourceSwitch','sourceToggleBusy','sourceToggleEnabled','bottomActionBar'],{readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel},params);
+  p.sources=params.sources;p.mounted=true;p.temporaryBackIdentity='source-sdk-visit';p.contentFrame=()=>({width:350});p.actionBottomInset=()=>0;
   const switchAction=()=>{p.sourceRow(i.sourceSources[0]);const c=[...p.children.values()].findLast(c=>c instanceof Toggle);c.initialRender();return sdk.nodes(c).find(n=>n.onClick).onClick;};
   const action=(spec,label)=>{const actor=sdk.walk(p).findLast(c=>c.specId===spec&&(!label||c.label===label));assert.ok(actor,'actual '+spec+' component');
    const hit=sdk.nodes(actor).find(n=>typeof n.onClick==='function');assert.ok(hit,'actual '+spec+' native action');return hit.onClick;};
@@ -122,13 +122,13 @@ for(const retirement of['nav','mount','unset']){
   getUIContext:()=>({showAlertDialog:options=>{shown=options;}})});
  const id=a.i.sourcePresentationIdentity,current=()=>a.i.isCurrentSourceManagement(1,r,1,a.i.sourceHost,id);
  const inlineAction=()=>{
-  const page=sdk.consumer(pageSource,['appThemeScheme','operation','statusKind','statusMessage','statusActionLabel','statusActionGeneration','onStatusAction','recovery','statusBanner'],
+  const page=sdk.consumer(pageSource,['appThemeScheme','operation','statusKind','statusMessage','statusActionLabel','statusActionGeneration','onStatusAction','onMessageChanged','feedbackIdentity','lastFeedbackIdentity','lastToastMessage','mounted','recovery','statusAction'],
    {readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView')},
    {operation:{action:'load',sourceId:''},statusKind:p.sourceStatusKind,statusMessage:p.sourceStatusMessage,
     statusActionLabel:p.sourceImportSearchActionLabel,statusActionGeneration:p.sourceImportSearchActionRevision,
     onStatusAction:revision=>p.runSourceImportSearchAction(revision)});
-  page.contentFrame=()=>({width:350});page.statusBanner();
-  const button=sdk.walk(page).findLast(c=>c.specId==='source-management-retry'&&c.label==='重新搜索');
+  page.statusAction();
+  const button=sdk.walk(page).findLast(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label==='重新搜索');
   assert.ok(button,'actual inline source result action');return sdk.nodes(button).find(n=>n.onClick).onClick;
  };
  p.showSourceImportResultFromSearch('书源导入完成','Core 已导入 1 个书源。',current);

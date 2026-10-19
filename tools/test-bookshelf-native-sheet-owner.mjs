@@ -6,6 +6,8 @@ import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
 import {admitBookshelfSdkCarrier} from './lib/bookshelf-projection-owner-probe.mjs';
 import {readerAppColor} from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import * as geometryApi from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const sdk=resolveEtsLoaderRoot();
 const builders=createRequire(import.meta.url)(sdk+'/lib/component_map.js').CUSTOM_BUILDER_METHOD;
@@ -14,18 +16,24 @@ const pageSource=source('features/bookshelf/BookshelfPage.ets');
 const names=['presentBookActionSheet','isCurrentBookActionSheet','dismissBookActionSheet','performBookAction','bookActionSheetOptions','bookActionSheetSpec','onBooksChanged','aboutToDisappear'];
 const book=(sourceId,bookId)=>({sourceId,bookId,title:bookId,author:'author',kind:'novel',currentChapterTitle:'chapter'});
 const A=book('a','same'),B=book('b','same');
-function fixture(definition=pageSource){
+function fixture(definition=pageSource,{width=390,left=0,right=0}={}){
+  const metrics=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,width,844),undefined,new metricsApi.ReaderInsetsVp(left,0,right,0));
   const p=boundedSurfaceSdk();p.hooks.lifecycleChildren=true;p.hooks.allowEmptyBranchAdmission=true;
   p.hooks.childSources.ReaderSheetActionList=source('features/common/ReaderSheetActionList.ets');
   p.deps.ReaderSheetActionList=createReaderBuilderProbe(p.hooks.childSources.ReaderSheetActionList,boundedMembers(p.hooks.childSources.ReaderSheetActionList),p.deps,p.hooks).Component;
   const leaf=source('features/bookshelf/BookshelfBookActionSheet.ets');p.hooks.childSources.BookshelfBookActionSheet=leaf;
   p.deps.BookshelfBookActionSheet=createReaderBuilderProbe(leaf,boundedMembers(leaf),p.deps,p.hooks).Component;
-  const probe=createReaderBuilderProbe(definition,['books','navigationGeneration','actionBook','actionSheetId','actionSheetRevision','actionSheetNavigation','mounted',...names,'onShelfPresentationChanged','bookshelfTabContent','bookActionSheetContent','bookActionSheetPresentation'],
-    {...p.deps,readerAppColor,SheetType:{BOTTOM:'bottom'}},{...p.hooks,initialParams:{books:[A,B],navigationGeneration:7}});
+  const probe=createReaderBuilderProbe(definition,['books','navigationGeneration','actionBook','actionSheetId','actionSheetRevision','actionSheetNavigation','mounted',...names,
+    'readerWindowMetricsRevision','viewportWidth','bookActionWidth','resolveContentFrame','effectiveViewportWidth',
+    'onShelfPresentationChanged','bookshelfTabContent','bookActionSheetContent','bookActionSheetPresentation'],
+    {...p.deps,...metricsApi,...geometryApi,readerAppColor,ReaderWindowCoordinator:{metrics:()=>metrics},SheetType:{BOTTOM:'bottom'},SheetSize:{FIT_CONTENT:'fit-content'}},
+    {...p.hooks,initialParams:{books:[A,B],navigationGeneration:7}});
   const {owner}=probe;
   assert.match(probe.output,/bookActionSheetPresentation[^\n]*ObservedObject\.GetRawObject\(this\.actionBook\)/,'actual SDK unwraps the State value at the Builder call');
   const calls=[];Object.assign(owner,{mounted:true,appThemeScheme:'day',
-    isWideViewport:()=>false,phoneContent(){},tabletContent(){},tabletNavigation(){},bookActionWidth:()=>352,numericAreaLength:Number,
+    readerWindowMetricsRevision:0,viewportWidth:0,
+    viewModePending:()=>false,isWideViewport:()=>false,phoneContent(){},tabletContent(){},tabletNavigation(){},numericAreaLength:Number,
+    shelfContentWidth:()=>assert.fail('native book actions must not use the old cover frame'),
     saveShelfViewport(){},resetViewSwitchMotion(){},queueShelfProjection(){},publishVisibleReadingBooks(){},viewState:{},projectionGeneration:0,viewportRestoreGeneration:0,viewModeRevision:0,
     onBookMultiSelectRequested:book=>calls.push(['multi',book]),onBookInfoRequested:book=>calls.push(['info',book]),onBookGroupRequested:book=>calls.push(['group',book]),onBookRemoveRequested:book=>calls.push(['remove',book]),
   });
@@ -34,10 +42,22 @@ function fixture(definition=pageSource){
   const options=()=>{owner.replay();return host.bindSheet[2];};
   return{p,owner,calls,render,options,host,output:probe.output};
 }
+// Current user scope replaces the old cover-aligned 352/720 and fixed 270
+// geometry, while leaving every entity/once-only/retirement case below intact.
+for(const [width,left,right] of [[270,0,0],[390,0,0],[720,0,0],[1024,28,13],[320,24,18],[240,100,80]]){
+ const f=fixture(pageSource,{width,left,right});f.owner.presentBookActionSheet(A);f.render();
+ assert.equal(f.options().width,Math.min(390,Math.max(0,width-left-right)),'actual native options use the current safe window with the source drawer cap');
+ f.owner.viewportWidth=300;
+ assert.equal(f.options().width,Math.min(390,Math.max(0,300-left-right)),'measured viewport updates flow through the real width method');
+ f.owner.appThemeScheme='night';const night=f.options();
+ assert.equal(night.backgroundColor,readerAppColor('TOK_SS_WINDOW_BG','night'));assert.equal(night.maskColor,readerAppColor('TOK_SS_DRAWER_SCRIM','night'));
+ assert.deepEqual(night.radius,{topLeft:22,topRight:22,bottomLeft:0,bottomRight:0});
+}
 for(const [index,name]of[['0','multi'],['1','info'],['2','group'],['3','remove']]){
   const f=fixture();f.owner.presentBookActionSheet(A);const current=f.render(),o=f.options();
-  assert.equal(o.height,270);assert.equal(o.width,352);assert.equal(o.preferType,'bottom');assert.equal(o.dragBar,false);assert.equal(o.showClose,false);assert.equal(o.enableOutsideInteractive,false);
-  assert.deepEqual(o.radius,{topLeft:24,topRight:24,bottomLeft:0,bottomRight:0});current.buttons[Number(index)].onClick();current.buttons[Number(index)].onClick();
+  assert.equal(o.height,'fit-content','the approved native owner follows its measured content rather than the rejected 270vp frame');assert.equal(o.width,390);assert.equal(o.preferType,'bottom');assert.equal(o.dragBar,false);assert.equal(o.showClose,false);assert.equal(o.enableOutsideInteractive,false);
+  assert.equal(o.backgroundColor,readerAppColor('TOK_SS_WINDOW_BG','day'));assert.equal(o.maskColor,readerAppColor('TOK_SS_DRAWER_SCRIM','day'));
+  assert.deepEqual(o.radius,{topLeft:22,topRight:22,bottomLeft:0,bottomRight:0});current.buttons[Number(index)].onClick();current.buttons[Number(index)].onClick();
   assert.deepEqual(f.calls,[[name,A]],'actual native row has one dispatch to captured book');assert.equal(f.owner.actionBook,undefined);o.onDisappear();assert.equal(f.owner.actionBook,undefined);
 }
 {

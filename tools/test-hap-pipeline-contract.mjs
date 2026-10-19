@@ -301,13 +301,14 @@ try {
   mkdirSync(join(scoped, 'scripts'));
   copyFileSync(new URL('../scripts/hap-pipeline.mjs', import.meta.url), join(scoped, 'scripts/hap-pipeline.mjs'));
   copyFileSync(new URL('./hap-contract-evidence-policy.json', import.meta.url), join(scoped, 'tools/hap-contract-evidence-policy.json'));
-  assert.equal(buildContractScope(new Map(), scoped), undefined);
-  assert.equal(buildContractScope(new Map([['--contracts-scope', 'manga-image-cache']]), scoped), 'manga-image-cache');
-  assert.equal(buildContractScope(new Map([['--contracts-scope', 'search-return-runtime']]), scoped), 'search-return-runtime');
+  assert.equal(buildContractScope(new Map(), scoped), 'none');
+  assert.equal(buildContractScope(new Map([['--contracts-scope', 'full'], ['--rationale', 'Explicit user full-suite request for this fixture']]), scoped), undefined);
+  assert.equal(buildContractScope(new Map([['--contracts-scope', 'manga-image-cache'], ['--rationale', 'Changed image-cache ownership']]), scoped), 'manga-image-cache');
+  assert.equal(buildContractScope(new Map([['--contracts-scope', 'search-return-runtime'], ['--rationale', 'Changed search return ownership']]), scoped), 'search-return-runtime');
   for (const options of [new Map([['--class', 'acceptance'], ['--contracts-scope', 'manga-image-cache']]),
     new Map([['--class', 'acceptance'], ['--contracts-scope', 'search-return-runtime']]),
     new Map([['--contracts-scope', 'unknown']]), new Map([['--contracts-scope', 'search-message-ui']]), new Map([['--contracts-scope', '']]), new Map([['--resume', 'old']])]) {
-    assert.throws(() => buildContractScope(options, scoped), /contracts-scope|unknown build argument|missing/);
+    assert.throws(() => buildContractScope(options, scoped), /contracts-scope|unknown build argument|missing|rationale/);
   }
   // Actual canonical argv rejects before signing, Native admission or any build.
   for (const argv of [['--class', 'acceptance', '--contracts-scope', 'manga-image-cache'],
@@ -318,7 +319,7 @@ try {
     try { execFileSync(process.execPath, [fileURLToPath(new URL('../scripts/hap-pipeline.mjs', import.meta.url)), 'build', ...argv],
       { encoding: 'utf8', timeout: 5000 }); } catch (error) { rejected = error; }
     assert.ok(rejected); assert.equal(rejected.status, 2);
-    assert.match(rejected.stderr, /contracts-scope|unknown build argument|invalid argument|duplicate argument/);
+    assert.match(rejected.stderr, /contracts-scope|unknown build argument|invalid argument|duplicate argument|rationale/);
   }
   const snapshots = { source: sourceSnapshot(scoped), controller: controllerSnapshot(scoped),
     workspace: workspaceContractSnapshot(scoped), toolchain: contentSnapshot(scoped, ['sdk']) };
@@ -341,7 +342,7 @@ try {
   verifyContractEvidence(run, manifest);
   assert.deepEqual(contracts.selected, ['test-selected.mjs']); assert.deepEqual(contracts.omitted, ['test-omitted.mjs']);
   assert.equal(contracts.fullSuite, 'NOT_RUN');
-  for (const change of [value => { value.gates.harmonyContracts = 'PASS'; }, value => { value.buildClass = 'acceptance'; },
+  for (const change of [value => { value.gates.harmonyContracts = 'PASS'; }, value => { value.buildClass = 'invalid'; },
     value => { value.acceptanceEligible = true; }, value => { delete value.gates.contracts; },
     value => { value.gates.contracts.selected.push('test-omitted.mjs'); }, value => { value.gates.contracts.fullSuite = 'PASS'; },
     value => { delete value.gates.contracts; delete value.gates.contractToolchainInputs; value.gates.harmonyContracts = 'PASS'; },
@@ -447,7 +448,7 @@ try {
     value=>{value.scopeTimeoutMs=120001;},value=>{value.pipelineGateMilliseconds=120001;},
   ]){const invalid=structuredClone(returnReport);change(invalid);assert.throws(()=>publishContractEvidence(returnRun,invalid,'search-return-runtime',inputs,scoped),/contract evidence/);}
   const returnAcceptance=structuredClone(returnManifest);returnAcceptance.buildClass='acceptance';returnAcceptance.acceptanceEligible=true;
-  assert.throws(()=>verifyContractEvidence(returnRun,returnAcceptance),/scoped contracts cannot be acceptance evidence/);
+  assert.throws(()=>verifyContractEvidence(returnRun,returnAcceptance),/contract evidence build class is inconsistent|scoped contracts cannot be acceptance evidence/);
   const returnUnknown=structuredClone(returnManifest);returnUnknown.gates.contracts.scope='search-return-runtime-unknown';
   assert.throws(()=>verifyContractEvidence(returnRun,returnUnknown),/contract evidence build class is inconsistent/);
   console.log('PASS separate search-return-runtime immutable receipt: exact subset/omissions, 120s policy, fail-fast/PARTIAL and deadline/selection/settlement/log-input policy tamper rejection; no production build');

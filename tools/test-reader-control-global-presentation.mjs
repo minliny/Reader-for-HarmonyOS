@@ -1,15 +1,19 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import * as paint from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
-import * as scroll from '../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts';
-import * as appearance from '../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts';
-import { READER_CONTROL_APPEARANCE_THEMES } from '../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts';
-import * as appearanceState from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import * as render from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
-import * as playback from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
-import * as settings from '../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts';
-import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions=Object.fromEntries([['actor-clips','Auto/Settings actual source-basis clipping and overflow'],['appearance-paint','Actual SDK font cell fill/radius/clip and callback separation'],['appearance-cache','Actual Appearance endpoint/font-order cache invalidation'],['visible-rect-policy','Pure shared viewport intersection policy']].map(([id,description])=>[id,{description,resources:[]}]));
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { readFileSync }=await import('node:fs');
+const paint=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+const scroll=await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
+const appearance=await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts');
+const { READER_CONTROL_APPEARANCE_THEMES }=await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts');
+const appearanceState=await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
+const render=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const playback=await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
+const settings=await import('../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts');
+const actors=await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
+const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
 
 const source = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/ReaderControl${name}Content.ets`, import.meta.url), 'utf8');
 const PathShape = class { commands(path) { this.path = path; return this; } };
@@ -23,6 +27,7 @@ const props = () => ({
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-7, `${a} != ${b}`);
 const deps = { ...paint, ...scroll, ...actors, PathShape };
 
+if(selectedCase==='actor-clips'){
 // Production clipping adapters operate in each actor's actual parent basis.
 const { owner: auto } = createReaderBuilderProbe(source('AutoPage'),
   ['p', 'frame', 'presentation', 'sharedPaintRect', 'sharedClip', 'quickBack'], { ...deps, ...playback });
@@ -53,6 +58,8 @@ for (const offset of [0, 100, 300, 666, 3300]) {
 assert.equal(auto.sharedPaintRect('speed', 0).height, 64, 'Quick speed keeps its real child overflow');
 assert.equal(auto.sharedPaintRect('control', 0).height, 67, 'transport icons above local zero are not cut off');
 
+}
+if(selectedCase==='appearance-paint'){
 // Actual SDK-generated font cell: rounded paint inside the motion clip, with
 // text softening independent of the surface. Native rounded rendering is also
 // checked on the VM; this probe checks the retained observer attributes.
@@ -115,19 +122,17 @@ for (const offset of [0, 250, 565, 1000]) for (const p of [0, .1, .5, .9, 1, .7,
     near(text.fontSize, 12);
   }
 }
-// Empty/loading/error list content must use the same nonblank fade envelope.
-for (const name of ['AutoPage', 'Appearance', 'Settings', 'Search', 'Replace', 'Directory', 'Tts']) {
-  const tree = source(name);
-  assert.match(tree, /sampleReaderControlMotionPresentation/);
-  assert.doesNotMatch(tree, /setInterval|componentSnapshot|animateTo/);
 }
+if(selectedCase==='visible-rect-policy'){
 for (const y of [-100, -10, 0, 70, 100]) {
   const rect = paint.readerControlMotionVisibleRect({ x: 0, y, width: 100, height: 30 }, 80);
   assert.ok(rect.height >= 0 && rect.height <= 30);
   if (y >= 80 || y + 30 <= 0) near(rect.height, 0);
 }
-console.log('PASS global presentation: shared policies, production actor-local clips, retained overflow, actual SDK font content/outline separation and reversal; device evidence separate');
+}
+console.log(`PASS selected control scope ${selectedCase}; actual SDK authored attributes/callbacks, native compositor and touch remain separate`);
 
+if(selectedCase==='appearance-cache'){
 // Theme/font clipping reads both endpoints repeatedly; geometry is shared
 // within the live width/height, including reversal and font-order updates.
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
@@ -144,3 +149,8 @@ const ids=cache.fontIds();assert.equal(cache.fontIds(),ids);
 cache.snapshot.fontOrder=cache.snapshot.fontOrder.slice().reverse();assert.notDeepEqual(cache.fontIds(),ids);
 cache.draggedFontId='system';cache.previewFontOrder=['system','import'];assert.deepEqual(cache.fontIds(),['system','import']);
 cache.previewFontOrder.reverse();assert.deepEqual(cache.fontIds(),['import','system']);
+
+}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
-import { syncIndexFixture as f, fullSyncIndexPage } from './lib/sync-index-real-fixture.mjs';
-
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { syncIndexFixture: f, fullSyncIndexPage }=await import("./lib/sync-index-real-fixture.mjs");
 const clone = value => structuredClone(value);
 async function until(predicate) {
   for (let n = 0; n < 2000; n++) {
     if (predicate()) return;
-    await new Promise(resolve => setTimeout(resolve, 1));
+    await new Promise(setImmediate);
   }
   throw Error('actual platform boundary did not arrive');
 }
@@ -25,6 +26,9 @@ function fixture() {
 
 // All methods are complete production Store/Gateway/owner methods. Platform
 // AtomicFile uses the existing real-file adapter; the UI is SDK transformed.
+
+try {
+if(id==='config-transfer'){
 {
   const x = fixture(), a = x.attach('a');
   x.owner.open(); await x.settle();
@@ -69,6 +73,8 @@ function fixture() {
   const page = fullSyncIndexPage({ snapshot: b.snapshot, onReconcile: generation => x.owner.reconcile(generation) });
   assert.equal(page.snapshot.facts.operation.operationId, b.snapshot.facts.operation.operationId);
 }
+}
+if(id==='restore-transfer'){
 {
   const x = fixture(), a = x.attach('restore-a');
   x.owner.open(); await x.settle();
@@ -86,6 +92,8 @@ function fixture() {
   assert.equal(b.snapshot.facts.operation.completed, true);
   assert.equal(b.snapshot.facts.operation.projection.receipt.confirmation, 'confirmed');
 }
+}
+if(id==='unknown-transfer'){
 {
   const x = fixture(), a = x.attach('unknown-a');
   x.owner.open(); await x.settle();
@@ -105,6 +113,8 @@ function fixture() {
   assert.equal(b.snapshot.facts.operation.operationId, originalId);
   assert.equal(f.asset.calls.filter(v => v === 'add').length, writes, 'pure exact read does not dispatch another save');
 }
+}
+if(id==='runtime-retirement'){
 {
   const x = fixture(), a = x.attach('retired');
   x.owner.open(); await x.settle();
@@ -122,4 +132,8 @@ function fixture() {
   assert.notEqual(y.owner, x.owner, 'replacement Runtime gets its own finite domain owner');
   assert.equal(y.owner.ownedBy(y.runtime), true);
 }
-console.log('PASS Sync finite Runtime owner: one accepted chain across Index replacement, exact unknown barrier, matching presentation cleanup, SDK projection, original arguments and retired Runtime isolation');
+}
+}finally{f.cleanup();}
+}
+const definitions={"config-transfer": "config-transfer; actual production methods with explicit controlled platform ports", "restore-transfer": "restore-transfer; actual production methods with explicit controlled platform ports", "unknown-transfer": "unknown-transfer; actual production methods with explicit controlled platform ports", "runtime-retirement": "runtime-retirement; actual production methods with explicit controlled platform ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

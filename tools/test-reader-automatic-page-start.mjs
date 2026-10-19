@@ -1,3 +1,4 @@
+import { createReaderPageGestureState } from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerRapidPageTurnHasWork, createReaderRapidPageTurnState } from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
@@ -21,7 +22,7 @@ function fixture(){
   const auto={status:'running',generation:5,awaitingPageCommit:true};
   const owner=Object.assign(new Model(),{
     mounted:true,appForeground:true,exitRequested:false,lifecycleToken:7,viewportWidth:400,viewportHeight:800,
-    activePagePointerId:-1,pagePointerEpoch:0,pendingPointerSegmentReserved:false,
+    pageTurnGestureState:createReaderPageGestureState(),activePagePointerId:-1,pagePointerEpoch:0,pendingPointerSegmentReserved:false,
     readerSettingsSnapshot:{navigationMode:'paged'}, rapidPageTurnState:createReaderRapidPageTurnState(),
     pageTurnSettlementGeneration:20,bookTurnSurfaceGeneration:20,pageTurnSettlementActive:false,
     pageTurnPresentationPhase:'idle',pageTurnCommitStarted:false,pageTurnCommitFinished:false,

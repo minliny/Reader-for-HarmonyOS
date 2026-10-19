@@ -1,12 +1,35 @@
-import assert from 'node:assert/strict';
-import { registerHooks } from 'node:module';
-registerHooks({ resolve(specifier, context, nextResolve) {
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={
+ 'crud':{description:'Actual existing CLI partial fields/validation/current admission and CRUD',resources:[]},
+ 'receipts':{description:'Actual lost/malformed/exact original receipts and final nondispatch',resources:[]},
+ 'replace-bundle':{description:'Actual replace-only bundle families/import duplicates and no replaceExisting',resources:[]},
+ 'preview-request':{description:'Actual Gateway preview input/typed decode against fake runtime; no Core result claim',resources:[]}
+};
+const selected=selectContractCases(definitions);
+async function runCase(selectedCase){
+const {default:assert}=await import('node:assert/strict');
+const { registerHooks }=await import('node:module');
+const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
   try { return nextResolve(specifier, context); } catch (error) {
     if ((specifier.startsWith('./') || specifier.startsWith('../')) && !specifier.endsWith('.ts'))
       return nextResolve(`${specifier}.ts`, context);
     throw error;
   }
 } });
+let cleanupDurableFixtures;
+try {
+if(selectedCase==='preview-request'){
+ const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {readFileSync}=await import('node:fs');
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderReplaceQuickGateway.ts',import.meta.url),'utf8');const {ts}=installedEtsCompiler();
+ const emitted=ts.transpileModule(source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(emitted.diagnostics,[]);
+ const exports={};new Function('exports','errorMessageOf',emitted.outputText)(exports,error=>error.message);
+ const calls=[],runtime={request:async(method,params)=>{calls.push({method,params});return{data:{...params,chapterTitle:'chapter',before:'old',after:'new',changed:true,truncated:false,storedRuleCount:3,enabledRuleCount:3}};}};
+ const gateway=new exports.ReaderReplaceQuickGateway(runtime),preview=await gateway.preview('source','book',4,80);
+ assert.equal(preview.before,'old');assert.equal(preview.after,'new');assert.deepEqual(calls,[{method:'replace.preview',params:{sourceId:'source',bookId:'book',chapterIndex:4,maxScalars:80}}]);
+ await assert.rejects(gateway.preview('source','book',4,2049),/bounds/);assert.equal(calls.length,1);return;
+}
+const durable=await import('./lib/rules-mutation-durable-probe.mjs');cleanupDurableFixtures=durable.cleanupDurableFixtures;
+console.log(JSON.stringify({kind:'reader-existing-tool-evidence',...durable.durableFixtureToolEvidence()}));
 const { readerReplaceSdkFixture, readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
 const actualSdk = await readerReplaceSdkFixture();
 const ReaderControlReplaceGateway = actualSdk.Full, ReaderControlReplaceGatewayError = actualSdk.FullError;
@@ -18,11 +41,11 @@ const rule = (id) => ({ id, order: id, name: `规则${id}`, pattern: 'old', repl
 // Actual SDK-emitted full Owner/Gateway, AtomicFile seam and cold SQLite Core.
 // Only controlled protocol observations/lost replies are injected; no rule
 // persistence, identity, receipt or mutation algorithm is copied into the test.
-for (let id = 1; id <= 5; id++) {
+for (let id = 1; id <= (selectedCase==='crud'?5:selectedCase==='receipts'?3:1); id++) {
   const seed = { ...rule(id) }; delete seed.id;
   await actualSdk.command('replace.persist', { operation: 'create', params: seed });
 }
-await actualSdk.command('dict-rule.put', { name: 'unrelated', urlRule: 'https://dict.invalid/{{key}}', showRule: '$.definition', enabled: true, sortNumber: 0 });
+if(selectedCase==='replace-bundle')await actualSdk.command('dict-rule.put', { name: 'unrelated', urlRule: 'https://dict.invalid/{{key}}', showRule: '$.definition', enabled: true, sortNumber: 0 });
 const calls = [];
 let current = true;
 let validationValid = true;
@@ -64,13 +87,14 @@ runtime.request = async (method, params = {}, options = {}) => {
 };
 let gateway = new ReaderControlReplaceGateway(runtime);
 const all = await gateway.loadRules(() => current);
-assert.deepEqual(all.map(r => r.id), [1, 2, 3, 4, 5]);
+if(selectedCase==='crud')assert.deepEqual(all.map(r => r.id), [1,2,3,4,5]);
 assert.equal(all[0].scopeSource, true);
-assert.deepEqual((await gateway.load()).rules.map(r => r.id), [1, 2, 3], 'legacy Quick facade stays bounded');
+if(selectedCase==='crud')assert.deepEqual((await gateway.load()).rules.map(r=>r.id),[1,2,3],'legacy Quick facade stays bounded');
 const original = all[0];
 let draft = createReaderControlReplaceDraft(original);
-assert.deepEqual(readerControlReplaceDraftParams(draft), { id: 1 });
-let count = calls.length;
+let count=calls.length;
+if(selectedCase==='crud'){
+assert.deepEqual(readerControlReplaceDraftParams(draft),{id:1});
 assert.equal((await gateway.save(draft)).changed, false);
 assert.equal(calls.length, count, 'Core rejects no-op updates, so do not send them');
 draft.name = 'renamed';
@@ -100,6 +124,8 @@ assert.equal((await gateway.save(draft, () => current)).rule.name, 'renamed-afte
   'confirmed real write still resolves after UI closure; Host separately protects presentation');
 duringPersist = undefined;
 current = true;
+}
+if(selectedCase==='receipts'){
 persistError = true;
 draft.name = 'lost-original-reply';
 await assert.rejects(gateway.save(draft), e => e instanceof ReaderControlReplaceGatewayError && e.writeUncertain);
@@ -135,11 +161,8 @@ duringStartup = undefined; current = true;
 draft.order = 2147483648;
 await assert.rejects(gateway.save(draft), /数值/);
 
-const preview = await gateway.preview('source', 'book', 4, 80);
-assert.equal(preview.before, 'old');
-assert.equal(preview.after, 'new');
-assert.equal(calls.some(c => c.method === 'replace.apply'), false, 'preview never re-processes already rendered UI text');
-await assert.rejects(gateway.preview('source', 'book', 4, 2049), /bounds/);
+}
+if(selectedCase==='replace-bundle'){
 const exported = JSON.parse(await gateway.exportJson());
 assert.equal(exported.replaceRules.length, (await actualSdk.command('replace-rule.list')).data.rules.length);
 assert.deepEqual(exported.dictRules, [], 'in-reader export must not disclose unrelated rule families');
@@ -158,4 +181,9 @@ current = false;
 await assert.rejects(gateway.loadRules(() => current), /过期/);
 await assert.rejects(gateway.importJson(JSON.stringify(incoming), () => current), /过期/);
 assert.ok(actualSdk.writes().every(call => call.method === 'rules.mutation.apply'), 'all actual writes retain the complete typed exact-receipt envelope');
-console.log('PASS reader-control-replace-gateway: actual full SDK Owner/Gateway/Atomic IO/cold SQLite requests, all rules, lossless partial CRUD, guards, receipts, preview and replace-only bundle');
+}
+console.log(`PASS replace gateway ${selectedCase}: existing CLI/actual SDK boundary`);
+}finally{if(cleanupDurableFixtures)await cleanupDurableFixtures();resolution.deregister();}
+
+}
+for(const id of selected){await runCase(id);recordContractCasePass(id);}

@@ -15,6 +15,7 @@ const projectPersistedReceipt=compile('app/ReaderPersistedReceiptProjection.ts',
 const book=id=>({sourceId:'s',bookId:id,title:id,author:'author',addedAt:1,sortIndex:0,group:'old'});
 const until=async(fn)=>{for(let i=0;i<200&&!fn();i++)await new Promise(r=>setTimeout(r,2));assert.ok(fn(),'actual async boundary reached');};
 let cases=0;
+const nativeAction=(owner,label)=>{const actor=sdk.walk(owner).findLast(c=>c.label===label);return actor&&sdk.nodes(actor).find(n=>n.onClick);};
 async function fixture(text=indexSource,gatewayText=source('features/bookshelf/BookshelfManagementGateway.ts'),existing){
  const f=dialogFixture(text),r=f.r,actual=await managementFixture(existing,r,gatewayText),Runtime=actual.Runtime;
  if(!existing){for(const input of [book('a'),book('b')])await actual.command('bookshelf.add',{sourceId:input.sourceId,bookId:input.bookId,title:input.title,author:input.author});
@@ -34,7 +35,7 @@ async function fixture(text=indexSource,gatewayText=source('features/bookshelf/B
  const {Host,Orchestrator}=actual;
  const attach=(index)=>{const host=new Host(snapshot=>{index.bookshelfManagementSnapshot=snapshot;},()=>index.route==='bookshelfManagement',()=>r);index.bookshelfHost=host;return host;};
  const host=attach(f.i);const owner=()=>host.managementOrchestrator;
- const notice=()=>sdk.nodes(f.i).findLast(n=>n.create==='核对分组'&&n.onClick);
+ const notice=()=>nativeAction(f.i,'核对分组');
  return{...f,...actual,r,host,Host,Orchestrator,Runtime,attach,owner,notice,settle:async()=>{await owner()?.operationTail;await Promise.resolve();await Promise.resolve();},
   writes:()=>actual.writes().filter(c=>c.dispatched).map(c=>({method:c.params.mutation.method,params:c.params.mutation.params,cancel:c.options.shouldCancel})),
   retire:()=>{actual.retire();f.retire();}};
@@ -48,7 +49,17 @@ async function fixture(text=indexSource,gatewayText=source('features/bookshelf/B
 for(const fail of['read','lost','lostBefore','malformed']){
  const f=await fixture(),b=f.r.books[0];f.i.openShelfGroup(b);await f.settle();
  if(fail==='read')f.r.readFailure='book-group.list';if(fail==='lost')f.r.lost='bookshelf.group.assign';if(fail==='lostBefore')f.r.lostBefore='bookshelf.group.assign';if(fail==='malformed')f.r.malformed=true;
- f.group().select.onClick();await f.settle();assert.equal(f.writes().length,1);assert.equal(f.raw(f.i.editingShelfGroupBook),b);
+ f.group().select.onClick();await f.settle();assert.equal(f.writes().length,1);
+ if(fail==='read'){
+  assert.equal(f.i.editingShelfGroupBook,undefined,'confirmed assignment closes to prevent a duplicate save after readback failure');
+  assert.equal(f.i.bookshelfManagementSnapshot.receipt.receipt.confirmation,'confirmed');
+  assert.equal(f.i.bookshelfManagementSnapshot.receipt.receipt.fact,'confirmedRefreshFailed');
+  assert.deepEqual(f.toasts,['分组已保存，列表刷新失败']);
+  assert.equal(f.refresh(),1,'confirmed assignment dispatches the stable bookshelf read entry');
+  assert.equal(f.notice(),undefined,'no pending notice is rendered for a known saved result');
+  f.i.refreshBookshelf();assert.equal(f.writes().length,1,'stable refresh is read-only');cases++;continue;
+ }
+ assert.equal(f.raw(f.i.editingShelfGroupBook),b);
  const receipt=f.i.bookshelfManagementSnapshot.receipt;assert.equal(receipt.receipt.confirmation,fail==='read'?'confirmed':'unknown');
  f.i.shelfGroupContent();const n=f.notice();assert.ok(n?.onClick,'actual shared Notice/Action native read-only recovery');n.onClick();n.onClick();await f.settle();
  assert.equal(f.writes().length,1,'double read recovery never repeats group write');
@@ -99,8 +110,9 @@ function managementIndex(f){
  const actualPage=()=>{
   i.bookshelfManagementContent();const props=[...i.children.values()].at(-1).params;
   const page=sdk.consumer(pageSource,boundedMembers(pageSource),{EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT:i.bookshelfManagementSnapshot,readerRecoveryView,InputType:{Number:1}},props);
-  page.groupEditorCard();page.recoveryAction();
-  return{page,props,save:sdk.nodes(page).find(n=>n.create==='创建'&&n.onClick)};
+  const toasts=[];page.getUIContext=()=>({getPromptAction:()=>({showToast:value=>toasts.push(value.message)})});
+  page.onSnapshotChanged();page.groupEditorCard();page.pendingOverlay();
+  return{page,props,toasts,save:nativeAction(page,'创建')};
  };
  return{i,owner,actualPage,back:()=>back,open:async()=>{i.bookshelfHost.openManagement(i.bookshelfManagementPresentationIdentity);await owner.operationTail;}};
 }
@@ -116,7 +128,8 @@ function managementIndex(f){
 {
  const f=await fixture(),x=managementIndex(f);await x.open();const p=x.actualPage();p.props.onGroupNameChanged('truth');f.r.readFailure='book-group.list';p.save.onClick();await x.owner.operationTail;
  assert.equal(x.i.bookshelfManagementSnapshot.receipt.receipt.fact,'confirmedRefreshFailed');
- const actual=x.actualPage();const recovery=sdk.nodes(actual.page).find(n=>n.create==='刷新列表'&&n.onClick);assert.ok(recovery);recovery.onClick();await x.owner.operationTail;
+ const actual=x.actualPage();assert.equal(nativeAction(actual.page,'核对操作结果'),undefined,'known saved/read failure stays Toast');assert.match(actual.toasts[0],/保存|刷新/);
+ actual.props.onReconcile(x.i.bookshelfManagementSnapshot.receipt.facts.generation);await x.owner.operationTail;
  assert.equal(f.writes().length,1);assert.equal(x.i.bookshelfManagementSnapshot.receipt.receipt.fact,'confirmedCurrent');cases++;
 }
 {
@@ -131,12 +144,12 @@ function managementIndex(f){
  const f=await fixture(),b=f.r.books[0];f.i.openShelfGroup(b);await f.settle();f.r.lostBefore='bookshelf.group.assign';f.group().select.onClick();await f.settle();
  const original=JSON.parse(f.disk()),cold=await fixture(indexSource,source('features/bookshelf/BookshelfManagementGateway.ts'),{root:f.root,uuid:f.uuid()}),x=managementIndex(cold);
  await x.open();assert.equal(x.i.bookshelfManagementSnapshot.managementMutation.canContinueOriginal,true);
- const actual=x.actualPage(),old=sdk.nodes(actual.page).findLast(n=>n.create==='继续原分组操作'&&n.onClick);
+ const actual=x.actualPage(),old=nativeAction(actual.page,'继续原分组操作');
  assert.ok(old,'cold original intent is consumed by an actual SDK shared RecoveryAction');
- const query=sdk.nodes(actual.page).findLast(n=>n.create==='刷新列表'&&n.onClick);assert.ok(query);query.onClick();await x.owner.operationTail;
+ const query=nativeAction(actual.page,'核对操作结果');assert.ok(query);query.onClick();await x.owner.operationTail;
  assert.equal(cold.writes().length,0,'original native reconcile always remains query-only');
- actual.page.updateStateVars({...actual.props,snapshot:x.i.bookshelfManagementSnapshot});actual.page.recoveryAction();
- const current=sdk.nodes(actual.page).findLast(n=>n.create==='继续原分组操作'&&n.onClick);assert.notEqual(current,old);
+ actual.page.updateStateVars({...actual.props,snapshot:x.i.bookshelfManagementSnapshot});actual.page.pendingOverlay();
+ const current=nativeAction(actual.page,'继续原分组操作');assert.notEqual(current,old);
  old.onClick();await x.owner.operationTail;assert.equal(cold.writes().length,0,'retained old physical action cannot borrow new generation');
  current.onClick();current.onClick();await x.owner.operationTail;
  assert.equal(cold.writes().length,1);const write=cold.calls.find(c=>c.method==='bookshelf.management.mutation.apply'&&c.dispatched);
@@ -147,24 +160,24 @@ function managementIndex(f){
  const f=await fixture(),b=f.r.books[0];f.i.openShelfGroup(b);await f.settle();f.r.lostBefore='bookshelf.group.assign';f.group().select.onClick();await f.settle();
  const cold=await fixture(indexSource,source('features/bookshelf/BookshelfManagementGateway.ts'),{root:f.root,uuid:f.uuid()});
  cold.i.openShelfGroup(cold.r.books[1]);await cold.settle();const owner=cold.owner();
- cold.i.shelfGroupContent();assert.equal(sdk.nodes(cold.i).filter(n=>n.create==='继续原分组操作'&&n.onClick).length,0,
+ cold.i.shelfGroupContent();assert.equal(sdk.walk(cold.i).filter(c=>c.label==='继续原分组操作').length,0,
   'a pending assignment of book A cannot present a write continuation as book B');
  assert.equal(cold.i.canContinueShelfGroup(cold.r.books[0],cold.i.bookshelfManagementSnapshot.receipt.facts.generation),true,'exact original book A remains eligible');
  assert.equal(cold.writes().length,0);cases++;
 }
 {
  const f=await fixture(),b=f.r.books[0];f.i.openShelfGroup(b);await f.settle();f.r.lostBefore='bookshelf.group.assign';f.group().select.onClick();await f.settle();
- const x=managementIndex(f);await x.open();const old=x.actualPage();const oldNative=sdk.nodes(old.page).findLast(n=>n.create==='继续原分组操作'&&n.onClick);assert.ok(oldNative);
+ const x=managementIndex(f);await x.open();const old=x.actualPage();const oldNative=nativeAction(old.page,'继续原分组操作');assert.ok(oldNative);
  const replacement=managementIndex(f);await replacement.open();oldNative.onClick();old.props.onContinueOriginal(x.i.bookshelfManagementSnapshot.receipt.facts.generation);await x.owner.operationTail;
  assert.equal(f.writes().length,1,'only original failed admission was dispatched, no stale page continuation');
- const live=replacement.actualPage(),native=sdk.nodes(live.page).findLast(n=>n.create==='继续原分组操作'&&n.onClick);assert.ok(native);native.onClick();await replacement.owner.operationTail;
+ const live=replacement.actualPage(),native=nativeAction(live.page,'继续原分组操作');assert.ok(native);native.onClick();await replacement.owner.operationTail;
  assert.equal(f.writes().length,2,'current replacement page explicitly continues original complete DTO');cases++;
 }
 {
  const f=await fixture(),x=managementIndex(f);await x.open();f.options.loseFinishAt=2;const p=x.actualPage();p.props.onGroupNameChanged('终态');p.save.onClick();await x.owner.operationTail;
  assert.equal(x.i.bookshelfManagementSnapshot.receipt.receipt.confirmation,'confirmed');assert.equal(x.i.bookshelfManagementSnapshot.mutationBlocked,true);
  const recovery=x.actualPage();assert.match(recovery.page.recovery().message,/已确认.*记录清理尚未确认/);
- const native=sdk.nodes(recovery.page).findLast(n=>n.create==='刷新列表'&&n.onClick);assert.ok(native,'confirmed Core ACK with unsettled local cleanup still has pure recovery');
+ const native=nativeAction(recovery.page,'核对操作结果');assert.ok(native,'confirmed Core ACK with unsettled local cleanup still has pure recovery');
  native.onClick();await x.owner.operationTail;assert.equal(f.writes().length,1);assert.equal(x.i.bookshelfManagementSnapshot.mutationBlocked,false);cases++;
 }
 

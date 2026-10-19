@@ -1,11 +1,23 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, copyFileSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync as writeNativeFileSync, readFileSync, rmSync, existsSync, copyFileSync, symlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { runContracts, runContractsBounded, contractTests, MAX_CONTRACT_TIMEOUT_MS, MAX_CONTRACT_KILL_GRACE_MS } from './run-contract-tests.mjs';
+
+// Every owned synthetic child below is plain Node. Give these fixture roots
+// an explicit resource declaration; production missing metadata still fails.
+function writeFileSync(path, bytes, ...options) {
+ writeNativeFileSync(path,bytes,...options);
+ if (String(path).endsWith('/tools/contract-test-tiers.json')) {
+  let inventory;try{inventory=JSON.parse(String(bytes));}catch{return;}
+  const names=[...(inventory.source??[]),...(inventory.integration??[])];
+  writeNativeFileSync(String(path).replace('contract-test-tiers.json','contract-case-manifest.json'),JSON.stringify({schemaVersion:1,files:{},legacy:Object.fromEntries(names.map(name=>[name,{resources:[],basis:'Owned plain Node fixture, no native build'}]))}));
+ }
+}
+
 
 export async function runContractTierFixtures() {
 contractTests(fileURLToPath(new URL('..', import.meta.url)), 'full');
@@ -67,8 +79,9 @@ try {
   rmSync(join(root, 'tools/test-new.mjs'));
   const fixtureRunner = join(root, 'tools/run-contract-tests.mjs');
   copyFileSync(new URL('./run-contract-tests.mjs', import.meta.url), fixtureRunner);
+  copyFileSync(new URL('./retired-contract-tests.json', import.meta.url), join(root, 'tools/retired-contract-tests.json'));
   const resultsFile = join(root, 'cli-results.json');
-  const cli = spawnSync(process.execPath, [fixtureRunner, '--scope', 'manga-image-cache', '--results-file', resultsFile,
+  const cli = spawnSync(process.execPath, [fixtureRunner, '--scope', 'manga-image-cache', '--rationale', 'The selected fixture verifies scoped omission and deadline receipts.', '--results-file', resultsFile,
     '--test-timeout-ms', '2000'], { encoding: 'utf8', timeout: 5000 });
   assert.equal(cli.status, 0, cli.stderr); assert.match(cli.stdout, /full suite NOT_RUN/);
   const cliReport = JSON.parse(readFileSync(resultsFile, 'utf8'));
@@ -78,7 +91,7 @@ try {
   assert.ok(cliReport.millisecondsTotal <= cliReport.scopeTimeoutMs);
   for (const argv of [['--scope', 'manga-image-cache', '--test-timeout-ms', String(MAX_CONTRACT_TIMEOUT_MS + 1)],
     ['--scope', 'unknown'], ['--full', '--test-timeout-ms', '0'], ['--full', '--test-timeout-ms', '2', '--test-timeout-ms', '2']]) {
-    const rejected = spawnSync(process.execPath, [fixtureRunner, ...argv], { encoding: 'utf8', timeout: 5000 });
+    const rejected = spawnSync(process.execPath, [fixtureRunner, ...argv, '--rationale', 'The selected invalid fixture must be rejected before execution.'], { encoding: 'utf8', timeout: 5000 });
     assert.notEqual(rejected.status, 0, 'invalid scope/deadline/duplicate cannot execute the fixture suite');
   }
   await assert.rejects(runContractsBounded(root, 'full', 1, { timeoutMs: MAX_CONTRACT_TIMEOUT_MS + 1 }), /invalid test deadline/);

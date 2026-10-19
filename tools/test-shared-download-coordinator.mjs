@@ -1,7 +1,10 @@
-import { localFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { localFilePath }=await import('./lib/tool-environment.mjs');
+
+const { readFileSync }=await import('node:fs');
+const { registerHooks, stripTypeScriptTypes }=await import('node:module');
 registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; }
@@ -32,6 +35,7 @@ const session = (count = 45, bookId = 'book') => ({ identity: { sourceId: 'sourc
   acquisitionMode: 'online', contentKind: 'text', detailUrl: bookId, tocUrl: 'toc',
   book: { title: 'Fixture book', author: '' }, continuationVariables: [], hostRequirements: [],
   entries: Array.from({ length: count }, (_, index) => ({ index, title: `Chapter ${index}`, url: `/${index}`, variables: [], navigable: true })) });
+const owned=[];
 function fixture(seed = []) {
   const calls = [], completed = new Set(), pending = new Map();
   let blocked = -1, failure = -1, failureMessage = 'network interrupted', automatic = false,
@@ -75,6 +79,7 @@ function fixture(seed = []) {
     async clearOfflineChapterImages(_source, _book, index) { calls.push(['clear-chapter-images', index]); },
   };
   const coordinator = new SharedDownloadCoordinator(runtime, () => !closed, persistence);
+  owned.push(async()=>{closed=true;for(const release of pending.values())release();await coordinator.close();});
   return { coordinator, runtime, calls, completed, pending, get saved() { return saved; },
     setAutomatic(value) { automatic = value; }, block(index) { blocked = index; },
     setUrls(next) { urls = next.slice(); generic++; },
@@ -156,6 +161,9 @@ async function withControlDiagnostics(work) {
   try { await work(warnings); }
   finally { console.warn = previous; }
 }
+
+try{
+if(id==='scale-identities'){
 for (const count of [1024, 4096]) {
   const meter = { reads: 0 }, s = session(count, `scale-${count}`);
   s.entries = countedCatalogArray(s.entries.map((entry, ordinal) => ({ ...entry, index: ordinal * 2,
@@ -229,9 +237,8 @@ for (const count of [1024, 4096]) {
     'every selected status row is rechecked, including a later conflicting duplicate');
   assert.equal(rpc.some(method => method.startsWith('cache.download.')), false);
 }
-
-// A fully ready range is a single synchronous skip pass. Watch replaced
-// requested arrays too, since the real rebind replaces them during run().
+}
+if(id==='scale-ready'){
 {
   const count = 4096, meter = { reads: 0 }, s = session(count, 'all-ready-scale');
   const indexes = s.entries.map(entry => entry.index), intent = scaleIntent(s, indexes);
@@ -257,9 +264,8 @@ for (const count of [1024, 4096]) {
   assert.equal(intent.status, 'completed'); assert.equal(acquisitions, 0);
   assert.ok(meter.reads <= 20 * count, `ready range: ${meter.reads} visits must not restart the requested/projection scan per chapter`);
 }
-
-// The execution cursor is local, but an accepted range can be replaced while
-// its current chapter awaits Core. An earlier new index must still be visited.
+}
+if(id==='range-extension'){
 {
   const f = fixture(), s = session(3); f.setAutomatic(true); f.block(2);
   await f.coordinator.submit(s, [2]);
@@ -273,8 +279,8 @@ for (const count of [1024, 4096]) {
   assert.deepEqual([...f.completed].sort((a, b) => a - b), [0, 2]);
   await f.close();
 }
-// A call-local identity map must refresh after an awaited queue operation,
-// before it admits the next row against a newly replaced directory.
+}
+if(id==='changed-after-control'){
 {
   const s = session(2, 'control-directory-change'), intent = scaleIntent(s, [0, 1]);
   const calls = []; let release;
@@ -297,7 +303,8 @@ for (const count of [1024, 4096]) {
   assert.deepEqual(calls.filter(call => call[0] === 'cache.download.pause').map(call => call[1].chapterIndex), [0],
     'the changed later chapter is rejected before its queue mutation is dispatched');
 }
-
+}
+if(id==='whole-book'){
 {
   const f = fixture(); const s = session();
   const ack = await f.coordinator.submit(s);
@@ -314,6 +321,8 @@ for (const count of [1024, 4096]) {
   assert.equal(f.calls.filter(call => call[0] === 'cache.book.prefetch').length, before, 'fully saved chapters are reused');
   await f.close();
 }
+}
+if(id==='pause-resume-retention'){
 {
   const f = fixture(); await f.coordinator.submit(session()); await until(() => f.pending.has(0), 'pause chapter');
   const pause = f.coordinator.operate('pause', { book: f.coordinator.books()[0] });
@@ -328,6 +337,8 @@ for (const count of [1024, 4096]) {
   assert.equal(f.saved[0].requestedIndexes.length, 0); assert.equal(f.saved[0].retainedIndexes.length, 45, 'cancel retains local ownership');
   assert.equal(f.completed.size, 45); await f.close();
 }
+}
+if(id==='control-readback'){
 for (const action of ['pause', 'cancel']) await withControlDiagnostics(async warnings => {
   const f = await feedbackFixture(); f.failProjectionOnce();
   let observed;
@@ -351,9 +362,8 @@ for (const action of ['pause', 'cancel']) await withControlDiagnostics(async war
   assert.equal(restored.pending.size, 0, 'committed pause/cancel survives process restoration without reacquisition');
   await restored.close(); await f.close();
 });
-// The external physical-read port may throw only a fixed Host guard constant
-// into ordinary diagnostics. Exercise the complete operation boundary so a
-// classified read failure cannot turn a confirmed pause into a failed job.
+}
+if(id==='physical-guard-diagnostics'){
 for (const code of ['MANGA_DECODE_CAPACITY', 'MANGA_CACHE_EVICTING', 'MANGA_CACHE_STORAGE_RESTORING',
   'MANGA_CACHE_PROFILE_REQUIRED', 'MANGA_CACHE_RESOURCE_CORRUPT']) await withControlDiagnostics(async warnings => {
   const f = await feedbackFixture();
@@ -370,6 +380,8 @@ for (const code of ['MANGA_DECODE_CAPACITY', 'MANGA_CACHE_EVICTING', 'MANGA_CACH
   assert.equal(warnings[0], `DOWNLOAD_CONTROL_DIAGNOSTIC action=pause stage=projection-refresh lastConfirmed=state-persisted code=${code}`);
   await f.close();
 });
+}
+if(id==='unsafe-diagnostics'){
 for (const failure of [
   new Error('MANGA_DECODE_CAPACITY https://private.invalid/?token=PRIVATE_TOKEN Cookie=PRIVATE_COOKIE'),
   new Error('MANGA_CACHE_EVICTING: PRIVATE_BUSINESS_ID'),
@@ -388,6 +400,8 @@ for (const failure of [
   assert.doesNotMatch(warnings.join('\n'), /PRIVATE_TOKEN|PRIVATE_COOKIE|PRIVATE_BUSINESS_ID|private.invalid|MANGA_UNREGISTERED_GUARD/);
   await f.close();
 });
+}
+if(id==='resume-readback'){
 await withControlDiagnostics(async warnings => {
   const f = await feedbackFixture('paused', 'paused');
   const failure = new Error('MANGA_DECODE_CAPACITY'); f.failProjectionOnce(failure);
@@ -401,6 +415,8 @@ await withControlDiagnostics(async warnings => {
   assert.match(warnings.join('\n'), /stage=projection-refresh lastConfirmed=state-persisted code=MANGA_DECODE_CAPACITY/);
   const closing = f.close(); f.release(0); await closing;
 });
+}
+if(id==='unknown-control'){
 await withControlDiagnostics(async warnings => {
   const f = await feedbackFixture();
   const failure = Object.assign(new Error('queue response https://private.invalid/?token=PRIVATE_TOKEN'), { code: 'INTERNAL' });
@@ -416,6 +432,8 @@ await withControlDiagnostics(async warnings => {
   assert.doesNotMatch(warnings.join('\n'), /PRIVATE_TOKEN|private.invalid/);
   await f.close();
 });
+}
+if(id==='control-identity'){
 for (const mismatch of ['source', 'chapter']) await withControlDiagnostics(async warnings => {
   const f = await feedbackFixture();
   if (mismatch === 'source') f.changeSourceIdentity(); else f.changeChapterIdentity();
@@ -429,6 +447,8 @@ for (const mismatch of ['source', 'chapter']) await withControlDiagnostics(async
   assert.match(warnings.join('\n'), mismatch === 'source' ? /code=STATUS_IDENTITY_INVALID/ : /code=DIRECTORY_CHANGED/);
   await f.close();
 });
+}
+if(id==='failure-privacy'){
 {
   const f = fixture(); f.setAutomatic(true); f.fail(23, 'network interrupted https://private.invalid/?token=PRIVATE_TOKEN Cookie=PRIVATE_COOKIE');
   await f.coordinator.submit(session());
@@ -439,6 +459,8 @@ for (const mismatch of ['source', 'chapter']) await withControlDiagnostics(async
   const restored = fixture(f.saved); await restored.coordinator.restore();
   assert.equal(restored.pending.size, 0, 'failed jobs require explicit retry'); await restored.close(); await f.close();
 }
+}
+if(id==='intent-flush'){
 {
   const f = fixture();
   const coordinator = new SharedDownloadCoordinator(f.runtime, () => true,
@@ -448,6 +470,8 @@ for (const mismatch of ['source', 'chapter']) await withControlDiagnostics(async
   assert.equal(coordinator.jobs()[0].status, 'failed');
   await assert.rejects(coordinator.close(), /preferences flush failed/); await f.close();
 }
+}
+if(id==='first-request-proof'){
 {
   const f = fixture(), book = { sourceId: 'source', bookId: 'book', title: 'Fixture book', author: '', contentKind: 'text', addedAt: 1 };
   f.setUrls(['/replacement', ...Array.from({ length: 44 }, (_, index) => `/${index + 1}`)]);
@@ -463,6 +487,8 @@ for (const mismatch of ['source', 'chapter']) await withControlDiagnostics(async
     'maxAttempts=0 still verifies the exact catalog URL before any acquisition');
   await f.close();
 }
+}
+if(id==='cold-active'){
 {
   const f = fixture(); f.setAutomatic(true); f.block(21); await f.coordinator.submit(session());
   await until(() => f.pending.has(21), 'interrupted full range beyond chapter 20');
@@ -476,6 +502,8 @@ for (const mismatch of ['source', 'chapter']) await withControlDiagnostics(async
     Array.from({ length: 24 }, (_, index) => index + 21));
   await restored.close();
 }
+}
+if(id==='url-rebind'){
 {
   const f = fixture(); await f.coordinator.submit(session(), [0, 1]); await until(() => f.pending.has(0), 'selected range');
   const pause = f.coordinator.operate('pause', { book: f.coordinator.books()[0] });
@@ -489,6 +517,8 @@ for (const mismatch of ['source', 'chapter']) await withControlDiagnostics(async
     'old physical slots remain protected until an explicit content deletion');
   assert.equal(f.completed.has(0), false); await f.close();
 }
+}
+if(id==='restore-atomic'){
 {
   const f = fixture(); await f.coordinator.submit(session(), [0]); await until(() => f.pending.has(0), 'restore record seed');
   const pause = f.coordinator.operate('pause', { book: f.coordinator.books()[0] });
@@ -502,6 +532,8 @@ for (const mismatch of ['source', 'chapter']) await withControlDiagnostics(async
   records = [valid]; await restored.restore(); assert.equal(restored.books().length, 1, 'read failure has an explicit refresh/retry path');
   assert.equal(restored.jobs()[0].status, 'paused'); await restored.close(); await f.close();
 }
+}
+if(id==='delete-drain'){
 {
   const f = fixture(); await f.coordinator.submit(session()); await until(() => f.pending.has(0), 'delete race');
   const deletion = f.coordinator.operate('delete', { book: f.coordinator.books()[0], chapterIndexes: [0] });
@@ -513,12 +545,16 @@ for (const mismatch of ['source', 'chapter']) await withControlDiagnostics(async
   assert.equal(f.saved[0].retainedIndexes.includes(0), false); assert.equal(f.saved[0].retainedIndexes.length, 44);
   await f.close();
 }
+}
+if(id==='content-epoch'){
 {
   const f = fixture(); await f.coordinator.submit(session()); await until(() => f.pending.has(0), 'content mutation');
   f.mutate(); f.release(0);
   await until(() => f.coordinator.jobs()[0].status === 'failed', 'content epoch has visible failure');
   assert.match(f.coordinator.jobs()[0].error, /书源或内容/); assert.equal(f.completed.size, 0); await f.close();
 }
+}
+if(id==='index-submit'){
 {
   const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
   const Entry = productionMotionMethods(localFilePath(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url)),
@@ -535,4 +571,8 @@ for (const mismatch of ['source', 'chapter']) await withControlDiagnostics(async
   await until(() => f.pending.has(0), 'entry accepted consumer'); f.setAutomatic(true); f.release(0);
   await until(() => f.coordinator.jobs()[0].status === 'completed', 'entry download completes'); await f.close();
 }
-console.log('PASS production Runtime-owned Coordinator + offline gateway: full-range flushed ACK, navigation survival, physical body reuse, pause/resume and paused restart, explicit failed retry, cancel retention, exact deletion/drain/sibling continuation, real content mutation failure');
+}
+}finally{for(const cleanup of owned)await cleanup();}
+}
+const definitions={"scale-identities": "scale-identities actual scoped owner/gateway/storage path; controlled Core/OS ports", "scale-ready": "scale-ready actual scoped owner/gateway/storage path; controlled Core/OS ports", "range-extension": "range-extension actual scoped owner/gateway/storage path; controlled Core/OS ports", "changed-after-control": "changed-after-control actual scoped owner/gateway/storage path; controlled Core/OS ports", "whole-book": "whole-book actual scoped owner/gateway/storage path; controlled Core/OS ports", "pause-resume-retention": "pause-resume-retention actual scoped owner/gateway/storage path; controlled Core/OS ports", "control-readback": "control-readback actual scoped owner/gateway/storage path; controlled Core/OS ports", "physical-guard-diagnostics": "physical-guard-diagnostics actual scoped owner/gateway/storage path; controlled Core/OS ports", "unsafe-diagnostics": "unsafe-diagnostics actual scoped owner/gateway/storage path; controlled Core/OS ports", "resume-readback": "resume-readback actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-control": "unknown-control actual scoped owner/gateway/storage path; controlled Core/OS ports", "control-identity": "control-identity actual scoped owner/gateway/storage path; controlled Core/OS ports", "failure-privacy": "failure-privacy actual scoped owner/gateway/storage path; controlled Core/OS ports", "intent-flush": "intent-flush actual scoped owner/gateway/storage path; controlled Core/OS ports", "first-request-proof": "first-request-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "cold-active": "cold-active actual scoped owner/gateway/storage path; controlled Core/OS ports", "url-rebind": "url-rebind actual scoped owner/gateway/storage path; controlled Core/OS ports", "restore-atomic": "restore-atomic actual scoped owner/gateway/storage path; controlled Core/OS ports", "delete-drain": "delete-drain actual scoped owner/gateway/storage path; controlled Core/OS ports", "content-epoch": "content-epoch actual scoped owner/gateway/storage path; controlled Core/OS ports", "index-submit": "index-submit actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

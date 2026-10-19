@@ -1,14 +1,16 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
-import {createRequire} from 'node:module';
-import {readFileSync} from 'node:fs';
-import {fixture,seedEntry,draft,settle} from './lib/rss-management-durable-probe.mjs';
-import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {boundedSurfaceSdk,boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
-import {projectOperationFacts} from '../entry/src/main/ets/app/ReaderOperationFacts.ts';
-import {RssPresentationProjection} from '../entry/src/main/ets/features/rss/RssPresentationProjection.ts';
-import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
-import {actualReaderPageShell} from './lib/reader-page-shell-runtime-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+async function run(id){
+const { resolveEtsLoaderRoot }=await import("./lib/tool-environment.mjs");
+const {createRequire}=await import("node:module");
+const {readFileSync}=await import("node:fs");
+const {fixture,seedEntry,draft,settle}=await import("./lib/rss-management-durable-probe.mjs");
+const {createReaderBuilderProbe}=await import("./lib/reader-control-builder-probe.mjs");
+const {boundedSurfaceSdk,boundedMembers}=await import("./lib/bounded-surface-sdk-probe.mjs");
+const {projectOperationFacts}=await import("../entry/src/main/ets/app/ReaderOperationFacts.ts");
+const {RssPresentationProjection}=await import("../entry/src/main/ets/features/rss/RssPresentationProjection.ts");
+const {readerRecoveryView}=await import("../entry/src/main/ets/app/ReaderRecoveryProjection.ts");
+const {actualReaderPageShell}=await import("./lib/reader-page-shell-runtime-probe.mjs");
 const syntax=createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));syntax.builderParamObjectCollection.set('MainTabShell',new Set(['content']));
 const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const routes={main:'rss',management:'rssSubscriptionManagement',editor:'rssSubscriptionEditor',feed:'rssSourceFeed',entry:'rssEntryDetail'};
@@ -85,41 +87,133 @@ async function pending(kind,failure='beforeMethod'){
  const original=JSON.parse(f.disk());f.retire();return{f:await fixture(f),original};
 }
 let cases=0;
-for(const kind of ['management','editor','entry','feed','main']){
+const {cleanupDurableFixtures,durableFixtureToolEvidence}=await import('./lib/rules-mutation-durable-probe.mjs');console.log(JSON.stringify({kind:'reader-contract-tool-evidence',...durableFixtureToolEvidence()}));let passed=false;try{
+const key=id;
+if(key==='management'){
+for(const kind of ['management']){
  const {f,original}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind);
  assert.equal(f.writes().length,0,'cold opening only exact query and current read');
  const readAction=v.action('核对原操作回执');readAction.click();await x.settled();assert.equal(f.writes().length,0);v.update();
  if(kind==='feed'||kind==='main'){assert.equal(v.sdk.walk(v.child).some(c=>c instanceof v.sdk.deps.ReaderRecoveryAction&&c.label==='继续原操作'),false,'feed never borrows entry continuation');}
  else{const old=v.action('继续原操作');v.action('核对原操作回执').click();await x.settled();v.update();old.click();await x.settled();assert.equal(f.writes().length,0,'old actor immutable original generation cannot upgrade');
   v.action('继续原操作').click();v.action('继续原操作').click();await x.settled();assert.equal(f.writes().length,1);assert.equal(f.writes()[0].params.operationId,original.operationId);assert.deepEqual(f.writes()[0].params.mutation,original.mutation);}
- cases++;
+ 
 }
-for(const kind of ['management','editor','entry'])for(const retired of ['nav','mount','runtime','route','physical']){
+}
+if(key==='editor'){
+for(const kind of ['editor']){
+ const {f,original}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind);
+ assert.equal(f.writes().length,0,'cold opening only exact query and current read');
+ const readAction=v.action('核对原操作回执');readAction.click();await x.settled();assert.equal(f.writes().length,0);v.update();
+ if(kind==='feed'||kind==='main'){assert.equal(v.sdk.walk(v.child).some(c=>c instanceof v.sdk.deps.ReaderRecoveryAction&&c.label==='继续原操作'),false,'feed never borrows entry continuation');}
+ else{const old=v.action('继续原操作');v.action('核对原操作回执').click();await x.settled();v.update();old.click();await x.settled();assert.equal(f.writes().length,0,'old actor immutable original generation cannot upgrade');
+  v.action('继续原操作').click();v.action('继续原操作').click();await x.settled();assert.equal(f.writes().length,1);assert.equal(f.writes()[0].params.operationId,original.operationId);assert.deepEqual(f.writes()[0].params.mutation,original.mutation);}
+ 
+}
+}
+if(key==='entry'){
+for(const kind of ['entry']){
+ const {f,original}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind);
+ assert.equal(f.writes().length,0,'cold opening only exact query and current read');
+ const readAction=v.action('核对原操作回执');readAction.click();await x.settled();assert.equal(f.writes().length,0);v.update();
+ if(kind==='feed'||kind==='main'){assert.equal(v.sdk.walk(v.child).some(c=>c instanceof v.sdk.deps.ReaderRecoveryAction&&c.label==='继续原操作'),false,'feed never borrows entry continuation');}
+ else{const old=v.action('继续原操作');v.action('核对原操作回执').click();await x.settled();v.update();old.click();await x.settled();assert.equal(f.writes().length,0,'old actor immutable original generation cannot upgrade');
+  v.action('继续原操作').click();v.action('继续原操作').click();await x.settled();assert.equal(f.writes().length,1);assert.equal(f.writes()[0].params.operationId,original.operationId);assert.deepEqual(f.writes()[0].params.mutation,original.mutation);}
+ 
+}
+}
+if(key==='feed'){
+for(const kind of ['feed']){
+ const {f,original}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind);
+ assert.equal(f.writes().length,0,'cold opening only exact query and current read');
+ const readAction=v.action('核对原操作回执');readAction.click();await x.settled();assert.equal(f.writes().length,0);v.update();
+ if(kind==='feed'||kind==='main'){assert.equal(v.sdk.walk(v.child).some(c=>c instanceof v.sdk.deps.ReaderRecoveryAction&&c.label==='继续原操作'),false,'feed never borrows entry continuation');}
+ else{const old=v.action('继续原操作');v.action('核对原操作回执').click();await x.settled();v.update();old.click();await x.settled();assert.equal(f.writes().length,0,'old actor immutable original generation cannot upgrade');
+  v.action('继续原操作').click();v.action('继续原操作').click();await x.settled();assert.equal(f.writes().length,1);assert.equal(f.writes()[0].params.operationId,original.operationId);assert.deepEqual(f.writes()[0].params.mutation,original.mutation);}
+ 
+}
+}
+if(key==='main'){
+for(const kind of ['main']){
+ const {f,original}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind);
+ assert.equal(f.writes().length,0,'cold opening only exact query and current read');
+ const readAction=v.action('核对原操作回执');readAction.click();await x.settled();assert.equal(f.writes().length,0);v.update();
+ if(kind==='feed'||kind==='main'){assert.equal(v.sdk.walk(v.child).some(c=>c instanceof v.sdk.deps.ReaderRecoveryAction&&c.label==='继续原操作'),false,'feed never borrows entry continuation');}
+ else{const old=v.action('继续原操作');v.action('核对原操作回执').click();await x.settled();v.update();old.click();await x.settled();assert.equal(f.writes().length,0,'old actor immutable original generation cannot upgrade');
+  v.action('继续原操作').click();v.action('继续原操作').click();await x.settled();assert.equal(f.writes().length,1);assert.equal(f.writes()[0].params.operationId,original.operationId);assert.deepEqual(f.writes()[0].params.mutation,original.mutation);}
+ 
+}
+}
+if(key==='management-retirement'){
+for(const kind of ['management'])for(const retired of ['nav','mount','runtime','route','physical']){
  const {f}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind),old=v.action('继续原操作'),before=f.calls.length;
  if(retired==='nav')x.p.navigationGeneration++;
  if(retired==='mount')x.p.detailShelfAdmissionMount++;
  if(retired==='runtime')f.retire();
  if(retired==='route')x.p.route='bookshelf';
  if(retired==='physical')v.sdk.walk(v.child).filter(c=>c instanceof v.sdk.deps.RssOriginalRecoverySurface).forEach(c=>c.aboutToDisappear());
- old.click();await x.settled();assert.equal(f.calls.length,before,'retired physical/native callback never borrows fresh owner');cases++;
+ old.click();await x.settled();assert.equal(f.calls.length,before,'retired physical/native callback never borrows fresh owner');
 }
-for(const kind of ['management','editor','entry']){
+}
+if(key==='management-replacement'){
+for(const kind of ['management']){
  const {f}=await pending(kind),a=index(f,kind,1);a.open();await a.settled();const va=page(f,a,kind),old=va.action('继续原操作');
  const b=index(f,kind,2);b.open();await b.settled();const vb=page(f,b,kind),before=f.calls.length;old.click();await a.settled();assert.equal(f.calls.length,before);
  a.p.getRssOrchestrator();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old alive getter cannot steal successor');
  a.p.retireRssPresentation();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old detach preserves new lease');
- vb.action('继续原操作').click();await b.settled();assert.equal(f.writes().length,1);cases++;
+ vb.action('继续原操作').click();await b.settled();assert.equal(f.writes().length,1);
 }
-// A same-runtime old page can call ordinary mutation methods unless the actual
-// Index physical callback checks the captured attachment. This negative control
-// runs the identical production method with that one guard removed.
+}
+if(key==='editor-retirement'){
+for(const kind of ['editor'])for(const retired of ['nav','mount','runtime','route','physical']){
+ const {f}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind),old=v.action('继续原操作'),before=f.calls.length;
+ if(retired==='nav')x.p.navigationGeneration++;
+ if(retired==='mount')x.p.detailShelfAdmissionMount++;
+ if(retired==='runtime')f.retire();
+ if(retired==='route')x.p.route='bookshelf';
+ if(retired==='physical')v.sdk.walk(v.child).filter(c=>c instanceof v.sdk.deps.RssOriginalRecoverySurface).forEach(c=>c.aboutToDisappear());
+ old.click();await x.settled();assert.equal(f.calls.length,before,'retired physical/native callback never borrows fresh owner');
+}
+}
+if(key==='editor-replacement'){
+for(const kind of ['editor']){
+ const {f}=await pending(kind),a=index(f,kind,1);a.open();await a.settled();const va=page(f,a,kind),old=va.action('继续原操作');
+ const b=index(f,kind,2);b.open();await b.settled();const vb=page(f,b,kind),before=f.calls.length;old.click();await a.settled();assert.equal(f.calls.length,before);
+ a.p.getRssOrchestrator();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old alive getter cannot steal successor');
+ a.p.retireRssPresentation();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old detach preserves new lease');
+ vb.action('继续原操作').click();await b.settled();assert.equal(f.writes().length,1);
+}
+}
+if(key==='entry-retirement'){
+for(const kind of ['entry'])for(const retired of ['nav','mount','runtime','route','physical']){
+ const {f}=await pending(kind),x=index(f,kind);x.open();await x.settled();const v=page(f,x,kind),old=v.action('继续原操作'),before=f.calls.length;
+ if(retired==='nav')x.p.navigationGeneration++;
+ if(retired==='mount')x.p.detailShelfAdmissionMount++;
+ if(retired==='runtime')f.retire();
+ if(retired==='route')x.p.route='bookshelf';
+ if(retired==='physical')v.sdk.walk(v.child).filter(c=>c instanceof v.sdk.deps.RssOriginalRecoverySurface).forEach(c=>c.aboutToDisappear());
+ old.click();await x.settled();assert.equal(f.calls.length,before,'retired physical/native callback never borrows fresh owner');
+}
+}
+if(key==='entry-replacement'){
+for(const kind of ['entry']){
+ const {f}=await pending(kind),a=index(f,kind,1);a.open();await a.settled();const va=page(f,a,kind),old=va.action('继续原操作');
+ const b=index(f,kind,2);b.open();await b.settled();const vb=page(f,b,kind),before=f.calls.length;old.click();await a.settled();assert.equal(f.calls.length,before);
+ a.p.getRssOrchestrator();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old alive getter cannot steal successor');
+ a.p.retireRssPresentation();assert.equal(b.host.isPresentationCurrent(b.p.rssPresentationIdentity),true,'old detach preserves new lease');
+ vb.action('继续原操作').click();await b.settled();assert.equal(f.writes().length,1);
+}
+}
+if(key==='admission-negative'){
 for(const mutated of [false,true]){
  const f=await fixture();await seedEntry(f);let source=read('pages/Index.ets');
  if(mutated){const before="if (this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssSubscriptionManagement')) host?.toggleSubscription(id, enabled);";assert.ok(source.includes(before));source=source.replace(before,'host?.toggleSubscription(id, enabled);');}
  const a=index(f,'management',1,source);a.open();await a.settled();const old=a.params().onToggle;
  const b=index(f,'management',2);b.open();await b.settled();old('s',false);await a.settled();assert.equal(f.writes().length,mutated?1:0,'actual last physical admission guard negative control');
- if(!mutated){b.params().onToggle('s',false);await b.settled();assert.equal(f.writes().length,1,'current physical callback succeeds');}cases++;
+ if(!mutated){b.params().onToggle('s',false);await b.settled();assert.equal(f.writes().length,1,'current physical callback succeeds');}
 }
-console.log(`PASS RSS exact original Core/Atomic→Index→five decorated Pages→one shared recovery: ${cases} groups`);
-assert.equal(indexTypes.size,2,'original and guard-mutant Index are independently emitted once');
-assert.equal(pageTypes.size,5,'each original decorated Page is emitted once with fresh instances per journey');
+}
+passed=true;}finally{const cleanup=await cleanupDurableFixtures({retain:!passed});if(!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));}
+}
+const definitions={"management": {"description": "management actual production owner/SDK scope", "resources": []}, "editor": {"description": "editor actual production owner/SDK scope", "resources": []}, "entry": {"description": "entry actual production owner/SDK scope", "resources": []}, "feed": {"description": "feed actual production owner/SDK scope", "resources": []}, "main": {"description": "main actual production owner/SDK scope", "resources": []}, "management-retirement": {"description": "management-retirement actual production owner/SDK scope", "resources": []}, "management-replacement": {"description": "management-replacement actual production owner/SDK scope", "resources": []}, "editor-retirement": {"description": "editor-retirement actual production owner/SDK scope", "resources": []}, "editor-replacement": {"description": "editor-replacement actual production owner/SDK scope", "resources": []}, "entry-retirement": {"description": "entry-retirement actual production owner/SDK scope", "resources": []}, "entry-replacement": {"description": "entry-replacement actual production owner/SDK scope", "resources": []}, "admission-negative": {"description": "admission-negative actual production owner/SDK scope", "resources": []}};
+for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

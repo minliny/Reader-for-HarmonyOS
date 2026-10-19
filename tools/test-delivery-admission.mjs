@@ -19,7 +19,10 @@ import { verifyBuildLease } from '../../Reader-Core/scripts/lib/build-resource-l
 const root = realpathSync(mkdtempSync(join(tmpdir(), 'reader-delivery-admission-')));
 const put = (path, value = '') => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, value); return path; };
 try {
-  assert.equal(buildContractScope(new Map([['--class', 'acceptance'], ['--core-gate-receipt', 'fixture-receipt.json']])), undefined);
+  for (const buildClass of ['iteration', 'acceptance']) {
+    assert.equal(buildContractScope(new Map([['--class', buildClass], ['--core-gate-receipt', 'fixture-receipt.json']])), 'none',
+      'build class and an existing Core receipt never implicitly authorize full Host checks');
+  }
   for (const task of ['compileNative', ':entry:default@ConfigureCmake', 'default@BuildNativeWithNinja', 'BuildNativeWithCmake',
     'ProcessLibs', ':entry:default@DoNativeStrip', 'default@CacheNativeLibs', 'clean', 'assembleHap']) assert.equal(isBuildResourceTask(task), true);
   assert.equal(isPackageTask('compileNative'), false); assert.equal(isBuildResourceTask('PreviewArkTS'), false);

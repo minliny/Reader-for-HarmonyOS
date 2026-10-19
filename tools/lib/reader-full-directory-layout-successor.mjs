@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 import {createDefaultReaderWindowMetrics,readerVisualSafeTop,readerContentSafeTop} from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
 
 export const fullDirectoryLayoutSuccessorPath='tools/fixtures/reader-full-directory-page-layout-successor-20261014.json';
+export const fullDirectoryMessageOverlaySuccessorPath='tools/fixtures/reader-full-directory-message-overlay-successor-20261019.json';
 const { ts, options } = installedEtsCompiler();
 const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
@@ -13,6 +14,16 @@ const digest=value=>createHash('sha256').update(JSON.stringify(value)).digest('h
 export function verifyFullDirectoryLayoutSuccession(baseline,readSource,shape,parseCurrent){
  const parse=(source,file)=>parseCurrent?parseCurrent(source,file):ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
  const witness=JSON.parse(readSource(fullDirectoryLayoutSuccessorPath));
+ const overlayWitness=JSON.parse(readSource(fullDirectoryMessageOverlaySuccessorPath));
+ assert.deepEqual([overlayWitness.schema,overlayWitness.authority,overlayWitness.previousLayoutWitness,overlayWitness.page,overlayWitness.scope],
+  [1,'docs/message-ui/approved-scope-20261019.json',fullDirectoryLayoutSuccessorPath,'entry/src/main/ets/features/reading/ReaderFullDirectory.ets','A13 pending-operation'],
+  'only the approved A13 overlay supersedes the immutable directory layout witness');
+ assert.deepEqual(overlayWitness.slots,{header:'topBar',content:'directoryContent',overlayContent:'directoryOverlay'});
+ assert.equal(overlayWitness.visibility,'this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible');
+ assert.deepEqual(overlayWitness.overlayModifiers,[['hitTestBehavior',['HitTestMode.Transparent']],['zIndex',['8']],
+  ['position',['{ x: this.panelLeft(), y: this.panelTop() }']],['width',['this.panelWidth()']]]);
+ assert.deepEqual(overlayWitness.recoveryInputs,{recovery:'this.directoryRecovery',onReconcileBookmarks:'this.onReconcileBookmarks',
+  onContinueBookmarks:'this.onContinueBookmarks',onReconcileOffline:'this.onReconcileOffline',onContinueOffline:'this.onContinueOffline'});
  assert.equal(witness.schema,1);
  assert.equal(witness.previousSourceHead,'838078322bb267c95e11757ccce8a242678be44a');
  assert.equal(witness.previousSourceSha256,'a8c8d44475062ff8ffbf334604aaca6656912f53d20ff9d19fbd0b792c404adc');
@@ -46,7 +57,29 @@ export function verifyFullDirectoryLayoutSuccession(baseline,readSource,shape,pa
  assert.equal(props.get('variant')?.getText(tree),witness.variantExpression,'exact detail/reader surface context');
  assert.equal(props.get('headerKind')?.getText(tree),"'floating'",'the retained card remains the bounded floating header');
  assert.equal(props.get('headerMeasurementKey')?.getText(tree),'this.topBarTop()','the actual live geometry fact keys native header measurements');
- for(const[slot,builder]of Object.entries(witness.slots))assert.equal(calls(props.get(slot),'this.'+builder).length,1,'actual full-directory shared '+slot+' delegation');
+ for(const[slot,builder]of Object.entries(overlayWitness.slots))assert.equal(calls(props.get(slot),'this.'+builder).length,1,'actual full-directory shared '+slot+' delegation');
+ const overlay=member('directoryOverlay'),recovery=member('recoveryContent');
+ const normalized=node=>node.getText(tree).replace(/\s/g,'');
+ for(const method of [overlay,recovery]) {
+  assert.ok(ts.getAllDecorators(method).some(d=>d.getText(tree)==='@Builder'),'pending message delegates through an actual Builder');
+  assert.ok(ts.isIfStatement(method.body.statements[0]),'pending message is conditionally visible');
+  assert.equal(normalized(method.body.statements[0].expression),overlayWitness.visibility.replace(/\s/g,''),'exact bookmark/offline message visibility facts');
+ }
+ assert.equal(overlay.body.statements.length,2,'overlay contains only the pending message and retained offline menu');
+ assert.equal(recovery.body.statements.length,1,'recovery slot cannot acquire a sibling actor');
+ const overlayUi=[];const walkOverlay=node=>{if((ts.isCallExpression(node)||ts.isEtsComponentExpression(node))&&ts.isIdentifier(node.expression)&&/^[A-Z]/.test(node.expression.text))overlayUi.push(node.expression.text);ts.forEachChild(node,walkOverlay);};walkOverlay(overlay);
+ assert.deepEqual(overlayUi,['Column'],'pending overlay owns only one intrinsic native carrier');
+ assert.equal(calls(overlay,'this.recoveryContent').length,1,'actual top overlay delegates the original recovery surface once');
+ assert.equal(calls(overlay,'this.offlineBookMenu').length,1,'original offline menu retains its overlay edge');
+ const overlayEdges=[];const visitEdges=node=>{if((ts.isCallExpression(node)||ts.isEtsComponentExpression(node))&&
+  ts.isPropertyAccessExpression(node.expression)&&node.expression.expression.kind===ts.SyntaxKind.ThisKeyword)overlayEdges.push(node.expression.getText(tree));ts.forEachChild(node,visitEdges);};visitEdges(overlay);
+ assert.deepEqual(overlayEdges.sort(),['this.recoveryContent','this.panelWidth','this.panelLeft','this.panelTop','this.offlineBookMenu'].sort(),
+  'pending overlay cannot acquire another unclassified Builder or action edge');
+ const overlayModifiers=[];const visit=node=>{if(ts.isCallExpression(node)&&ts.isPropertyAccessExpression(node.expression)&&node.expression.expression.kind!==ts.SyntaxKind.ThisKeyword)overlayModifiers.push([node.expression.name.text,node.arguments.map(arg=>arg.getText(tree))]);ts.forEachChild(node,visit);};visit(overlay);
+ assert.deepEqual(overlayModifiers,overlayWitness.overlayModifiers,'pending overlay has exact panel bounds and transparent input; no arbitrary full-screen carrier');
+ const recoveryActors=calls(recovery,'ReaderDirectoryRecoverySurface');assert.equal(recoveryActors.length,1,'actual pending messages retain their shared recovery actor');
+ assert.deepEqual(Object.fromEntries(recoveryActors[0].arguments[0].properties.map(p=>[p.name.getText(tree),p.initializer.getText(tree)])),overlayWitness.recoveryInputs,
+  'bookmark/offline generation-bearing callbacks remain distinct original inputs');
  const context=member('catalogContext');assert.ok(ts.getAllDecorators(context).some(d=>d.getText(tree)==='@Prop'),'context is an actual reactive parent fact');
  assert.equal(context.type.getText(tree),"'detail' | 'reader'");assert.equal(context.initializer.getText(tree),"'reader'",'reader-context default retains existing embedded semantics');
  // Execute the actual small production methods through the installed SDK.
@@ -81,7 +114,15 @@ export function verifyFullDirectoryLayoutSuccession(baseline,readSource,shape,pa
  const panelProps=new Map(panels[0].arguments[0].properties.map(p=>[p.name.getText(tree),p.initializer.getText(tree)]));
  assert.equal(panelProps.get('allowUnanchoredBrowse'),"this.catalogContext === 'detail'",'only the standalone detail context admits unknown-anchor browsing');
  for(const builder of['topBar','offlineBookMenu'])assert.equal(calls(body,'this.'+builder).length,0,'one physical actor per shared slot');
- const expected=witness.previousStyles.filter((_,index)=>index!==witness.removedRootStyleIndex).map(style=>({...style,method:style.method==='build'?'directoryContent':style.method}));
+ const previous=witness.previousStyles.filter((_,index)=>index!==witness.removedRootStyleIndex).map(style=>({...style,method:style.method==='build'?'directoryContent':style.method}));
+ const transfer=overlayWitness.styleTransfer;
+ assert.deepEqual(transfer,{previousContentStyleIndex:2,
+  before:{owner:'ReaderFullDirectory',method:'directoryContent',property:'width',args:['this.panelWidth()']},
+  after:{owner:'ReaderFullDirectory',method:'directoryOverlay',property:'width',args:['this.panelWidth()']},
+  heightBefore:'Math.max(0, this.panelViewportHeight() - this.activeRecoveryHeight())',heightAfter:'this.panelViewportHeight()'},'only the approved pending message width/height transfer');
+ assert.deepEqual(previous[transfer.previousContentStyleIndex],transfer.before,'original embedded recovery width remains witnessed');
+ const expected=[transfer.after,...previous.filter((_,index)=>index!==transfer.previousContentStyleIndex).map(style=>
+  style.method==='directoryContent'&&style.property==='height'&&style.args[0]===transfer.heightBefore?{...style,args:[transfer.heightAfter]}:style)];
  assert.deepEqual(shape(source,witness.page).styles,expected,'full-directory succession retains every original card, body, menu, font and motion physical input');
  assert.equal(witness.sdkProof,'tools/test-reader-page-header-contract.mjs');assert.ok(readSource(witness.sdkProof).length>0);
  return{privateBudget:{fontSize:5,backgroundColor:2},retainedPhysicalInputs:expected.length};

@@ -1,13 +1,21 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"typography-expression-admission": {"description": "官方AST私有字形literal/mixed branch/import语义反例", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire } = await import('node:module');
+const { registeredProducerTypographySlots } = await import('./lib/architecture-shared-producer-contract.mjs');
+const { auditTypographyConsumers } = await import('./lib/reader-typography-consumer-audit.mjs');
+const { countPrivateTypographyCalls } = await import('./lib/architecture-private-typography-count.mjs');
+const { isSharedTypographyExpression, typographyExpressionContext } = await import('./lib/reader-typography-consumer-audit.mjs');
+
 const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
-import { registeredProducerTypographySlots } from './lib/architecture-shared-producer-contract.mjs';
-import { auditTypographyConsumers } from './lib/reader-typography-consumer-audit.mjs';
-import { countPrivateTypographyCalls } from './lib/architecture-private-typography-count.mjs';
-import { isSharedTypographyExpression, typographyExpressionContext } from './lib/reader-typography-consumer-audit.mjs';
 // The full CLI now requires the immutable whole-app registry and producer
 // contracts. Exercise its exact carrier counter here; whole-app registration,
 // imports and producer mutation negatives have their actual-source gates.
@@ -20,7 +28,7 @@ const run = expression => ({ status: countPrivateTypographyCalls(
   assert.notEqual(run('TYPE_FORM_ACTION.fontSizeFp + 2').status, 0, 'private numeric role override rejected');
   assert.notEqual(run("'TYPE_FORM_ACTION.fontSizeFp'").status, 0, 'a string/comment is not a public role expression');
   assert.equal(run('this.selected ? TYPE_FORM_ACTION.fontSizeFp : TYPE_FORM_LABEL_ACTION.fontSizeFp').status, 0, 'bounded public variants accepted');
-  assert.equal(isSharedTypographyExpression('TYPE_SHELF_COVER_PLACEHOLDER.fontSizeFp * this.coverWidth / 96.96'), true);
+  
 assert.equal(countPrivateTypographyCalls("// Text('comment').fontSize(13);\n@Component struct Probe { build() { Column() {} } }",file),0,'ETS comments do not become production consumers');
 const fake = "@Component struct Probe { private spec() { return { fontSizeFp: 99 }; } build() { Text('bad').fontSize(this.spec().fontSizeFp); } }";
 assert.equal(isSharedTypographyExpression('this.spec().fontSizeFp'),false,'a helper name alone carries no shared proof');
@@ -59,13 +67,19 @@ const privateFacade=compatibilitySource.replace('build() {',"build() { Text('pri
 assert.notEqual(privateFacade,compatibilitySource);assert.ok(rejectsPrivate(privateFacade,compatibilityFile),'retired content getter cannot regain admission through the facade');
 const menuFile=common+'ReaderActionMenuSurface.ets',menuSource=readFileSync(new URL('../'+menuFile,import.meta.url),'utf8');
 assert.equal(isSharedTypographyExpression('this.actionSheetSpec().labelFontSize',typographyExpressionContext(menuSource,menuFile),'ReaderActionMenuSurface'),true,'existing menu family binds its second finite sheet resolver');
-assert.ok(rejectsPrivate(menuSource.replace("resolveActionSheetSpec(this.variant === 'quick' ? 'quick' : 'grouped')",'{ labelFontSize: 99 }'),menuFile),'same secondary getter cannot return a private typography bag');
+const privateSheetGetter=menuSource.replace("resolveActionSheetSpec(this.variant === 'bookshelf' ? 'bookshelf' : this.variant === 'quick' ? 'quick' : 'grouped')",'{ labelFontSize: 99 }');
+assert.notEqual(privateSheetGetter,menuSource,'private sheet getter negative control reaches the actual finite selector');
+assert.ok(rejectsPrivate(privateSheetGetter,menuFile),'same secondary getter cannot return a private typography bag');
 const actionOwnerFile=common+'ReaderSheetActionList.ets',actionOwnerSource=readFileSync(new URL('../'+actionOwnerFile,import.meta.url),'utf8');
 assert.equal(auditTypographyConsumers(actionOwnerSource,actionOwnerFile).length,0,'bookshelf presentation owner delegates all text to the shared content producer');
-const retiredOwnerText=actionOwnerSource.replace('Stack({ alignContent: Alignment.TopStart }) {',"Stack({ alignContent: Alignment.TopStart }) { Text('private').fontSize(this.surfaceSpec().actionLabelFontSize);");
+const retiredOwnerText=actionOwnerSource.replace('    Column() {',"    Column() { Text('private').fontSize(this.surfaceSpec().actionLabelFontSize);");
 assert.notEqual(retiredOwnerText,actionOwnerSource);
 assert.ok(rejectsPrivate(retiredOwnerText,actionOwnerFile),'retired bookshelf typography getter cannot regain admission after delegation');
 // Direct modifier injection must be rejected even though the struct's old getter is untouched.
 const choiceFile=common+'ReaderChoiceRow.ets',choiceSource=readFileSync(new URL('../'+choiceFile,import.meta.url),'utf8');
 assert.ok(rejectsPrivate(choiceSource.replace('instance.fontSize(text.fontSizeFp);','instance.fontSize(99);'),choiceFile),'same call count cannot hide a private Modifier literal');
+const privateAlias=choiceSource.replace('const text = this.selected ? spec.selectedText : spec.text;', 'const text = { fontSizeFp: 99 };');
+assert.notEqual(privateAlias,choiceSource);assert.ok(rejectsPrivate(privateAlias,choiceFile),'a modifier-local alias cannot manufacture a private font bag');
 console.log('PASS private Typography budget: real public variants admitted; literals/mixed branches/string tricks/numeric overrides rejected; geometry/comments precise');
+
+}

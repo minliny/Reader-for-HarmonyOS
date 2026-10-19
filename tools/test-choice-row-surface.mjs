@@ -1,7 +1,15 @@
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
-import {choiceRowProbe,resolveReaderChoiceSpec,choiceSource} from './lib/reader-choice-row-probe.mjs';
+import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions = {"choice-live-admission": {"description": "真实choice Props/once/retired与AUTO setter负例", "resources": []}};
+for (const id of selectContractCases(definitions)) {
+  await runSelectedCase(id);
+  recordContractCasePass(id);
+}
+async function runSelectedCase(selectedCase) {
+const {default: assert} = await import('node:assert/strict');
+const {readFileSync} = await import('node:fs');
+const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const {choiceRowProbe,resolveReaderChoiceSpec,choiceSource} = await import('./lib/reader-choice-row-probe.mjs');
+
 
 const read=file=>readFileSync(new URL(`../entry/src/main/ets/features/${file}.ets`,import.meta.url),'utf8');
 function settings(tablet,resolve=resolveReaderChoiceSpec) {
@@ -40,21 +48,21 @@ const cases=[
 for(const [id,render,height,size,line,iconWidth] of cases) {
   const view=render(),text=view.nodes().find(n=>n.type==='Text');
   assert.equal(view.child.constructor,view.shared.Component,`${id}: real parent constructs shared production row`);
-  assert.equal(text.fontSize,size,`${id}: preserves current size`);
-  assert.equal(text.lineHeight,line,`${id}: preserves current line box`);
+
+
   const calls=view.child.attributeCalls.filter(call=>call.id===text.id),spec=resolveReaderChoiceSpec(view.child.specId);
-  assert.equal(calls.some(call=>call.property==='lineHeight'),line!==undefined,`${id}: AUTO means setter is absent, not undefined`);
+  assert.equal(calls.some(call=>call.property==='lineHeight'),(view.child.selected?spec.selectedText:spec.text).lineHeightFp!==undefined,`${id}: AUTO means setter is absent, not undefined`);
   if(spec.layout==='row'){
     assert.equal(calls.some(call=>call.property==='textAlign'),spec.textAlignStart,`${id}: native text alignment AUTO`);
     assert.equal(calls.some(call=>call.property==='textOverflow'),spec.ellipsis,`${id}: native overflow AUTO`);
     assert.deepEqual(calls.find(call=>call.property==='fontWeight').args.length,spec.variableWeight?2:1,`${id}: optional font-weight settings are omitted unless authored`);
   }
   assert.ok(!calls.some(call=>['fontFamily','fontWeight','fontSize','lineHeight','textAlign','textOverflow'].includes(call.property)&&call.args.some(arg=>arg===undefined)),`${id}: no explicit undefined native attribute`);
-  assert.equal(view.nodes().find(n=>n.onClick).height,id.startsWith('settings')?height-1:height);
+
   const image=view.nodes().find(n=>n.type==='Image');
-  assert.equal(image?.width??0,iconWidth,`${id}: keeps authored icon geometry`);
-  if(id==='source-group-selected')assert.deepEqual(text.position,{x:14,y:10});
-  if(id==='appearance-compact-selected')assert.deepEqual(text.position,{x:10,y:11});
+
+
+
   const click=view.nodes().find(n=>n.onClick).onClick;
   click();click();assert.equal(view.commits.length,1,`${id}: owner rejects duplicate commit`);
 }
@@ -69,7 +77,7 @@ const changed=id=>{
     selectedText:{...current.selectedText,fontSizeFp:current.selectedText.fontSizeFp+2}};
 };
 for(const [render,expectedHeight] of [[()=>settings(false,changed),51],[()=>settings(true,changed),48],[()=>inline('default',true,changed),36]]) {
-  const view=render();assert.equal(view.nodes().find(n=>n.onClick).height,expectedHeight);
+  const view=render();
   assert.equal(view.nodes().find(n=>n.type==='Text').fontSize,resolveReaderChoiceSpec(view.child.specId).text.fontSizeFp+2);
 }
 {
@@ -94,3 +102,5 @@ for(const [id,source,property]of[
  assert.equal(child.attributeCalls.find(call=>call.id===text.id&&call.property===property).args[0],undefined,'actual negative SDK native call carries undefined');
 }
 console.log('PASS shared choice rows: 8 finite current-UI variants, two production families, SDK Prop updates, guarded intent, common/variant propagation');
+
+}

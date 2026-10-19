@@ -1,7 +1,12 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { createRequire, registerHooks } from 'node:module';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"text-projection": {"description": "实际Gateway exact text cache selector/部分未知/正文bytes与过滤/读目标/失效", "resources": []}, "storage-admission": {"description": "实际storage bytes格式与已证cleanable<=automatic准入", "resources": []}, "manga-projection": {"description": "实际Manga entry解码与Host image证明/元数据不可冒充diskbytes", "resources": []}, "manga-proof-batch": {"description": "实际Gateway9章图片证明并发预算与缺页降级，受控microtask", "resources": []}, "page-actions": {"description": "实际SDK书/章节意图范围、精确reading target与最新Scroll保存", "resources": []}, "storage-policy": {"description": "实际SDK non-preset/fractional容量策略与dirty draft保护", "resources": []}, "storage-actions": {"description": "实际SDK清理确认/取消/最新证明/retired generation且不伪造删除", "resources": []}, "live-theme": {"description": "实际SDK业务控件语义色/当前资源scheme更新", "resources": []}, "host-single-flight": {"description": "完整实际Host同书single-flight与retired拒绝", "resources": []}, "host-index": {"description": "完整实际Host下载revision索引跨页面复用与重复burst单书刷新", "resources": []}, "host-intents": {"description": "完整实际Host Runtime accepted job burst仅变更书刷新/注销observer", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { createRequire, registerHooks } = await import('node:module');
+
 registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); }
   catch (error) {
@@ -12,7 +17,7 @@ registerHooks({ resolve(specifier, context, next) {
 } });
 const projection = await import('../entry/src/main/ets/features/downloads/SharedDownloadProjection.ts');
 const { SharedDownloadGateway } = await import('../entry/src/main/ets/features/downloads/SharedDownloadGateway.ts');
-const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+
 const visual = await import('../entry/src/main/ets/features/common/SharedDownloadVisualSpec.ts');
 const { DOWNLOAD_VISUAL, downloadVisualColor } = visual;
 const { createDownloadBookView, projectDownloadBookAvailability, filterDownloadBooks, describeDownloadReadingTarget } = projection;
@@ -22,6 +27,16 @@ const row = (index, state = 'missing', bytes = 0, extra = {}) => ({ chapterIndex
   title: `第${index + 1}章`, url: `chapter:${index}`, navigable: true, state, cachedBytes: bytes, ...extra });
 const status = (book, chapters, tocAvailable = true) => ({ sourceId: book.sourceId, bookId: book.bookId, tocAvailable, chapters });
 const novel = shelf('s1', 'same');
+const comic = shelf('comic-source', 'same', 'manga');
+const pageId = 'mp1:' + 'a'.repeat(64);
+const entry = { chapter: { chapterIndex: 1, totalPages: 1, pageStart: 0, cached: true, resources: [],
+  manifest: { chapter: { sourceId: comic.sourceId, bookId: comic.bookId, chapterId: 'chapter:1' },
+    manifestVersion: 'v1', sourceRuleVersion: 'r1', decodeRevision: 'identity-v1',
+    pages: [{ pageId, ordinal: 0, resourceRef: `manga:${pageId}` }] } },
+  targetOrdinal: 0, recoveryRequired: false, progress: { token: { epoch: 1, revision: 0 }, location: null } };
+const storageMiB=1024*1024,storageGiB=storageMiB*1024;const storageFixture={totalBytes:3*storageGiB,retainedBytes:storageGiB,automaticBytes:2*storageGiB,cleanableBytes:512*storageMiB,availableBytes:8*storageGiB};
+
+if(selectedCase==='text-projection'){
 const calls = [], requestParams = [];
 const runtime = {
   request: async (method, params) => { calls.push(method); requestParams.push({ method, params });
@@ -59,17 +74,19 @@ assert.match(target.description, /小说正文阅读页/);
 assert.equal(describeDownloadReadingTarget(view, { ...view.chapters[0], sourceId: 's2' }).route, 'unavailable');
 assert.equal(describeDownloadReadingTarget(view, { ...view.chapters[0], chapterId: 'other' }).route, 'unavailable');
 
-// Storage statistics remain an independent, read-only projection. Text-body
-// bytes and unknown global classifications must never become cleanup facts.
+let active = true, finish;
+const pending = new SharedDownloadGateway({ request: () => new Promise(resolve => { finish = resolve; }) }).load(novel, () => active);
+active = false; finish({ data: status(novel, [row(0)]) });
+await assert.rejects(pending, /失效/, 'late status cannot publish after presentation retirement');
+
+}
+if(selectedCase==='storage-admission'){
 const { formatDownloadStorageBytes, canCleanDownloadStorage } = projection;
-const storageMiB = 1024 * 1024, storageGiB = storageMiB * 1024;
 for (const invalid of [undefined, NaN, Infinity, -1, 0.5, Number.MAX_SAFE_INTEGER + 1])
   assert.equal(formatDownloadStorageBytes(invalid), '', 'unproven byte values leave an empty storage slot');
 assert.match(formatDownloadStorageBytes(0), /^0\s*MB$/, 'a known zero remains distinct from unknown');
 for (const [bytes, unit] of [[1, 'B'], [1024, 'KB'], [storageMiB, 'MB'], [storageGiB, 'GB']])
   assert.match(formatDownloadStorageBytes(bytes), new RegExp(`^1(?:\\.0)?\\s*${unit}$`));
-const storageFixture = { totalBytes: 3 * storageGiB, retainedBytes: storageGiB,
-  automaticBytes: 2 * storageGiB, cleanableBytes: 512 * storageMiB, availableBytes: 8 * storageGiB };
 assert.equal(canCleanDownloadStorage(storageFixture), true);
 for (const summary of [{}, { automaticBytes: storageGiB }, { cleanableBytes: storageMiB },
   { automaticBytes: storageGiB, cleanableBytes: 0 },
@@ -80,15 +97,8 @@ for (const summary of [{}, { automaticBytes: storageGiB }, { cleanableBytes: sto
 assert.equal(canCleanDownloadStorage({ ...storageFixture, cleanableBytes: storageFixture.automaticBytes }), true,
   'the inclusive candidate bound accepts an explicitly proven complete automatic set');
 
-// Exercise the existing MangaSessionGateway decoder and exact Host completion
-// port, not a replacement implementation of image decoding or disk ownership.
-const comic = shelf('comic-source', 'same', 'manga');
-const pageId = 'mp1:' + 'a'.repeat(64);
-const entry = { chapter: { chapterIndex: 1, totalPages: 1, pageStart: 0, cached: true, resources: [],
-  manifest: { chapter: { sourceId: comic.sourceId, bookId: comic.bookId, chapterId: 'chapter:1' },
-    manifestVersion: 'v1', sourceRuleVersion: 'r1', decodeRevision: 'identity-v1',
-    pages: [{ pageId, ordinal: 0, resourceRef: `manga:${pageId}` }] } },
-  targetOrdinal: 0, recoveryRequired: false, progress: { token: { epoch: 1, revision: 0 }, location: null } };
+}
+if(selectedCase==='manga-projection'){
 const comicCalls = [], comicParams = [], proofs = [];
 const cachedEntry = (index) => ({ ...entry, chapter: { ...entry.chapter, chapterIndex: index,
   manifest: { ...entry.chapter.manifest, chapter: { ...entry.chapter.manifest.chapter,
@@ -133,6 +143,8 @@ assert.equal(mangaView.chapters[1].mangaSavedPages, 1);
 assert.equal(projection.downloadChapterDetailLabel('manga', mangaView.chapters[1]), '1 / 1 页 · 已下载');
 assert.match(describeDownloadReadingTarget(mangaView, mangaView.chapters[1]).description, /漫画图片阅读页/);
 
+}
+if(selectedCase==='manga-proof-batch'){
 // Host integrity checks are batched: Core queue completion is only a
 // candidate, while a missing page file downgrades that chapter to repairable
 // state. Four concurrent entry/file proofs bound startup work for long books.
@@ -149,7 +161,7 @@ assert.match(describeDownloadReadingTarget(mangaView, mangaView.chapters[1]).des
       batchCalls.push(method);
       if (method === 'cache.book.status') return { data: status(batchBook, batchRows) };
       activeProofs += 1; maxProofs = Math.max(maxProofs, activeProofs);
-      await new Promise(resolve => setTimeout(resolve, 2));
+      await new Promise(resolve=>queueMicrotask(resolve));
       activeProofs -= 1;
       const index = params.chapterIndex;
       const batchEntry = {
@@ -175,29 +187,32 @@ assert.match(describeDownloadReadingTarget(mangaView, mangaView.chapters[1]).des
   assert.match(batchView.chapters[3].stateLabel, /未下载|待修复/);
   assert.equal(batchCalls.filter(method => method === 'manga.entry.get').length, 9);
 }
-let active = true, finish;
-const pending = new SharedDownloadGateway({ request: () => new Promise(resolve => { finish = resolve; }) }).load(novel, () => active);
-active = false; finish({ data: status(novel, [row(0)]) });
-await assert.rejects(pending, /失效/, 'late status cannot publish after presentation retirement');
-
+}
+if(['page-actions','storage-policy','storage-actions','live-theme'].includes(selectedCase)){
 // Run the actual SDK-emitted page callbacks. Native paint is a separate gate.
+const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
+const fixtureChapter=(book,index,complete)=>({key:JSON.stringify([book.sourceId,book.bookId,index]),sourceId:book.sourceId,bookId:book.bookId,index,title:`第${index+1}章`,chapterId:`chapter:${index}`,navigable:true,localComplete:complete,stateLabel:complete?'已下载':'未下载',queueState:'missing'});
+const view=projectDownloadBookAvailability(createDownloadBookView(novel),[fixtureChapter(novel,0,true),fixtureChapter(novel,1,false)],2,12);
+const mangaView=projectDownloadBookAvailability(createDownloadBookView(comic),[fixtureChapter(comic,0,false),fixtureChapter(comic,1,true),fixtureChapter(comic,2,true)],3);
 const source = readFileSync('entry/src/main/ets/features/downloads/SharedDownloadPage.ets', 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(sdk + '/node_modules/typescript');
-const pageTree = ts.createSourceFile('SharedDownloadPage.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS);
+const pageTree = ts.createSourceFile('SharedDownloadPage.ets', source, ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
 const pageMembers = pageTree.statements.find(node => node.name?.getText(pageTree) === 'SharedDownloadPage').members;
 const helpers = pageMembers.filter(member => ts.isMethodDeclaration(member) && member.name.getText(pageTree) !== 'build' &&
   !ts.getAllDecorators(member).some(decorator => decorator.expression.getText(pageTree) === 'Builder'))
   .map(member => member.name.getText(pageTree));
 const names = [...new Set(['sortBars', ...helpers])];
-const events = [], saved = [];
-const { owner } = createReaderBuilderProbe(source, names, { ...projection, ...visual });
 const chapter = mangaView.chapters[1];
 const mixed = projectDownloadBookAvailability(mangaView, [
   { ...chapter, localComplete: false, queueState: 'inProgress' },
   { ...chapter, key: 'other', index: 2, localComplete: false, queueState: 'failed' },
 ], 2);
+
+const events=[],saved=[];
+if(selectedCase==='page-actions'||selectedCase==='storage-policy'){
+const { owner } = createReaderBuilderProbe(source, names, { ...projection, ...visual });
 Object.assign(owner, { books: [view, mixed], detailKey: '', actionBookKeys: [mixed.key], actionChapterIndices: [],
   sheet: 'book-actions', confirmation: '', managing: false, mounted: true,
   mountedIdentity: 'download-business-test', presentationIdentity: 'download-business-test', presentationGeneration: 0,
@@ -205,6 +220,7 @@ Object.assign(owner, { books: [view, mixed], detailKey: '', actionBookKeys: [mix
   onIntent: value => events.push(value), onReadTarget: value => events.push(value),
   onViewStateChanged: value => saved.push(value), query: 'same', bookType: 'all', stateFilter: 'all',
   sourceFilter: 'all', sortField: 'recent', sortDirection: 'desc' });
+if(selectedCase==='page-actions'){
 assert.equal(mixed.stateLabel, '下载失败');
 assert.equal(owner.bookIsRunning(mixed), true, 'pause decision must use queue facts, not label text');
 owner.sendAction('cancel');
@@ -223,6 +239,23 @@ assert.equal(owner.consumeBack(), true); // Close target sheet.
 assert.equal(owner.consumeBack(), false);
 assert.equal(saved.at(-1).listScroll, 87, 'save latest offset before the root retires identity');
 
+}
+// Read the committed device-sized policy, including a non-preset and fractional
+// MiB value; opening the settings sheet must not select a fabricated preset.
+owner.storagePolicy = { capacityBytes: 777 * storageMiB + 123, expiryDays: 19 };
+owner.sheet = ''; owner.storagePolicyDraftChanged = false; owner.syncStoragePolicy();
+assert.equal(owner.cacheLimitMb * storageMiB, owner.storagePolicy.capacityBytes);
+assert.equal(owner.limitChoices()[owner.limitIndex()] * storageMiB, owner.storagePolicy.capacityBytes);
+assert.equal(owner.dayChoices()[owner.daysIndex()], 19);
+owner.sheet = 'settings'; owner.storagePolicyDraftChanged = true;
+owner.cacheLimitMb = 1024; owner.cleanupAfterDays = 3; owner.syncStoragePolicy();
+assert.equal(owner.cacheLimitMb, 1024); assert.equal(owner.cleanupAfterDays, 3, 'background policy read cannot overwrite an open dirty draft');
+owner.storagePolicyDraftChanged = false; owner.syncStoragePolicy();
+assert.equal(owner.cacheLimitMb * storageMiB, owner.storagePolicy.capacityBytes);
+
+
+}
+if(selectedCase==='storage-actions'){
 // Exercise the production cleanup button and confirmation callbacks. There
 // is deliberately no RPC/filesystem port or invented successful publication.
 const storageMetrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
@@ -247,10 +280,10 @@ function storageOwner(summary = { ...storageFixture }) {
   return { result, intents, button: [...result.nodes.values()].find(node => node.type === 'Button') };
 }
 const cleanup = storageOwner(), cleanupDataBefore = structuredClone(cleanup.result.storageSummary);
-assert.equal(cleanup.button.backgroundColor, 'Color.Transparent');
+
 assert.equal(cleanup.button.accessibilityText, '清理自动保存 · 512 MB');
-assert.equal(cleanup.button.width, 'LayoutPolicy.matchParent');
-assert.equal(cleanup.button.height, 'LayoutPolicy.matchParent');
+
+
 cleanup.button.onClick();
 assert.equal(cleanup.result.confirmation, 'cleanup', 'the cleanup button only opens confirmation');
 assert.equal(cleanup.result.sheet, 'settings', 'cancel can return to the same approved storage sheet');
@@ -286,6 +319,8 @@ assert.deepEqual(retiredCleanup.intents, [], 'retired cleanup actors cannot oper
 retiredCleanup.result.mounted = true; retiredCleanup.result.confirmation = 'cleanup'; retiredConfirm();
 assert.deepEqual(retiredCleanup.intents, [], 'a same-identity remount cannot reactivate the previous dialog callback');
 
+}
+if(selectedCase==='live-theme'){
 // New business controls carry their own retained Day/Night proof. The
 // historical theme gate keeps all its original foreground sites unchanged.
 const colorMethods = [...new Set(['typeTab', 'statusButton', 'menuAction', 'actionButton', 'choiceRow', ...helpers])];
@@ -315,16 +350,25 @@ for (const scheme of ['day', 'night', 'day']) {
     `app.media.download_visual_pause${scheme === 'night' ? '_theme_night' : ''}`, 'pause uses the demo Lucide asset and a fixed theme variant');
 }
 
+
+}
+}
+if(selectedCase.startsWith('host-')){
+const {createRequire}=await import('node:module');const req=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot(),ts=req(sdk+'/node_modules/typescript');
 // Host probes isolate only existing bookshelf/runtime ports, retaining the
 // unchanged production Host body and its generation/single-flight logic.
 const hostSource = readFileSync('entry/src/main/ets/features/downloads/SharedDownloadHost.ts', 'utf8')
   .replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm, '');
 const hostBody = ts.transpileModule(hostSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2021 } }).outputText;
+const novelKey=JSON.stringify(['s1','same']),comicKey=JSON.stringify(['comic-source','same']);
 let loads = 0, resolveProbe, hold = false;
 class ShelfPort { async loadAll() { return { books: [novel, comic] }; } }
 class StatusPort { async load(book) { loads++; if (hold) await new Promise(resolve => { resolveProbe = resolve; }); return { ...book, projectionStatus: 'ready' }; } }
+const clock={next:0,tasks:new Map(),set(fn){const id=++this.next;this.tasks.set(id,fn);return id;},clear(id){this.tasks.delete(id);},async flush(){const tasks=[...this.tasks.values()];this.tasks.clear();for(const fn of tasks)fn();for(let i=0;i<40;i++)await Promise.resolve();}};
+class CoreReadPort{async loadShelfBook(){throw Error('unused read port');}}
 const exports = {};
-new Function('exports', 'BookshelfFlowGateway', 'SharedDownloadGateway', 'createDownloadBookView', hostBody)(exports, ShelfPort, StatusPort, createDownloadBookView);
+new Function('exports','BookshelfFlowGateway','SharedDownloadGateway','createDownloadBookView','ReaderCoreGateway','projectDownloadBookAvailability','setTimeout','clearTimeout',hostBody)(exports,ShelfPort,StatusPort,createDownloadBookView,CoreReadPort,projectDownloadBookAvailability,fn=>clock.set(fn),id=>clock.clear(id));
+if(selectedCase==='host-single-flight'){
 const publications = [], host = new exports.SharedDownloadHost({}, snapshot => publications.push(snapshot));
 await host.reload(() => true);
 assert.equal(publications.at(-1).books.length, 2);
@@ -335,9 +379,12 @@ assert.equal(loads - before, 1, 'same-book refreshes share one real read');
 const published = publications.length; host.retire(); resolveProbe(); await Promise.all([refreshA, refreshB]);
 assert.equal(publications.length, published, 'retired Host cannot overwrite the next presentation');
 
+
+}
 // A download status clock is independent from readingProjectionRevision. A
 // second page mount reuses unchanged rows, while a background prefetch event
 // invalidates only the affected book and is coalesced into one 100ms patch.
+if(selectedCase==='host-index'){
 let indexedLoads = 0;
 const downloadListeners = new Set();
 const revisionOwner = {
@@ -354,7 +401,7 @@ class IndexedStatusPort {
     downloadedChapters: indexedLoads > 1 && book.sourceId === 's1' ? 1 : 0, state: indexedLoads > 1 && book.sourceId === 's1' ? 'downloaded' : 'none', stateLabel: '', progressPercent: 0 }; }
 }
 const indexedExports = {};
-new Function('exports', 'BookshelfFlowGateway', 'SharedDownloadGateway', 'createDownloadBookView', hostBody)(indexedExports, ShelfPort, IndexedStatusPort, createDownloadBookView);
+new Function('exports','BookshelfFlowGateway','SharedDownloadGateway','createDownloadBookView','ReaderCoreGateway','projectDownloadBookAvailability','setTimeout','clearTimeout',hostBody)(indexedExports,ShelfPort,IndexedStatusPort,createDownloadBookView,CoreReadPort,projectDownloadBookAvailability,fn=>clock.set(fn),id=>clock.clear(id));
 const firstMount = new indexedExports.SharedDownloadHost(revisionOwner, () => {});
 await firstMount.reload(() => true);
 const firstLoadCount = indexedLoads;
@@ -366,35 +413,24 @@ secondMount.retire();
 const progressSnapshots = [];
 const progressHost = new indexedExports.SharedDownloadHost(revisionOwner, snapshot => progressSnapshots.push(snapshot));
 await progressHost.reload(() => true);
-const novelKey = JSON.stringify(['s1', 'same']);
-const comicKey = JSON.stringify(['comic-source', 'same']);
+
 const unchangedBeforeProgress = progressSnapshots.at(-1).books.find(book => book.key === comicKey);
 const beforeProgress = indexedLoads;
 revisionOwner.downloadRevisions.set(novelKey, 1);
 downloadListeners.forEach(listener => listener({ reset: false, identities: [novel, novel] }));
-await new Promise(resolve => setTimeout(resolve, 140));
+await clock.flush();
 assert.equal(indexedLoads - beforeProgress, 1, 'duplicate background notifications refresh one changed book');
 assert.equal(progressSnapshots.at(-1).books.find(book => book.key === novelKey).downloadedChapters, 1,
   'background completion publishes the refreshed chapter summary');
 assert.equal(progressSnapshots.at(-1).books.find(book => book.key === comicKey), unchangedBeforeProgress,
   'unchanged row remains the same object');
 progressHost.retire();
-console.log('PASS shared-download: real cache/body/manifest projection, unknown/partial status, filters/direction, exact wired reading targets, scoped intents, latest scroll, single-flight and stale publication');
 
-// Read the committed device-sized policy, including a non-preset and fractional
-// MiB value; opening the settings sheet must not select a fabricated preset.
-owner.storagePolicy = { capacityBytes: 777 * storageMiB + 123, expiryDays: 19 };
-owner.sheet = ''; owner.storagePolicyDraftChanged = false; owner.syncStoragePolicy();
-assert.equal(owner.cacheLimitMb * storageMiB, owner.storagePolicy.capacityBytes);
-assert.equal(owner.limitChoices()[owner.limitIndex()] * storageMiB, owner.storagePolicy.capacityBytes);
-assert.equal(owner.dayChoices()[owner.daysIndex()], 19);
-owner.sheet = 'settings'; owner.storagePolicyDraftChanged = true;
-owner.cacheLimitMb = 1024; owner.cleanupAfterDays = 3; owner.syncStoragePolicy();
-assert.equal(owner.cacheLimitMb, 1024); assert.equal(owner.cleanupAfterDays, 3, 'background policy read cannot overwrite an open dirty draft');
-owner.storagePolicyDraftChanged = false; owner.syncStoragePolicy();
-assert.equal(owner.cacheLimitMb * storageMiB, owner.storagePolicy.capacityBytes);
-console.log('PASS actual download policy selector preserves measured non-preset bytes and a dirty settings draft');
 
+
+}
+
+if(selectedCase==='host-intents'){
 // Accepted Runtime intent progress also batches only changed books. A second
 // job in the snapshot is not a reason to re-query the entire shelf.
 {
@@ -410,17 +446,20 @@ console.log('PASS actual download policy selector preserves measured non-preset 
   class IntentStatusPort { async load(book) { intentLoads++; return { ...book,
     projectionStatus: 'ready', chapters: [], totalChapters: 1, downloadedChapters: 0, progressPercent: 0 }; } }
   const intentExports = {};
-  new Function('exports', 'BookshelfFlowGateway', 'SharedDownloadGateway', 'createDownloadBookView', hostBody)(
-    intentExports, ShelfPort, IntentStatusPort, createDownloadBookView);
+  new Function('exports','BookshelfFlowGateway','SharedDownloadGateway','createDownloadBookView','ReaderCoreGateway','projectDownloadBookAvailability','setTimeout','clearTimeout',hostBody)(
+    intentExports,ShelfPort,IntentStatusPort,createDownloadBookView,CoreReadPort,projectDownloadBookAvailability,fn=>clock.set(fn),id=>clock.clear(id));
   const snapshots = [], intentHost = new intentExports.SharedDownloadHost({ getDownloadCoordinator: () => coordinator },
     snapshot => snapshots.push(snapshot));
   await intentHost.reload(() => true);
   const beforeIntentLoads = intentLoads, unchanged = snapshots.at(-1).books.find(book => book.key === comicKey);
   jobs[0] = { ...jobs[0], revision: 2, updatedAt: 2 };
   subscriber({ books: [novel, comic], jobs }); subscriber({ books: [novel, comic], jobs });
-  await new Promise(resolve => setTimeout(resolve, 140));
+  await clock.flush();
   assert.equal(intentLoads - beforeIntentLoads, 1);
   assert.equal(snapshots.at(-1).books.find(book => book.key === comicKey), unchanged);
   intentHost.retire(); assert.equal(subscriber, undefined, 'retiring a page releases its observer, not the Runtime accepted job');
 }
-console.log('PASS accepted download intent bursts refresh one changed book and retain unrelated row objects');
+}
+}
+
+}

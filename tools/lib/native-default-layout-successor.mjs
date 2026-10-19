@@ -7,14 +7,16 @@ import {auditNativeTextElements} from './reader-typography-consumer-audit.mjs';
 const read=p=>readFileSync(new URL('../../'+p,import.meta.url),'utf8');
 export const nativeDefaultLayoutSuccessor=JSON.parse(read('tools/fixtures/design/native-default-layout-successor-20261014.json'));
 const contract=nativeDefaultLayoutSuccessor,digest=x=>createHash('sha256').update(x).digest('hex'),norm=x=>(x??'').replace(/\s+/g,'');
+const previous=JSON.parse(read(contract.previousFixture)).consumers.find(row=>row.id===contract.id);
+export function validateNativeDefaultLayoutDefinition(){
 assert.equal(contract.schema,1);assert.equal(contract.previousFixture,'tools/fixtures/design/native-default-control-contracts.json');
 assert.equal(digest(read(contract.previousFixture)),contract.previousFixtureSha256,'native-default original witness bytes remain immutable');
-const previous=JSON.parse(read(contract.previousFixture)).consumers.find(row=>row.id===contract.id);
 assert.equal(digest(JSON.stringify(previous)),contract.previousRowSha256,'the exact native family is unchanged');
 assert.deepEqual([contract.id,contract.file,contract.previousMethod,contract.currentMethod,contract.host,contract.variant,contract.header,contract.content],
  ['NATIVE-DEFAULT-01','features/bookshelf/BookDirectoryPage.ets','standardPage','standardToolbar','ReaderPageScaffold','directory','standardHeader','standardContent']);
 assert.equal(contract.onClick,'(): void => { this.rulesExpanded = !this.rulesExpanded; }','the finite successor retains the original local display-state action');
 assert.equal(contract.sdkProof,'tools/test-native-default-control-contracts.mjs');
+}
 const sdk=resolveEtsLoaderRoot();
 const req=createRequire(import.meta.url),ts=req(sdk+'/node_modules/typescript'),options=req(sdk+'/lib/ets_checker.js').compilerOptions;
 export function proveNativeDefaultLayout(source){

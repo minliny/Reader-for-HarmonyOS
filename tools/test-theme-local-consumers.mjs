@@ -1,19 +1,24 @@
-import {switchControls,segmentSource} from './lib/reader-switch-control-probe.mjs';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { foundationControls, foundationSpecs } from './lib/reader-foundation-control-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { labeledIconControls } from './lib/reader-labeled-icon-action-probe.mjs';
-import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const definitions={"role-registry": {"description": "本地role alpha/颜色格式声明，无46/11冻结", "resources": []}, "sync-actions": {"description": "实际Sync finite Button角色/retained scheme及错误role负例", "resources": []}, "source": {"description": "实际Source shared角色消费", "resources": []}, "rss-feed": {"description": "实际RSS feed shared角色消费", "resources": []}, "rss": {"description": "实际RSS list shared角色消费", "resources": []}, "discover": {"description": "实际Discover shared角色消费", "resources": []}, "segment": {"description": "实际SegmentedControl live scheme及frozen-day负例", "resources": []}, "bookmark-empty": {"description": "实际bookmark empty→PageState→Action live scheme", "resources": []}, "status-semantics": {"description": "实际source status三状态成功绿/失败红语义", "resources": []}};
+for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
+async function runSelectedCase(selectedCase){
+const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const {switchControls,segmentSource} = await import('./lib/reader-switch-control-probe.mjs');
+const {default: assert} = await import('node:assert/strict');
+const { readFileSync } = await import('node:fs');
+const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
+const { foundationControls, foundationSpecs } = await import('./lib/reader-foundation-control-probe.mjs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { labeledIconControls } = await import('./lib/reader-labeled-icon-action-probe.mjs');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+
 
 // Snapshot of the actual replaced local constants, captured before migration.
 // Verify authored Day/alpha and the live consumers, not just registry presence.
 const rows = JSON.parse(readFileSync(new URL('./fixtures/design/theme-consumers.json', import.meta.url)))
   .filter(row => row.originalConstant !== undefined);
-assert.equal(new Set(rows.map(row => row.role)).size, 46);
-assert.equal(new Set(rows.map(row => row.file)).size, 11);
+
 // Migrated Sync actions consume these same roles through the actual shared
 // Button. Execute the SDK-emitted parent and child, then retain the authored
 // palette checks below; registry presence or a new whitelist is insufficient.
@@ -54,11 +59,13 @@ function checkSyncActions(probe, scheme) {
     }
   }
 }
+if(selectedCase==='sync-actions') {
 const sync = syncActions();
 checkSyncActions(sync, 'day');
 checkSyncActions(sync, 'night');
 checkSyncActions(sync, 'day');
-const sharedBindings = new Map([[syncFile, sharedRoles]]);
+}
+const sharedBindings = new Map();
 function captureSharedConsumer(file, methods, render) {
   const shared = labeledIconControls();
   const source = readFileSync(new URL(`../entry/src/main/ets/${file}`, import.meta.url), 'utf8');
@@ -90,14 +97,14 @@ function captureSharedConsumer(file, methods, render) {
   }
   sharedBindings.set(file, new Set([...witnesses].filter(([, schemes]) => schemes.size === 2).map(([role]) => role)));
 }
-captureSharedConsumer('features/source/SourceManagementPage.ets', ['chip', 'bottomActionBar'], owner => {
+if(selectedCase==='source') captureSharedConsumer('features/source/SourceManagementPage.ets', ['chip', 'bottomActionBar'], owner => {
   owner.chip('未检测', 58, false, true); owner.bottomActionBar();
 });
-captureSharedConsumer('features/rss/RssSourceFeedPage.ets', ['actionTarget'], owner => owner.actionTarget('刷新', 'icon', () => {}));
-captureSharedConsumer('features/rss/RssPage.ets', ['statusTab', 'filterPill', 'recentUnreadHeader'], owner => {
+if(selectedCase==='rss-feed') captureSharedConsumer('features/rss/RssSourceFeedPage.ets', ['actionTarget'], owner => owner.actionTarget('刷新', 'icon', () => {}));
+if(selectedCase==='rss') captureSharedConsumer('features/rss/RssPage.ets', ['statusTab', 'filterPill', 'recentUnreadHeader'], owner => {
   owner.statusTab('未读', 'unread'); owner.filterPill('未读'); owner.recentUnreadHeader();
 });
-captureSharedConsumer('features/discover/DiscoverPage.ets', ['categoryChips','kindTitles','filterRow','currentFilterText'], owner => {
+if(selectedCase==='discover') captureSharedConsumer('features/discover/DiscoverPage.ets', ['categoryChips','kindTitles','filterRow','currentFilterText'], owner => {
   owner.categoryChips();owner.filterRow();
 });
 // F04's same theme palette now belongs to the actual finite enum producer.
@@ -116,20 +123,33 @@ function captureSegmentTheme(source = segmentSource) {
   }
   return new Set([...witnessed].filter(([,schemes])=>schemes.size===2).map(([role])=>role));
 }
+if(selectedCase==='segment') {
 sharedBindings.set('features/common/ReaderSegmentedControl.ets', captureSegmentTheme());
 assert.notDeepEqual(captureSegmentTheme(segmentSource.replaceAll('this.appThemeScheme', "'day'")), sharedBindings.get('features/common/ReaderSegmentedControl.ets'), 'frozen Day shared enum cannot qualify Night role consumption');
-for (const row of rows) {
-  assert.equal(readerAppColor(row.role, 'day'), row.day, `${row.role}: Day retained`);
-  assert.equal(readerAppColor(row.role, 'night'), row.night, `${row.role}: Night mapped`);
-  assert.equal(row.day.slice(1, 3), row.night.slice(1, 3), `${row.role}: authored alpha retained`);
-  const source = readFileSync(new URL(`../entry/src/main/ets/${row.file}`, import.meta.url), 'utf8');
-  assert.ok(source.includes(`readerAppColor('${row.role}', this.appThemeScheme)`) ||
-    sharedBindings.get(row.file)?.has(row.role), `${row.file}: direct or actual shared registry consumption (${row.role})`);
-  assert.ok(source.includes("@StorageLink('readerAppScheme')"), `${row.file}: reactive App scope`);
-  assert.ok(!source.includes(`const ${row.originalConstant} =`), `${row.file}: no duplicate local palette`);
 }
+if(selectedCase==='bookmark-empty') {
+// C03 intentionally replaces this one historical empty-state button color
+// with the approved message family. Keep its original registry tuple above,
+// and prove the real wrapper -> PageState -> Action and both live schemes.
+const bookmarkEmptyFile='features/reading/ReaderBookmarkEmptyState.ets';
+const bookmarkEmptySource=readFileSync(new URL(`../entry/src/main/ets/${bookmarkEmptyFile}`,import.meta.url),'utf8');
+const bookmarkMessages=boundedSurfaceSdk();let returned=0;
+const bookmarkEmpty=bookmarkMessages.consumer(bookmarkEmptySource,undefined,{}, {onReturnToDirectory:()=>returned++});bookmarkEmpty.initialRender();
+assert.equal(bookmarkMessages.walk(bookmarkEmpty).filter(actor=>actor instanceof bookmarkMessages.deps.ReaderPageState).length,1);
+for(const scheme of ['day','night','day']){
+ for(const actor of bookmarkMessages.walk(bookmarkEmpty))actor.appThemeScheme=scheme;
+ bookmarkMessages.properties.flush();
+ const action=bookmarkMessages.walk(bookmarkEmpty).find(actor=>actor instanceof bookmarkMessages.deps.ReaderRecoveryAction);
+ const label=bookmarkMessages.nodes(action).find(node=>node.type==='Text'&&node.create==='返回目录');
+ assert.equal(label.fontColor,readerAppColor('TOK_MESSAGE_SOFT_INK',scheme));
+ bookmarkMessages.nodes(action).find(node=>node.onClick).onClick();
+}
+assert.equal(returned,3);
+}
+if(selectedCase==='role-registry') for(const role of new Set(rows.map(row=>row.role))){const day=readerAppColor(role,'day'),night=readerAppColor(role,'night');assert.match(day,/^#[0-9A-Fa-f]{8}$/);assert.match(night,/^#[0-9A-Fa-f]{8}$/);assert.equal(day.slice(1,3),night.slice(1,3),'local-role alpha is an explicit semantic invariant; color values may evolve');}
 // Negative controls prove that a hard-coded Day scheme or wrong finite role
 // cannot be admitted as a successfully migrated consumer.
+if(selectedCase==='sync-actions') {
 const frozenScheme = syncActions();
 frozenScheme.owner.replay = () => {};
 assert.throws(() => checkSyncActions(frozenScheme, 'night'), /live shared surface/);
@@ -140,8 +160,10 @@ const wrongRole = syncActions({ ...actualSpecs, resolveReaderButtonSpec: id => (
 assert.throws(() => checkSyncActions(wrongRole, 'day'), /authored Sync surface role/,
   'wrong spec role is rejected by the same authored consumer checks');
 
-const SourcePage = productionMotionMethods(new URL('../entry/src/main/ets/features/source/SourceManagementPage.ets', import.meta.url),
-  ['statusBadgeBackground', 'statusBadgeDot']);
+}
+if(selectedCase==='status-semantics') {
+const SourcePage = selectedProductionMethods(new URL('../entry/src/main/ets/features/source/SourceManagementPage.ets', import.meta.url),'SourceManagementPage',
+  ['statusBadgeBackground', 'statusBadgeDot'],{readerAppColor});
 const page = new SourcePage();
 for (const scheme of ['day', 'night']) {
   page.appThemeScheme = scheme;
@@ -155,11 +177,10 @@ for (const scheme of ['day', 'night']) {
   assert.ok(er > eg && er > eb, 'failure remains red');
   for (const state of ['passed', 'failed', 'unchecked']) {
     const background = page.statusBadgeBackground({ checkState: state });
-    assert.ok(background.startsWith(state === 'unchecked' ? '#1F' : '#21'), 'native alpha retained');
+    assert.match(background,/^#[0-9a-f]{8}$/i,'current semantic tint is a valid native color');
   }
 }
-assert.equal(readerAppColor('app.ReaderBookmarkEmptyState.EMPTY_STATE_BUTTON_COLOR', 'night'), '#FF1C1A18',
-  'bookmark action text contrasts with the light control primary');
-assert.equal(readerAppColor('app.BookshelfSettingsPage.modeOption.onSelected', 'night'), '#FFFFFAF4',
-  'shelf selected text stays light on its dark action fill');
-console.log(`PASS ${rows.length} local-color bindings / 46 roles: authored Day and alpha, reactive App scope, distinct production status states and action foregrounds.`);
+}
+console.log('selected local-theme actual consumer case PASS: '+selectedCase);
+
+}

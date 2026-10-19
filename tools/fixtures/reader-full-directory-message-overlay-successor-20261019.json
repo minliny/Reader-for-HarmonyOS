@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "authority": "docs/message-ui/approved-scope-20261019.json",
+  "previousLayoutWitness": "tools/fixtures/reader-full-directory-page-layout-successor-20261014.json",
+  "page": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+  "scope": "A13 pending-operation",
+  "slots": {"header": "topBar", "content": "directoryContent", "overlayContent": "directoryOverlay"},
+  "visibility": "this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible",
+  "overlayModifiers": [
+    ["hitTestBehavior", ["HitTestMode.Transparent"]],
+    ["zIndex", ["8"]],
+    ["position", ["{ x: this.panelLeft(), y: this.panelTop() }"]],
+    ["width", ["this.panelWidth()"]]
+  ],
+  "recoveryInputs": {
+    "recovery": "this.directoryRecovery",
+    "onReconcileBookmarks": "this.onReconcileBookmarks",
+    "onContinueBookmarks": "this.onContinueBookmarks",
+    "onReconcileOffline": "this.onReconcileOffline",
+    "onContinueOffline": "this.onContinueOffline"
+  },
+  "styleTransfer": {
+    "previousContentStyleIndex": 2,
+    "before": {"owner": "ReaderFullDirectory", "method": "directoryContent", "property": "width", "args": ["this.panelWidth()"]},
+    "after": {"owner": "ReaderFullDirectory", "method": "directoryOverlay", "property": "width", "args": ["this.panelWidth()"]},
+    "heightBefore": "Math.max(0, this.panelViewportHeight() - this.activeRecoveryHeight())",
+    "heightAfter": "this.panelViewportHeight()"
+  }
+}
