@@ -1,0 +1,1084 @@
+{
+  "schemaVersion": 1,
+  "referenceId": "reader-common-ui-committed-20261020",
+  "date": "2026-10-20",
+  "timezone": "Asia/Shanghai",
+  "selection": "User-selected current committed non-native-enhancement main branches; ongoing UI working-tree changes excluded.",
+  "inputReadMode": "git object bytes at exact commits, never working-tree content",
+  "repositories": {
+    "Reader-for-HarmonyOS": {
+      "commit": "33f7c7b21474a76a042ebda911c5f0ff2d73cf54",
+      "selectedBranch": "main",
+      "gitTree": "89133075ec39083ab6a78833bbac1a199ee49fd8"
+    },
+    "Reader-UI": {
+      "commit": "95366cd93775ea0ad3ecbc0f60e8882717f93169",
+      "selectedBranch": "main",
+      "gitTree": "b0037d55723c749a90ce1fd78a7b5a7953e38d2e"
+    },
+    "Reader-Core": {
+      "commit": "2a301653c140eef457e786fd6ab3bb9b8e3045c8",
+      "selectedBranch": "main",
+      "gitTree": "6cbc8a7dbf0bd2b11bf19075fbe90d9f08154b87"
+    }
+  },
+  "excluded": {
+    "branch": "codex/harmony-native-phase1-20261020",
+    "uncommittedChanges": true,
+    "otherReferencePoint": "0c37547c is the saved pre-native-phase-one Host boundary, not the selected current-main input for this consolidation.",
+    "privateEvidenceRequiredForReadingTheseDocs": false
+  },
+  "coverage": "Selected direct document/source references, explicitly indexed shared visual inputs, and font assets. This is not a build input manifest, complete transitive dependency closure, implementation-completeness claim, or HAP/device receipt.",
+  "authority": "See README.md; historical roles never override the selected product contracts or shared visual inputs. Some linked entry documents receive navigation-only edits in this documentation change; hashes here identify their original selected-commit bytes.",
+  "generatedSourceBindings": [
+    {
+      "source": {
+        "repository": "Reader-UI",
+        "path": "theme/registry.json"
+      },
+      "consumer": {
+        "repository": "Reader-for-HarmonyOS",
+        "path": "entry/src/main/ets/features/common/ReaderThemeRegistry.ts"
+      },
+      "sourceSha256": "1a3ea68f162a2e440b60fa0dfe0001bc9c3051b6adba7700a60fdc73024a798f",
+      "generatedHeaderMatches": true,
+      "meaning": "Recorded source hash matches the generated header; not regeneration, semantic, pixel or runtime verification."
+    },
+    {
+      "source": {
+        "repository": "Reader-UI",
+        "path": "design/manga-directory/visual.json"
+      },
+      "consumer": {
+        "repository": "Reader-for-HarmonyOS",
+        "path": "entry/src/main/ets/features/manga/MangaDirectoryVisual.ts"
+      },
+      "sourceSha256": "c4a5f2dda1598d4651e03e3af95acd8ba107ce769733bb4d3880e5ffde959be4",
+      "generatedHeaderMatches": true,
+      "meaning": "Recorded source hash matches the generated header; not regeneration, semantic, pixel or runtime verification."
+    },
+    {
+      "source": {
+        "repository": "Reader-UI",
+        "path": "design/source-switch/source-switch.visual.json"
+      },
+      "consumer": {
+        "repository": "Reader-for-HarmonyOS",
+        "path": "entry/src/main/ets/features/source/SourceSwitchVisual.ts"
+      },
+      "sourceSha256": "205de7f89121243e6ef4490f4863c6f4874e928a7eb5a66f52b41f0275c8d977",
+      "generatedHeaderMatches": true,
+      "meaning": "Recorded source hash matches the generated header; not regeneration, semantic, pixel or runtime verification."
+    }
+  ],
+  "inputs": [
+    {
+      "repository": "Reader-Core",
+      "path": "bindings/ios/README.md",
+      "role": "product-and-host-boundary",
+      "gitBlob": "59fd2951d7b4eaede94576b38a7160d5dce14802",
+      "sha256": "4266113d0cc0ca4bd3863bfdbb638c15ce9b08606cdc26c64bed489d6789f6a2",
+      "bytes": 3240
+    },
+    {
+      "repository": "Reader-Core",
+      "path": "bindings/ios/STATUS.md",
+      "role": "historical-reference",
+      "gitBlob": "0fcb398ec112fd4fdd6aeb982217ff724e65440d",
+      "sha256": "c963f24937d7682ccf00680049e9d1039f0cba21f92bfa6c4cb78e80e90f1638",
+      "bytes": 9997
+    },
+    {
+      "repository": "Reader-Core",
+      "path": "docs/host-app-contracts/04-local-book-files.md",
+      "role": "product-and-host-boundary",
+      "gitBlob": "e7d5c5a02bd30807ec086ccfd33934d525298aff",
+      "sha256": "bc49bbc3c9e1b0a750d33dea0861b06d3487d11049fcadcfe4ba6c84842475e7",
+      "bytes": 5063
+    },
+    {
+      "repository": "Reader-Core",
+      "path": "docs/host-app-contracts/05-tts.md",
+      "role": "product-and-host-boundary",
+      "gitBlob": "b1495789b7b33e73eef2ac0acfd4859b7e635fc1",
+      "sha256": "eb4443abf08d32dd6201df9c238af7b2694b4db0e47c1318117c960f818a8b55",
+      "bytes": 15029
+    },
+    {
+      "repository": "Reader-Core",
+      "path": "docs/host-app-contracts/README.md",
+      "role": "product-and-host-boundary",
+      "gitBlob": "ef0398cef3633a7a066d1a2fb4fa49897af0e5f3",
+      "sha256": "1b239c79baf34b25c843576336942542f8875b7226f76d7273fd93b1d5ffa41f",
+      "bytes": 4963
+    },
+    {
+      "repository": "Reader-Core",
+      "path": "governance/workspace/ARCHITECTURE.md",
+      "role": "product-and-host-boundary",
+      "gitBlob": "c521956db1c621909a9352706b5ee5d7d7721b72",
+      "sha256": "b80c571e8c81e7209e703bc16146831fca37fb7d2f7f224ccb35d6e193ef30fe",
+      "bytes": 7171
+    },
+    {
+      "repository": "Reader-Core",
+      "path": "governance/workspace/DEVELOPMENT_BACKLOG.md",
+      "role": "product-and-host-boundary",
+      "gitBlob": "8952754402470640edb902151ade1cc4c98eadbf",
+      "sha256": "04e2280a384c340355d29dec99cc7060379a6c6b95168401327a8ea87b67f41d",
+      "bytes": 154660
+    },
+    {
+      "repository": "Reader-Core",
+      "path": "governance/workspace/README.md",
+      "role": "product-and-host-boundary",
+      "gitBlob": "f3cb15403bf7e1d67d8e81837cff1e6febbea0e6",
+      "sha256": "5be05dc29e2db8b7a56cb6d1c1a7b86880ad6133401fd600762eb06c7633fe8b",
+      "bytes": 10653
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "README.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "433da4dfa7841486e47070a24040ec3c03e28df1",
+      "sha256": "ead00121d22281fa284b4b38cbb6fb51ac154c239f7bcb9f7d7ce675f4db4152",
+      "bytes": 2899
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "design/manga-directory/ICON-LICENSE.txt",
+      "role": "asset-provenance",
+      "gitBlob": "a18858fb7b014098cba85703e66609be66a26ef5",
+      "sha256": "0e80a2d229d2fd4fc7e8636142ec5d0ff0bc031f14c15b682e2ac01dfd5b5138",
+      "bytes": 1063
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "design/manga-directory/icon-provenance.json",
+      "role": "asset-provenance",
+      "gitBlob": "4af20d1af478cfeb7313bb7cda057c273c391bb0",
+      "sha256": "83261d9eacf9b684883ac342977b3b9a4fcd651624b5fd790ec848e7167fd3ef",
+      "bytes": 381
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "design/manga-directory/visual.json",
+      "role": "shared-visual-input",
+      "gitBlob": "d143e6812e51aa23aba4e4687901d4f84c910309",
+      "sha256": "c4a5f2dda1598d4651e03e3af95acd8ba107ce769733bb4d3880e5ffde959be4",
+      "bytes": 8812
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "design/source-switch/source-switch.visual.json",
+      "role": "shared-visual-input",
+      "gitBlob": "7fe1d5c5d68b7a1e9cd15dd20fdfa18c8fd3598e",
+      "sha256": "205de7f89121243e6ef4490f4863c6f4874e928a7eb5a66f52b41f0275c8d977",
+      "bytes": 12087
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "fonts/Inter-OFL.txt",
+      "role": "asset-provenance",
+      "gitBlob": "9b2ca37b3ffc77391d8b2ebef4a974ef32bf46ea",
+      "sha256": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
+      "bytes": 4380
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "fonts/InterVariable.ttf",
+      "role": "font-asset",
+      "gitBlob": "4ab79e0102bbe0ffa1ed879b13e52ac8c6487833",
+      "sha256": "4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf",
+      "bytes": 879708
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "fonts/NotoSansSC-VF.otf",
+      "role": "font-asset",
+      "gitBlob": "3ec828414f3845ff48a97a41b1e15f108f65badf",
+      "sha256": "d13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b",
+      "bytes": 15054748
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "fonts/NotoSerifSC-Bold.ttf",
+      "role": "font-asset",
+      "gitBlob": "ee0a8ee7ef4c6f780b25d5f6aefeb2cb24879ee5",
+      "sha256": "3fb07709c24ed05993636d0b137917ea0bae5cf976f157d5e258fd068399a894",
+      "bytes": 14853692
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "fonts/NotoSerifSC-Regular.ttf",
+      "role": "font-asset",
+      "gitBlob": "af5de5b355b511d5554b4e8527d9c3a8fcdd2470",
+      "sha256": "9502147ceba7b5bc7fd3415083f6a5d133f22d8f9efb4974d4b85f3a97ea2d3a",
+      "bytes": 14854712
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "fonts/NotoSerifSC-wght.ttf",
+      "role": "font-asset",
+      "gitBlob": "eab063faf229160a52d3760f5555150e4eb9e5bf",
+      "sha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9",
+      "bytes": 25125512
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "fonts/OFL.txt",
+      "role": "asset-provenance",
+      "gitBlob": "94d1bf7b52481343e2983fb7751e8b7abe1ea07b",
+      "sha256": "5e0da210fb04058a8c0087985d2d456b931c2579811a49655721d3cf0c36b6d6",
+      "bytes": 4350
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "theme/ReaderThemeRegistry.ts",
+      "role": "generated-consumer",
+      "gitBlob": "b701036ce284f9fd176ec53202ca201dd5db3676",
+      "sha256": "6b8ac73d5e4ae2d1d6522b8bb4cbaf6d898c7637929b203573139358c0392ba4",
+      "bytes": 101489
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "theme/ReaderThemeSelection.ts",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "8c8a95bcaf8cbac1531839c07b6e07acf0030f0e",
+      "sha256": "837a2bde130b41502dd9e378a81e4578db80f8fd68597f8698a2e6e92c42fe3e",
+      "bytes": 7221
+    },
+    {
+      "repository": "Reader-UI",
+      "path": "theme/registry.json",
+      "role": "shared-visual-input",
+      "gitBlob": "3e88d593fa5924017ed67f0f3be94c713b6dc0cb",
+      "sha256": "1a3ea68f162a2e440b60fa0dfe0001bc9c3051b6adba7700a60fdc73024a798f",
+      "bytes": 270292
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "README.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "9810e172c2bb29e51f0fa0ff8b3a0929c2a31393",
+      "sha256": "4ef228302eea276282d97ee6aca161bb0d11472ea9bfb7d83444e647891a4b48",
+      "bytes": 3364
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/MANGA_BOUNDARY_TURN_UI_CONTRACT_20261008.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "b6f56aa203c967265db13b5bed9f6aa9b27a9b90",
+      "sha256": "55b5980caaafb11f1bed4ec1fb8a3d8b4f61e759a09024086f347212bc1871a8",
+      "bytes": 4065
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/MANGA_SHEET_MOTION_20261003.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "a6d79bebdd945697d0d7841b4324725c429a0838",
+      "sha256": "873b2d0a8b6e816027c1667ef0109b6c499b8431078a1d3b731982409fc2a57b",
+      "bytes": 12462
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/READER_CONTROL_BAR_EXECUTION_REFERENCE_2026-09-05.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "8cfafdefdf3bdfee2bc2e35e58f56adfdd2aab17",
+      "sha256": "b51e696ba221734fc5ea82fb7e21f98ac4f059811c4f895413d074416fa28b38",
+      "bytes": 16420
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/READER_REPAIR_SPEC.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "c400e8bb5284e3f67d8c54bf9cb2735998653923",
+      "sha256": "9c9da0d3feb50e3a5f9c65bc324838530f84bdf7468ddd1fc04b435ebc015c30",
+      "bytes": 376250
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/READING_CHROME_AND_INTERACTION_20261012.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "ef68337f3d0fd4103a965554e9c40b51a2490f17",
+      "sha256": "155665d451cf376d1b47e16b610aad04db681a976075b987166743727365dc00",
+      "bytes": 13650
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/architecture/interaction-wiring-20261019/README.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "e894ff047f2e867a6129fd735796d7cf879d4ad2",
+      "sha256": "af0071a953ab1ff45c1148c6738a6b0c4975dc6dd9e958c7cc288febdbcc5715",
+      "bytes": 16909
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/architecture/interaction-wiring-20261019/action-comparison.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "c2fa092d867c3746c9f6267bade63d7d5bc28a7d",
+      "sha256": "d32abd9a1e885aac310e5b49afcb31a22279feb77fc933b665b0fa2dd5f18afa",
+      "bytes": 36328
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/architecture/interaction-wiring-20261019/navigation-comparison.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "79c87689ed835ddd44276f9a9baa4fedc3d9df3c",
+      "sha256": "5e62b26e0490b8c52568c2679fe5371d5d64821e5c08f9a330c185d9d7e9a763",
+      "bytes": 28903
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/architecture/interaction-wiring-20261019/workflow-comparison.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "36344db7017c177a81fde46bf8f37220d41314bf",
+      "sha256": "e04d3f60f79b5524defa8bc93dc46748ab0475d9f873438b51061197f9eb4a57",
+      "bytes": 31557
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/architecture/source-switch-owner-audit-20261003.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "a05cc8dcdc1c78ef0b323a875362921a88582fe6",
+      "sha256": "94ddfd16f9aa23f13c4d79bf3c6c07b6b07064d2c4eeea84587d4178a9dd96f3",
+      "bytes": 11797
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/architecture/temporary-back-leaf-bridge-20261003.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "a252e9b750c14933a5f8c98aa1b5796499ea83aa",
+      "sha256": "6d9299163588b3a8624924ae0f9f2dfd0f38941b458e5002dc06dbee0ff3dbc1",
+      "bytes": 5681
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/architecture/ui-page-framework-20261014.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "1e2135379c4713b4a76ee8fb2aaa37a92b5d4184",
+      "sha256": "c405c53db80658d28f785f87a2293d2af1ea4ec77f959ee6b9d846817d9f9838",
+      "bytes": 4446
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/message-ui/FRAMEWORK.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "2d237bec544ab203099c7d33ee38825daa2b9164",
+      "sha256": "81582815106c60444d8e34bf25f61ec24c6ad2331365b33ec348aaf90894f3fe",
+      "bytes": 6120
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/ui-design/MANGA_SHEET_FONTS_PROVENANCE.json",
+      "role": "asset-provenance",
+      "gitBlob": "514697bdae6b8a317c912c1e20cb7f2ad38ef78d",
+      "sha256": "5dc0fcfdf778a6648981ebdffe172c4059abdf85cc4e79f8037ec85ba2678e33",
+      "bytes": 2707
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/ui-design/SVG_PROVENANCE.json",
+      "role": "asset-provenance",
+      "gitBlob": "5b9773d109ec99a904844c821716c357518aca5f",
+      "sha256": "20a97e781267ba4742d0123b4042b7f1ffcf7f7bc1d27158c8b8dec1ad312f45",
+      "bytes": 429515
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/ui-design/app-baseline/CLASSIFICATION.md",
+      "role": "historical-observation",
+      "gitBlob": "73bf9db39cb9ac9b83a66f31bebc21832c5c8843",
+      "sha256": "17920e1f8399b1abbebe79202a69d89d815208ffb96d580522072e5809657f10",
+      "bytes": 124634
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/ui-design/app-baseline/LOGIC.md",
+      "role": "historical-observation",
+      "gitBlob": "99ee50b7decf29280e242a509ad3bcd5b45c619a",
+      "sha256": "2aafa51914819cabbb2021b42d4c2281f3bb28ddde8f7fed344b7d70a57cb869",
+      "bytes": 91157
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/ui-design/app-baseline/README.md",
+      "role": "historical-observation",
+      "gitBlob": "92b0dbb2cf7dff7de7a68fd08ab75f1b3f1abff7",
+      "sha256": "a41f4e9fe82afb70ed2006e3f043b213d2cd16b2696943a13ca3616754883dae",
+      "bytes": 2382
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/ui-design/app-baseline/private-inputs.json",
+      "role": "historical-observation",
+      "gitBlob": "3417389e5582225708f1482c9c71cae6fbf17251",
+      "sha256": "160c968c0989ab679c63933b6c5b2e285d42780373446a77b94213b099ed0bd2",
+      "bytes": 73073
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/ui-design/shared-download/fonts.json",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "4f8e43b4774590d38407c1d6c7e6b0fbf80ad7a2",
+      "sha256": "1bd9fe2b4fd093f945153a58909834ac15d5c1275dbea484e1948c7b29bad503",
+      "bytes": 49720
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/ui-design/shared-download/visual-spec.json",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "354ed4afff71ea34f6861d6fbb3bf51d2512b304",
+      "sha256": "57d1cf0b694a9687407348a4025f768a5fd17c0f1fdba124c4402ea1076554cb",
+      "bytes": 70401
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/ui-design/source-switch-reference/README.md",
+      "role": "scoped-contract-or-source-index",
+      "gitBlob": "d814bc791966bf2f85536d989e9620c5cbfdcb9a",
+      "sha256": "d253693cc5fec1a09028659497377e7c394e662f0dd82e1f7e0be057eb7e6264",
+      "bytes": 3774
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "docs/ui-design/source-switch-reference/approved-source/LOGIC.md",
+      "role": "historical-reference",
+      "gitBlob": "825daebf90abd3d85769fda239817082f50c74df",
+      "sha256": "af63b6f1a1f4bf05079cd4252a5bb8329394be8040b9b6bb1c2f441578ffde37",
+      "bytes": 467575
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/app/ReaderBrightnessWriter.ts",
+      "role": "implementation-reference",
+      "gitBlob": "0a889415d269e942cd49840107825aed827a2c25",
+      "sha256": "1a0b5de52e814fa02e28ebad95cb6ad98f579479ab14f4c927bbc25e26a157d4",
+      "bytes": 6913
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/app/ReaderOperationFacts.ts",
+      "role": "implementation-reference",
+      "gitBlob": "dcd55544695a16faab3e30384d41cf6caefd43fc",
+      "sha256": "3b0c79ab3806abc2c8ee9a79388415f2be9472aee8dc1b1d65ba1a477abb01a9",
+      "bytes": 7915
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/app/ReaderProductScope.ts",
+      "role": "implementation-reference",
+      "gitBlob": "dc1932b970de91136e6963dd9ab56fcb63aa4f17",
+      "sha256": "041aa7dad7fb57eac37e157da003b2d1a11fbfee9966424ee97626d69c58f85f",
+      "bytes": 1311
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/app/ReaderSystemFileOpenHost.ts",
+      "role": "implementation-reference",
+      "gitBlob": "573b0d4ae6184ff04555ddffb759a960c6567d81",
+      "sha256": "1d0d3b2f25b015b6e806ad4534aef9dc1e311e470fb42ea970b3eb7eb5f8fb09",
+      "bytes": 4275
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/bookshelf/BookDirectoryPage.ets",
+      "role": "implementation-reference",
+      "gitBlob": "c686e65d55293bafe1934799b7ef9d6780b5630d",
+      "sha256": "599f389d6dc9fc9b06e508a06fdb9eb5509daff84af456ce3007b50fda9f0083",
+      "bytes": 54409
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfOperationOwner.ts",
+      "role": "implementation-reference",
+      "gitBlob": "83a7b0212110a38de855243da2246d0a30030e32",
+      "sha256": "f32f8cf1cbc84d9efca3a224f02fa67cc6c376713f611f6f5e0220334c780a9f",
+      "bytes": 16049
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/bookshelf/BookshelfPage.ets",
+      "role": "implementation-reference",
+      "gitBlob": "53174ac020e67c3878e84c16040c8e47a4eeb52b",
+      "sha256": "675480b7004a182d3a439f47e1de1bf6b4bc0d26b25561e1c3ba4fbe97c8b1a4",
+      "bytes": 71454
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/bookshelf/LocalBookDetail.ets",
+      "role": "implementation-reference",
+      "gitBlob": "aaed311ec4ef31b86c936061e2cda8f8c4d41642",
+      "sha256": "23b4a133129bc0140e7a312a2a5018af08fdd452db8db8afcd8206b9ce40961d",
+      "bytes": 57912
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/bookshelf/LocalImportDialog.ets",
+      "role": "implementation-reference",
+      "gitBlob": "faba2e0db888121fef8c18023d1f6f9d18ade518",
+      "sha256": "08c58a9f273318fdd2b61b7eaa2b665c15abf4795ad1094aa499c18bd9ef78d5",
+      "bytes": 25658
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/MotionPointTrack.ts",
+      "role": "implementation-reference",
+      "gitBlob": "126ebcfc6bfc16eb7835dc28af8c218d5f4ad09d",
+      "sha256": "762630fe756a28f808d92242f4cf655d4b160e9442711e47f3995b1ce796ce9e",
+      "bytes": 958
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/MotionSpec.ets",
+      "role": "implementation-reference",
+      "gitBlob": "4191e6bf44d37a730dbb4dc0e6577a0a1153fc31",
+      "sha256": "23d82155b3243aad367473eec7495ec1d37e57485790422ccbc6d9cf6dbda6a7",
+      "bytes": 14758
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/MotionTimeline.ts",
+      "role": "implementation-reference",
+      "gitBlob": "3b6a9288148e4e50a70c2021ca45ff6a15c5efe7",
+      "sha256": "9596445cd773c3c0b43f1540b81a1a768a45346b1adc4c2fb15a44e9a23238b0",
+      "bytes": 1182
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ProductMotionTiming.ts",
+      "role": "implementation-reference",
+      "gitBlob": "73514fc0884039c29ee800cb9e6da4f3ec208ed8",
+      "sha256": "1074dac727f6a00f08b0c421bb2d441ebcec955e8f185e02536cef71dc2b94e4",
+      "bytes": 323
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ReaderFontFamilies.ts",
+      "role": "implementation-reference",
+      "gitBlob": "6f0a057f5fa05901444ef00e9107260f6bd1e25a",
+      "sha256": "da256271159a8bb1a1688c52fe70bb1f053eb48c287f610706dd2b74883160b1",
+      "bytes": 1969
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ReaderFonts.ets",
+      "role": "implementation-reference",
+      "gitBlob": "2efc75a9bffc5af94ab56f7db99127d2a3e54473",
+      "sha256": "ad6eafc09e73e3cb1b825e43a54c9c8af65b4c12524cdda1449fdf49043dcd41",
+      "bytes": 7131
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ReaderMessageStyle.ets",
+      "role": "implementation-reference",
+      "gitBlob": "b5ee0d4dc99fd48f5cd1ed4c8849347b10162b59",
+      "sha256": "e89cfc032a76a62ebd5593362187b5c2c6d6941a52b885cc7e70c1cf80b0a001",
+      "bytes": 1541
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ReaderMotionClock.ets",
+      "role": "implementation-reference",
+      "gitBlob": "33dc204fc9a39e344c05fddfd405c25be997fd5c",
+      "sha256": "a427dbcfbcdd377e871b641e4d243d6cb9e36685e8a1dfdb6af6611ffd815480",
+      "bytes": 257
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ReaderPageScaffold.ets",
+      "role": "implementation-reference",
+      "gitBlob": "143df14d1933aa56a422c6eacbb93c82d1aeb510",
+      "sha256": "ae41895b53c1a8752f20c13a2e275c327e82fc1cfcf1ea21ef28e0fcf5897c47",
+      "bytes": 4915
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ReaderPageShell.ts",
+      "role": "implementation-reference",
+      "gitBlob": "290067bee8a6bb21af7f7d45cd6e4c3b3c33bc07",
+      "sha256": "37157b9f65552ca88dd815b6397498cf7bf6346538de3ec37a5e508d4482de45",
+      "bytes": 7584
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ReaderPressFeedback.ets",
+      "role": "implementation-reference",
+      "gitBlob": "a9ef02b6d81a15204a3556bcc658b6a80cd4b905",
+      "sha256": "de661500ec97b4f1b6688a0d6d89fa59439757a2a7aaee4f9ce1bd72d528480e",
+      "bytes": 2238
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets",
+      "role": "implementation-reference",
+      "gitBlob": "0e5e21462cdbf1cb1ddaf07021fce65cea26b2b2",
+      "sha256": "79ebe2d99bad7814e2ebd99f11117624323ac6b996a2a711c1e9e4bc09fcf1a1",
+      "bytes": 25740
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ReaderThemeRegistry.ts",
+      "role": "generated-consumer",
+      "gitBlob": "b701036ce284f9fd176ec53202ca201dd5db3676",
+      "sha256": "6b8ac73d5e4ae2d1d6522b8bb4cbaf6d898c7637929b203573139358c0392ba4",
+      "bytes": 101489
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ReaderTokens.ets",
+      "role": "implementation-reference",
+      "gitBlob": "c4bd5387406a7bd6401826bf1f258818e2686f35",
+      "sha256": "040889752658f2060da49079b7fce61e0b3277a8cc5357d82da10b02c4b8b1ad",
+      "bytes": 14574
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/common/ReaderTypography.ets",
+      "role": "implementation-reference",
+      "gitBlob": "268bd2ddae3b1cfe710b5700a403db0590cb2c3b",
+      "sha256": "e74b3087815ac45857a35020482c524fbaae15608943c4c9e5f832eb11065675",
+      "bytes": 82649
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/downloads/SharedDownloadHost.ts",
+      "role": "implementation-reference",
+      "gitBlob": "65d79eb3170ccec5a4c848865488f60d2f8d17fb",
+      "sha256": "c1b0e84889a45ad4fbd57a5a6540aafb0849127e9c2333b423a701fdb51a27df",
+      "bytes": 21838
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/downloads/SharedDownloadPage.ets",
+      "role": "implementation-reference",
+      "gitBlob": "6554a3025a361b7915bffd290b6477a1c72abdee",
+      "sha256": "7f009d4eda7f4d0e20b73fc84ff7e78ab1d5c6c5ba5537230bb281dcae773af8",
+      "bytes": 140686
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/downloads/SharedDownloadProjection.ts",
+      "role": "implementation-reference",
+      "gitBlob": "c44aa6f9ec2fe53cedd847fb9504478de6f5396b",
+      "sha256": "3fe0c158e5e55e97070ca30211001cf41ebbff0c3e36a4fc68c80f54e5fb33c7",
+      "bytes": 12702
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts",
+      "role": "implementation-reference",
+      "gitBlob": "2f42946ac4ac2ed1e76d93395a94e2eff2ae259b",
+      "sha256": "2207769c403f0e5274f6b4b0b7d663c6c92f885583a563d6149b4f9f976384eb",
+      "bytes": 3708
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/manga/MangaDirectoryVisual.ts",
+      "role": "generated-consumer",
+      "gitBlob": "a611579d30a02f61ad6c427587b7aee3aca5b9d0",
+      "sha256": "c8d1009add3163f4941b5c4387248e3c2a07b6a6202d8d07b518bb3ed79917b2",
+      "bytes": 19265
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/manga/MangaReadingSurface.ets",
+      "role": "implementation-reference",
+      "gitBlob": "86915b8fa73353fbdfb9dcce41493ea468c2bc7a",
+      "sha256": "9233bf3ff4d8a160c8e2163e1f00469826c2e66fb7f269335ca76c93535c9fc4",
+      "bytes": 184472
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/manga/MangaSessionController.ts",
+      "role": "implementation-reference",
+      "gitBlob": "fb44512a789aa2119aa859a8a10ac5b1f2cf3983",
+      "sha256": "aa94b370dd84b4683c115cc7bc4aa966cc7d413a947693f1f0f0a4525aff1d7d",
+      "bytes": 63485
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/manga/vendor/pulltorefresh/PullToRefresh.ets",
+      "role": "implementation-reference",
+      "gitBlob": "77197a15ad5af4698624490a9ede40e240256ae9",
+      "sha256": "be1d9a80f788f0c506cb034edd6e6321cd82ca7187d1925d28d7282cca219f5a",
+      "bytes": 12796
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/LocalReadingExperience.ets",
+      "role": "implementation-reference",
+      "gitBlob": "a7e891d33075b3504d14d61f7abbdfda6a7d2ffd",
+      "sha256": "a7533632a576f8c52a7657e75361dd1a2c782ecfac6b978d468cae8360179019",
+      "bytes": 749870
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderAutoPageState.ts",
+      "role": "implementation-reference",
+      "gitBlob": "fde06d1d1ffa7a362cbae77199643309237002db",
+      "sha256": "957a4853060071b9558bf84a7e63d6c7b3aa2caff878d7613bd68e3606a61b3e",
+      "bytes": 7695
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderControlGeometry.ts",
+      "role": "implementation-reference",
+      "gitBlob": "e2692c9dfd70408e9b9b540c5aa358e15e51787d",
+      "sha256": "d8701c251fb44df13f7ede69e5b68a3aeff7fd6963ba77e825e0c52ba11da38b",
+      "bytes": 3415
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderControlGestureDriver.ts",
+      "role": "implementation-reference",
+      "gitBlob": "7ffed39a1b32335ede1b7179df5f5206bac5972c",
+      "sha256": "1352127222d3b21306a2b6833faa80ddf8590833a892f10d01f8d6ce07f64960",
+      "bytes": 16578
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionPolicy.ts",
+      "role": "implementation-reference",
+      "gitBlob": "8443408b77eb410c5b676e9b456e38d5b5091294",
+      "sha256": "cd1d00f844cae7ffb84bd4801cc21e670ec257a6558a08603b8b9dff765c798d",
+      "bytes": 3671
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts",
+      "role": "implementation-reference",
+      "gitBlob": "85cee27480041d51f85d6b2a312a78435e688e25",
+      "sha256": "29327d20cfc332f75831823696f2cc297772245ac6db4e5ba50fefa43459e477",
+      "bytes": 8405
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderControlPanel.ets",
+      "role": "implementation-reference",
+      "gitBlob": "fc07c44c0e86968f93361ef56c3b4bb72c4be810",
+      "sha256": "b2df061d6933d1b66cf62929388b94fe742c907b003cbabf551d0a624e4d92ce",
+      "bytes": 109304
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderControlSessionState.ts",
+      "role": "implementation-reference",
+      "gitBlob": "9294c7c32461e0322031d34419d50ad6990e57db",
+      "sha256": "d0d1c28f5a2b2a05065ff7e6f8de93a871a1deeff41d917900ad4bb131d8bb44",
+      "bytes": 27274
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderFullDirectory.ets",
+      "role": "implementation-reference",
+      "gitBlob": "bb9c94b97e7257f82421ac571ffeb16f74785859",
+      "sha256": "27a72b3b832446bb4274534fb96f7ee69c535ce50064b48486ab6a633842f01e",
+      "bytes": 22622
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderPageSettlementTimeline.ts",
+      "role": "implementation-reference",
+      "gitBlob": "1b472890720aa7a32257d7787f197a6cffc83e62",
+      "sha256": "996ab26ff46f1fc3f4f3ff5e00a6d6bef45153ab4d6695c364720156a87f80bd",
+      "bytes": 1428
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderSessionLaunchController.ts",
+      "role": "implementation-reference",
+      "gitBlob": "4ec7c0b0b65221b0a5c9e75372b563830ed950aa",
+      "sha256": "cc8e1dfa420676223a39d99453b5daca042112d3bda4cdbf9620dc4e4e2c7d66",
+      "bytes": 9685
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderSessionLaunchCurves.ets",
+      "role": "implementation-reference",
+      "gitBlob": "d0db973f3fcdca92ea41d1f81b1d05f158498233",
+      "sha256": "92b1b68aeaff26c481c44a738215ed828d6b3f977076e4ba098d914851ba79a1",
+      "bytes": 993
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderSessionLaunchPresentation.ts",
+      "role": "implementation-reference",
+      "gitBlob": "023892c51a4c429fa1d1d95a9b147af05507521f",
+      "sha256": "c80d64ce49b75acd424d35ad8ba623317ced76b99c4644f464edf0c945bdbdf9",
+      "bytes": 12790
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/reading/ReaderTtsState.ts",
+      "role": "implementation-reference",
+      "gitBlob": "264ac14e6491192b9fcfa33e74755640ae02c552",
+      "sha256": "9e626aac811694d6f5394b9e1480a3b8bc2b4f721cde7b26f062cda4f99f630b",
+      "bytes": 13668
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/search/SearchPage.ets",
+      "role": "implementation-reference",
+      "gitBlob": "ce190489a644b7ede99724e9389433c1046e837c",
+      "sha256": "791ca8e030dde410228d6db5e6181b4541a8c74201cd5b6106d4eb25d228277c",
+      "bytes": 81168
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/search/SearchPresentation.ts",
+      "role": "implementation-reference",
+      "gitBlob": "aedf980c92f71df75954adc780140bf12bb5c019",
+      "sha256": "42a445d6382761e3f4798bca3cdfc7d129f424d151d2a037b8fb0acd0ded64cd",
+      "bytes": 4586
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/settings/SettingsPage.ets",
+      "role": "implementation-reference",
+      "gitBlob": "ea2fed03b1af17c708b6853eeb07d1ee62cda1f7",
+      "sha256": "f03dd49116d3f49cb84249fa74b96b58a0cd03aa63c9d6acb73758d0450b8e8d",
+      "bytes": 42930
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/source/SourceManagementPage.ets",
+      "role": "implementation-reference",
+      "gitBlob": "69e1a59f316e4b32e1fdeeb15bafafd878c81f75",
+      "sha256": "3b4866fadfb9b06c04196ff24849809231957a07cfe4f5abb2ed4bd260401c67",
+      "bytes": 36421
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/source/SourceSwitchPresentationState.ts",
+      "role": "implementation-reference",
+      "gitBlob": "3e3cd8e89791295b77f0497d408c4d122bb1d202",
+      "sha256": "c262f8b3fca461fc1733f2fc1e689923cf3ae38b367f406fd35dd57eb0cecfdd",
+      "bytes": 1560
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/source/SourceSwitchSpinner.ets",
+      "role": "implementation-reference",
+      "gitBlob": "e4e4cf867e0090f845d0e956a36a1706e2c4a488",
+      "sha256": "e9db693d21c45b94b33fa9b4a63862a8bd882e074de47c0841aa6fbcd19a9318",
+      "bytes": 1039
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/source/SourceSwitchVisual.ts",
+      "role": "generated-consumer",
+      "gitBlob": "44c8d4433baa19263ca7b0b8ef397a7bd3f2de89",
+      "sha256": "06c4a144380f44908e872bff2112f1f6868bd49e65b0cdb1e76312f857c00f66",
+      "bytes": 13585
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/source/SourceSwitchWindow.ets",
+      "role": "implementation-reference",
+      "gitBlob": "99c87e277118872badb741b6a7c7d7aa3b191ef0",
+      "sha256": "e250b5963800718dee5d5ac2f12e4b812718aeda9b31fb2d0ee41a9a9eb5765e",
+      "bytes": 53341
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/features/source/SourceToolsOrchestrator.ets",
+      "role": "implementation-reference",
+      "gitBlob": "4941b5cb51d7a271119984b11f452433df3f4757",
+      "sha256": "0812196544c5a33a3722f9d11c43f2b49159f63a1ff86a40a71ead2914c1a0e8",
+      "bytes": 46228
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/pages/Index.ets",
+      "role": "implementation-reference",
+      "gitBlob": "37ed03414462ebb6b158b615e064df48c4acd644",
+      "sha256": "fb4c560c4ff8540d4cdd883dd99613010f566d983c1677570e3ece99ebd3e034",
+      "bytes": 417764
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/ets/pages/ReaderStartupRecovery.ets",
+      "role": "implementation-reference",
+      "gitBlob": "c4d4949c20b8d191c4650ee0fbeee8bf610705f7",
+      "sha256": "f824107ec1eaddf1b4f0e35948e421b625726dbc4d5fd2809947c530b18a521c",
+      "bytes": 2661
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/FONT-SOURCES.txt",
+      "role": "asset-provenance",
+      "gitBlob": "af331d3c73c17a21934238a8f287f3680854bb0a",
+      "sha256": "d3723794f91d69c798d3580de88d0c0890b30e6efacc232c9c349ccdb7898e31",
+      "bytes": 1871
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/Inter-OFL.txt",
+      "role": "asset-provenance",
+      "gitBlob": "9b2ca37b3ffc77391d8b2ebef4a974ef32bf46ea",
+      "sha256": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
+      "bytes": 4380
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/InterVariable.ttf",
+      "role": "font-asset",
+      "gitBlob": "4ab79e0102bbe0ffa1ed879b13e52ac8c6487833",
+      "sha256": "4989b125924991b90d05b2d16e0e388c48f7d5bb8b30539bbf9c755278d0ccaf",
+      "bytes": 879708
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/LXGWWenKaiGBLite-OFL.txt",
+      "role": "asset-provenance",
+      "gitBlob": "fc2a3469b28c6d6dbcb4294bd2b772802704f88a",
+      "sha256": "f4b480b99e1f6b150f0ed1aa621265ad67e40d4f74fbecc983aad85edfbec5fc",
+      "bytes": 5177
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/LXGWWenKaiGBLite-Regular.ttf",
+      "role": "font-asset",
+      "gitBlob": "7acdfb4d8688b5c01aaae00427f1e6e43c355e70",
+      "sha256": "1675c708cce181871d9a8adc987f35a0cabc6ff980685cd99f05d2655ea08c4c",
+      "bytes": 14116284
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/LXGWWenKaiLite-OFL.txt",
+      "role": "asset-provenance",
+      "gitBlob": "741b5ed176b27be5c97110e08df85a81031ed2c6",
+      "sha256": "94ca862eaded6a1af228b2d4e268b3c0f73d4333098bc0a1c63a34ff9d1b13bf",
+      "bytes": 4447
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/LXGWWenKaiLite-Regular.ttf",
+      "role": "font-asset",
+      "gitBlob": "8751570c043ae7bb9a0aa10773b031ca4ada9843",
+      "sha256": "140c99ba4e28e817cec49bf82a0c5fcdc4fe633fb9dfda16d0ee8d59a8545f15",
+      "bytes": 13872424
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/Noto-OFL.txt",
+      "role": "asset-provenance",
+      "gitBlob": "d952d62c065f3f35fb83a173496e90b21525aef3",
+      "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+      "bytes": 4301
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-UIBold.otf",
+      "role": "font-asset",
+      "gitBlob": "0daf987b6db68e09e2441578d5adfe082edefdcc",
+      "sha256": "995b908ebac24174fae7965b03324f21371dfe57bbfbe2794116d71ddde262cd",
+      "bytes": 7791444
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-UIMedium.otf",
+      "role": "font-asset",
+      "gitBlob": "605c70eafb2599c9b3f4d9c61930527c05e5f2e0",
+      "sha256": "319a7e09915410a00906741980b6afabe5fe23ae3b46052570b9cdd2b20c715d",
+      "bytes": 7709456
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-UIRegular.otf",
+      "role": "font-asset",
+      "gitBlob": "e8deaaa81f0d3e473ccfca4c2000ed0a5a369ebd",
+      "sha256": "26903423458d18bb9be20b12f7982a604118e10f10c62c83b45d10f04dfb939e",
+      "bytes": 7715508
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/NotoSansSC-VF.otf",
+      "role": "font-asset",
+      "gitBlob": "3ec828414f3845ff48a97a41b1e15f108f65badf",
+      "sha256": "d13ed01ec8aa45d6178999b648e96fb92150683e9f8e2a581f2acf208dcbe44b",
+      "bytes": 15054748
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/NotoSerifSC-Bold.ttf",
+      "role": "font-asset",
+      "gitBlob": "ee0a8ee7ef4c6f780b25d5f6aefeb2cb24879ee5",
+      "sha256": "3fb07709c24ed05993636d0b137917ea0bae5cf976f157d5e258fd068399a894",
+      "bytes": 14853692
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/NotoSerifSC-Regular.ttf",
+      "role": "font-asset",
+      "gitBlob": "af5de5b355b511d5554b4e8527d9c3a8fcdd2470",
+      "sha256": "9502147ceba7b5bc7fd3415083f6a5d133f22d8f9efb4974d4b85f3a97ea2d3a",
+      "bytes": 14854712
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/ReaderMangaSans550.otf",
+      "role": "font-asset",
+      "gitBlob": "a874d9406d7165d4be16067f26c668c00928e343",
+      "sha256": "c2028eca8a27dff3f67c59de85007c8eb30a4ce46b93cf9d139f00d6bcdac909",
+      "bytes": 7708476
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/ReaderMangaSans600.otf",
+      "role": "font-asset",
+      "gitBlob": "02d878ae22a33d904b25c337fb0310a90777e154",
+      "sha256": "6829ecf59c4da77c541030f3d9385d7cca521b6acb2068f982f2cd84c1298d54",
+      "bytes": 7713748
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/ReaderMangaSans650.otf",
+      "role": "font-asset",
+      "gitBlob": "a78aadfa82433e0d64c159ce6151d2528c569f22",
+      "sha256": "8f5b2272a34979aae5b1da1ff096311a7aa4177bceee7fe8b10ab830c835c42f",
+      "bytes": 7737684
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/ReaderMangaSans900.otf",
+      "role": "font-asset",
+      "gitBlob": "eb23d95d41b5b2b9996f9aaf57c428d0e980b3ef",
+      "sha256": "bb589e9472aa1bfc3626725464584c9ffcdc4f95cc40de08f04e08a6734ca38a",
+      "bytes": 6740
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/SarasaGothic-OFL.txt",
+      "role": "asset-provenance",
+      "gitBlob": "cf074af5c7bde8a9a979f5b2d4044a69f1f4d647",
+      "sha256": "88d491908756578c2012f85e3fdac01591e6ba53d7a5807576b1b2474efe2224",
+      "bytes": 4593
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/SarasaMonoSC-Regular.ttf",
+      "role": "font-asset",
+      "gitBlob": "bd427d32e640a4af89f546b200860c188f482364",
+      "sha256": "95718854631c2386845e618aa5bc37908e5fb8a919eb56e40f70e1170d80af94",
+      "bytes": 25541448
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/ZhuqueFangsong-OFL.txt",
+      "role": "asset-provenance",
+      "gitBlob": "4cc470220df130fb7a1f6a54f347bc78a543f664",
+      "sha256": "1922c38238aebfa4fc91434394287838d592fe043798cd5f38f259ff8b63432b",
+      "bytes": 4387
+    },
+    {
+      "repository": "Reader-for-HarmonyOS",
+      "path": "entry/src/main/resources/rawfile/ZhuqueFangsong-Regular.ttf",
+      "role": "font-asset",
+      "gitBlob": "3f69b67fc67f1fd6b640b00c101db8a39c547502",
+      "sha256": "558c62730844fe54ba220146ed62f859d4e2880188d92d985f8921c6e3743bc4",
+      "bytes": 8824084
+    }
+  ]
+}

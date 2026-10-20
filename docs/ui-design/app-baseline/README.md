@@ -1,5 +1,10 @@
 # Historical native baseline reproduction
 
+For the committed cross-platform UI and interaction handoff, start with
+[Reader cross-platform reference](../cross-platform-reference/README.md). This
+directory retains its historical captures and evidence classification; it does
+not replace that handoff's selected source versions.
+
 This reference is conditional on private native evidence. A clean public checkout
 does not contain the captures, device metadata or review registry and must not
 invent replacements. `private-inputs.json` declares the two historical sessions,
