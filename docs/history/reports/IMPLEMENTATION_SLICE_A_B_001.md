@@ -2,7 +2,7 @@
 
 > **历史实施切片，不是当前待开发清单。** 本文保留当时的消费节点、边界和分层证据；其中暂停项、
 > 缺口和实施顺序不得直接作为当前任务。唯一待开发清单见
-> [`../../DEVELOPMENT_BACKLOG.md`](../../DEVELOPMENT_BACKLOG.md)，禁止在本文追加当前待办。
+> [`../../../../DEVELOPMENT_BACKLOG.md`](../../../../DEVELOPMENT_BACKLOG.md)，禁止在本文追加当前待办。
 
 状态：实施中。本文是 HarmonyOS 实现切片的约束记录，不是设计副本、页面 AST 或生成器输入。
 

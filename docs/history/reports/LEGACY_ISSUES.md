@@ -2,7 +2,7 @@
 
 > **已冻结，不再是当前遗留问题清单。** 本文保留 2026-08 时点的决策和阻塞证据，现有
 > `OPEN / DEFERRED / BLOCKED` 不代表当前任务状态，也禁止继续追加条目。唯一待开发清单见
-> [`../../DEVELOPMENT_BACKLOG.md`](../../DEVELOPMENT_BACKLOG.md)；旧条目如需继续，必须先按当前源码复核后迁入该文件。
+> [`../../../../DEVELOPMENT_BACKLOG.md`](../../../../DEVELOPMENT_BACKLOG.md)；旧条目如需继续，必须先按当前源码复核后迁入该文件。
 
 Historically documented open issues, deferred decisions, and blocked verification items for
 the Reader HarmonyOS surface. Each entry records its original 状态、根因、决策、解锁条件。
