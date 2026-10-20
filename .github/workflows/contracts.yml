@@ -70,7 +70,7 @@ jobs:
         if: always()
         run: echo 'Only the explicitly selected checks were requested. Unselected tests and SDK, Native, HAP, signing and device acceptance remain NOT_RUN.' >> "$GITHUB_STEP_SUMMARY"
   host-source-gate:
-    name: host-source-gate
+    name: contract-gate
     if: always()
     needs: source-check
     runs-on: ubuntu-24.04
