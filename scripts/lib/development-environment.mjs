@@ -1,5 +1,5 @@
 // Generated from Reader-Core/scripts/lib/development-environment.mjs; run sync-workspace.mjs --write.
-import { existsSync, realpathSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -12,13 +12,31 @@ export function sdkSetting(env = process.env) {
 const directory = path => { try { return statSync(path).isDirectory(); } catch { return false; } };
 export function sdkCandidates(root) {
   const candidates = [root, join(root, 'openharmony'), join(root, 'default/openharmony')];
-  if (directory(root)) for (const name of readdirSync(root).filter(name => /^\d+(?:\.\d+)*$/.test(name)).sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))) {
+  if (directory(root)) for (const name of readdirSync(root).filter(name =>
+    /^(?:\d+(?:\.\d+)*|HarmonyOS-\d[\w.()+-]*)$/.test(name))
+    .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))) {
     candidates.push(join(root, name), join(root, name, 'openharmony'));
   }
   return candidates;
 }
 export function normalizeSdkRoot(root) {
   return sdkCandidates(root).find(path => directory(join(path, 'ets')) && directory(join(path, 'toolchains')));
+}
+/** Packaging needs the official Harmony SDK container, not just ETS tools. */
+export function harmonySdkContainerRoot(root) {
+  const selected = normalizeSdkRoot(root);
+  if (!selected) return undefined;
+  const sdkRoot = realpathSync(selected), packageRoot = dirname(sdkRoot);
+  const descriptor = join(packageRoot, 'sdk-pkg.json');
+  if (!existsSync(descriptor)) return undefined;
+  let metadata;
+  try { metadata = JSON.parse(readFileSync(descriptor, 'utf8')); }
+  catch { throw new Error('The selected Harmony SDK has an invalid sdk-pkg.json'); }
+  if (!/^HarmonyOS-\d[\w.()+-]*$/.test(metadata?.data?.path || '') ||
+      !directory(join(packageRoot, 'openharmony')) || realpathSync(join(packageRoot, 'openharmony')) !== sdkRoot) {
+    throw new Error('The selected Harmony SDK does not match its sdk-pkg.json package');
+  }
+  return { sdkRoot, packageRoot, containerRoot: dirname(packageRoot) };
 }
 export function nativeSdkRoot(env = process.env, cwd = process.cwd()) {
   const setting = sdkSetting(env);
