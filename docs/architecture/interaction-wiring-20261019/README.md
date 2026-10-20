@@ -21,7 +21,7 @@
 |---|---|---|
 | 用户本轮及此前确认 | 书架封面直接阅读、长按信息入口；组件分类和样式；下载新增入口；返回来源；图片失败粒度；不做非必要门禁。 | 不能以旧测试、旧图或重构计划覆盖后来的明确要求。 |
 | [原工作流和覆盖](../../../../evidence/2026-10-02-complete-app-architecture/WORKFLOWS_AND_COVERAGE.md)、同目录 [系统合同](../../../../evidence/2026-10-02-complete-app-architecture/SYSTEM_CONTRACTS.md) 及 [UI 状态合同](../../../../evidence/2026-10-02-complete-app-architecture/UI_SPEC_AND_STATE_CONTRACTS.md) | 用户旅程、任务 owner、原操作确认、取消、进度、资源和展示身份的规则。 | 旧 implemented/partial/OPEN 及步骤统计是当时审阅结果，不是本轮完成率。 |
-| [Search→Source 合同](../../../../AUDIT_P0_ADD_SOURCE_FLOW_FIGMA_2026-08-29.md)、[临时层 Back](../temporary-back-leaf-bridge-20261003.md) | 保存原入口与 SearchPresentation；返回不自动重新搜索；先关顶层；旧注册/注销不能作用于新展示。 | 专项已做不代表所有页面自动继承。 |
+| [Search→Source 合同](../../../../docs/history/audits/AUDIT_P0_ADD_SOURCE_FLOW_FIGMA_2026-08-29.md)、[临时层 Back](../temporary-back-leaf-bridge-20261003.md) | 保存原入口与 SearchPresentation；返回不自动重新搜索；先关顶层；旧注册/注销不能作用于新展示。 | 专项已做不代表所有页面自动继承。 |
 | [Settings owner](../general-settings-runtime-owner-20261003.md)、[Rules lease](../rules-presentation-runtime-owner-20261003.md)、[进度 producer](../reader-progress-producer-boundary-20261003.md) | 同 Runtime 原任务归属、持久写与 UI 退休分离、进度退出屏障、明确核对和继续原操作。 | 不从列表一致、页面关闭或内存值推定持久写确认。 |
 | [真实应用逻辑账](../../ui-design/app-baseline/LOGIC.md)、[分类说明](../../ui-design/app-baseline/CLASSIFICATION.md) | 已采集动作、当前源码候选及证据边界。 | “当时详情返回书架”是观察，不能当正确产品规则；未证明的返回仍不能算验收。 |
 | [页面框架实施计划](../../../../evidence/ui-interaction-system-review-20261001/framework/implementation/IMPLEMENTATION_PLAN.md) | 延展原壳、保留业务 owner，按旅程核对。 | proposed 的导航迁移不是当前授权。本轮没有另造 Router。 |

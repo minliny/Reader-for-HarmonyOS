@@ -11,7 +11,7 @@
 | 编号 | 原文依据 | 本次采用的规则及边界 |
 | --- | --- | --- |
 | R0 | [唯一待开发入口](../../../../DEVELOPMENT_BACKLOG.md)，`UI 与逻辑稿重建` | 当前 UI／逻辑表达从真实应用重建；旧数量、候选设计和通过结果不能直接当作当前行为。历史缺口需重新核对，不能原样变成当前 TODO。 |
-| R1 | [Search → Source 完整流程](../../../../AUDIT_P0_ADD_SOURCE_FLOW_FIGMA_2026-08-29.md)，§4 步骤 3／5、§5 导航合同 | 入口保存返回目标、关键词、SearchPresentation 和来源范围；普通 Back 恢复原 Search，不重新 open 到 Initial、不自动发新搜索。显式“用新书源搜索”才重新搜索。该文是专项合同和时点审计，不是当前整体验收结果。 |
+| R1 | [Search → Source 完整流程](../../../../docs/history/audits/AUDIT_P0_ADD_SOURCE_FLOW_FIGMA_2026-08-29.md)，§4 步骤 3／5、§5 导航合同 | 入口保存返回目标、关键词、SearchPresentation 和来源范围；普通 Back 恢复原 Search，不重新 open 到 Initial、不自动发新搜索。显式“用新书源搜索”才重新搜索。该文是专项合同和时点审计，不是当前整体验收结果。 |
 | R2 | [临时层 Back 合同](../temporary-back-leaf-bridge-20261003.md)，Integration API／Real behavior | leaf 仍是可见状态唯一 owner；appear 注册捕获身份的处理器，disappear 先退役再按原身份注销。Index 捕获 Runtime／navigation／leaf identity；首个 Back 先交最上层。旧注销、旧 finish、旧选项不能作用于新层。 |
 | R3 | [Settings Runtime owner](../general-settings-runtime-owner-20261003.md)、[Rules presentation lease](../rules-presentation-runtime-owner-20261003.md) | 页面退役停止投影，不取消已派发持久写入；新 presentation 继承同 Runtime 原 owner 的 canonical 和操作事实。实际回调捕获自己的 presentation，不能现查新身份借用。 |
 | R4 | [原操作与确认](../reading-exact-operation-intents-20261003.md)、[Source 原操作恢复](../source-management-cold-recovery-20261003.md) | open／refresh 先纯核对原回执；未知写不能被返回动作自动重放。明确“继续原操作”复用原 ID／完整 DTO。列表一致不等于原操作确认，关闭 UI 不等于回滚。 |

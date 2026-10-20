@@ -9,11 +9,7 @@ Reader 当前唯一完整产品 Host/UI，也是唯一实际消费 `Reader-Core`
 
 ## 开发准入
 
-运行全部非服务型契约：
-
-```bash
-./scripts/check-local.sh
-```
+日常开发、漏洞修复和构建前，先按 [`../GATE_INDEX.md`](../GATE_INDEX.md) 的任务选择表确定本次刚需检查，再用准确 ID / `--stages` / `--tests` 显式选择。全量仅用于已明确的正式发布或整体验收计划；合并、Core 改动或某项失败不自动扩大范围。
 
 生成当前 dirty 状态可追溯的日常 debug HAP：
 
@@ -21,7 +17,7 @@ Reader 当前唯一完整产品 Host/UI，也是唯一实际消费 `Reader-Core`
 node scripts/hap-pipeline.mjs build --class iteration
 ```
 
-该流水线是唯一 HAP 交付入口：先运行全部合同，再按内容生成源码 fingerprint，在临时目录进行
+该流水线是唯一 HAP 交付入口；检查集合遵循根 `GATE_INDEX.md` 的本次刚需选择，普通构建不得隐式追加全量。流水线按内容生成源码 fingerprint，在临时目录进行
 无增量构建和本地签名注入，校验 HAP、内嵌 Native、书源字节和签名后，才原子发布 immutable
 manifest。`entry/build/` 不再是交付目录，`check-local.sh --hap` 已停用。
 
@@ -46,7 +42,7 @@ node scripts/deveco-build.mjs
 
 当前开发 HAP 会编译尚未纳入 L0 验收的 RSS、Discover、Sync 等扩展页面；开发构建成功不代表这些
 页面已进入发布范围。最近一次已审计交付 HAP 的精确哈希、安装结果、阅读生命周期、冲突项和证据边界见
-[`../README.md`](../README.md) 和 [`../AUDIT_2026-08-12.md`](../AUDIT_2026-08-12.md)。
+[`../README.md`](../README.md) 和 [`../docs/audits/WORKSPACE_AUDIT.md`](../docs/audits/WORKSPACE_AUDIT.md)。
 
 当前待开发内容只维护在根目录
 [`../DEVELOPMENT_BACKLOG.md`](../DEVELOPMENT_BACKLOG.md)。本仓 `docs/` 下的审计、实施切片、

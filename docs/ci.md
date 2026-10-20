@@ -1,8 +1,8 @@
 # HarmonyOS source and integration checks
 
-Repository-only CI runs `node tools/run-contract-tests.mjs --source` with Node 22 and pinned Actions. The explicit test-tier manifest classifies every discovered regression; tests requiring the official SDK, current Core CLI or sibling repository inputs remain in the full local gate.
+CI keeps manual selection only. Select the checks required by the current task using the task table in [`../../GATE_INDEX.md`](../../GATE_INDEX.md) and explicit IDs / `--stages` / `--tests`. Unselected checks are `NOT_RUN`; full sets require an explicit release or overall acceptance plan.
 
-Run `bash scripts/check-local.sh` for complete current discovery in the approved development workspace. Source checks do not establish ArkTS compilation, matching OHOS Native, signed HAP or device behavior.
+Local checks follow the same required selection. A selected check with a missing tool, failure or missing result remains `FAIL` / incomplete. Source checks do not establish ArkTS compilation, matching OHOS Native, signed HAP or device behavior.
 
 Native synchronization uses `node scripts/hap-pipeline.mjs sync-native`; the previous `sync-core` spelling delegates to the same provenance checker and transactional replacement. Inputs must come from a fresh matching local Core build, with `core-input-snapshot.json` and SDK smoke evidence. Older generated SO/SDK packages are retained for recovery and are not accepted as inputs for new source.
 
